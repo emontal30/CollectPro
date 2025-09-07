@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - CollectPro</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-page">
+  <div class="admin-container">
+    <div class="admin-header">
+      <img src="logo-momkn.png" alt="CollectPro" class="admin-logo">
+      <h1>لوحة التحكم</h1>
+      <p>إدارة المستخدمين والاشتراكات</p>
+    </div>
+    
+    <!-- الإحصائيات -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <i class="fas fa-users"></i>
+        <div class="stat-content">
+          <h3>إجمالي المستخدمين</h3>
+          <span id="totalUsers">0</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-user-check"></i>
+        <div class="stat-content">
+          <h3>المستخدمون النشطون</h3>
+          <span id="activeUsers">0</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-user-times"></i>
+        <div class="stat-content">
+          <h3>المستخدمون غير النشطين</h3>
+          <span id="inactiveUsers">0</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <i class="fas fa-user-clock"></i>
+        <div class="stat-content">
+          <h3>الاشتراكات المنتهية</h3>
+          <span id="expiredUsers">0</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- أزرار التحكم الجماعي -->
+    <div class="bulk-actions">
+      <h3>إجراءات جماعية</h3>
+      <div class="action-buttons">
+        <button id="activateAllBtn" class="bulk-btn activate">
+          <i class="fas fa-check-circle"></i> تفعيل الكل
+        </button>
+        <button id="deactivateAllBtn" class="bulk-btn deactivate">
+          <i class="fas fa-times-circle"></i> إيقاف الكل
+        </button>
+        <button id="renewAllBtn" class="bulk-btn renew">
+          <i class="fas fa-sync-alt"></i> تجديد الكل
+        </button>
+      </div>
+    </div>
+    
+    <!-- البحث والفلترة -->
+    <div class="search-filter">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="ابحث بالاسم أو البريد الإلكتروني...">
+        <i class="fas fa-search"></i>
+      </div>
+      
+      <div class="filter-box">
+        <select id="statusFilter">
+          <option value="">جميع الحالات</option>
+          <option value="active">نشط</option>
+          <option value="inactive">غير نشط</option>
+          <option value="expired">منتهي</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- جدول المستخدمين -->
+    <div class="users-table-container">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>المستخدم</th>
+            <th>البريد الإلكتروني</th>
+            <th>تاريخ البداية</th>
+            <th>المدة</th>
+            <th>تاريخ الانتهاء</th>
+            <th>الحالة</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- سيتم ملؤها ديناميكياً -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- نافذة تعديل الاشتراك -->
+  <div id="subscriptionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>إدارة الاشتراك</h3>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="user-info">
+          <p><strong>المستخدم:</strong> <span id="modalUserName"></span></p>
+          <p><strong>البريد:</strong> <span id="modalUserEmail"></span></p>
+        </div>
+        
+        <div class="form-group">
+          <label for="durationDays">مدة الاشتراك (بالأيام)</label>
+          <input type="number" id="durationDays" min="1" value="30">
+        </div>
+        
+        <div class="modal-actions">
+          <button id="activateUserBtn" class="modal-btn activate">
+            <i class="fas fa-check"></i> تفعيل
+          </button>
+          <button id="deactivateUserBtn" class="modal-btn deactivate">
+            <i class="fas fa-times"></i> إيقاف
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

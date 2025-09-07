@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الاشتراكات - CollectPro</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="subscription-page">
+  <div class="subscription-container">
+    <div class="subscription-header">
+      <h1>اختر خطتك المناسبة</h1>
+      <p>استمتع بجميع مميزات CollectPro باسعار تنافسية</p>
+    </div>
+    
+    <div class="pricing-plans">
+      <div class="plan-card" data-plan="monthly">
+        <div class="plan-header">
+          <h3>اشتراك شهري</h3>
+          <div class="price">20 <span>جنيه</span></div>
+        </div>
+        <ul class="plan-features">
+          <li><i class="fas fa-check"></i> وصول كامل للميزات</li>
+          <li><i class="fas fa-check"></i> دعم فني على مدار الساعة</li>
+          <li><i class="fas fa-check"></i> تحديثات مجانية</li>
+        </ul>
+        <button class="select-plan-btn" data-plan="monthly">اختر الخطة</button>
+      </div>
+      
+      <div class="plan-card popular" data-plan="quarterly">
+        <div class="plan-badge">الأكثر شعبية</div>
+        <div class="plan-header">
+          <h3>اشتراك 3 أشهر</h3>
+          <div class="price">50 <span>جنيه</span></div>
+        </div>
+        <ul class="plan-features">
+          <li><i class="fas fa-check"></i> كل مميزات الخطة الشهرية</li>
+          <li><i class="fas fa-check"></i> توفير 10 جنيه</li>
+          <li><i class="fas fa-check"></i> أولوية في الدعم الفني</li>
+        </ul>
+        <button class="select-plan-btn" data-plan="quarterly">اختر الخطة</button>
+      </div>
+    </div>
+    
+    <div class="payment-section" id="paymentSection" style="display: none;">
+      <div class="payment-header">
+        <h2>طرق الدفع</h2>
+        <p>اختر طريقة الدفع المناسبة لك</p>
+      </div>
+      
+      <div class="payment-methods">
+        <div class="payment-method active" data-method="vodafone">
+          <i class="fas fa-mobile-alt"></i>
+          <h3>فودافون كاش</h3>
+          <p>ادفع عبر محفظة فودافون كاش</p>
+        </div>
+      </div>
+      
+      <div class="payment-form">
+        <div class="form-group">
+          <label for="transactionNumber">رقم عملية التحويل</label>
+          <input type="text" id="transactionNumber" placeholder="أدخل رقم عملية التحويل">
+        </div>
+        
+        <div class="payment-info">
+          <h4>معلومات الدفع:</h4>
+          <p><strong>رقم المحفظة:</strong> 01012345678</p>
+          <p><strong>الاسم:</strong> Ahmed Mohamed</p>
+          <p><strong>المبلغ:</strong> <span id="paymentAmount">20</span> جنيه</p>
+        </div>
+        
+        <button id="sendPaymentBtn" class="payment-btn">
+          <i class="fas fa-paper-plane"></i> إرسال بيانات الدفع
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
