@@ -49,7 +49,7 @@ const UpdatePasswordPage = () => {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <img 
-              src="logo-momkn.png" 
+              src="/logo-momkn.png" 
               alt="CollectPro" 
               className="h-10 w-10" 
             />

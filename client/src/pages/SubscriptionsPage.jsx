@@ -235,7 +235,7 @@ const SubscriptionsPage = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-2">
-              <img src="logo-momkn.png" alt="CollectPro" className="h-10 w-10" />
+              <img src="/logo-momkn.png" alt="CollectPro" className="h-10 w-10" />
               <p className="text-xl font-bold">CollectPro</p>
             </div>
             <div className="flex items-center space-x-4">

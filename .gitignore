@@ -1,0 +1,15 @@
+# Root ignores
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Env files (anywhere)
+*.env
+*.env.*
+
+# Vite outputs inside client
+client/dist/
+
+# Legacy static (kept locally, not committed)
+client/legacy_static/
