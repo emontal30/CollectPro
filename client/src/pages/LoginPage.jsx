@@ -120,7 +120,7 @@ const LoginPage = () => {
       setSuccess('تم تسجيل الدخول بنجاح');
 
       // انتقال للصفحة التالية
-      setTimeout(() => navigate('/subscriptions'), 600);
+      setTimeout(() => navigate('/'), 600);
     } catch (err) {
       console.error('Login error:', err);
       recordFailedAttempt();
@@ -138,7 +138,7 @@ const LoginPage = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/subscriptions' }
+        options: { redirectTo: window.location.origin + '/' }
       });
       if (error) throw error;
     } catch (err) {
@@ -165,7 +165,7 @@ const LoginPage = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + '/subscriptions'
+          emailRedirectTo: window.location.origin + '/'
         }
       });
       if (error) throw error;

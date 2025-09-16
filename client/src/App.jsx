@@ -130,7 +130,7 @@ function App() {
         {/* Protected routes with Outlet */}
         <Route element={user ? <ProtectedLayout isAdmin={isAdmin} profile={profile} user={user} /> : <Navigate to="/login" /> }>
           {/* Default route: Admin -> AdminDashboard, Others -> Data Entry (Dashboard) */}
-          <Route index element={isAdmin ? <AdminDashboard /> : <Dashboard />} />
+          <Route path="/" element={isAdmin ? <AdminDashboard /> : <Dashboard />} />
 
           {/* Other protected routes */}
           <Route path="subscriptions" element={<SubscriptionsPage />} />
