@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>الأرشيف</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-archive.png" alt="شعار الأرشيف" class="logo" />
+      </div>
+    </div>
+    <h1>الأرشيف 📂</h1>
+  </header>
+  <main>
+    <!-- اختيار التاريخ والبحث -->
+    <div class="archive-controls">
+      <div class="control-group">
+        <label>اختر التاريخ:
+          <select id="archiveSelect">
+            <option value="">-- اختر تاريخ --</option>
+          </select>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>بحث:
+          <input type="text" id="archiveSearch" placeholder="اكتب اسم المحل أو الكود" />
+        </label>
+      </div>
+    </div>
+    
+    <!-- جدول الأرشيف -->
+    <table id="archiveTable">
+      <thead>
+        <tr>
+          <th>📅 التاريخ</th>
+          <th>🏪 المحل</th>
+          <th>🔢 الكود</th>
+          <th>💸 مبلغ التحويل</th>
+          <th>➕ تحويل إضافي</th>
+          <th>💰 المحصّل</th>
+          <th>⚖️ الصافي</th>
+          <th>✅ الحالة</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <!-- أزرار التحكم -->
+    <div class="buttons">
+      <button id="deleteArchiveBtn" class="btn-danger">🗑️ حذف التاريخ الحالي</button>
+    </div>
+  </main>
+  
+  <!-- شريط التنقل السفلي -->
+  <nav class="bottom-nav">
+    <button id="prevPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">←</span>
+    </button>
+  </nav>
+  
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
