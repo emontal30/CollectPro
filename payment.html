@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#007965" />
+  <title>الدفع - CollectPro</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="logo-momkn.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="payment.css" />
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1>إتمام الدفع 💳</h1>
+  </header>
+
+  <main>
+    <div class="payment-container">
+      <div class="payment-card">
+        <div class="payment-header">
+          <h2>تفاصيل الدفع</h2>
+          <div class="plan-summary">
+            <div class="plan-info">
+              <span class="plan-label">الخطة المختارة:</span>
+              <span class="plan-value" id="selected-plan">-</span>
+            </div>
+            <div class="plan-info">
+              <span class="plan-label">السعر:</span>
+              <span class="plan-value" id="plan-price">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="payment-form">
+          <form id="payment-form">
+            <div class="form-group">
+              <label for="email">البريد الإلكتروني</label>
+              <div class="input-container">
+                <i class="fas fa-envelope input-icon"></i>
+                <input type="email" id="email" name="email" readonly />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="user-id">معرف المستخدم</label>
+              <div class="input-container">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" id="user-id" name="user-id" readonly />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="subscription-type">نوع الاشتراك</label>
+              <div class="input-container">
+                <i class="fas fa-calendar-alt input-icon"></i>
+                <input type="text" id="subscription-type" name="subscription-type" readonly />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="transaction-id">رقم عملية التحويل</label>
+              <div class="input-container">
+                <i class="fas fa-receipt input-icon"></i>
+                <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل من InstaPay أو Vodafone Cash" required />
+              </div>
+              <span class="help-text">أدخل رقم عملية التحويل من InstaPay أو Vodafone Cash</span>
+            </div>
+
+            <div class="payment-methods">
+              <h3>طرق الدفع المتاحة</h3>
+              <div class="payment-method">
+                <div class="method-icon">
+                  <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="method-details">
+                  <h4>InstaPay</h4>
+                  <p>رقم الحساب: 01094085228</p>
+                  <p>اسم المستفيد: أيمن حافظ</p>
+                </div>
+              </div>
+              <div class="payment-method">
+                <div class="method-icon">
+                  <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div class="method-details">
+                  <h4>Vodafone Cash</h4>
+                  <p>رقم المحفظة: 01094085228</p>
+                  <p>اسم المستفيد: أيمن حافظ</p>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+              <span class="btn-text">إرسال طلب الدفع</span>
+              <i class="fas fa-spinner fa-spin spinner"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="alert-container" class="alert-container"></div>
+
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
+  <script src="payment.js"></script>
+  <script>
+    // التحقق من وجود جلسة نشطة قبل تحميل الصفحة
+    window.addEventListener('DOMContentLoaded', async () => {
+      const hasAccess = await auth.checkPageAccess();
+      if (!hasAccess) return;
+
+      // تحميل بيانات المستخدم والخطة المختارة بعد التحقق من الصلاحية
+      await loadUserData();
+      await loadSelectedPlan();
+    });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(registration) {
+          console.log('Service Worker registered successfully:', registration.scope);
+        })
+        .catch(function(error) {
+          console.log('Service Worker registration failed:', error);
+        });
+    }
+  </script>
+</body>
+</html>

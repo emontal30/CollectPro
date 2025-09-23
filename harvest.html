@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#007965" />
+  <title>صفحة التحصيل</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="logo-tick.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-tick.png" alt="شعار التحصيل" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1>التحصيلات 💴</h1>
+  </header>
+  <main>
+    <p>📅 اليوم: <span id="currentDate"></span></p>
+    <table id="harvestTable">
+      <thead>
+        <tr>
+          <th class="serial">#️⃣</th>
+          <th class="shop">🏪 المحل</th>
+          <th class="code">🔢 الكود</th>
+          <th class="amount">💸 مبلغ التحويل</th>
+          <th class="extra"><div class="hdr-extra"><div class="signs"><span class="plus">➕</span><span class="minus">➖</span></div><span class="label">اضافه & سحب</span></div></th>
+          <th class="collector highlight">💰 المحصّل</th>
+          <th class="net numeric">⚖️ الصافي</th>
+          <th class="status">✅ الحالة</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <!-- ملخص البيان -->
+    <section id="summary">
+      <h2>📊 ملخص البيان</h2>
+      <div class="summary-grid">
+        <label><strong>ليمِت الماستر:</strong>
+          <input type="text" id="masterLimit" class="bold-input" />
+        </label>
+        <label><strong>رصيد الماستر الحالي:</strong>
+          <input type="text" id="currentBalance" />
+        </label>
+        <label><strong>مبلغ التصفيرة:</strong>
+          <span id="resetAmount" class="calc-field">0</span>
+        </label>
+        <label><strong>إجمالي المحصل:</strong>
+          <span id="totalCollected" class="calc-field">0</span>
+        </label>
+        <label><strong>حالة التصفير:</strong>
+          <span id="resetStatus" class="calc-field">0</span>
+        </label>
+      </div>
+    </section>
+    <div class="buttons">
+      <button id="archiveTodayBtn" class="btn-archive">🗄️ أرشفه اليوم</button>
+      <button id="clearHarvestBtn" class="btn-danger">🧹 تفريغ الحقول</button>
+    </div>
+  </main>
+  
+  <!-- شريط التنقل السفلي -->
+  <nav class="bottom-nav">
+    <button id="nextPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">→</span>
+    </button>
+    <div class="nav-spacer"></div>
+    <button id="prevPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">←</span>
+    </button>
+  </nav>
+  
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

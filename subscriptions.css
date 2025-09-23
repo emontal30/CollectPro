@@ -1,0 +1,282 @@
+/* صفحة الاشتراكات */
+.subscription-intro {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.subscription-intro h2 {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.subscription-intro p {
+  font-size: 1.1rem;
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.plans-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.plan-card {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+  width: 100%;
+  max-width: 350px;
+  transition: var(--transition);
+  position: relative;
+}
+
+.plan-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.plan-card.featured {
+  border: 2px solid var(--secondary);
+  transform: scale(1.05);
+}
+
+.plan-badge {
+  position: absolute;
+  top: 15px;
+  left: -30px;
+  background: var(--secondary);
+  color: white;
+  padding: 5px 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.plan-header {
+  padding: 30px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.plan-header h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.currency {
+  font-size: 1rem;
+  color: #666;
+  margin-left: 5px;
+}
+
+.price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.period {
+  font-size: 1rem;
+  color: #666;
+  margin-right: 5px;
+}
+
+.plan-offer {
+  background: var(--success);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.plan-features {
+  padding: 20px;
+}
+
+.plan-features ul {
+  list-style: none;
+  padding: 0;
+}
+
+.plan-features li {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+}
+
+.plan-features li:last-child {
+  border-bottom: none;
+}
+
+.plan-features i {
+  color: var(--success);
+  margin-left: 10px;
+  font-size: 1.2rem;
+}
+
+.plan-footer {
+  padding: 20px;
+  text-align: center;
+}
+
+.select-plan-btn {
+  background: linear-gradient(135deg, var(--primary), #00a085);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 12px 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+}
+
+.select-plan-btn:hover {
+  background: linear-gradient(135deg, #00a085, var(--primary));
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);
+}
+
+/* قسم الأسئلة الشائعة */
+.faq-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-section h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  color: var(--primary);
+  margin-bottom: 30px;
+}
+
+.faq-container {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.faq-item {
+  border-bottom: 1px solid #eee;
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  padding: 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.faq-question:hover {
+  background: #f8f9fa;
+}
+
+.faq-question h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.faq-question i {
+  color: var(--primary);
+  transition: var(--transition);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.faq-answer p {
+  padding: 0 20px 20px;
+  margin: 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 200px;
+}
+
+.faq-item.active .faq-question i {
+  transform: rotate(180deg);
+}
+
+/* الوضع الليلي */
+body.dark .plan-card {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+body.dark .plan-header {
+  background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+}
+
+body.dark .plan-header h3 {
+  color: var(--dark-text);
+}
+
+body.dark .plan-features li {
+  border-bottom-color: #444;
+}
+
+body.dark .faq-container {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+body.dark .faq-item {
+  border-bottom-color: #444;
+}
+
+body.dark .faq-question:hover {
+  background: #2a2a2a;
+}
+
+body.dark .faq-question h3 {
+  color: var(--dark-text);
+}
+
+/* تصميم متجاوب */
+@media (max-width: 768px) {
+  .plans-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .plan-card.featured {
+    transform: scale(1);
+  }
+  
+  .plan-card {
+    max-width: 100%;
+  }
+}

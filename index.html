@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#007965" />
+  <title>إدخال البيانات</title>
+  <!-- تم تعطيل ملف manifest.json مؤقتاً لتجنب خطأ CORS عند التطوير المحلي -->
+  <!-- <link rel="manifest" href="manifest.json" /> -->
+  <link rel="apple-touch-icon" href="logo-momkn.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1> إدخال البيانات 📝</h1>
+  </header>
+  <main>
+    <textarea id="dataInput" placeholder="ألصق البيانات هنا..."></textarea>
+    <div class="buttons">
+      <button id="pasteBtn" class="btn-primary">📋 لصق البيانات</button>
+      <button id="saveGoBtn" class="btn-success">💾 حفظ وانتقال لصفحة التحصيل</button>
+      <button id="clearBtn" class="btn-danger">🗑️ مسح البيانات</button>
+    </div>
+  </main>
+  
+  <!-- شريط التنقل السفلي -->
+  <nav class="bottom-nav">
+    <button id="prevPage" class="nav-btn bottom-nav-btn hidden">
+      <span class="nav-icon">←</span>
+    </button>
+    <div class="nav-spacer"></div>
+    <button id="nextPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">→</span>
+    </button>
+  </nav>
+  
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

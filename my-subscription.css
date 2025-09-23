@@ -1,0 +1,245 @@
+/* صفحة اشتراك المستخدم */
+.subscription-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.subscription-card {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.subscription-header {
+  padding: 30px;
+  background: linear-gradient(135deg, var(--primary), #00a085);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.subscription-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background: rgba(243, 156, 18, 0.2);
+}
+
+.status-active {
+  background: rgba(39, 174, 96, 0.2);
+}
+
+.status-cancelled {
+  background: rgba(231, 76, 60, 0.2);
+}
+
+.status-expired {
+  background: rgba(52, 73, 94, 0.2);
+}
+
+.subscription-details {
+  padding: 30px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #666;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #333;
+}
+
+.subscription-actions {
+  padding: 0 30px 30px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.subscription-history {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.subscription-history h2 {
+  padding: 20px;
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--primary);
+  border-bottom: 1px solid #eee;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+#history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#history-table th, #history-table td {
+  padding: 12px 15px;
+  text-align: right;
+  border-bottom: 1px solid #eee;
+}
+
+#history-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+#history-table tr:hover {
+  background: #f8f9fa;
+}
+
+/* نافذة تجديد الاشتراك */
+.renew-plans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.renew-plan {
+  flex: 1;
+  min-width: 200px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.renew-plan:hover {
+  border-color: var(--primary);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.renew-plan h3 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.plan-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.plan-offer {
+  background: var(--success);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+/* الوضع الليلي */
+body.dark .subscription-card {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+body.dark .subscription-details {
+  background: var(--dark-bg);
+}
+
+body.dark .detail-row {
+  border-bottom-color: #444;
+}
+
+body.dark .detail-label {
+  color: #aaa;
+}
+
+body.dark .detail-value {
+  color: var(--dark-text);
+}
+
+body.dark .subscription-history {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+body.dark .subscription-history h2 {
+  border-bottom-color: #444;
+  color: var(--dark-mode-green);
+}
+
+body.dark #history-table th {
+  background: #2a2a2a;
+  color: var(--dark-text);
+}
+
+body.dark #history-table td {
+  border-bottom-color: #444;
+}
+
+body.dark #history-table tr:hover {
+  background: #2a2a2a;
+}
+
+body.dark .renew-plan {
+  border-color: #444;
+  background: #2a2a2a;
+}
+
+body.dark .renew-plan:hover {
+  border-color: var(--dark-mode-green);
+}
+
+body.dark .renew-plan h3 {
+  color: var(--dark-text);
+}
+
+/* تصميم متجاوب */
+@media (max-width: 768px) {
+  .subscription-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .subscription-actions {
+    flex-direction: column;
+  }
+  
+  .renew-plans {
+    flex-direction: column;
+  }
+}

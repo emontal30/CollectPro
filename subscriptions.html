@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#007965" />
+  <title>الاشتراكات - CollectPro</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="logo-momkn.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="subscriptions.css" />
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1>الاشتراكات 💳</h1>
+  </header>
+
+  <main>
+    <section class="subscription-intro">
+      <h2>اختر خطة الاشتراك المناسبة لك</h2>
+      <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
+    </section>
+
+    <div class="plans-container">
+      <!-- الخطة الشهرية -->
+      <div class="plan-card">
+        <div class="plan-header">
+          <h3>خطة شهرية</h3>
+          <div class="plan-price">
+            <span class="currency">ج.م</span>
+            <span class="price">30</span>
+            <span class="period">/ شهر</span>
+          </div>
+        </div>
+        <div class="plan-features">
+          <ul>
+            <li><i class="fas fa-check"></i> الوصول الكامل للتطبيق</li>
+            <li><i class="fas fa-check"></i> تحديثات شهرية</li>
+            <li><i class="fas fa-check"></i> دعم فني أساسي</li>
+            <li><i class="fas fa-check"></i> تخزين البيانات السحابي</li>
+          </ul>
+        </div>
+        <div class="plan-footer">
+          <button class="select-plan-btn" data-plan="monthly" data-price="30">
+            اختر الخطة
+          </button>
+        </div>
+      </div>
+
+      <!-- الخطة المفضلة (3 شهور) -->
+      <div class="plan-card featured">
+        <div class="plan-badge">الأكثر شعبية</div>
+        <div class="plan-header">
+          <h3>خطة 3 شهور</h3>
+          <div class="plan-price">
+            <span class="currency">ج.م</span>
+            <span class="price">50</span>
+            <span class="period">/ 3 شهور</span>
+          </div>
+        </div>
+        <div class="plan-features">
+          <ul>
+            <li><i class="fas fa-check"></i> كل ميزات الخطة الشهرية</li>
+            <li><i class="fas fa-check"></i> توفير 40% مقارنة بالخطة الشهرية</li>
+            <li><i class="fas fa-check"></i> دعم فني متميز</li>
+            <li><i class="fas fa-check"></i> تقارير متقدمة</li>
+          </ul>
+        </div>
+        <div class="plan-footer">
+          <button class="select-plan-btn" data-plan="3-months" data-price="50">
+            اختر الخطة
+          </button>
+        </div>
+      </div>
+
+      <!-- الخطة السنوية -->
+      <div class="plan-card">
+        <div class="plan-header">
+          <h3>خطة سنوية</h3>
+          <div class="plan-price">
+            <span class="currency">ج.م</span>
+            <span class="price">360</span>
+            <span class="period">/ سنة</span>
+          </div>
+          <div class="plan-offer">+ شهر مجاني</div>
+        </div>
+        <div class="plan-features">
+          <ul>
+            <li><i class="fas fa-check"></i> كل ميزات الخطة المفضلة</li>
+            <li><i class="fas fa-check"></i> توفير 50% مقارنة بالخطة الشهرية</li>
+            <li><i class="fas fa-check"></i> شهر إضافي مجاني</li>
+            <li><i class="fas fa-check"></i> دعم فني على مدار الساعة</li>
+            <li><i class="fas fa-check"></i> جلسات تدريبية مجانية</li>
+          </ul>
+        </div>
+        <div class="plan-footer">
+          <button class="select-plan-btn" data-plan="yearly" data-price="360">
+            اختر الخطة
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section class="faq-section">
+      <h2>الأسئلة الشائعة</h2>
+      <div class="faq-container">
+        <div class="faq-item">
+          <div class="faq-question">
+            <h3>كيف يمكنني الدفع؟</h3>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="faq-answer">
+            <p>يمكنك الدفع عن طريق التحويل البنكي أو المحافظ الإلكترونية. بعد اختيار الخطة، سيتم توجيهك لصفحة الدفع لإدخال بيانات التحويل.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            <h3>هل يمكنني إلغاء اشتراكي؟</h3>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="faq-answer">
+            <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال صفحة إدارة اشتراكي. لن يتم تجديد الاشتراك تلقائياً.</p>
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            <h3>ماذا يحدث بعد انتهاء الاشتراك؟</h3>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="faq-answer">
+            <p>بعد انتهاء الاشتراك، ستحتفظ ببياناتك لمدة 30 يوماً. يمكنك تجديد الاشتراك في أي وقت خلال هذه الفترة.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
+  <script src="subscriptions.js"></script>
+  <!-- تم تعطيل Service Worker مؤقتاً لتجنب الخطأ عند التشغيل المحلي -->
+  <!-- <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(registration) {
+          console.log('Service Worker registered successfully:', registration.scope);
+        })
+        .catch(function(error) {
+          console.log('Service Worker registration failed:', error);
+        });
+    }
+  </script> -->
+  </script>
+</body>
+</html>
