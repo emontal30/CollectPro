@@ -1,10 +1,51 @@
 // استدعاء مكتبة Supabase
 const { createClient } = require('@supabase/supabase-js');
 
-// إنشاء عميل Supabase
+// إعدادات إعادة المحاولة
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 5000,
+};
+
+// دالة إعادة المحاولة مع backoff أسي
+async function retryOperation(operation, config = RETRY_CONFIG) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < config.maxRetries && (error.code === 'PGRST301' || error.message?.includes('timeout'))) {
+        const delay = Math.min(config.baseDelay * Math.pow(2, attempt), config.maxDelay);
+        console.warn(`Database operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${config.maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+// إنشاء عميل Supabase مع إعدادات محسنة
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: false
+    },
+    global: {
+      headers: {
+        'x-application-name': 'collectpro-api'
+      }
+    }
+  }
 );
 
 // المعالج الأساسي
@@ -61,7 +102,17 @@ async function handleLogin(req, res) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return res.status(401).json({ success: false, message: error.message });
 
-    const { data: userData } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+    // استخدام إعادة المحاولة لجلب بيانات المستخدم
+    const userData = await retryOperation(async () => {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError) throw userError;
+      return userData;
+    });
 
     return res.status(200).json({
       success: true,
@@ -101,14 +152,19 @@ async function handleRegister(req, res) {
     if (error) return res.status(400).json({ success: false, message: error.message });
 
     if (data.user) {
-      await supabase.from('users').insert([{
-        id: data.user.id,
-        email: data.user.email,
-        full_name: fullName || '',
-        phone: phone || '',
-        is_verified: false,
-        is_admin: false
-      }]);
+      // استخدام إعادة المحاولة لإدراج بيانات المستخدم
+      await retryOperation(async () => {
+        const { error: insertError } = await supabase.from('users').insert([{
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName || '',
+          phone: phone || '',
+          is_verified: false,
+          is_admin: false
+        }]);
+
+        if (insertError) throw insertError;
+      });
     }
 
     return res.status(201).json({

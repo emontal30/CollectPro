@@ -944,12 +944,21 @@ function enhanceTableExperience() {
   });
 }
 /* ========== DOM Ready ========== */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // التحقق من صلاحية الوصول للصفحة
+  if (window.auth && typeof window.auth.checkPageAccess === 'function') {
+    const hasAccess = await window.auth.checkPageAccess();
+    if (!hasAccess) {
+      // التحقق من الوصول فشل، تم توجيه المستخدم بالفعل
+      return;
+    }
+  }
+
   // إضافة انتقال سلس للصفحة
   setTimeout(() => {
     document.body.classList.add("loaded");
   }, 100);
-  
+
   applyDarkModeFromStorage();
   
   const toggleDarkBtn = document.getElementById("toggleDark");

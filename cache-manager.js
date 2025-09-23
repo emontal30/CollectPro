@@ -1,11 +1,13 @@
-// ========== مدير التخزين المؤقت ========== //
+// ========== مدير التخزين المؤقت المحسن ========== //
 
-// التخزين المؤقت للبيانات
+// التخزين المؤقت للبيانات مع دعم CDN
 class CacheManager {
   constructor() {
     this.cache = new Map();
     this.config = window.AppConfig?.app?.performance || {};
     this.cacheTimeout = this.config.cacheTimeout || 300000; // 5 دقائق افتراضيًا
+    this.cdnUrl = process.env.CDN_URL || '';
+    this.maxCacheSize = this.config.maxCacheSize || 100; // الحد الأقصى لعدد العناصر
   }
 
   // إنشاء مفتاح للتخزين المؤقت
@@ -46,6 +48,7 @@ class CacheManager {
     const entry = this.cache.get(key);
 
     if (entry && this.isCacheValid(entry)) {
+      this.updateAccessStats(key);
       return entry.data;
     }
 
@@ -56,10 +59,75 @@ class CacheManager {
   set(endpoint, params, data) {
     const key = this.generateCacheKey(endpoint, params);
 
+    // إدارة حجم التخزين المؤقت
+    if (this.cache.size >= this.maxCacheSize) {
+      this.evictOldEntries();
+    }
+
     this.cache.set(key, {
       data: data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      accessCount: 0,
+      lastAccessed: Date.now()
     });
+  }
+
+  // تحديث إحصائيات الوصول
+  updateAccessStats(key) {
+    const entry = this.cache.get(key);
+    if (entry) {
+      entry.accessCount = (entry.accessCount || 0) + 1;
+      entry.lastAccessed = Date.now();
+    }
+  }
+
+  // إزالة العناصر القديمة (LRU)
+  evictOldEntries() {
+    const entries = Array.from(this.cache.entries());
+    entries.sort((a, b) => {
+      const aScore = (a[1].accessCount || 0) + (Date.now() - a[1].lastAccessed) / 1000;
+      const bScore = (b[1].accessCount || 0) + (Date.now() - b[1].lastAccessed) / 1000;
+      return aScore - bScore;
+    });
+
+    const toRemove = entries.slice(0, Math.floor(this.maxCacheSize * 0.2)); // إزالة 20%
+    toRemove.forEach(([key]) => this.cache.delete(key));
+  }
+
+  // الحصول على رابط CDN
+  getCdnUrl(path) {
+    if (!this.cdnUrl) return path;
+    return `${this.cdnUrl}${path}`;
+  }
+
+  // تحميل المورد مع التخزين المؤقت
+  async loadResource(url, options = {}) {
+    const cacheKey = `resource_${this.hashString(url)}`;
+    const cached = this.cache.get(cacheKey);
+
+    if (cached && this.isCacheValid(cached)) {
+      this.updateAccessStats(cacheKey);
+      return cached.data;
+    }
+
+    try {
+      const response = await fetch(this.getCdnUrl(url), {
+        ...options,
+        headers: {
+          'Cache-Control': 'public, max-age=3600',
+          ...options.headers
+        }
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+      this.set(cacheKey, {}, data);
+      return data;
+    } catch (error) {
+      console.error('فشل تحميل المورد:', error);
+      throw error;
+    }
   }
 
   // مسح التخزين المؤقت

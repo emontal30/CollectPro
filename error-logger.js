@@ -1,14 +1,59 @@
-// ========== وحدة تسجيل الأخطاء ========== //
+// ========== وحدة تسجيل الأخطاء الآمنة ========== //
 
-// تسجيل خطأ
+// خريطة لتتبع معدل الأخطاء (لمنع الإساءة)
+const errorRateMap = new Map();
+const MAX_ERRORS_PER_MINUTE = 10;
+
+// تسجيل خطأ مع التحقق من المدخلات ومعدل التكرار
 async function logError(error, context = {}) {
   try {
+    // التحقق من وجود خطأ صالح
+    if (!error || (typeof error !== 'object' && typeof error !== 'string')) {
+      console.warn('تسجيل الخطأ: تم استدعاء الدالة بمدخلات غير صالحة');
+      return;
+    }
+
+    // تطبيق معدل الحد الأقصى للأخطاء
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    
+    // تنظيف الأخطاء القديمة
+    errorRateMap.forEach((timestamps, key) => {
+      const recent = timestamps.filter(t => t > oneMinuteAgo);
+      if (recent.length > 0) {
+        errorRateMap.set(key, recent);
+      } else {
+        errorRateMap.delete(key);
+      }
+    });
+
+    // إنشاء مفتاح فريد للخطأ
+    const errorKey = error.message ?
+                    `${error.message.substring(0, 50)}_${window.location.pathname}` :
+                    'unknown_error';
+    
+    // التحقق من تجاوز الحد المسموح
+    const errorTimestamps = errorRateMap.get(errorKey) || [];
+    if (errorTimestamps.length >= MAX_ERRORS_PER_MINUTE) {
+      console.warn(`تم تجاوز الحد الأقصى لتسجيل الأخطاء لنوع: ${errorKey}`);
+      return;
+    }
+    errorRateMap.set(errorKey, [...errorTimestamps, now]);
+
     const config = window.AppConfig || {};
     const supabaseUrl = config.supabase?.url;
     const supabaseAnonKey = config.supabase?.anonKey;
 
+    // التحقق من إعدادات Supabase
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('إعدادات Supabase غير مكتملة لتسجيل الأخطاء');
+      
+      // تسجيل بديل في وحدة التحكم مع تفاصيل إضافية
+      console.error('تفاصيل الخطأ:', {
+        message: error.message || String(error),
+        stack: error.stack || '',
+        context
+      });
       return;
     }
 

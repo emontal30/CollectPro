@@ -317,24 +317,158 @@ class AssetLoader {
   }
 }
 
+// إدارة تحميل الموارد المسبق
+class ResourcePreloader {
+  constructor() {
+    this.preloaded = new Set();
+    this.criticalResources = [
+      '/css/style.css',
+      '/js/script.js',
+      '/js/sidebar.js',
+      '/js/auth.js'
+    ];
+    this.nonCriticalResources = [
+      '/css/admin.css',
+      '/css/login.css',
+      '/css/payment.css',
+      '/css/subscriptions.css'
+    ];
+  }
+
+  // تحميل الموارد الحرجة
+  preloadCritical() {
+    this.criticalResources.forEach(resource => {
+      this.preloadResource(resource, 'high');
+    });
+  }
+
+  // تحميل الموارد غير الحرجة
+  preloadNonCritical() {
+    setTimeout(() => {
+      this.nonCriticalResources.forEach(resource => {
+        this.preloadResource(resource, 'low');
+      });
+    }, 2000);
+  }
+
+  // تحميل مورد معين
+  preloadResource(url, priority = 'auto') {
+    if (this.preloaded.has(url)) return;
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+
+    // تحديد نوع المورد
+    const extension = url.split('.').pop().toLowerCase();
+    switch (extension) {
+      case 'css':
+        link.as = 'style';
+        break;
+      case 'js':
+      case 'mjs':
+        link.as = 'script';
+        break;
+      case 'woff2':
+      case 'woff':
+        link.as = 'font';
+        link.crossOrigin = 'anonymous';
+        break;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'webp':
+      case 'avif':
+        link.as = 'image';
+        break;
+      default:
+        link.as = 'fetch';
+    }
+
+    link.href = this.getCdnUrl(url);
+    link.fetchPriority = priority;
+
+    // إضافة إلى DOM
+    document.head.appendChild(link);
+    this.preloaded.add(url);
+
+    // تتبع التحميل
+    link.onload = () => {
+      if (window.PerformanceMonitor?.eventTracker) {
+        window.PerformanceMonitor.eventTracker.trackEvent('resource_preloaded', {
+          url,
+          priority,
+          type: link.as
+        });
+      }
+    };
+
+    link.onerror = () => {
+      console.warn(`فشل تحميل المورد المسبق: ${url}`);
+    };
+  }
+
+  // الحصول على رابط CDN
+  getCdnUrl(url) {
+    const config = window.AppConfig?.hosting || {};
+    if (config.cdnEnabled && config.domain) {
+      return `${config.domain}${url}`;
+    }
+    return url;
+  }
+
+  // تحميل الموارد بناءً على الصفحة الحالية
+  preloadPageResources() {
+    const path = window.location.pathname;
+
+    // موارد خاصة بكل صفحة
+    const pageResources = {
+      '/': ['/js/login.js'],
+      '/login': ['/js/login.js'],
+      '/register': ['/js/login.js'],
+      '/dashboard': ['/js/script.js', '/js/sidebar.js'],
+      '/admin': ['/js/admin.js', '/css/admin.css'],
+      '/subscriptions': ['/js/subscriptions.js', '/css/subscriptions.css'],
+      '/payment': ['/js/payment.js', '/css/payment.css'],
+      '/harvest': ['/js/harvest.js', '/css/harvest.css']
+    };
+
+    const resources = pageResources[path];
+    if (resources) {
+      resources.forEach(resource => {
+        this.preloadResource(resource, 'high');
+      });
+    }
+  }
+}
+
 // إنشاء مثيلات من الفئات
 const lazyLoader = new LazyLoader();
 const imageOptimizer = new ImageOptimizer();
 const assetCache = new AssetCache();
 const assetLoader = new AssetLoader();
+const resourcePreloader = new ResourcePreloader();
 
 // تصدير وحدة تحسين الأصول
 window.AssetOptimizer = {
   lazyLoader,
   imageOptimizer,
   assetCache,
-  assetLoader
+  assetLoader,
+  resourcePreloader
 };
 
 // تهيئة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
+  // تحميل الموارد الحرجة مسبقًا
+  resourcePreloader.preloadCritical();
+
+  // تحميل موارد الصفحة الحالية
+  resourcePreloader.preloadPageResources();
+
   // تحميل الأصول غير الأساسية بشكل كسول
   setTimeout(() => {
+    resourcePreloader.preloadNonCritical();
+
     const nonCriticalAssets = [
       '/css/admin.css',
       '/css/login.css',

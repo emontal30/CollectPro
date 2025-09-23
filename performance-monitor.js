@@ -141,10 +141,29 @@ class PerformanceMonitor {
     }
   }
 
-  // تسجيل خطأ في الأداء
+  // تسجيل خطأ في الأداء مع تكامل محسن
   async logPerformanceError(metric, value, threshold, context = {}) {
     const error = new Error(`مشكلة في الأداء: ${metric}`);
-    await logPerformanceError(metric, value, threshold, context);
+
+    // تسجيل في نظام تسجيل الأخطاء
+    if (window.ErrorLogger) {
+      await window.ErrorLogger.logPerformanceError(metric, value, threshold);
+    }
+
+    // إرسال إشعار للمطورين إذا كان الخطأ خطيرًا
+    if (value > threshold * 2) {
+      console.warn(`🚨 أداء حرج: ${metric} = ${value} (عتبة: ${threshold})`, context);
+    }
+
+    // تتبع الحدث
+    if (window.PerformanceMonitor?.eventTracker) {
+      window.PerformanceMonitor.eventTracker.trackEvent('performance_error', {
+        metric,
+        value,
+        threshold,
+        context
+      });
+    }
   }
 
   // الحصول على إحصائيات الأداء

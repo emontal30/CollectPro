@@ -40,7 +40,47 @@ app.use(express.static(path.join(__dirname)));
 const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL || 'https://altnvsolaqphpndyztup.supabase.co';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-G';
-const supabase = createClient(supabaseUrl, supabaseKey);
+
+// إعدادات إعادة المحاولة
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000, // 1 ثانية
+  maxDelay: 10000, // 10 ثوانٍ
+};
+
+// دالة إعادة المحاولة مع backoff أسي
+async function retryOperation(operation, config = RETRY_CONFIG) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < config.maxRetries) {
+        const delay = Math.min(config.baseDelay * Math.pow(2, attempt), config.maxDelay);
+        console.warn(`Operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${config.maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+// إنشاء عميل Supabase مع إعدادات محسنة
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: false
+  },
+  global: {
+    headers: {
+      'x-application-name': 'collectpro-server'
+    }
+  }
+});
 
 // جعل Supabase متاحاً عالمياً في بيئة الخادم
 global.supabase = supabase;
@@ -86,7 +126,7 @@ fs.readdirSync(apiPath).forEach(file => {
               res.setHeader(name, value);
               return vercelRes;
             },
-            // إضافة دالة لإرسال رسائل الخطأ
+            // إضافة دالة لإرسال رسائل الخطأ مع إعادة المحاولة
             sendError: (statusCode, message, error = null) => {
               const response = {
                 success: false,
@@ -103,7 +143,11 @@ fs.readdirSync(apiPath).forEach(file => {
             }
           };
 
-          await apiModule.default(vercelReq, vercelRes);
+          // استخدام آلية إعادة المحاولة للعمليات الحساسة
+          await retryOperation(async () => {
+            await apiModule.default(vercelReq, vercelRes);
+          });
+
         } catch (error) {
           console.error(`API Error in ${routePath}:`, error);
 

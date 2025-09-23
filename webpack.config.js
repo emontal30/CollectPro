@@ -6,8 +6,10 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const CompressionPlugin = require('compression-webpack-plugin');
 const webpack = require('webpack');
+const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const cdnUrl = process.env.CDN_URL || '';
 
 module.exports = {
   mode: isDevelopment ? 'development' : 'production',
@@ -38,7 +40,8 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: ['@babel/preset-env'],
+            cacheDirectory: true,
           }
         }
       },
@@ -46,7 +49,12 @@ module.exports = {
         test: /\.css$/,
         use: [
           isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
-          'css-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: false,
+            }
+          },
           {
             loader: 'postcss-loader',
             options: {
@@ -63,14 +71,16 @@ module.exports = {
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource',
         generator: {
-          filename: 'images/[name].[hash][ext]'
+          filename: cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]',
+          publicPath: cdnUrl ? `${cdnUrl}/` : undefined,
         }
       },
       {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
         type: 'asset/resource',
         generator: {
-          filename: 'fonts/[name].[hash][ext]'
+          filename: cdnUrl ? `${cdnUrl}/fonts/[name].[hash][ext]` : 'fonts/[name].[hash][ext]',
+          publicPath: cdnUrl ? `${cdnUrl}/` : undefined,
         }
       },
     ],
@@ -82,32 +92,38 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
-      chunks: ['main']
+      chunks: ['main'],
+      preload: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './login.html',
       filename: 'login.html',
-      chunks: ['login']
+      chunks: ['login'],
+      preload: ['login']
     }),
     new HtmlWebpackPlugin({
       template: './admin.html',
       filename: 'admin.html',
-      chunks: ['admin']
+      chunks: ['admin'],
+      preload: ['admin']
     }),
     new HtmlWebpackPlugin({
       template: './my-subscription.html',
       filename: 'my-subscription.html',
-      chunks: ['my-subscription']
+      chunks: ['my-subscription'],
+      preload: ['my-subscription']
     }),
     new HtmlWebpackPlugin({
       template: './payment.html',
       filename: 'payment.html',
-      chunks: ['payment']
+      chunks: ['payment'],
+      preload: ['payment']
     }),
     new HtmlWebpackPlugin({
       template: './subscriptions.html',
       filename: 'subscriptions.html',
-      chunks: ['subscriptions']
+      chunks: ['subscriptions'],
+      preload: ['subscriptions']
     }),
     new HtmlWebpackPlugin({
       template: './reset-password.html',
@@ -121,6 +137,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+      'process.env.CDN_URL': JSON.stringify(cdnUrl),
     }),
     !isDevelopment && new BundleAnalyzerPlugin({
       analyzerMode: 'static',
@@ -131,6 +148,19 @@ module.exports = {
       test: /\.(js|css|html|svg)$/,
       threshold: 10240,
       minRatio: 0.8,
+    }),
+    !isDevelopment && new ImageMinimizerPlugin({
+      minimizer: {
+        implementation: ImageMinimizerPlugin.imageminMinify,
+        options: {
+          plugins: [
+            ['mozjpeg', { quality: 75 }],
+            ['pngquant', { quality: [0.65, 0.90], speed: 4 }],
+            ['gifsicle', { interlaced: false }],
+            ['svgo', { plugins: [{ removeViewBox: false }] }],
+          ],
+        },
+      },
     }),
   ].filter(Boolean),
   optimization: {
@@ -155,6 +185,13 @@ module.exports = {
           name: 'vendors',
           chunks: 'all',
           priority: 10,
+          enforce: true,
+        },
+        supabase: {
+          test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+          name: 'supabase',
+          chunks: 'all',
+          priority: 15,
         },
         common: {
           name: 'common',
@@ -174,6 +211,12 @@ module.exports = {
     runtimeChunk: 'single',
     moduleIds: 'deterministic',
     chunkIds: 'deterministic',
+  },
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
+    },
   },
   performance: {
     hints: isDevelopment ? false : 'warning',
