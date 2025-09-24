@@ -20,7 +20,7 @@
     },
     {
       "source": "/dashboard",
-      "destination": "/index.html"
+      "destination": "/dashboard.html"
     },
     {
       "source": "/admin",
@@ -51,6 +51,9 @@
       "destination": "/api/$1"
     }
   ],
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "env": {
     "NODE_ENV": "production"
   },

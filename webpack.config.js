@@ -7,6 +7,7 @@ const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const CompressionPlugin = require('compression-webpack-plugin');
 const webpack = require('webpack');
 const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const cdnUrl = process.env.CDN_URL || '';
@@ -161,6 +162,16 @@ module.exports = {
           ],
         },
       },
+    }),
+    new CopyPlugin({
+      patterns: [
+        { from: '*.html', to: '[name][ext]' },
+        { from: '*.css', to: '[name][ext]' },
+        { from: '*.js', to: '[name][ext]' },
+        { from: '*.png', to: '[name][ext]' },
+        { from: '*.json', to: '[name][ext]' },
+        { from: 'dist/_redirects', to: '_redirects' },
+      ],
     }),
   ].filter(Boolean),
   optimization: {

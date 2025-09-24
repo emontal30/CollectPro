@@ -4,52 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#007965" />
-  <title>إدخال البيانات</title>
-  <!-- تم تعطيل ملف manifest.json مؤقتاً لتجنب خطأ CORS عند التطوير المحلي -->
-  <!-- <link rel="manifest" href="manifest.json" /> -->
-  <link rel="apple-touch-icon" href="logo-momkn.png" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="style.css" />
-  <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
+  <title>CollectPro - إعادة توجيه...</title>
+  <meta http-equiv="refresh" content="0; url=/login.html" />
+  <script>
+    // إعادة توجيه فورية باستخدام JavaScript كبديل
+    window.location.href = '/login.html';
+  </script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #007965;
+      color: white;
+    }
+    .loading {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1> إدخال البيانات 📝</h1>
-  </header>
-  <main>
-    <textarea id="dataInput" placeholder="ألصق البيانات هنا..."></textarea>
-    <div class="buttons">
-      <button id="pasteBtn" class="btn-primary">📋 لصق البيانات</button>
-      <button id="saveGoBtn" class="btn-success">💾 حفظ وانتقال لصفحة التحصيل</button>
-      <button id="clearBtn" class="btn-danger">🗑️ مسح البيانات</button>
-    </div>
-  </main>
-  
-  <!-- شريط التنقل السفلي -->
-  <nav class="bottom-nav">
-    <button id="prevPage" class="nav-btn bottom-nav-btn hidden">
-      <span class="nav-icon">←</span>
-    </button>
-    <div class="nav-spacer"></div>
-    <button id="nextPage" class="nav-btn bottom-nav-btn">
-      <span class="nav-icon">→</span>
-    </button>
-  </nav>
-  
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-  <script src="config.js"></script>
-  <script src="auth.js"></script>
-  <script src="sidebar.js"></script>
-  <script src="script.js"></script>
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #007965, #00a085); color: white; font-family: 'Cairo', sans-serif;">
+    <div class="loading">جاري تحميل CollectPro...</div>
+    <div class="spinner"></div>
+    <p style="margin-top: 20px; opacity: 0.8;">سيتم توجيهك إلى صفحة تسجيل الدخول</p>
+  </div>
 </body>
 </html>
