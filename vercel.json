@@ -45,10 +45,6 @@
     {
       "source": "/archive",
       "destination": "/archive.html"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
     }
   ],
   "buildCommand": "npm run vercel-build",

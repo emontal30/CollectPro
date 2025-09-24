@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#007965" />
   <title>إدخال البيانات - CollectPro</title>
-  <!-- تم تعطيل ملف manifest.json مؤقتاً لتجنب خطأ CORS عند التطوير المحلي -->
-  <!-- <link rel="manifest" href="manifest.json" /> -->
+  <!-- تم تفعيل ملف manifest.json لدعم خصائص PWA -->
+  <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="logo-momkn.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="sidebar.css" />
@@ -51,5 +51,13 @@
   <script src="auth.js"></script>
   <script src="sidebar.js"></script>
   <script src="script.js"></script>
+  <script>
+    // تسجيل Service Worker لدعم خصائص PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered:', reg))
+        .catch(err => console.error('Service Worker registration failed:', err));
+    }
+  </script>
 </body>
 </html>

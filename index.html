@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#007965" />
   <title>CollectPro - إعادة توجيه...</title>
-  <meta http-equiv="refresh" content="0; url=/login.html" />
+  <meta http-equiv="refresh" content="0; url=login.html" />
   <script>
     // إعادة توجيه فورية باستخدام JavaScript كبديل
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
   </script>
   <style>
     body {
@@ -36,6 +36,7 @@
       100% { transform: rotate(360deg); }
     }
   </style>
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
   <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #007965, #00a085); color: white; font-family: 'Cairo', sans-serif;">
@@ -43,5 +44,13 @@
     <div class="spinner"></div>
     <p style="margin-top: 20px; opacity: 0.8;">سيتم توجيهك إلى صفحة تسجيل الدخول</p>
   </div>
+  <script>
+    // تسجيل Service Worker لدعم خصائص PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered:', reg))
+        .catch(err => console.error('Service Worker registration failed:', err));
+    }
+  </script>
 </body>
 </html>
