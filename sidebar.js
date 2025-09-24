@@ -1,244 +1,193 @@
-// Sidebar: modern slide-in with user info, nav, subscription meta, and logout
-// Reads user from localStorage/sessionStorage ('user') and subscription from localStorage ('subscriptionSummary')
-(function () {
-  const PAGES = [
-    { href: 'index.html', icon: 'fa-home', label: 'ادخال البيانات' },
-    { href: 'harvest.html', icon: 'fa-hand-holding-usd', label: 'التحصيل' },
-    { href: 'archive.html', icon: 'fa-archive', label: 'الأرشيف' },
-    { href: 'subscriptions.html', icon: 'fa-tags', label: 'الاشتراكات' },
-    { href: 'my-subscription.html', icon: 'fa-id-card', label: 'اشتراكي' },
-    { href: 'admin.html', icon: 'fa-user-shield', label: 'لوحة التحكم' }
-  ];
+// إدارة الشريط الجانبي
+const sidebar = {
+  /**
+   * تهيئة الشريط الجانبي
+   */
+  init: function () {
+    // التحقق مما إذا كان الشريط الجانبي موجود في الصفحة
+    const sidebarElement = document.querySelector('.sidebar');
+    if (!sidebarElement) return;
 
-  // Create toggle button
-  function ensureToggleButton() {
-    if (document.querySelector('.sidebar-toggle')) return;
-    const btn = document.createElement('button');
-    btn.className = 'sidebar-toggle';
-    btn.innerHTML = '<i class="fas fa-bars"></i><span>القائمة</span>';
-    btn.addEventListener('click', () => {
-      const sb = document.querySelector('.sidebar');
-      if (!sb) return;
-      const willOpen = !sb.classList.contains('open');
-      sb.classList.toggle('open');
-      document.body.classList.toggle('sidebar-open', willOpen);
-    });
-    document.body.appendChild(btn);
-  }
+    // إضافة مستمعي الأحداث
+    this.setupEventListeners();
 
-  // Create sidebar structure
-  function createSidebar() {
-    if (document.querySelector('.sidebar')) return;
+    // تحديث معلومات المستخدم
+    this.updateUserInfo();
 
-    const sidebar = document.createElement('aside');
-    sidebar.className = 'sidebar';
+    // تمييز العنصر النشط في القائمة
+    this.highlightActiveMenuItem();
 
-    sidebar.innerHTML = `
-      <div class="sidebar-header">
-        <div class="user-box">
-          <div class="user-avatar" id="sb-avatar">U</div>
-          <div class="user-meta">
-            <div class="user-name" id="sb-name">غير مسجل</div>
-            <div class="user-id" id="sb-id">ID: -</div>
-          </div>
-        </div>
-      </div>
-      <div class="sidebar-content">
-        <ul class="nav-links" id="sb-links"></ul>
-      </div>
-      <div class="sidebar-footer">
-        <div class="sub-meta"><span>نوع الاشتراك:</span><span class="value" id="sb-sub-type">-</span></div>
-        <div class="sub-meta"><span>ينتهي في:</span><span class="value" id="sb-sub-exp">-</span></div>
-        <button class="logout-btn" id="sb-logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-      </div>
-    `;
+    // تحديث مؤشرات الإشعارات
+    this.updateNotificationBadges();
 
-    document.body.appendChild(sidebar);
-  }
+    // التحقق من صلاحية الجلسة
+    this.checkSessionExpiry();
+  },
 
-  // Read user from storage
-  function readUser() {
-    try {
-      const ls = localStorage.getItem('user');
-      const ss = sessionStorage.getItem('user');
-      const raw = ls || ss;
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
-  }
-
-  // Populate header with user data
-  function populateUser(user) {
-    const nameEl = document.getElementById('sb-name');
-    const idEl = document.getElementById('sb-id');
-    const avatarEl = document.getElementById('sb-avatar');
-    if (!nameEl || !idEl || !avatarEl) return;
-
-    if (user) {
-      const name = user.name || user.email || 'مستخدم';
-      const id = user.id ?? '-';
-      nameEl.textContent = name;
-      idEl.textContent = `ID: ${id}`;
-      const initials = String(name).trim().charAt(0).toUpperCase() || 'U';
-      avatarEl.textContent = initials;
-    } else {
-      nameEl.textContent = 'غير مسجل';
-      idEl.textContent = 'ID: -';
-      avatarEl.textContent = 'U';
+  /**
+   * إعداد مستمعي الأحداث للشريط الجانبي
+   */
+  setupEventListeners: function () {
+    // زر توسيع/طي الشريط الجانبي
+    const toggleButton = document.getElementById('sidebar-toggle');
+    if (toggleButton) {
+      toggleButton.addEventListener('click', () => this.toggleSidebar());
     }
-  }
 
-  // Build nav links
-  function buildNav() {
-    const ul = document.getElementById('sb-links');
-    if (!ul) return;
-    ul.innerHTML = '';
-    const current = window.location.pathname.split('/').pop() || 'index.html';
-    PAGES.forEach(p => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = p.href;
-      a.innerHTML = `<i class="fas ${p.icon}"></i><span>${p.label}</span>`;
-      if (current === p.href) a.classList.add('active');
-      li.appendChild(a);
-      ul.appendChild(li);
-    });
-  }
-
-  // Subscription summary from local storage (fallback). This can be updated by pages that fetch Supabase.
-  function readSubscriptionSummary() {
-    try {
-      const raw = localStorage.getItem('subscriptionSummary');
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
-  }
-
-  function populateSubscription(summary) {
-    const typeEl = document.getElementById('sb-sub-type');
-    const expEl = document.getElementById('sb-sub-exp');
-    if (!typeEl || !expEl) return;
-
-    if (summary) {
-      typeEl.textContent = summary.planName || summary.plan || '-';
-      expEl.textContent = summary.endDate || '-';
-    } else {
-      typeEl.textContent = '-';
-      expEl.textContent = '-';
+    // زر تبديل الوضع المظلم
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    if (darkModeToggle) {
+      darkModeToggle.addEventListener('click', () => this.toggleDarkMode());
     }
-  }
 
-  // Logout logic: clear storages and go to login
-  function setupLogout() {
-    const btn = document.getElementById('sb-logout');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      // طلب تأكيد من المستخدم قبل تسجيل الخروج
-      if (confirm('هل أنت متأكد أنك تريد تسجيل الخروج؟')) {
-        try { localStorage.removeItem('user'); } catch (e) {}
-        try { sessionStorage.removeItem('user'); } catch (e) {}
-        window.location.href = 'login.html';
+    // زر تسجيل الخروج
+    const logoutButton = document.getElementById('logout-btn');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', () => this.handleLogout());
+    }
+
+    // قائمة التنقل الرئيسية
+    const menuLinks = document.querySelectorAll('.sidebar-menu a');
+    menuLinks.forEach(link => {
+      link.addEventListener('click', (e) => this.handleMenuItemClick(e, link));
+    });
+  },
+
+  /**
+   * تبديل حالة الشريط الجانبي (مطوي/موسع)
+   */
+  toggleSidebar: function () {
+    const body = document.body;
+    body.classList.toggle('sidebar-collapsed');
+    
+    // حفظ حالة الشريط الجانبي في التخزين المحلي
+    const isCollapsed = body.classList.contains('sidebar-collapsed');
+    localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
+  },
+
+  /**
+   * تبديل الوضع المظلم
+   */
+  toggleDarkMode: function () {
+    const body = document.body;
+    body.classList.toggle('dark');
+    
+    // حفظ تفضيل الوضع المظلم
+    const isDarkMode = body.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode ? 'on' : 'off');
+  },
+
+  /**
+   * معالجة النقر على عناصر القائمة
+   */
+  handleMenuItemClick: function (event, link) {
+    // إزالة الفئة النشطة من جميع العناصر
+    document.querySelectorAll('.sidebar-menu a').forEach(item => {
+      item.classList.remove('active');
+    });
+    
+    // إضافة الفئة النشطة إلى العنصر المنقور
+    link.classList.add('active');
+  },
+
+  /**
+   * معالجة تسجيل الخروج
+   */
+  handleLogout: function () {
+    // استخدام وظيفة تسجيل الخروج من نظام المصادقة
+    if (window.auth && typeof window.auth.logout === 'function') {
+      window.auth.logout();
+      
+      // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
+      window.location.href = 'login.html';
+    }
+  },
+
+  /**
+   * تحديث معلومات المستخدم في الشريط الجانبي
+   */
+  updateUserInfo: function () {
+    if (!window.auth) return;
+
+    // الحصول على بيانات المستخدم
+    const user = window.auth.checkUserSession();
+    if (!user) return;
+
+    // تحديث اسم المستخدم
+    const nameElement = document.querySelector('.sidebar-user-name');
+    if (nameElement) {
+      nameElement.textContent = user.name || 'المستخدم';
+    }
+
+    // تحديث صورة المستخدم
+    const avatarElement = document.querySelector('.sidebar-user-avatar');
+    if (avatarElement && user.avatar) {
+      avatarElement.src = user.avatar;
+      avatarElement.alt = user.name;
+    }
+
+    // تحديث البريد الإلكتروني
+    const emailElement = document.querySelector('.sidebar-user-email');
+    if (emailElement) {
+      emailElement.textContent = user.email || '';
+    }
+  },
+
+  /**
+   * تمييز العنصر النشط في القائمة بناءً على الصفحة الحالية
+   */
+  highlightActiveMenuItem: function () {
+    // الحصول على اسم الصفحة الحالية
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // العثور على العنصر المطابق في القائمة
+    const menuItems = document.querySelectorAll('.sidebar-menu a');
+    menuItems.forEach(item => {
+      const href = item.getAttribute('href');
+      if (href === currentPage || href === `/${currentPage}`) {
+        item.classList.add('active');
       }
     });
-  }
+  },
 
-  // Expose small API so pages can update subscription info after fetching from Supabase
-  window.Sidebar = {
-    setSubscription(plan, endDate) {
-      const planNames = { 'monthly': 'شهري', '3-months': '3 شهور', 'yearly': 'سنوي' };
-      const summary = { plan, planName: planNames[plan] || plan, endDate };
-      try { localStorage.setItem('subscriptionSummary', JSON.stringify(summary)); } catch (e) {}
-      populateSubscription(summary);
+  /**
+   * تحديث مؤشرات الإشعارات
+   */
+  updateNotificationBadges: function () {
+    // يمكن تنفيذ هذا في المستقبل عند وجود نظام إشعارات
+  },
+
+  /**
+   * التحقق من صلاحية جلسة المستخدم
+   */
+  checkSessionExpiry: function () {
+    if (!window.auth) return;
+    
+    // الحصول على بيانات المستخدم
+    const user = window.auth.checkUserSession();
+    
+    // إذا لم تكن هناك جلسة نشطة وهذه ليست صفحة تسجيل الدخول، إعادة التوجيه
+    const isLoginPage = window.location.pathname.indexOf('login.html') !== -1;
+    if (!user && !isLoginPage) {
+      window.auth.redirectToLogin('session_expired');
     }
-  };
+  }
+};
 
-  // Init
-  function init() {
-    ensureToggleButton();
-    createSidebar();
-    populateUser(readUser());
-    buildNav();
-    populateSubscription(readSubscriptionSummary());
-    setupLogout();
+// تصدير كائن sidebar
+window.sidebar = sidebar;
 
-    // Gesture controls: open by swiping from right edge to left, close by swiping inside sidebar to the right
-    (function addGestureControls() {
-      const EDGE = 20; // px from right edge to start opening
-      const OPEN_THRESHOLD = 50; // horizontal px to trigger open
-      const CLOSE_THRESHOLD = 50; // horizontal px to trigger close
-
-      const isOpen = () => document.querySelector('.sidebar')?.classList.contains('open');
-      const openSidebar = () => { const sb = document.querySelector('.sidebar'); if (sb) { sb.classList.add('open'); document.body.classList.add('sidebar-open'); } };
-      const closeSidebar = () => { const sb = document.querySelector('.sidebar'); if (sb) { sb.classList.remove('open'); document.body.classList.remove('sidebar-open'); } };
-
-      // Touch gestures
-      let startX = null, startY = null, tracking = null;
-      function onTouchStart(e) {
-        if (!e.touches || !e.touches[0]) return;
-        const t = e.touches[0];
-        startX = t.clientX; startY = t.clientY;
-        const sb = document.querySelector('.sidebar');
-        const rect = sb ? sb.getBoundingClientRect() : { left: window.innerWidth, right: window.innerWidth };
-        if (!isOpen() && startX >= window.innerWidth - EDGE) {
-          tracking = 'open';
-        } else if (isOpen() && startX >= rect.left && startX <= rect.right) {
-          tracking = 'close';
-        } else {
-          tracking = null;
-        }
-      }
-      function onTouchMove(e) {
-        if (!tracking || !e.touches || !e.touches[0]) return;
-        const t = e.touches[0];
-        const dx = t.clientX - startX;
-        const dy = t.clientY - startY;
-        if (Math.abs(dx) < Math.abs(dy)) return; // ignore mostly vertical
-        if (tracking === 'open' && dx <= -OPEN_THRESHOLD) {
-          openSidebar();
-          tracking = null;
-        } else if (tracking === 'close' && dx >= CLOSE_THRESHOLD) {
-          closeSidebar();
-          tracking = null;
-        }
-      }
-      function onTouchEnd() { tracking = null; }
-
-      document.addEventListener('touchstart', onTouchStart, { passive: true });
-      document.addEventListener('touchmove', onTouchMove, { passive: true });
-      document.addEventListener('touchend', onTouchEnd, { passive: true });
-
-      // Mouse gestures (desktop)
-      let mStartX = null, mStartY = null, mTrack = null;
-      document.addEventListener('mousedown', (e) => {
-        mStartX = e.clientX; mStartY = e.clientY;
-        const sb = document.querySelector('.sidebar');
-        const rect = sb ? sb.getBoundingClientRect() : { left: window.innerWidth, right: window.innerWidth };
-        if (!isOpen() && mStartX >= window.innerWidth - EDGE) {
-          mTrack = 'open';
-        } else if (isOpen() && mStartX >= rect.left && mStartX <= rect.right) {
-          mTrack = 'close';
-        } else {
-          mTrack = null;
-        }
-      });
-      document.addEventListener('mousemove', (e) => {
-        if (!mTrack) return;
-        const dx = e.clientX - mStartX;
-        const dy = e.clientY - mStartY;
-        if (Math.abs(dx) < Math.abs(dy)) return;
-        if (mTrack === 'open' && dx <= -OPEN_THRESHOLD) {
-          openSidebar();
-          mTrack = null;
-        } else if (mTrack === 'close' && dx >= CLOSE_THRESHOLD) {
-          closeSidebar();
-          mTrack = null;
-        }
-      });
-      document.addEventListener('mouseup', () => { mTrack = null; });
-    })();
+// تهيئة الشريط الجانبي عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+  // تطبيق الوضع الليلي المحفوظ
+  const isDarkMode = localStorage.getItem("darkMode") === "on";
+  if (isDarkMode) {
+    document.body.classList.add("dark");
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  // تطبيق حالة طي الشريط الجانبي المحفوظة
+  const isSidebarCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+  if (isSidebarCollapsed) {
+    document.body.classList.add("sidebar-collapsed");
   }
-})();
+});
