@@ -93,48 +93,66 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
-      chunks: ['main'],
+      chunks: ['main', 'auth', 'sidebar'],
+      preload: ['main']
+    }),
+    new HtmlWebpackPlugin({
+      template: './dashboard.html',
+      filename: 'dashboard.html',
+      chunks: ['main', 'auth', 'sidebar'],
+      preload: ['main']
+    }),
+    new HtmlWebpackPlugin({
+      template: './harvest.html',
+      filename: 'harvest.html',
+      chunks: ['main', 'auth', 'sidebar'],
+      preload: ['main']
+    }),
+    new HtmlWebpackPlugin({
+      template: './archive.html',
+      filename: 'archive.html',
+      chunks: ['main', 'auth', 'sidebar'],
       preload: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './login.html',
       filename: 'login.html',
-      chunks: ['login'],
+      chunks: ['login', 'auth', 'sidebar'],
       preload: ['login']
     }),
     new HtmlWebpackPlugin({
       template: './admin.html',
       filename: 'admin.html',
-      chunks: ['admin'],
+      chunks: ['admin', 'auth', 'sidebar'],
       preload: ['admin']
     }),
     new HtmlWebpackPlugin({
       template: './my-subscription.html',
       filename: 'my-subscription.html',
-      chunks: ['my-subscription'],
+      chunks: ['my-subscription', 'auth', 'sidebar'],
       preload: ['my-subscription']
     }),
     new HtmlWebpackPlugin({
       template: './payment.html',
       filename: 'payment.html',
-      chunks: ['payment'],
+      chunks: ['payment', 'auth', 'sidebar'],
       preload: ['payment']
     }),
     new HtmlWebpackPlugin({
       template: './subscriptions.html',
       filename: 'subscriptions.html',
-      chunks: ['subscriptions'],
+      chunks: ['subscriptions', 'auth', 'sidebar'],
       preload: ['subscriptions']
     }),
     new HtmlWebpackPlugin({
       template: './reset-password.html',
       filename: 'reset-password.html',
-      chunks: []
+      chunks: ['login', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './register.html',
       filename: 'register.html',
-      chunks: []
+      chunks: ['login', 'auth', 'sidebar']
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
@@ -170,6 +188,15 @@ module.exports = {
         { from: '*.jpg', to: '[name][ext]' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
+        { from: 'sw.js', to: 'sw.js' },
+        { from: 'config.js', to: 'config.js' },
+        { from: 'auth.js', to: 'auth.js' },
+        { from: 'sidebar.js', to: 'sidebar.js' },
+        { from: 'login.js', to: 'login.js' },
+        { from: 'admin.js', to: 'admin.js' },
+        { from: 'script.js', to: 'script.js' },
+        { from: 'api-client.js', to: 'api-client.js' },
+        { from: 'supabase-loader.js', to: 'supabase-loader.js' },
       ],
     }),
   ].filter(Boolean),

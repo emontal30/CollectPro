@@ -37,8 +37,21 @@
     }
   </style>
   <link rel="manifest" href="manifest.json" />
+  <script src="config.js"></script>
+  <script src="supabase-loader.js"></script>
+  <script src="auth.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="script.js"></script>
 </head>
 <body>
+  <script>
+    // تسجيل Service Worker لدعم خصائص PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered:', reg))
+        .catch(err => console.error('Service Worker registration failed:', err));
+    }
+  </script>
   <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #007965, #00a085); color: white; font-family: 'Cairo', sans-serif;">
     <div class="loading">جاري تحميل CollectPro...</div>
     <div class="spinner"></div>
