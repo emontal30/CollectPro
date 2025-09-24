@@ -168,7 +168,6 @@ module.exports = {
         { from: '*.css', to: '[name][ext]' },
         { from: '*.png', to: '[name][ext]' },
         { from: '*.jpg', to: '[name][ext]' },
-        { from: '*.jpeg', to: '[name][ext]' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
       ],

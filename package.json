@@ -9,7 +9,7 @@
     "start": "npm run serve",
     "serve": "python -m http.server 8000",
     "vercel-build": "npm run build && npm run copy-static",
-    "copy-static": "mkdir -p dist && cp *.css *.png *.jpg *.jpeg *.json _redirects dist/ 2>/dev/null || echo 'Static files copied'",
+    "copy-static": "mkdir -p dist && cp *.css *.png *.jpg *.json _redirects dist/ 2>/dev/null || echo 'Static files copied'",
     "analyze": "NODE_ENV=production npx webpack --profile --json > stats.json && npx webpack-bundle-analyzer stats.json",
     "lint": "npx eslint src/**/*.js",
     "format": "npx prettier --write \"src/**/*.{js,css,html}\"",
