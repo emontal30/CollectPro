@@ -4,7 +4,6 @@ const STATIC_CACHE = 'collectpro-static-v1';
 const DYNAMIC_CACHE = 'collectpro-dynamic-v1';
 
 const STATIC_ASSETS = [
-  './',
   'index.html',
   'manifest.json',
   'public/logoapp.png',

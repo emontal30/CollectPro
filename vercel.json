@@ -5,6 +5,10 @@
   "outputDirectory": ".",
   "installCommand": null,
   "framework": null,
+  "functions": {
+    "src": "./api",
+    "runtime": "nodejs18.x"
+  },
   "rewrites": [
     {
       "source": "/((?!api/).*)",
