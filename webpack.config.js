@@ -6,7 +6,8 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
-const cdnUrl = process.env.CDN_URL || '';
+const isVercel = process.env.VERCEL === '1';
+const cdnUrl = process.env.CDN_URL || (isVercel ? '' : '');
 
 module.exports = {
   mode: isDevelopment ? 'development' : 'production',
@@ -26,7 +27,8 @@ module.exports = {
     filename: isDevelopment ? '[name].bundle.js' : '[name].[contenthash].bundle.js',
     path: path.resolve(__dirname, 'dist'),
     clean: true,
-    publicPath: '/',
+    // تعديل مهم لـ Vercel
+    publicPath: isVercel ? '' : '/',
     assetModuleFilename: 'assets/[hash][ext][query]',
   },
   module: {
@@ -68,16 +70,18 @@ module.exports = {
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource',
         generator: {
-          filename: cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]',
-          publicPath: cdnUrl ? `${cdnUrl}/` : undefined,
+          // تحسين معالجة الصور لـ Vercel
+          filename: isVercel ? 'images/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]'),
+          publicPath: isVercel ? '' : (cdnUrl ? `${cdnUrl}/` : ''),
         }
       },
       {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
         type: 'asset/resource',
         generator: {
-          filename: cdnUrl ? `${cdnUrl}/fonts/[name].[hash][ext]` : 'fonts/[name].[hash][ext]',
-          publicPath: cdnUrl ? `${cdnUrl}/` : undefined,
+          // تحسين معالجة الخطوط لـ Vercel
+          filename: isVercel ? 'fonts/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/fonts/[name].[hash][ext]` : 'fonts/[name].[hash][ext]'),
+          publicPath: isVercel ? '' : (cdnUrl ? `${cdnUrl}/` : ''),
         }
       },
     ],
@@ -89,7 +93,7 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
-      chunks: ['main', 'auth', 'sidebar']
+      chunks: ['main', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './login.html',
@@ -99,67 +103,58 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './dashboard.html',
       filename: 'dashboard.html',
-      chunks: ['main', 'auth', 'sidebar']
+      chunks: ['main', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './admin.html',
       filename: 'admin.html',
-      chunks: ['admin', 'auth', 'sidebar']
+      chunks: ['admin', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './harvest.html',
       filename: 'harvest.html',
-      chunks: ['main', 'auth', 'sidebar']
+      chunks: ['main', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './archive.html',
       filename: 'archive.html',
-      chunks: ['main', 'auth', 'sidebar']
+      chunks: ['main', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './my-subscription.html',
       filename: 'my-subscription.html',
-      chunks: ['my-subscription', 'auth', 'sidebar']
+      chunks: ['my-subscription', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './payment.html',
       filename: 'payment.html',
-      chunks: ['payment', 'auth', 'sidebar']
+      chunks: ['payment', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './subscriptions.html',
       filename: 'subscriptions.html',
-      chunks: ['subscriptions', 'auth', 'sidebar']
+      chunks: ['subscriptions', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './register.html',
       filename: 'register.html',
-      chunks: ['login', 'auth', 'sidebar']
+      chunks: ['login', 'config', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './reset-password.html',
       filename: 'reset-password.html',
-      chunks: ['login', 'auth', 'sidebar']
+      chunks: ['login', 'config', 'auth', 'sidebar']
     }),
     new CopyPlugin({
       patterns: [
+        // نسخ الملفات الثابتة فقط (ليس ملفات JS التي تتم معالجتها بالفعل)
         { from: '*.css', to: '[name][ext]' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
         { from: 'env.js', to: 'env.js' },
         { from: 'config.js', to: 'config.js' },
-        { from: 'auth.js', to: 'auth.js' },
-        { from: 'sidebar.js', to: 'sidebar.js' },
-        { from: 'login.js', to: 'login.js' },
-        { from: 'admin.js', to: 'admin.js' },
-        { from: 'script.js', to: 'script.js' },
-        { from: 'api-client.js', to: 'api-client.js' },
-        { from: 'supabase-loader.js', to: 'supabase-loader.js' },
-        { from: 'my-subscription.js', to: 'my-subscription.js' },
-        { from: 'payment.js', to: 'payment.js' },
-        { from: 'subscriptions.js', to: 'subscriptions.js' },
-        // نسخ ملفات الصور الموجودة فعلاً
+        // نسخ الصور فقط
         { from: 'logo-momkn.png', to: '[name][ext]' },
         { from: 'logo-tick.png', to: '[name][ext]' },
         { from: 'logoapp.png', to: '[name][ext]' },
@@ -193,6 +188,14 @@ module.exports = {
           name: 'supabase',
           chunks: 'all',
           priority: 15,
+        },
+        // إضافة مجموعة مشتركة للملفات المستخدمة في كل الصفحات
+        common: {
+          name: 'common',
+          minChunks: 2,
+          chunks: 'all',
+          priority: 5,
+          reuseExistingChunk: true
         }
       },
     },
@@ -218,5 +221,5 @@ module.exports = {
     open: true,
     historyApiFallback: true
   },
-  devtool: isDevelopment ? 'eval-source-map' : 'source-map',
+  devtool: isDevelopment ? 'eval-source-map' : (isVercel ? 'hidden-source-map' : 'source-map'),
 };

@@ -146,6 +146,12 @@ const auth = {
         return null;
       }
 
+      // التحقق من وجود دالة getConfig
+      if (typeof getConfig === 'undefined') {
+        console.error('دالة getConfig غير متوفرة. تأكد من تحميل config.js قبل auth.js');
+        return null;
+      }
+
       const supabaseUrl = getConfig('supabase.url');
       const supabaseKey = getConfig('supabase.anonKey');
 

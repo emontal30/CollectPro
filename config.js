@@ -1,5 +1,11 @@
 // إعدادات التطبيق
 // يمكن تحديث هذه القيم من متغيرات البيئة في ملف .env
+
+// التحقق من وجود دالة getEnv
+if (typeof getEnv === 'undefined') {
+  console.error('دالة getEnv غير متوفرة. تأكد من تحميل env.js قبل config.js');
+}
+
 const CONFIG = {
   // إعدادات Supabase - احصل عليها من https://supabase.com
   supabase: {
