@@ -70,9 +70,9 @@ module.exports = {
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource',
         generator: {
-          // تحسين معالجة الصور لـ Vercel
-          filename: isVercel ? 'images/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]'),
-          publicPath: isVercel ? '' : (cdnUrl ? `${cdnUrl}/` : ''),
+          // تحسين معالجة الصور لـ Vercel - وضع الصور في مجلد منفصل
+          filename: isVercel ? 'assets/images/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]'),
+          publicPath: isVercel ? '/assets/images/' : (cdnUrl ? `${cdnUrl}/` : '/'),
         }
       },
       {
@@ -153,12 +153,8 @@ module.exports = {
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
         { from: 'env.js', to: 'env.js' },
-        { from: 'config.js', to: 'config.js' },
-        // نسخ الصور فقط
-        { from: 'logo-momkn.png', to: '[name][ext]' },
-        { from: 'logo-tick.png', to: '[name][ext]' },
-        { from: 'logoapp.png', to: '[name][ext]' },
-        { from: 'logo-archive.png', to: '[name][ext]' }
+        { from: 'config.js', to: 'config.js' }
+        // تم إزالة نسخ الصور لأنها ستُعالج بواسطة asset/resource
       ]
     })
   ],

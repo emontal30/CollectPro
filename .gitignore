@@ -82,12 +82,12 @@ tmp/
 logs/
 
 # ======================
-# Image files (large files)
+# Image files (large files) - تم إلغاء الاستبعاد لدعم Vercel
 # ======================
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.ico
-*.webp
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
+# *.svg
+# *.ico
+# *.webp
