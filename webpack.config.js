@@ -70,9 +70,9 @@ module.exports = {
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource',
         generator: {
-          // تحسين معالجة الصور لـ Vercel - وضع الصور في مجلد منفصل
-          filename: isVercel ? 'assets/images/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/images/[name].[hash][ext]` : 'images/[name].[hash][ext]'),
-          publicPath: isVercel ? '/assets/images/' : (cdnUrl ? `${cdnUrl}/` : '/'),
+          // تحسين معالجة الصور لـ Vercel - وضع الصور في مجلد public
+          filename: isVercel ? 'public/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/public/[name].[hash][ext]` : 'public/[name].[hash][ext]'),
+          publicPath: isVercel ? '/public/' : (cdnUrl ? `${cdnUrl}/` : '/'),
         }
       },
       {
