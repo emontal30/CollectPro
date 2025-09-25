@@ -37,7 +37,7 @@
       ]
     },
     {
-      "source": "/public/(.*)\\.(png|jpg|jpeg|gif|svg|ico|webp)",
+      "source": "/public/(.*)\\.(png)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -46,6 +46,71 @@
         {
           "key": "Content-Type",
           "value": "image/png"
+        }
+      ]
+    },
+    {
+      "source": "/public/(.*)\\.(jpg|jpeg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "source": "/public/(.*)\\.(gif)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/gif"
+        }
+      ]
+    },
+    {
+      "source": "/public/(.*)\\.(svg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "source": "/public/(.*)\\.(ico)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/x-icon"
+        }
+      ]
+    },
+    {
+      "source": "/public/(.*)\\.(webp)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/webp"
         }
       ]
     },

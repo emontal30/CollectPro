@@ -7,8 +7,8 @@ const STATIC_ASSETS = [
   './',
   'index.html',
   'manifest.json',
-  'logoapp.png',
-  'logo-momkn.png'
+  'public/logoapp.png',
+  'public/logo-momkn.png'
 ];
 
 const API_ENDPOINTS = [
@@ -18,12 +18,29 @@ const API_ENDPOINTS = [
 // Install event - cache static assets
 self.addEventListener('install', function(event) {
   console.log('Service Worker: Installing...');
+  console.log('🔍 Debug - STATIC_ASSETS:', STATIC_ASSETS);
 
   event.waitUntil(
     Promise.all([
       caches.open(STATIC_CACHE).then(function(cache) {
         console.log('Service Worker: Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('🔍 Debug - Cache name:', STATIC_CACHE);
+
+        // Check each asset before caching
+        return Promise.all(STATIC_ASSETS.map(async (asset) => {
+          try {
+            console.log('🔍 Debug - Checking asset:', asset);
+            const response = await fetch(asset);
+            console.log('✅ Asset available:', asset, response.status);
+            return response;
+          } catch (error) {
+            console.log('❌ Asset not available:', asset, error);
+            throw error;
+          }
+        })).then(responses => {
+          console.log('🔍 Debug - All assets checked, adding to cache');
+          return cache.addAll(responses);
+        });
       })
     ])
   );

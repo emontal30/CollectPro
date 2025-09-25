@@ -7,7 +7,7 @@
   <title>تسجيل الدخول - CollectPro</title>
   <!-- تم تفعيل ملف manifest.json لدعم خصائص PWA -->
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="/public/logo-momkn.png" />
+  <link rel="apple-touch-icon" href="public/logo-momkn.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="login.css" />
@@ -18,7 +18,7 @@
     <div class="login-card">
       <!-- شعار التطبيق -->
       <div class="logo-container">
-        <img src="/public/logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
         <h1 class="app-name">CollectPro</h1>
         <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
       </div>
@@ -214,6 +214,39 @@
   <script src="auth.js"></script>
   <script src="sidebar.js"></script>
   <script src="login.js"></script>
+
+  <!-- Debug logging for logo images only -->
+  <script>
+    console.log('🔍 Logo Debug Info:');
+    console.log('Current URL:', window.location.href);
+
+    // Test image loading events
+    const logoImg = document.querySelector('.logo');
+    if (logoImg) {
+      console.log('✅ Logo image element found');
+      console.log('Logo src:', logoImg.src);
+
+      logoImg.addEventListener('load', () => {
+        console.log('✅ Logo loaded successfully - Dimensions:', logoImg.naturalWidth + 'x' + logoImg.naturalHeight);
+      });
+      logoImg.addEventListener('error', (e) => {
+        console.log('❌ Logo failed to load:', e);
+        console.log('Error details:', {
+          src: logoImg.src,
+          naturalWidth: logoImg.naturalWidth,
+          naturalHeight: logoImg.naturalHeight,
+          error: e
+        });
+      });
+
+      // Check if image is already loaded
+      if (logoImg.complete && logoImg.naturalWidth > 0) {
+        console.log('✅ Logo already loaded - Dimensions:', logoImg.naturalWidth + 'x' + logoImg.naturalHeight);
+      }
+    } else {
+      console.log('❌ Logo image element not found!');
+    }
+  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // التحقق من وجود جلسة نشطة قبل تحميل صفحة تسجيل الدخول
