@@ -4,6 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#007965" />
+  <meta name="description" content="نظام إدارة التحصيلات المتقدم - CollectPro - حلول ذكية لإدارة التحصيلات والاشتراكات" />
+  <meta name="keywords" content="تحصيلات, إدارة, بيانات, تطبيق ويب, اشتراكات, مدفوعات, CollectPro" />
+  <meta name="author" content="أيمن حافظ" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://collectpro.vercel.app/" />
+
+  <!-- Open Graph tags -->
+  <meta property="og:title" content="CollectPro - نظام إدارة التحصيلات" />
+  <meta property="og:description" content="نظام متكامل لإدارة التحصيلات والاشتراكات والمدفوعات" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://collectpro.vercel.app/" />
+  <meta property="og:site_name" content="CollectPro" />
+
+  <!-- Twitter Card tags -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="CollectPro - نظام إدارة التحصيلات" />
+  <meta name="twitter:description" content="نظام متكامل لإدارة التحصيلات والاشتراكات والمدفوعات" />
+
   <title>CollectPro - إعادة توجيه...</title>
   <meta http-equiv="refresh" content="0; url=login.html" />
   <script>
@@ -37,6 +55,7 @@
     }
   </style>
   <link rel="manifest" href="manifest.json" />
+  <script src="env.js"></script>
   <script src="config.js"></script>
   <script src="supabase-loader.js"></script>
   <script src="auth.js"></script>
@@ -57,13 +76,5 @@
     <div class="spinner"></div>
     <p style="margin-top: 20px; opacity: 0.8;">سيتم توجيهك إلى صفحة تسجيل الدخول</p>
   </div>
-  <script>
-    // تسجيل Service Worker لدعم خصائص PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  </script>
 </body>
 </html>

@@ -1,3 +1,40 @@
+/* ========== Alert System ========== */
+function showAlert(message, type = 'info', container = 'alert-container') {
+  const alertContainer = document.getElementById(container);
+  if (!alertContainer) {
+    // إذا لم يكن هناك حاوية تنبيهات، أنشئ واحدة مؤقتة
+    const tempContainer = document.createElement('div');
+    tempContainer.id = container;
+    tempContainer.className = 'alert-container';
+    document.body.appendChild(tempContainer);
+  }
+
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type}`;
+  alert.innerHTML = `
+    <div class="alert-content">
+      <span>${message}</span>
+      <button class="alert-close">&times;</button>
+    </div>
+  `;
+
+  const finalContainer = document.getElementById(container);
+  finalContainer.appendChild(alert);
+
+  // إضافة مستمع حدث لزر الإغلاق
+  const closeBtn = alert.querySelector('.alert-close');
+  closeBtn.addEventListener('click', () => {
+    alert.remove();
+  });
+
+  // إخفاء التنبيه تلقائيًا بعد 5 ثوانٍ
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.remove();
+    }
+  }, 5000);
+}
+
 /* ========== Helpers ========== */
 function parseNumber(x) {
   if (x === null || x === undefined) return 0;

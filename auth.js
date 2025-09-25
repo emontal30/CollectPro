@@ -1,4 +1,4 @@
-// نظام المصادقة
+// نظام المصادقة المحسن
 const auth = {
   /**
    * حفظ معلومات جلسة المستخدم
@@ -6,29 +6,90 @@ const auth = {
    * @param {boolean} remember - تذكر المستخدم
    */
   saveUserSession: function (user, remember) {
+    // التحقق من صحة البيانات
+    if (!user || !user.id || !user.email) {
+      throw new Error('بيانات المستخدم غير مكتملة');
+    }
+
     // الحصول على معلومات المستخدم الضرورية
     const userData = {
       id: user.id,
-      name: user.name || user.displayName,
+      name: user.name || user.displayName || '',
       email: user.email,
-      avatar: user.avatar || user.photoURL,
-      token: user.token || user.accessToken,
-      provider: user.provider || 'email'
+      avatar: user.avatar || user.photoURL || '',
+      token: user.token || user.accessToken || '',
+      provider: user.provider || 'email',
+      loginTime: new Date().toISOString(),
+      lastActivity: new Date().toISOString()
     };
 
+    // تشفير البيانات قبل الحفظ
+    const encryptedData = this.encryptData(userData);
+
     // التخزين في localStorage أو sessionStorage
-    if (remember) {
-      localStorage.setItem('user', JSON.stringify(userData));
-    } else {
-      sessionStorage.setItem('user', JSON.stringify(userData));
-    }
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem('user', encryptedData);
 
     // حفظ الوقت الحالي لمراجعة صلاحية الجلسة لاحقاً
     const expiryTime = new Date();
-    expiryTime.setHours(expiryTime.getHours() + 24); // صلاحية لمدة 24 ساعة
+    expiryTime.setHours(expiryTime.getHours() + (remember ? 168 : 24)); // 7 أيام أو 24 ساعة
     localStorage.setItem('session_expiry', expiryTime.toISOString());
 
     return userData;
+  },
+
+  /**
+   * تشفير البيانات قبل الحفظ
+   * @param {Object} data - البيانات المراد تشفيرها
+   * @returns {string} البيانات المشفرة
+   */
+  encryptData: function(data) {
+    try {
+      // استخدام base64 للتشفير البسيط
+      return btoa(JSON.stringify(data));
+    } catch (error) {
+      console.error('Encryption error:', error);
+      return JSON.stringify(data);
+    }
+  },
+
+  /**
+   * فك تشفير البيانات
+   * @param {string} encryptedData - البيانات المشفرة
+   * @returns {Object} البيانات الأصلية
+   */
+  decryptData: function(encryptedData) {
+    try {
+      return JSON.parse(atob(encryptedData));
+    } catch (error) {
+      // إذا فشل فك التشفير، جرب البيانات العادية
+      try {
+        return JSON.parse(encryptedData);
+      } catch {
+        return null;
+      }
+    }
+  },
+
+  /**
+   * التحقق من صحة الجلسة
+   * @param {Object} userData - بيانات المستخدم
+   * @returns {boolean} صحة الجلسة
+   */
+  isValidSession: function (userData) {
+    if (!userData || !userData.id || !userData.email) {
+      return false;
+    }
+
+    // التحقق من صلاحية الجلسة
+    const expiryTime = new Date(localStorage.getItem('session_expiry') || '');
+    const currentTime = new Date();
+
+    if (expiryTime && expiryTime <= currentTime) {
+      return false;
+    }
+
+    return true;
   },
 
   /**
@@ -36,48 +97,142 @@ const auth = {
    * @returns {Object|null} بيانات المستخدم أو null
    */
   checkUserSession: function () {
-    // التحقق من وجود بيانات في التخزين
-    let userData = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!userData) {
-      userData = JSON.parse(sessionStorage.getItem('user') || 'null');
-    }
+    try {
+      // التحقق من وجود بيانات في التخزين
+      let encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (!encryptedData) {
+        // التحقق من جلسة Supabase إذا لم تكن هناك بيانات محلية
+        return this.checkSupabaseSession();
+      }
 
-    // التحقق من صلاحية الجلسة
-    if (userData) {
-      const expiryTime = new Date(localStorage.getItem('session_expiry') || '');
-      const currentTime = new Date();
-
-      if (expiryTime > currentTime) {
-        return userData;
-      } else {
-        // إزالة البيانات منتهية الصلاحية
-        this.logout();
+      // فك تشفير البيانات
+      const userData = this.decryptData(encryptedData);
+      if (!userData) {
+        // إذا فشل فك التشفير، احذف البيانات التالفة
+        console.warn('فشل في فك تشفير بيانات المستخدم، مسح البيانات التالفة');
+        this.clearUserSession();
         return null;
       }
-    }
 
-    return null;
+      // التحقق من صحة الجلسة
+      if (!this.isValidSession(userData)) {
+        console.warn('الجلسة غير صالحة، مسح البيانات');
+        this.clearUserSession();
+        return null;
+      }
+
+      // تحديث وقت آخر نشاط
+      userData.lastActivity = new Date().toISOString();
+      const storage = localStorage.getItem('user') ? localStorage : sessionStorage;
+      storage.setItem('user', this.encryptData(userData));
+
+      return userData;
+    } catch (error) {
+      console.error('خطأ في فحص جلسة المستخدم:', error);
+      // في حالة حدوث خطأ، مسح البيانات لتجنب المشاكل
+      this.clearUserSession();
+      return null;
+    }
+  },
+
+  /**
+   * التحقق من جلسة Supabase
+   * @returns {Object|null} بيانات المستخدم أو null
+   */
+  checkSupabaseSession: async function () {
+    try {
+      // التحقق من وجود Supabase client
+      if (typeof window.supabase === 'undefined') {
+        return null;
+      }
+
+      const supabaseUrl = getConfig('supabase.url');
+      const supabaseKey = getConfig('supabase.anonKey');
+
+      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
+        return null;
+      }
+
+      const { createClient } = window.supabase;
+      const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+      // الحصول على الجلسة الحالية
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+      if (error || !session || !session.user) {
+        return null;
+      }
+
+      const user = session.user;
+
+      // التحقق من صحة بيانات المستخدم
+      if (!user.id || !user.email) {
+        return null;
+      }
+
+      const userData = {
+        id: user.id,
+        name: user.user_metadata?.name || user.email.split('@')[0],
+        email: user.email,
+        avatar: user.user_metadata?.avatar_url || '',
+        token: session.access_token,
+        provider: user.app_metadata?.provider || 'email',
+        loginTime: new Date().toISOString(),
+        lastActivity: new Date().toISOString()
+      };
+
+      // حفظ البيانات محلياً
+      this.saveUserSession(userData, true);
+
+      return userData;
+    } catch (error) {
+      console.error('Error checking Supabase session:', error);
+      return null;
+    }
+  },
+
+  /**
+   * مسح بيانات جلسة المستخدم دون إعادة توجيه
+   */
+  clearUserSession: function () {
+    try {
+      // إزالة بيانات المستخدم من التخزين المحلي
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
+      localStorage.removeItem('session_expiry');
+
+      // محاولة تسجيل الخروج من Supabase إذا كانت المكتبة متاحة
+      if (window.supabase && window.supabase.auth) {
+        window.supabase.auth.signOut().catch(error => {
+          console.warn("فشل تسجيل الخروج من Supabase:", error);
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('خطأ في مسح بيانات الجلسة:', error);
+      return false;
+    }
   },
 
   /**
    * تسجيل خروج المستخدم
    */
   logout: function () {
-    // إزالة بيانات المستخدم من التخزين المحلي
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('user');
-    localStorage.removeItem('session_expiry');
+    try {
+      // مسح بيانات الجلسة
+      const clearResult = this.clearUserSession();
 
-    // محاولة تسجيل الخروج من Supabase إذا كانت المكتبة متاحة
-    if (window.supabase && window.supabase.auth) {
-      try {
-        window.supabase.auth.signOut();
-      } catch (error) {
-        console.warn("فشل تسجيل الخروج من Supabase:", error);
+      // إعادة توجيه إلى صفحة تسجيل الدخول
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.href = 'login.html';
       }
-    }
 
-    return true;
+      return clearResult;
+    } catch (error) {
+      console.error('خطأ في تسجيل الخروج:', error);
+      return false;
+    }
   },
 
   /**

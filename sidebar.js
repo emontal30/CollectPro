@@ -31,11 +31,44 @@ const sidebar = {
     // زر توسيع/طي الشريط الجانبي
     const toggleButton = document.getElementById('sidebar-toggle');
     if (toggleButton) {
-      toggleButton.addEventListener('click', () => this.toggleSidebar());
+      toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar();
+      });
     }
 
+    // إغلاق القائمة الجانبية عند النقر خارجها
+    document.addEventListener('click', (e) => {
+      const sidebar = document.querySelector('.sidebar');
+      const toggleButton = document.getElementById('sidebar-toggle');
+
+      if (sidebar && !sidebar.contains(e.target) && e.target !== toggleButton) {
+        if (!sidebar.classList.contains('sidebar-collapsed')) {
+          this.closeSidebar();
+        }
+      }
+    });
+
+    // منع إغلاق القائمة عند النقر داخلها
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // إغلاق القائمة الجانبية عند الضغط على Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar && !sidebar.classList.contains('sidebar-collapsed')) {
+          this.closeSidebar();
+        }
+      }
+    });
+
     // زر تبديل الوضع المظلم
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const darkModeToggle = document.getElementById('toggleDark');
     if (darkModeToggle) {
       darkModeToggle.addEventListener('click', () => this.toggleDarkMode());
     }
@@ -47,7 +80,7 @@ const sidebar = {
     }
 
     // قائمة التنقل الرئيسية
-    const menuLinks = document.querySelectorAll('.sidebar-menu a');
+    const menuLinks = document.querySelectorAll('.nav-links a');
     menuLinks.forEach(link => {
       link.addEventListener('click', (e) => this.handleMenuItemClick(e, link));
     });
@@ -58,11 +91,33 @@ const sidebar = {
    */
   toggleSidebar: function () {
     const body = document.body;
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+      // تبديل حالة القائمة الجانبية
+      sidebar.classList.toggle('sidebar-collapsed');
+    }
+
+    // تبديل حالة الجسم للتنسيقات الأخرى
     body.classList.toggle('sidebar-collapsed');
-    
+
     // حفظ حالة الشريط الجانبي في التخزين المحلي
     const isCollapsed = body.classList.contains('sidebar-collapsed');
     localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
+  },
+
+  closeSidebar: function () {
+    const body = document.body;
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+      sidebar.classList.add('sidebar-collapsed');
+    }
+
+    body.classList.add('sidebar-collapsed');
+
+    // حفظ الحالة المغلقة
+    localStorage.setItem('sidebar-collapsed', 'true');
   },
 
   /**
@@ -82,10 +137,10 @@ const sidebar = {
    */
   handleMenuItemClick: function (event, link) {
     // إزالة الفئة النشطة من جميع العناصر
-    document.querySelectorAll('.sidebar-menu a').forEach(item => {
+    document.querySelectorAll('.nav-links a').forEach(item => {
       item.classList.remove('active');
     });
-    
+
     // إضافة الفئة النشطة إلى العنصر المنقور
     link.classList.add('active');
   },
@@ -94,12 +149,46 @@ const sidebar = {
    * معالجة تسجيل الخروج
    */
   handleLogout: function () {
-    // استخدام وظيفة تسجيل الخروج من نظام المصادقة
-    if (window.auth && typeof window.auth.logout === 'function') {
-      window.auth.logout();
-      
-      // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
-      window.location.href = 'login.html';
+    try {
+      // إغلاق القائمة الجانبية أولاً
+      this.closeSidebar();
+
+      // استخدام وظيفة تسجيل الخروج من نظام المصادقة
+      if (window.auth && typeof window.auth.logout === 'function') {
+        const logoutResult = window.auth.logout();
+
+        if (logoutResult !== false) {
+          // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 100);
+        } else {
+          // إذا فشل تسجيل الخروج، أظهر رسالة خطأ
+          console.error('فشل في تسجيل الخروج');
+          if (typeof showAlert === 'function') {
+            showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+          } else {
+            alert('حدث خطأ أثناء تسجيل الخروج');
+          }
+        }
+      } else {
+        // إذا لم يكن نظام المصادقة متاح، قم بمسح البيانات يدوياً
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('session_expiry');
+
+        // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 100);
+      }
+    } catch (error) {
+      console.error('خطأ في تسجيل الخروج:', error);
+      if (typeof showAlert === 'function') {
+        showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+      } else {
+        alert('حدث خطأ أثناء تسجيل الخروج');
+      }
     }
   },
 
@@ -139,9 +228,9 @@ const sidebar = {
   highlightActiveMenuItem: function () {
     // الحصول على اسم الصفحة الحالية
     const currentPage = window.location.pathname.split('/').pop();
-    
+
     // العثور على العنصر المطابق في القائمة
-    const menuItems = document.querySelectorAll('.sidebar-menu a');
+    const menuItems = document.querySelectorAll('.nav-links a');
     menuItems.forEach(item => {
       const href = item.getAttribute('href');
       if (href === currentPage || href === `/${currentPage}`) {
@@ -189,5 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const isSidebarCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
   if (isSidebarCollapsed) {
     document.body.classList.add("sidebar-collapsed");
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.add("sidebar-collapsed");
+    }
   }
 });

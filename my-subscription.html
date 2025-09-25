@@ -13,8 +13,68 @@
   <link rel="stylesheet" href="my-subscription.css" />
 </head>
 <body>
+  <!-- الشريط الجانبي -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="user-box">
+        <div class="user-avatar sidebar-user-avatar">أ</div>
+        <div class="user-meta">
+          <div class="user-name sidebar-user-name">المستخدم</div>
+          <div class="user-id sidebar-user-email">user@example.com</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-content">
+      <ul class="nav-links">
+        <li><a href="dashboard.html" class="nav-link">
+          <i class="fas fa-edit"></i>
+          <span>إدخال البيانات</span>
+        </a></li>
+        <li><a href="harvest.html" class="nav-link">
+          <i class="fas fa-coins"></i>
+          <span>صفحة التحصيل</span>
+        </a></li>
+        <li><a href="subscriptions.html" class="nav-link">
+          <i class="fas fa-list"></i>
+          <span>الاشتراكات</span>
+        </a></li>
+        <li><a href="my-subscription.html" class="nav-link">
+          <i class="fas fa-user"></i>
+          <span>اشتراكي</span>
+        </a></li>
+        <li><a href="payment.html" class="nav-link">
+          <i class="fas fa-credit-card"></i>
+          <span>المدفوعات</span>
+        </a></li>
+        <li><a href="archive.html" class="nav-link">
+          <i class="fas fa-archive"></i>
+          <span>الأرشيف</span>
+        </a></li>
+        <li><a href="admin.html" class="nav-link">
+          <i class="fas fa-cog"></i>
+          <span>إدارة النظام</span>
+        </a></li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sub-meta">
+        <span>الإصدار:</span>
+        <span class="value">1.0.0</span>
+      </div>
+      <button id="logout-btn" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>تسجيل الخروج</span>
+      </button>
+    </div>
+  </div>
+
   <header>
     <div class="header-top">
+      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
+        <i class="fas fa-bars"></i>
+      </button>
       <button id="toggleDark" class="dark-btn-icon">🌙</button>
       <div class="logo-container">
         <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
@@ -120,23 +180,43 @@
     <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
   </footer>
 
+  <script src="env.js"></script>
   <script src="config.js"></script>
   <script src="supabase-loader.js"></script>
   <script src="auth.js"></script>
   <script src="sidebar.js"></script>
-  <script src="script.js"></script>
-  <script src="my-subscription.js"></script>
   <script>
-    // التحقق من وجود جلسة نشطة قبل تحميل الصفحة
-    window.addEventListener('DOMContentLoaded', async () => {
-      const hasAccess = await auth.checkPageAccess();
-      if (!hasAccess) return;
+    // فحص المصادقة عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', async function() {
+      // التحقق من وجود جلسة مستخدم نشطة
+      if (typeof auth !== 'undefined') {
+        const user = auth.checkUserSession();
+        if (!user) {
+          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
+          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
+          return;
+        }
+
+        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
+        console.log('المستخدم مصادق:', user.email);
+      } else {
+        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
+        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
+      if (typeof sidebar !== 'undefined') {
+        sidebar.init();
+      }
 
       // تحميل بيانات الاشتراك بعد التحقق من الصلاحية
       await loadSubscriptionData();
       await loadSubscriptionHistory();
     });
   </script>
+  <script src="script.js"></script>
+  <script src="my-subscription.js"></script>
   <!-- تم تعطيل Service Worker مؤقتاً لتجنب الخطأ عند التشغيل المحلي -->
   <!-- <script>
     if ('serviceWorker' in navigator) {

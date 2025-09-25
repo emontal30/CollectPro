@@ -186,8 +186,8 @@ function setupLoginForm() {
     submitBtn.classList.add('loading');
 
     try {
-      // محاكاة طلب تسجيل الدخول
-      const response = await simulateLoginRequest(email, password);
+      // تسجيل الدخول باستخدام Supabase
+      const response = await realLoginRequest(email, password);
 
       if (response.success) {
         // حفظ معلومات الجلسة
@@ -198,7 +198,7 @@ function setupLoginForm() {
 
         // التحويل إلى صفحة الإدخال كصفحة رئيسية
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.href = 'dashboard.html';
         }, 1000);
       } else {
         // إظهار رسالة خطأ
@@ -471,47 +471,26 @@ function setupTwoFactorForm() {
 }
 
 // ========== تسجيل الدخول بحساب Google ========== //
-function setupGoogleLogin() {
+async function setupGoogleLogin() {
   const googleLoginBtn = document.getElementById('google-login');
   if (!googleLoginBtn) return;
 
   googleLoginBtn.addEventListener('click', async () => {
     try {
-      // التحقق من المكتبات المطلوبة
-      const dependencyErrors = checkDependencies();
-      if (dependencyErrors.length > 0) {
-        showAlert(dependencyErrors.join(', '), 'danger');
-        return;
-      }
-
       // إظهار حالة التحميل
-      googleLoginBtn.classList.add('loading');
+      showLoadingState(googleLoginBtn, true);
 
-      // تسجيل الدخول بحساب Google
-      const response = await simulateGoogleLoginRequest();
+      // تسجيل الدخول بحساب Google باستخدام Supabase
+      const response = await realGoogleLogin();
 
       if (response.success) {
-        // إذا كان redirect، فالمستخدم سيتم توجيهه تلقائياً
-        if (response.redirect) {
-          showAlert(response.message || 'جاري إعادة التوجيه إلى Google...', 'info');
-          // لا نحتاج إلى إعادة توجيه يدوي لأن Supabase سيتولى الأمر
-          return;
-        }
-        
-        // حفظ معلومات الجلسة للحالات العادية
-        if (response.user) {
-          if (typeof auth !== 'undefined' && auth.saveUserSession) {
-            auth.saveUserSession(response.user, true);
-          }
+        // إظهار رسالة نجاح
+        showAlert('تم تسجيل الدخول بحساب Google بنجاح! جاري التحويل...', 'success');
 
-          // إظهار رسالة نجاح
-          showAlert('تم تسجيل الدخول بحساب Google بنجاح! جاري التحويل...', 'success');
-
-          // التحويل إلى صفحة الإدخال كصفحة رئيسية
-          setTimeout(() => {
-            window.location.href = 'dashboard.html';
-          }, 1000);
-        }
+        // التحويل إلى صفحة الإدخال كصفحة رئيسية
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1000);
       } else {
         // إظهار رسالة خطأ
         showAlert(response.message || 'فشل تسجيل الدخول بحساب Google. يرجى المحاولة مرة أخرى.', 'danger');
@@ -521,10 +500,12 @@ function setupGoogleLogin() {
       showAlert(error.message || 'حدث خطأ أثناء محاولة تسجيل الدخول بحساب Google. يرجى المحاولة مرة أخرى لاحقًا.', 'danger');
     } finally {
       // إخفاء حالة التحميل
-      googleLoginBtn.classList.remove('loading');
+      showLoadingState(googleLoginBtn, false);
     }
   });
 }
+
+
 
 // ========== قوة كلمة المرور ========== //
 function setupPasswordStrength() {
@@ -599,7 +580,74 @@ function saveSession(user, remember) {
   }
 }
 
-// ========== محاكاة طلبات API ========== //
+// ========== طلبات API الحقيقية ========== //
+
+async function realLoginRequest(email, password) {
+  try {
+    // انتظار تحميل Supabase
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (typeof window.supabase === 'undefined' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('مكتبة Supabase غير محملة');
+    }
+
+    // الحصول على إعدادات Supabase
+    const supabaseUrl = getConfig('supabase.url');
+    const supabaseKey = getConfig('supabase.anonKey');
+
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
+      throw new Error('إعدادات Supabase غير صحيحة. يرجى التحقق من متغيرات البيئة');
+    }
+
+    // إنشاء Supabase client
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // تسجيل الدخول
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (error) {
+      console.error('Supabase login error:', error);
+      return {
+        success: false,
+        message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      };
+    }
+
+    if (data.user) {
+      return {
+        success: true,
+        user: {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+          email: data.user.email,
+          avatar: data.user.user_metadata?.avatar_url || '',
+          token: data.session?.access_token || '',
+          provider: 'email'
+        }
+      };
+    }
+
+    return {
+      success: false,
+      message: 'فشل تسجيل الدخول'
+    };
+  } catch (error) {
+    console.error('Real login error:', error);
+    throw error;
+  }
+}
+
+// ========== محاكاة طلبات API (للاختبار) ========== //
 // في تطبيق حقيقي، سيتم استبدال هذه الدوال بطلبات API حقيقية
 
 async function simulateLoginRequest(email, password) {
@@ -683,11 +731,15 @@ async function simulateResendCodeRequest() {
   };
 }
 
-async function simulateGoogleLoginRequest() {
+
+// دالة تسجيل الدخول بـ Google باستخدام Supabase
+async function realGoogleLogin() {
   try {
-    // انتظار تحميل Supabase (حد أقصى 10 ثوانٍ)
+    // انتظار تحميل Supabase
     let attempts = 0;
-    while (typeof window.supabase === 'undefined' && attempts < 100) {
+    const maxAttempts = 100;
+
+    while (typeof window.supabase === 'undefined' && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 100));
       attempts++;
     }
@@ -696,40 +748,23 @@ async function simulateGoogleLoginRequest() {
       throw new Error('مكتبة Supabase غير محملة');
     }
 
-    // التحقق من وجود دالة getConfig
-    if (typeof window.getConfig === 'undefined') {
-      throw new Error('دالة getConfig غير متوفرة');
-    }
+    // الحصول على إعدادات Supabase
+    const supabaseUrl = getConfig('supabase.url');
+    const supabaseKey = getConfig('supabase.anonKey');
 
-    // الحصول على إعدادات Supabase من ملف config
-    const supabaseUrl = window.getConfig('supabase.url');
-    const supabaseKey = window.getConfig('supabase.anonKey');
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('إعدادات Supabase غير متوفرة. يرجى التحقق من ملف config.js');
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
+      throw new Error('إعدادات Supabase غير صحيحة. يرجى التحقق من متغيرات البيئة');
     }
 
     // إنشاء Supabase client
-    if (typeof window.supabase.createClient !== 'function') {
-      throw new Error('دالة createClient غير متوفرة في مكتبة Supabase');
-    }
-
     const { createClient } = window.supabase;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // بدء تسجيل الدخول عبر Google
-    if (typeof supabaseClient.auth.signInWithOAuth !== 'function') {
-      throw new Error('دالة signInWithOAuth غير متوفرة');
-    }
-
+    // تسجيل الدخول بـ Google
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent'
-        }
+        redirectTo: `${window.location.origin}/dashboard.html`
       }
     });
 
@@ -746,136 +781,60 @@ async function simulateGoogleLoginRequest() {
     };
   } catch (error) {
     console.error('Google login error:', error);
-
-    // محاولة استخدام Google Identity Services كبديل
-    return await fallbackGoogleSignIn();
+    throw error;
   }
 }
 
-
-// دالة بديلة لتسجيل الدخول بـ Google باستخدام Google Identity Services
-async function fallbackGoogleSignIn() {
+// دالة تسجيل الدخول المبسطة بـ Google (للاختبار)
+async function simpleGoogleLogin() {
   try {
-    // التحقق من وجود مكتبة Google Identity Services
-    if (typeof google === "undefined" || !google.accounts) {
-      // إذا لم تكن المكتبة محملة، نعطي رسالة توضيحية
-      return {
-        success: false,
-        message: "تسجيل الدخول بـ Google غير متوفر حالياً. يرجى استخدام البريد الإلكتروني وكلمة المرور، أو تواصل مع الدعم الفني لإعداد تسجيل الدخول بـ Google."
-      };
+    // انتظار تحميل Supabase
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (typeof window.supabase === 'undefined' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
     }
 
-    // التحقق من وجود دالة getConfig
-    if (typeof window.getConfig === 'undefined') {
-      return {
-        success: false,
-        message: "إعدادات التطبيق غير متوفرة. يرجى تحديث الصفحة والمحاولة مرة أخرى."
-      };
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('مكتبة Supabase غير محملة');
     }
 
-    // التحقق من وجود Google Client ID
-    const googleClientId = window.getConfig("google.clientId");
-    if (!googleClientId || googleClientId.includes("your-google-client-id")) {
-      return {
-        success: false,
-        message: "إعدادات Google Client ID غير مكتملة. يرجى التحقق من ملف config.js"
-      };
+    // الحصول على إعدادات Supabase من متغيرات البيئة
+    const supabaseUrl = getConfig('supabase.url');
+    const supabaseKey = getConfig('supabase.anonKey');
+
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
+      throw new Error('إعدادات Supabase غير متوفرة. يرجى التحقق من متغيرات البيئة');
     }
 
-    // إنشاء وعد لمعالجة callback من Google
-    return new Promise((resolve, reject) => {
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async (response) => {
-          try {
-            // فك تشفير JWT token من Google
-            const payload = parseJwt(response.credential);
+    // إنشاء Supabase client
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-            if (payload) {
-              // إنشاء مستخدم من بيانات Google
-              const user = {
-                id: payload.sub,
-                name: payload.name,
-                email: payload.email,
-                avatar: payload.picture,
-                token: response.credential,
-                provider: "google"
-              };
-
-              // حفظ معلومات المستخدم في التخزين المحلي
-              if (typeof window.auth !== 'undefined' && window.auth.saveUserSession) {
-                window.auth.saveUserSession(user, true);
-              }
-
-              resolve({
-                success: true,
-                user: user
-              });
-            } else {
-              reject(new Error("فشل في معالجة استجابة Google"));
-            }
-          } catch (error) {
-            console.error('Google Identity Services error:', error);
-            reject(error);
-          }
-        }
-      });
-
-      // عرض نافذة تسجيل الدخول
-      google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // إذا لم تظهر النافذة، استخدم الطريقة البديلة
-          google.accounts.id.renderButton(
-            document.createElement("div"),
-            { theme: "outline", size: "large" }
-          );
-
-          // محاولة عرض النافذة مرة أخرى
-          setTimeout(() => {
-            google.accounts.id.prompt();
-          }, 1000);
-        }
-      });
+    // تسجيل الدخول بـ Google
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google'
     });
-  } catch (error) {
-    console.error("Fallback Google sign-in error:", error);
+
+    if (error) {
+      console.error('Supabase OAuth error:', error);
+      throw new Error(`خطأ في تسجيل الدخول بـ Google: ${error.message}`);
+    }
+
+    // في حالة نجاح تسجيل الدخول، سيتم إعادة توجيه المستخدم تلقائياً
     return {
-      success: false,
-      message: `حدث خطأ أثناء تسجيل الدخول بـ Google: ${error.message}. يرجى المحاولة مرة أخرى أو استخدام البريد الإلكتروني وكلمة المرور.`
+      success: true,
+      message: 'جاري إعادة التوجيه إلى Google...',
+      redirect: true
     };
-  }
-}
-
-// دالة مساعدة لفك تشفير JWT token
-function parseJwt(token) {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(atob(base64).split("").map(function(c) {
-      return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(""));
-    return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error("Error parsing JWT:", error);
-    return null;
+    console.error('Google login error:', error);
+    throw error;
   }
 }
 
-// دالة للتحقق من تحميل المكتبات المطلوبة
-function checkDependencies() {
-  const errors = [];
 
-  if (typeof window.supabase === 'undefined') {
-    errors.push('مكتبة Supabase غير محملة');
-  }
 
-  if (typeof window.getConfig === 'undefined') {
-    errors.push('دالة getConfig غير متوفرة');
-  }
 
-  if (typeof google === 'undefined' || !google.accounts) {
-    errors.push('مكتبة Google Identity Services غير متوفرة');
-  }
-
-  return errors;
-}

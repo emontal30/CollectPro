@@ -3,10 +3,6 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-const CompressionPlugin = require('compression-webpack-plugin');
-const webpack = require('webpack');
-const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -93,137 +89,88 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
-      chunks: ['main', 'auth', 'sidebar'],
-      preload: ['main']
-    }),
-    new HtmlWebpackPlugin({
-      template: './dashboard.html',
-      filename: 'dashboard.html',
-      chunks: ['main', 'auth', 'sidebar'],
-      preload: ['main']
-    }),
-    new HtmlWebpackPlugin({
-      template: './harvest.html',
-      filename: 'harvest.html',
-      chunks: ['main', 'auth', 'sidebar'],
-      preload: ['main']
-    }),
-    new HtmlWebpackPlugin({
-      template: './archive.html',
-      filename: 'archive.html',
-      chunks: ['main', 'auth', 'sidebar'],
-      preload: ['main']
+      chunks: ['main', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './login.html',
       filename: 'login.html',
-      chunks: ['login', 'auth', 'sidebar'],
-      preload: ['login']
+      chunks: ['login', 'auth', 'sidebar']
+    }),
+    new HtmlWebpackPlugin({
+      template: './dashboard.html',
+      filename: 'dashboard.html',
+      chunks: ['main', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './admin.html',
       filename: 'admin.html',
-      chunks: ['admin', 'auth', 'sidebar'],
-      preload: ['admin']
+      chunks: ['admin', 'auth', 'sidebar']
+    }),
+    new HtmlWebpackPlugin({
+      template: './harvest.html',
+      filename: 'harvest.html',
+      chunks: ['main', 'auth', 'sidebar']
+    }),
+    new HtmlWebpackPlugin({
+      template: './archive.html',
+      filename: 'archive.html',
+      chunks: ['main', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './my-subscription.html',
       filename: 'my-subscription.html',
-      chunks: ['my-subscription', 'auth', 'sidebar'],
-      preload: ['my-subscription']
+      chunks: ['my-subscription', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './payment.html',
       filename: 'payment.html',
-      chunks: ['payment', 'auth', 'sidebar'],
-      preload: ['payment']
+      chunks: ['payment', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './subscriptions.html',
       filename: 'subscriptions.html',
-      chunks: ['subscriptions', 'auth', 'sidebar'],
-      preload: ['subscriptions']
-    }),
-    new HtmlWebpackPlugin({
-      template: './reset-password.html',
-      filename: 'reset-password.html',
-      chunks: ['login', 'auth', 'sidebar']
+      chunks: ['subscriptions', 'auth', 'sidebar']
     }),
     new HtmlWebpackPlugin({
       template: './register.html',
       filename: 'register.html',
       chunks: ['login', 'auth', 'sidebar']
     }),
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-      'process.env.CDN_URL': JSON.stringify(cdnUrl),
-    }),
-    !isDevelopment && new BundleAnalyzerPlugin({
-      analyzerMode: 'static',
-      openAnalyzer: false,
-    }),
-    !isDevelopment && new CompressionPlugin({
-      algorithm: 'gzip',
-      test: /\.(js|css|html|svg)$/,
-      threshold: 10240,
-      minRatio: 0.8,
-    }),
-    !isDevelopment && new ImageMinimizerPlugin({
-      minimizer: {
-        implementation: ImageMinimizerPlugin.imageminMinify,
-        options: {
-          plugins: [
-            ['mozjpeg', { quality: 75 }],
-            ['pngquant', { quality: [0.65, 0.90], speed: 4 }],
-            ['gifsicle', { interlaced: false }],
-            ['svgo', { plugins: [{ removeViewBox: false }] }],
-          ],
-        },
-      },
+    new HtmlWebpackPlugin({
+      template: './reset-password.html',
+      filename: 'reset-password.html',
+      chunks: ['login', 'auth', 'sidebar']
     }),
     new CopyPlugin({
-       patterns: [
-         { from: '*.css', to: '[name][ext]' },
-         { from: '*.png', to: '[name][ext]' },
-         { from: '*.jpg', to: '[name][ext]' },
-         { from: '*.json', to: '[name][ext]' },
-         { from: '_redirects', to: '_redirects' },
-         { from: 'sw.js', to: 'sw.js' },
-         { from: 'config.js', to: 'config.js' },
-         { from: 'auth.js', to: 'auth.js' },
-         { from: 'sidebar.js', to: 'sidebar.js' },
-         { from: 'login.js', to: 'login.js' },
-         { from: 'admin.js', to: 'admin.js' },
-         { from: 'script.js', to: 'script.js' },
-         { from: 'api-client.js', to: 'api-client.js' },
-         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
-         { from: 'my-subscription.js', to: 'my-subscription.js' },
-         { from: 'payment.js', to: 'payment.js' },
-         { from: 'subscriptions.js', to: 'subscriptions.js' },
-         { from: 'auth_fixed.js', to: 'auth_fixed.js' },
-         { from: 'bug-tracker.js', to: 'bug-tracker.js' },
-         { from: 'backup-manager.js', to: 'backup-manager.js' },
-         { from: 'cache-manager.js', to: 'cache-manager.js' },
-         { from: 'csrf-protection.js', to: 'csrf-protection.js' },
-         { from: 'error-logger.js', to: 'error-logger.js' },
-         { from: 'help-system.js', to: 'help-system.js' },
-         { from: 'update-env.js', to: 'update-env.js' },
-         { from: 'update-manager.js', to: 'update-manager.js' },
-         { from: 'asset-optimizer.js', to: 'asset-optimizer.js' },
-         { from: 'performance-monitor.js', to: 'performance-monitor.js' },
-       ],
-     }),
-  ].filter(Boolean),
+      patterns: [
+        { from: '*.css', to: '[name][ext]' },
+        { from: '*.png', to: '[name][ext]' },
+        { from: '*.jpg', to: '[name][ext]' },
+        { from: '*.json', to: '[name][ext]' },
+        { from: '_redirects', to: '_redirects' },
+        { from: 'sw.js', to: 'sw.js' },
+        { from: 'env.js', to: 'env.js' },
+        { from: 'config.js', to: 'config.js' },
+        { from: 'auth.js', to: 'auth.js' },
+        { from: 'sidebar.js', to: 'sidebar.js' },
+        { from: 'login.js', to: 'login.js' },
+        { from: 'admin.js', to: 'admin.js' },
+        { from: 'script.js', to: 'script.js' },
+        { from: 'api-client.js', to: 'api-client.js' },
+        { from: 'supabase-loader.js', to: 'supabase-loader.js' },
+        { from: 'my-subscription.js', to: 'my-subscription.js' },
+        { from: 'payment.js', to: 'payment.js' },
+        { from: 'subscriptions.js', to: 'subscriptions.js' }
+      ]
+    })
+  ],
   optimization: {
     minimizer: [
       new CssMinimizerPlugin(),
       new TerserPlugin({
-        parallel: true,
-        extractComments: false,
         terserOptions: {
           compress: {
             drop_console: !isDevelopment,
-            pure_funcs: !isDevelopment ? ['console.log'] : [],
           },
         },
       }),
@@ -243,25 +190,9 @@ module.exports = {
           name: 'supabase',
           chunks: 'all',
           priority: 15,
-        },
-        common: {
-          name: 'common',
-          minChunks: 2,
-          chunks: 'all',
-          enforce: true,
-          priority: 5,
-        },
-        default: {
-          minChunks: 2,
-          chunks: 'initial',
-          priority: -10,
-          reuseExistingChunk: true,
-        },
+        }
       },
     },
-    runtimeChunk: 'single',
-    moduleIds: 'deterministic',
-    chunkIds: 'deterministic',
   },
   cache: {
     type: 'filesystem',
@@ -279,15 +210,10 @@ module.exports = {
       directory: path.join(__dirname, 'dist'),
     },
     compress: true,
-    host: '0.0.0.0',
-    port: 5000,
+    port: 3000,
     hot: true,
-    open: false,
-    historyApiFallback: true,
-    allowedHosts: 'all',
-    client: {
-      webSocketURL: 'auto://localhost:0/ws'
-    }
+    open: true,
+    historyApiFallback: true
   },
   devtool: isDevelopment ? 'eval-source-map' : 'source-map',
 };

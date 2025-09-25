@@ -68,7 +68,10 @@
         
         <button type="button" id="google-login" class="google-login-btn">
           <i class="fab fa-google"></i>
-          <span>تسجيل الدخول بحساب Google</span>
+          <span class="button-text">تسجيل الدخول بحساب Google</span>
+          <div class="loading-spinner" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
         </button>
         
         <div class="signup-link">
@@ -204,7 +207,8 @@
   
   <!-- تحميل مكتبة Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  
+
+  <script src="env.js"></script>
   <script src="supabase-loader.js"></script>
   <script src="config.js"></script>
   <script src="auth.js"></script>
@@ -213,16 +217,51 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     // التحقق من وجود جلسة نشطة قبل تحميل صفحة تسجيل الدخول
-    window.addEventListener('load', () => {
-      // التأكد من أن كائن auth متاح
+    window.addEventListener('load', async () => {
+      // مسح أي بيانات قديمة أو تالفة
       if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (user) {
-          // إذا كان هناك جلسة نشطة، قم بتوجيه المستخدم إلى صفحة إدخال البيانات
-          window.location.href = 'dashboard.html';
+        try {
+          // مسح أي بيانات جلسة قديمة أولاً
+          auth.clearUserSession();
+
+          // التحقق من وجود جلسة نشطة صالحة
+          const user = auth.checkUserSession();
+          if (user && user.email && user.id) {
+            // إذا كان هناك جلسة نشطة صالحة، قم بتوجيه المستخدم إلى صفحة إدخال البيانات
+            console.log('جلسة نشطة موجودة، إعادة توجيه إلى dashboard.html');
+            window.location.href = 'dashboard.html';
+            return;
+          }
+        } catch (error) {
+          console.warn('خطأ في فحص الجلسة:', error);
         }
       }
-      
+
+      // مسح أي بيانات قديمة أخرى قد تسبب مشاكل
+      try {
+        // مسح بيانات التطبيق القديمة
+        localStorage.removeItem('clientData');
+        localStorage.removeItem('harvestData');
+        localStorage.removeItem('rowData');
+        localStorage.removeItem('masterLimit');
+        localStorage.removeItem('currentBalance');
+        localStorage.removeItem('archiveData');
+
+        // مسح أي بيانات تطبيق أخرى قد تكون موجودة
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('app_') || key.startsWith('temp_'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        console.log('تم مسح البيانات المؤقتة');
+      } catch (error) {
+        console.warn('خطأ في مسح البيانات المؤقتة:', error);
+      }
+
       // تسجيل Service Worker لدعم خصائص PWA
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')

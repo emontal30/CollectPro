@@ -41,7 +41,7 @@ body.dark {
 }
 
 /* Nudge the toggle slightly left when sidebar is open so it doesn't overlap panel edge */
-body.sidebar-open .sidebar-toggle {
+body:not(.sidebar-collapsed) .sidebar-toggle {
   right: calc(var(--sb-width) + 10px);
 }
 .sidebar-toggle i {
@@ -66,13 +66,33 @@ body.sidebar-open .sidebar-toggle {
   flex-direction: column;
   touch-action: pan-y; /* allow vertical scroll, we'll handle horizontal swipe */
 }
-.sidebar.open { transform: translateX(0); }
+.sidebar:not(.sidebar-collapsed) { transform: translateX(0); }
+.sidebar.sidebar-collapsed { transform: translateX(100%); }
 
 /* Prevent accidental close by overlay clicks: remove any default backdrop logic (none currently).
-   Optionally, shift page content slightly when open if desired using body.sidebar-open */
-body.sidebar-open {
+   Optionally, shift page content slightly when open if desired using body:not(.sidebar-collapsed) */
+body:not(.sidebar-collapsed) {
   /* Example: add padding-inline-end to avoid covering critical buttons; set to 0 by default */
   /* padding-inline-end: 0; */
+}
+
+/* Overlay for mobile/tablet when sidebar is open */
+body:not(.sidebar-collapsed)::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1080;
+  pointer-events: none;
+}
+
+@media (min-width: 769px) {
+  body:not(.sidebar-collapsed)::before {
+    display: none;
+  }
 }
 
 .sidebar-header {
@@ -157,6 +177,64 @@ body.sidebar-open {
 }
 
 /* Small screens */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 85vw;
+    max-width: 320px;
+  }
+
+  .sidebar-toggle {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .sidebar-toggle i {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 480px) {
-  .sidebar { width: 90vw; }
+  .sidebar {
+    width: 90vw;
+    max-width: 280px;
+  }
+
+  .sidebar-header {
+    padding: 15px 12px 10px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .user-name {
+    font-size: 14px;
+  }
+
+  .user-id {
+    font-size: 11px;
+  }
+
+  .nav-links a {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .nav-links i {
+    width: 18px;
+    font-size: 14px;
+  }
+
+  .sidebar-footer {
+    padding: 10px 12px;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
 }

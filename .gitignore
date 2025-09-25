@@ -55,3 +55,28 @@ yarn-error.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ======================
+# Sensitive files
+# ======================
+*.json.backup
+*.env.backup
+client_secret*.json
+oauth_secret*.json
+*secret*.json
+*key*.json
+
+# ======================
+# Temporary files
+# ======================
+*.tmp
+*.temp
+.cache/
+temp/
+tmp/
+
+# ======================
+# Build artifacts
+# ======================
+*.log
+logs/

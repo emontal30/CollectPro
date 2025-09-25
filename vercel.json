@@ -1,55 +1,16 @@
 {
   "version": 2,
   "name": "collectpro-app",
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/login.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/login.html"
-    },
-    {
-      "source": "/register",
-      "destination": "/register.html"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "/reset-password.html"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/dashboard.html"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/subscriptions",
-      "destination": "/subscriptions.html"
-    },
-    {
-      "source": "/my-subscription",
-      "destination": "/my-subscription.html"
-    },
-    {
-      "source": "/payment",
-      "destination": "/payment.html"
-    },
-    {
-      "source": "/harvest",
-      "destination": "/harvest.html"
-    },
-    {
-      "source": "/archive",
-      "destination": "/archive.html"
-    }
-  ],
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },
