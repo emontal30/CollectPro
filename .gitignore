@@ -80,3 +80,14 @@ tmp/
 # ======================
 *.log
 logs/
+
+# ======================
+# Image files (large files)
+# ======================
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp

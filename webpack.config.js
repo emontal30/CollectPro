@@ -144,8 +144,6 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: '*.css', to: '[name][ext]' },
-        { from: '*.png', to: '[name][ext]' },
-        { from: '*.jpg', to: '[name][ext]' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
@@ -160,7 +158,12 @@ module.exports = {
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'my-subscription.js', to: 'my-subscription.js' },
         { from: 'payment.js', to: 'payment.js' },
-        { from: 'subscriptions.js', to: 'subscriptions.js' }
+        { from: 'subscriptions.js', to: 'subscriptions.js' },
+        // نسخ ملفات الصور الموجودة فعلاً
+        { from: 'logo-momkn.png', to: '[name][ext]' },
+        { from: 'logo-tick.png', to: '[name][ext]' },
+        { from: 'logoapp.png', to: '[name][ext]' },
+        { from: 'logo-archive.png', to: '[name][ext]' }
       ]
     })
   ],
