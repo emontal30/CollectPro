@@ -205,22 +205,15 @@ input:focus {
   transition: var(--transition);
 }
 
-.spinner {
+/* Hide spinner in login button by default */
+.login-btn .spinner {
   display: none;
-  margin-left: 10px;
 }
 
-.loading-spinner {
-  display: none;
-  margin-left: 10px;
-}
-
-.loading .btn-text {
-  opacity: 0.7;
-}
-
-.loading .spinner {
+/* Show spinner when login button has 'loading' class */
+.login-btn.loading .spinner {
   display: inline-block;
+  margin-left: 10px;
 }
 
 .loading .loading-spinner {

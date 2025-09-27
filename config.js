@@ -26,24 +26,26 @@ function getConfigValue(envKey, defaultValue) {
 }
 
 const appConfig = {
-  // إعدادات Supabase
-  supabaseUrl: getConfigValue('SUPABASE_URL', "https://altnvsolaqphpndyztup.supabase.co"),
+  // إعدادات Supabase - استخدم متغيرات البيئة
+  supabaseUrl: getConfigValue('SUPABASE_URL', "https://your-project-id.supabase.co"),
+  supabaseAnonKey: getConfigValue('SUPABASE_ANON_KEY', "your-supabase-anon-key"),
 
-  supabaseAnonKey: getConfigValue('SUPABASE_ANON_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaG5keXp0dXAiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyNzQxMDM5NSwiZXhwIjoyMDQzMDA5Mzk1fQ.test-anon-key"),
+  // إعدادات Google OAuth - استخدم متغيرات البيئة
+  googleClientId: getConfigValue('GOOGLE_CLIENT_ID', "your-google-client-id"),
+  googleRedirectUri: getConfigValue('GOOGLE_REDIRECT_URI', "http://localhost:8080/auth-callback.html"),
 
-  // إعدادات Google OAuth
-  googleClientId: getConfigValue('GOOGLE_CLIENT_ID', "170733685760-a1rgqkpr8sq4ktdki47iqtimjg55vc4o.apps.googleusercontent.com"),
-
-  googleRedirectUri: getConfigValue('GOOGLE_REDIRECT_URI', "https://collect-pro.vercel.app/auth/v1/callback"),
-
-  // إعدادات API
+  // إعدادات API - استخدم متغيرات البيئة
   apiEndpoint: getConfigValue('API_ENDPOINT', "/api"),
 
-  // إعدادات الأمان
+  // إعدادات الأمان - استخدم متغيرات البيئة
   csrfSecret: getConfigValue('CSRF_SECRET', "default-csrf-secret-change-in-production"),
 
-  // إعدادات البريد الإلكتروني
+  // إعدادات البريد الإلكتروني - استخدم متغيرات البيئة
   emailService: getConfigValue('EMAIL_SERVICE', "sendgrid"),
+  emailUser: getConfigValue('EMAIL_USER', "your-email@domain.com"),
+  emailPass: getConfigValue('EMAIL_PASS', "your-app-password"),
+  emailFrom: getConfigValue('EMAIL_FROM', "noreply@yourdomain.com"),
+  emailTo: getConfigValue('EMAIL_TO', "your-email@domain.com"),
 };
 
 // دالة احتياطية للحصول على الإعدادات (للتوافق مع الكود القديم)

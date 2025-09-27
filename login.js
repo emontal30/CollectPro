@@ -833,7 +833,9 @@ async function realGoogleLogin() {
     console.log('🔐 Attempting Google OAuth login...');
 
     // التحقق من إعدادات Supabase
-    if (!window.appConfig?.supabaseUrl || !window.appConfig?.supabaseAnonKey) {
+    if (!window.appConfig?.supabaseUrl || !window.appConfig?.supabaseAnonKey ||
+        window.appConfig.supabaseUrl.includes('your-project-id') ||
+        window.appConfig.supabaseAnonKey.includes('your-supabase-anon-key')) {
       console.log('🧪 إعدادات Supabase غير مكتملة، استخدام وضع الاختبار');
       return {
         success: true,
@@ -848,10 +850,12 @@ async function realGoogleLogin() {
       };
     }
 
+    console.log('🔐 بدء عملية تسجيل الدخول بـ Google...');
+
     const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth-callback.html`,
+        redirectTo: window.appConfig?.googleRedirectUri || `${window.location.origin}/auth-callback.html`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',

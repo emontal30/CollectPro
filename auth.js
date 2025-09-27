@@ -1,416 +1,221 @@
-// نظام المصادقة المحسن
+// نظام المصادقة المحسن والمتكامل
 const auth = {
+  // =================================================================
+  // 1. الوظائف الأساسية لإدارة الجلسة
+  // =================================================================
+
   /**
-   * حفظ معلومات جلسة المستخدم
-   * @param {Object} user - بيانات المستخدم
-   * @param {boolean} remember - تذكر المستخدم
+   * حفظ معلومات جلسة المستخدم بشكل آمن.
+   * @param {Object} user - بيانات المستخدم من Supabase أو غيره.
+   * @param {boolean} remember - هل يجب تذكر المستخدم (localStorage) أم لا (sessionStorage).
    */
   saveUserSession: function (user, remember) {
-    // التحقق من صحة البيانات
     if (!user || !user.id || !user.email) {
+      console.error("Auth Error: بيانات المستخدم غير مكتملة للحفظ.", user);
       throw new Error('بيانات المستخدم غير مكتملة');
     }
 
-    // الحصول على معلومات المستخدم الضرورية
     const userData = {
       id: user.id,
-      name: user.name || user.displayName || '',
+      name: user.user_metadata?.name || user.email.split('@')[0],
       email: user.email,
-      avatar: user.avatar || user.photoURL || '',
-      token: user.token || user.accessToken || '',
-      provider: user.provider || 'email',
+      avatar: user.user_metadata?.avatar_url || '',
+      token: user.token,
+      provider: user.app_metadata?.provider || 'email',
       loginTime: new Date().toISOString(),
-      lastActivity: new Date().toISOString()
     };
 
-    // تشفير البيانات قبل الحفظ
-    const encryptedData = this.encryptData(userData);
-
-    // التخزين في localStorage أو sessionStorage
     const storage = remember ? localStorage : sessionStorage;
-    storage.setItem('user', encryptedData);
-
-    // حفظ الوقت الحالي لمراجعة صلاحية الجلسة لاحقاً
-    const expiryTime = new Date();
-    expiryTime.setHours(expiryTime.getHours() + (remember ? 168 : 24)); // 7 أيام أو 24 ساعة
-    localStorage.setItem('session_expiry', expiryTime.toISOString());
-
-    return userData;
+    storage.setItem('user', btoa(JSON.stringify(userData))); // تشفير بسيط
+    console.log("🛡️ Auth: تم حفظ الجلسة بنجاح.", `المستخدم: ${userData.email}, التذكر: ${remember}`);
   },
 
   /**
-   * تشفير البيانات قبل الحفظ
-   * @param {Object} data - البيانات المراد تشفيرها
-   * @returns {string} البيانات المشفرة
+   * جلب جلسة المستخدم المحفوظة وفك تشفيرها.
+   * @returns {Object|null} بيانات المستخدم أو null.
    */
-  encryptData: function(data) {
-    try {
-      // استخدام base64 للتشفير البسيط
-      return btoa(JSON.stringify(data));
-    } catch (error) {
-      console.error('Encryption error:', error);
-      return JSON.stringify(data);
-    }
-  },
+  getStoredSession: function () {
+    const encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (!encryptedData) return null;
 
-  /**
-   * فك تشفير البيانات
-   * @param {string} encryptedData - البيانات المشفرة
-   * @returns {Object} البيانات الأصلية
-   */
-  decryptData: function(encryptedData) {
     try {
-      return JSON.parse(atob(encryptedData));
-    } catch (error) {
-      // إذا فشل فك التشفير، جرب البيانات العادية
-      try {
-        return JSON.parse(encryptedData);
-      } catch {
+      const userData = JSON.parse(atob(encryptedData));
+      // التحقق من أن البيانات ليست قديمة جدًا (صلاحية 7 أيام)
+      const loginTime = new Date(userData.loginTime);
+      const hoursDiff = (new Date() - loginTime) / (1000 * 60 * 60);
+      if (hoursDiff > 168) { // 7 أيام
+        console.warn("🛡️ Auth: الجلسة المحفوظة منتهية الصلاحية.");
+        this.clearUserSession();
         return null;
       }
+      return userData;
+    } catch (error) {
+      console.error("🛡️ Auth Error: فشل في فك تشفير بيانات الجلسة.", error);
+      this.clearUserSession(); // مسح البيانات التالفة
+      return null;
     }
   },
 
   /**
-   * التحقق من صحة الجلسة
-   * @param {Object} userData - بيانات المستخدم
-   * @returns {boolean} صحة الجلسة
-   */
-  isValidSession: function (userData) {
-    if (!userData || !userData.id || !userData.email) {
-      return false;
-    }
-
-    // التحقق من صلاحية الجلسة
-    const expiryTime = new Date(localStorage.getItem('session_expiry') || '');
-    const currentTime = new Date();
-
-    if (expiryTime && expiryTime <= currentTime) {
-      return false;
-    }
-
-    return true;
-  },
-
-  /**
-   * التحقق من صحة جلسة Supabase
-   * @param {Object} userData - بيانات المستخدم من Supabase
-   * @returns {boolean} صحة الجلسة
-   */
-  isValidSupabaseSession: function (userData) {
-    if (!userData || !userData.id || !userData.email) {
-      return false;
-    }
-
-    // التحقق من وجود access token
-    if (!userData.access_token) {
-      return false;
-    }
-
-    // التحقق من تاريخ انتهاء الصلاحية
-    if (userData.expires_at) {
-      const expiryTime = new Date(userData.expires_at * 1000); // Supabase يستخدم timestamp بالثواني
-      const currentTime = new Date();
-
-      if (expiryTime <= currentTime) {
-        return false;
-      }
-    }
-
-    // التحقق من أن وقت تسجيل الدخول ليس قديماً جداً (24 ساعة كحد أقصى)
-    if (userData.login_time) {
-      const loginTime = new Date(userData.login_time);
-      const currentTime = new Date();
-      const hoursDiff = (currentTime - loginTime) / (1000 * 60 * 60);
-
-      if (hoursDiff > 24) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-
-  /**
-    * التحقق من وجود جلسة مستخدم نشطة
-    * @returns {Object|null} بيانات المستخدم أو null
-    */
-   checkUserSession: function () {
-     try {
-       // التحقق من وجود بيانات Supabase محدثة أولاً
-       const supabaseUserData = localStorage.getItem('supabaseUser');
-       if (supabaseUserData) {
-         try {
-           const userData = JSON.parse(supabaseUserData);
-           if (userData && userData.id && userData.email) {
-             // التحقق من صلاحية الجلسة
-             if (this.isValidSupabaseSession(userData)) {
-               console.log('✅ تم العثور على جلسة Supabase صالحة');
-               return userData;
-             } else {
-               console.log('⚠️ جلسة Supabase منتهية الصلاحية');
-               localStorage.removeItem('supabaseUser');
-               localStorage.removeItem('authProvider');
-             }
-           }
-         } catch (error) {
-           console.warn('خطأ في تحليل بيانات Supabase:', error);
-           localStorage.removeItem('supabaseUser');
-           localStorage.removeItem('authProvider');
-         }
-       }
-
-       // التحقق من وجود بيانات في التخزين التقليدي
-       let encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
-       if (!encryptedData) {
-         // التحقق من جلسة Supabase إذا لم تكن هناك بيانات محلية
-         const supabaseSession = this.checkSupabaseSession();
-         if (supabaseSession) {
-           return supabaseSession;
-         }
-
-         // إذا لم تكن هناك جلسة Supabase، إنشاء جلسة تجريبية
-         console.log('🔧 إنشاء جلسة تجريبية للاختبار');
-         return this.createTestSession();
-       }
-
-       // فك تشفير البيانات
-       const userData = this.decryptData(encryptedData);
-       if (!userData) {
-         // إذا فشل فك التشفير، احذف البيانات التالفة
-         console.warn('فشل في فك تشفير بيانات المستخدم، مسح البيانات التالفة');
-         this.clearUserSession();
-         return this.createTestSession();
-       }
-
-       // التحقق من صحة الجلسة
-       if (!this.isValidSession(userData)) {
-         console.warn('الجلسة غير صالحة، مسح البيانات');
-         this.clearUserSession();
-         return this.createTestSession();
-       }
-
-       // تحديث وقت آخر نشاط
-       userData.lastActivity = new Date().toISOString();
-       const storage = localStorage.getItem('user') ? localStorage : sessionStorage;
-       storage.setItem('user', this.encryptData(userData));
-
-       return userData;
-     } catch (error) {
-       console.error('خطأ في فحص جلسة المستخدم:', error);
-       // في حالة حدوث خطأ، مسح البيانات لتجنب المشاكل
-       this.clearUserSession();
-       return this.createTestSession();
-     }
-   },
-
-  /**
-   * إنشاء جلسة تجريبية للاختبار
-   */
-  createTestSession: function () {
-    const testUser = {
-      id: 'test-user-' + Date.now(),
-      name: 'مستخدم تجريبي',
-      email: 'test@example.com',
-      token: 'test-token-' + Date.now(),
-      provider: 'test',
-      loginTime: new Date().toISOString(),
-      lastActivity: new Date().toISOString()
-    };
-
-    console.log('🔧 تم إنشاء جلسة تجريبية للاختبار');
-    return testUser;
-  },
-
-  /**
-    * التحقق من جلسة Supabase
-    * @returns {Object|null} بيانات المستخدم أو null
-    */
-   checkSupabaseSession: async function () {
-     try {
-       // التحقق من وجود Supabase client
-       if (typeof window === 'undefined' || !window.supabaseClient) {
-         console.log('🔧 Supabase client غير متاح، استخدام وضع الاختبار');
-         return null;
-       }
-
-       // التحقق من وجود appConfig
-       if (!window.appConfig) {
-         console.warn('appConfig غير متوفر');
-         return null;
-       }
-
-       // الحصول على إعدادات Supabase من appConfig
-       const config = window.appConfig;
-       if (!config || !config.supabaseUrl || !config.supabaseAnonKey) {
-         console.warn('إعدادات Supabase غير مكتملة');
-         return null;
-       }
-
-       // التحقق من أن الإعدادات ليست افتراضية
-       if (config.supabaseUrl.includes('your-project-id') || config.supabaseAnonKey.includes('your-supabase-anon-key')) {
-         console.warn('إعدادات Supabase افتراضية، استخدام وضع الاختبار');
-         return null;
-       }
-
-       // استخدام supabaseClient الموجود
-       const supabaseClient = window.supabaseClient;
-
-       // الحصول على الجلسة الحالية
-       const { data: { session }, error } = await supabaseClient.auth.getSession();
-
-       if (error) {
-         console.warn('خطأ في الحصول على الجلسة:', error.message);
-         return null;
-       }
-
-       if (!session || !session.user) {
-         return null;
-       }
-
-       const user = session.user;
-
-       // التحقق من صحة بيانات المستخدم
-       if (!user.id || !user.email) {
-         return null;
-       }
-
-       const userData = {
-         id: user.id,
-         name: user.user_metadata?.name || user.email.split('@')[0],
-         email: user.email,
-         avatar: user.user_metadata?.avatar_url || '',
-         token: session.access_token,
-         provider: user.app_metadata?.provider || 'email',
-         loginTime: new Date().toISOString(),
-         lastActivity: new Date().toISOString()
-       };
-
-       // حفظ البيانات محلياً
-       this.saveUserSession(userData, true);
-
-       return userData;
-     } catch (error) {
-       console.error('Error checking Supabase session:', error);
-       return null;
-     }
-   },
-
-  /**
-   * مسح بيانات جلسة المستخدم دون إعادة توجيه
+   * مسح جميع بيانات جلسة المستخدم.
    */
   clearUserSession: function () {
-    try {
-      // إزالة بيانات المستخدم من التخزين المحلي
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('user');
-      localStorage.removeItem('session_expiry');
-
-      // إزالة بيانات Supabase الجديدة
-      localStorage.removeItem('supabaseUser');
-      localStorage.removeItem('authProvider');
-
-      // محاولة تسجيل الخروج من Supabase إذا كانت المكتبة متاحة
-      if (window.supabase && window.supabase.auth) {
-        window.supabase.auth.signOut().catch(error => {
-          console.warn("فشل تسجيل الخروج من Supabase:", error);
-        });
-      }
-
-      return true;
-    } catch (error) {
-      console.error('خطأ في مسح بيانات الجلسة:', error);
-      return false;
-    }
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
+    console.log("🛡️ Auth: تم مسح بيانات الجلسة من التخزين.");
   },
 
   /**
-   * تسجيل خروج المستخدم
+   * تسجيل الخروج الكامل للمستخدم.
    */
-  logout: function () {
-    try {
-      // مسح بيانات الجلسة
-      const clearResult = this.clearUserSession();
+  logout: async function () {
+    console.log("🛡️ Auth: بدء عملية تسجيل الخروج...");
+    this.clearUserSession();
+    if (window.supabaseClient) {
+      const { error } = await window.supabaseClient.auth.signOut();
+      if (error) {
+        console.error("🛡️ Auth Error: خطأ أثناء تسجيل الخروج من Supabase.", error);
+      }
+    }
+    this.redirectToLogin("تم تسجيل الخروج بنجاح.");
+  },
 
-      // إعادة توجيه إلى صفحة تسجيل الدخول
-      if (typeof window !== 'undefined' && window.location) {
-        window.location.href = 'login.html';
+  // =================================================================
+  // 2. الوظائف الأساسية للتحقق من المستخدم والصلاحيات
+  // =================================================================
+
+  /**
+   * [مهم] التحقق من جلسة المستخدم الحالية (من الخادم أو التخزين المحلي).
+   * هذه هي الدالة الأساسية لمعرفة ما إذا كان المستخدم مسجلاً للدخول.
+   * @returns {Promise<Object|null>} بيانات المستخدم أو null.
+   */
+  checkUserSession: async function () {
+    // الخطوة 1: التحقق من وجود جلسة محلية صالحة أولاً لتسريع التحميل
+    const storedUser = this.getStoredSession();
+    if (storedUser) {
+      console.log("🛡️ Auth: تم العثور على جلسة محلية صالحة.", storedUser.email);
+      return storedUser;
+    }
+
+    // الخطوة 2: إذا لم تكن هناك جلسة محلية، تحقق من Supabase مباشرة
+    console.log("🛡️ Auth: لا توجد جلسة محلية، جاري التحقق من Supabase...");
+    if (!window.supabaseClient) {
+      console.warn("🛡️ Auth: Supabase client غير متاح.");
+      return null;
+    }
+
+    try {
+      const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+
+      if (error) {
+        console.error("🛡️ Auth Error: خطأ في جلب الجلسة من Supabase.", error);
+        return null;
       }
 
-      return clearResult;
+      if (!session) {
+        console.log("🛡️ Auth: لا توجد جلسة نشطة في Supabase.");
+        return null;
+      }
+
+      console.log("🛡️ Auth: تم العثور على جلسة نشطة في Supabase.", session.user.email);
+      // حفظ الجلسة الجديدة محليًا
+      this.saveUserSession(session.user, true); // نفترض التذكر دائمًا عند التحقق من الخادم
+      return session.user;
+
     } catch (error) {
-      console.error('خطأ في تسجيل الخروج:', error);
-      return false;
+      console.error("🛡️ Auth Error: خطأ فادح أثناء التحقق من جلسة Supabase.", error);
+      return null;
     }
   },
 
   /**
-   * إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
-   * @param {string} reason سبب إعادة التوجيه
+   * التحقق مما إذا كان المستخدم الحالي لديه صلاحيات المدير.
+   * @param {Object} user - كائن المستخدم للتحقق منه.
+   * @returns {boolean}
+   */
+  isAdmin: function (user) {
+    if (!user || !user.email) return false;
+    
+    // **مهم**: في تطبيق حقيقي، يجب أن تأتي الصلاحيات من الخادم.
+    // هنا، نعتمد على قائمة بريد إلكتروني محددة كمسؤولين.
+    const adminEmails = ["admin@example.com", "aymanhafez@example.com"]; // أضف الإيميلات هنا
+    
+    return adminEmails.includes(user.email);
+  },
+
+  // =================================================================
+  // 3. وظائف الحماية وإعادة التوجيه (Auth Guard)
+  // =================================================================
+
+  /**
+   * [دالة الحماية الموحدة] تتحقق من صلاحية وصول المستخدم للصفحة الحالية.
+   * تقوم بإعادة التوجيه تلقائيًا إذا لم يكن الوصول مسموحًا.
+   * @returns {Promise<boolean>} `true` إذا كان الوصول مسموحًا، `false` إذا تم إعادة التوجيه.
+   */
+  checkPageAccess: async function () {
+    const user = await this.checkUserSession();
+    const currentPage = window.location.pathname.split('/').pop();
+
+    // الحالة 1: المستخدم غير مسجل الدخول
+    if (!user) {
+      // إذا كان المستخدم بالفعل في صفحة تسجيل الدخول، لا تفعل شيئًا
+      if (currentPage === 'login.html') {
+        return true;
+      }
+      console.warn("🛡️ Auth Guard: لا يوجد مستخدم مسجل. إعادة توجيه إلى login.html");
+      this.redirectToLogin("يجب تسجيل الدخول للوصول إلى هذه الصفحة.");
+      return false;
+    }
+
+    // الحالة 2: المستخدم مسجل دخوله ويحاول الوصول لصفحة تسجيل الدخول
+    if (currentPage === 'login.html') {
+      console.log("🛡️ Auth Guard: المستخدم مسجل بالفعل. إعادة توجيه إلى dashboard.html");
+      window.location.href = 'dashboard.html';
+      return false;
+    }
+
+    // الحالة 3: التحقق من صلاحيات صفحة الإدارة
+    if (currentPage === 'admin.html') {
+      if (!this.isAdmin(user)) {
+        console.warn(`🛡️ Auth Guard: المستخدم (${user.email}) ليس لديه صلاحية الوصول إلى admin.html.`);
+        this.redirectToHome("ليس لديك الصلاحية للوصول لهذه الصفحة.");
+        return false;
+      }
+    }
+
+    // إذا مرت جميع الفحوصات، فالدخول مسموح
+    console.log(`🛡️ Auth Guard: المستخدم (${user.email}) لديه صلاحية الوصول إلى ${currentPage}.`);
+    return true;
+  },
+
+  /**
+   * إعادة التوجيه إلى صفحة تسجيل الدخول مع رسالة.
+   * @param {string} reason - سبب إعادة التوجيه.
    */
   redirectToLogin: function (reason = '') {
-    if (window.location.pathname.indexOf('login.html') === -1) {
-      let redirectUrl = 'login.html';
-      if (reason) {
-        redirectUrl += `?reason=${encodeURIComponent(reason)}`;
-      }
-      window.location.href = redirectUrl;
+    // منع إعادة التوجيه المتكرر
+    if (window.location.pathname.includes('login.html')) return;
+
+    let redirectUrl = 'login.html';
+    if (reason) {
+      redirectUrl += `?reason=${encodeURIComponent(reason)}`;
     }
+    window.location.href = redirectUrl;
   },
 
   /**
-   * الحصول على رمز الوصول الخاص بالمستخدم
-   * @returns {string|null} رمز الوصول أو null
+   * إعادة التوجيه إلى الصفحة الرئيسية مع رسالة.
+   * @param {string} reason - سبب إعادة التوجيه.
    */
-  getToken: function () {
-    const user = this.checkUserSession();
-    return user ? user.token : null;
-  },
-
-  /**
-   * التحقق من وجود دور محدد للمستخدم
-   * @param {string|string[]} roles - الدور أو مجموعة الأدوار المطلوبة
-   * @returns {boolean} إذا كان للمستخدم الدور المطلوب
-   */
-  hasRole: function (roles) {
-    const user = this.checkUserSession();
-    if (!user || !user.roles) return false;
-
-    if (Array.isArray(roles)) {
-      return roles.some(role => user.roles.includes(role));
+  redirectToHome: function (reason = '') {
+    let redirectUrl = 'index.html';
+    if (reason) {
+      // يمكن استخدام query parameter أو نظام تنبيهات لعرض الرسالة
+      alert(reason); // استخدام alert كحل مؤقت
     }
-
-    return user.roles.includes(roles);
-  },
-
-  /**
-   * التحقق من صلاحيات الإدارة
-   * @returns {boolean} true إذا كان المستخدم مسؤولاً
-   */
-  isAdmin: function () {
-    try {
-      const user = this.checkUserSession();
-      if (!user) return false;
-
-      // في تطبيق حقيقي، سيتم التحقق من دور المستخدم من قاعدة البيانات
-      // هنا نقوم بمحاكاة التحقق من صلاحيات الإدارة
-
-      // مثال: التحقق من البريد الإلكتروني
-      if (user.email === 'admin@example.com') return true;
-
-      // مثال: التحقق من وجود خاصية admin في بيانات المستخدم
-      if (user.role === 'admin') return true;
-
-      // مثال: التحقق من وجود صلاحية محددة
-      if (user.permissions && user.permissions.includes('admin')) return true;
-
-      return false;
-    } catch (error) {
-      console.error('خطأ في فحص صلاحيات الإدارة:', error);
-      return false;
-    }
+    window.location.href = redirectUrl;
   }
 };
 
-// تصدير كائن auth
+// تصدير الكائن ليصبح متاحًا عالميًا
 window.auth = auth;

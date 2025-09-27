@@ -140,11 +140,20 @@
   <footer>
     <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
   </footer>
-  <script src="env.js"></script>
-  <script src="config.js"></script>
-  <script src="supabase-loader.js"></script>
-  <script src="auth.js"></script>
-  <script src="sidebar.js"></script>
+  <!-- ملفات تحسين الأداء والـ SEO -->
+  <script src="performance-optimizer.js" defer></script>
+  <script src="seo-optimizer.js" defer></script>
+  <script src="spa-router.js" defer></script>
+  <script src="lazy-components.js" defer></script>
+  <script src="state-manager.js" defer></script>
+  <script src="clear-test-data.js" defer></script>
+
+  <!-- ملفات النظام الأساسية -->
+  <script src="env.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="supabase-loader.js" defer></script>
+  <script src="auth.js" defer></script>
+  <script src="sidebar.js" defer></script>
   <script>
     // فحص المصادقة عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', function() {

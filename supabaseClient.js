@@ -23,9 +23,9 @@ function initializeSupabaseClient() {
       return null;
     }
 
-    // التحقق من صحة الإعدادات
-    const supabaseUrl = window.appConfig.supabaseUrl;
-    const supabaseKey = window.appConfig.supabaseAnonKey;
+    // استخدام الإعدادات من appConfig
+    const supabaseUrl = window.appConfig?.supabaseUrl;
+    const supabaseKey = window.appConfig?.supabaseAnonKey;
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ إعدادات Supabase غير مكتملة');
@@ -34,7 +34,7 @@ function initializeSupabaseClient() {
 
     // التحقق من أن الإعدادات ليست افتراضية
     if (supabaseUrl.includes('your-project-id') || supabaseKey.includes('your-supabase-anon-key')) {
-      console.warn('⚠️ إعدادات Supabase لا تزال افتراضية - سيتم استخدام وضع المحاكاة');
+      console.warn('⚠️ إعدادات Supabase افتراضية - سيتم استخدام وضع المحاكاة');
       return createMockSupabaseClient();
     }
 
@@ -186,7 +186,7 @@ class AuthHelper {
       const { data, error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.appConfig?.googleRedirectUri || `${window.location.origin}/auth/v1/callback`,
+          redirectTo: window.appConfig?.googleRedirectUri || `${window.location.origin}/auth-callback.html`,
         },
       });
 

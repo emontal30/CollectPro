@@ -278,39 +278,28 @@
   <script src="auth.js"></script>
   <script src="sidebar.js"></script>
   <script>
-    // فحص المصادقة عند تحميل الصفحة
+    // استخدام دالة الحماية الموحدة للتحقق من الوصول
     document.addEventListener('DOMContentLoaded', async function() {
-      // التحقق من وجود جلسة مستخدم نشطة
+      // انتظر حتى يتم تحميل كائن المصادقة
       if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (!user) {
-          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
-          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-          return;
+        const hasAccess = await auth.checkPageAccess();
+        if (hasAccess) {
+          // إذا كان الوصول مسموحًا، قم بتهيئة الشريط الجانبي
+          if (typeof sidebar !== 'undefined') {
+            sidebar.init();
+          }
+          console.log("تم التحقق من صلاحية الوصول بنجاح.");
         }
-
-        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
-        console.log('المستخدم مصادق:', user.email);
       } else {
-        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
-        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
-        return;
-      }
-
-      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
-      if (typeof sidebar !== 'undefined') {
-        sidebar.init();
-      }
-
-      // التحقق من صلاحيات الإدارة
-      if (!auth.isAdmin()) {
-        if (typeof showAlert === 'function') {
-          showAlert('ليس لديك صلاحية للوصول إلى هذه الصفحة', 'danger');
-        } else {
-          alert('ليس لديك صلاحية للوصول إلى هذه الصفحة');
-        }
-        window.location.href = 'index.html';
-        return;
+          // في حالة عدم تحميل ملف المصادقة، أعد المحاولة
+          console.warn("Auth object not found, retrying...");
+          setTimeout(() => {
+            if(typeof auth !== 'undefined' && typeof auth.checkPageAccess === 'function') {
+              auth.checkPageAccess();
+            } else {
+              window.location.href = 'login.html?reason=' + encodeURIComponent('فشل تحميل نظام المصادقة');
+            }
+          }, 100);
       }
     });
   </script>
