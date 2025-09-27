@@ -5,11 +5,6 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
-  "functions": {
-    "app/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/((?!api|_next|favicon.ico|manifest.json|sw.js|public/).*)",
