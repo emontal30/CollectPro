@@ -102,7 +102,7 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './login.html',
       filename: 'login.html',
-      chunks: ['login']
+      chunks: ['login', 'auth']
     }),
     new HtmlWebpackPlugin({
       template: './dashboard.html',
