@@ -1,9 +1,9 @@
 {
   "version": 2,
   "name": "collectpro-app",
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "installCommand": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "framework": null,
   "functions": {
     "app/**/*.js": {

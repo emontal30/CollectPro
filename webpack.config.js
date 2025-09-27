@@ -17,11 +17,7 @@ module.exports = {
     admin: './admin.js',
     'my-subscription': './my-subscription.js',
     payment: './payment.js',
-    subscriptions: './subscriptions.js',
-    sidebar: './sidebar.js',
-    auth: './auth.js',
-    'api-client': './api-client.js',
-    'supabase-loader': './supabase-loader.js'
+    subscriptions: './subscriptions.js'
   },
   output: {
     filename: isDevelopment ? '[name].bundle.js' : '[name].[contenthash].bundle.js',
@@ -93,68 +89,79 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
-      chunks: ['main', 'config', 'auth', 'sidebar']
+      chunks: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './login.html',
       filename: 'login.html',
-      chunks: ['login', 'auth', 'sidebar']
+      chunks: ['login']
     }),
     new HtmlWebpackPlugin({
       template: './dashboard.html',
       filename: 'dashboard.html',
-      chunks: ['main', 'config', 'auth', 'sidebar']
+      chunks: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './admin.html',
       filename: 'admin.html',
-      chunks: ['admin', 'config', 'auth', 'sidebar']
+      chunks: ['admin']
     }),
     new HtmlWebpackPlugin({
       template: './harvest.html',
       filename: 'harvest.html',
-      chunks: ['main', 'config', 'auth', 'sidebar']
+      chunks: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './archive.html',
       filename: 'archive.html',
-      chunks: ['main', 'config', 'auth', 'sidebar']
+      chunks: ['main']
     }),
     new HtmlWebpackPlugin({
       template: './my-subscription.html',
       filename: 'my-subscription.html',
-      chunks: ['my-subscription', 'config', 'auth', 'sidebar']
+      chunks: ['my-subscription']
     }),
     new HtmlWebpackPlugin({
       template: './payment.html',
       filename: 'payment.html',
-      chunks: ['payment', 'config', 'auth', 'sidebar']
+      chunks: ['payment']
     }),
     new HtmlWebpackPlugin({
       template: './subscriptions.html',
       filename: 'subscriptions.html',
-      chunks: ['subscriptions', 'config', 'auth', 'sidebar']
+      chunks: ['subscriptions']
     }),
     new HtmlWebpackPlugin({
       template: './register.html',
       filename: 'register.html',
-      chunks: ['login', 'config', 'auth', 'sidebar']
+      chunks: ['login']
     }),
     new HtmlWebpackPlugin({
       template: './reset-password.html',
       filename: 'reset-password.html',
-      chunks: ['login', 'config', 'auth', 'sidebar']
+      chunks: ['login']
+    }),
+    new HtmlWebpackPlugin({
+      template: './auth-callback.html',
+      filename: 'auth-callback.html',
+      chunks: ['main']
     }),
     new CopyPlugin({
       patterns: [
-        // نسخ الملفات الثابتة فقط (ليس ملفات JS التي تتم معالجتها بالفعل)
+        // نسخ الملفات الثابتة
         { from: '*.css', to: '[name][ext]' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
         { from: 'env.js', to: 'env.js' },
-        { from: 'config.js', to: 'config.js' }
-        // تم إزالة نسخ الصور لأنها ستُعالج بواسطة asset/resource
+        { from: 'config.js', to: 'config.js' },
+        { from: 'auth.js', to: 'auth.js' },
+        { from: 'supabase-loader.js', to: 'supabase-loader.js' },
+        { from: 'sidebar.js', to: 'sidebar.js' },
+        { from: 'script.js', to: 'script.js' },
+        { from: 'cdn-config.js', to: 'cdn-config.js' },
+        // نسخ مجلد public بالكامل
+        { from: 'public', to: 'public', noErrorOnMissing: true }
       ]
     })
   ],
