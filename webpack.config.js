@@ -152,10 +152,13 @@ module.exports = {
       patterns: [
         // نسخ الملفات الثابتة
         { from: '*.css', to: '[name][ext]' },
+        { from: 'sidebar.css', to: 'sidebar.css' },
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
         { from: 'env.js', to: 'env.js' },
+        { from: 'config.js', to: 'config.js' },
+        { from: 'auth.js', to: 'auth.js' },
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'sidebar.js', to: 'sidebar.js' },
         { from: 'script.js', to: 'script.js' },
