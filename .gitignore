@@ -1,53 +1,35 @@
-# ======================
 # Dependencies
-# ======================
-node_modules/
-.pnp
-.pnp.js
+/node_modules/
 
-# ======================
-# Testing
-# ======================
-coverage/
+# Build output
+/dist/
+/build/
 
-# ======================
-# Production
-# ======================
-build/
-dist/
-cdn-config.js
+# Webpack cache
+.webpack_cache/
 
-# ======================
-# Environment Variables
-# ======================
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# ======================
 # Logs
-# ======================
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.log
 
-# ======================
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
-# ======================
-.idea/
 .vscode/
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# ======================
 # OS generated files
-# ======================
 .DS_Store
 .DS_Store?
 ._*
@@ -56,77 +38,20 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 
-# ======================
-# Sensitive files
-# ======================
-*.json.backup
-*.env.backup
-client_secret*.json
-oauth_secret*.json
-*secret*.json
-*key*.json
-
-# ======================
-# Files with sensitive data
-# ======================
-# These files contain real API keys, secrets, and credentials
-public/js/env-config.js      # Contains Supabase keys, OAuth secrets, email passwords
-payment.js                   # Contains Supabase API keys
-my-subscription.js           # Contains Supabase API keys
-subscriptions.js             # Contains Supabase API keys
-
-# ======================
-# Safe public files
-# ======================
-# These files are safe to commit (no real secrets)
-!public/js/cdn-config.js
-
-# ======================
 # Temporary files
-# ======================
 *.tmp
 *.temp
 .cache/
 temp/
 tmp/
 
-# ======================
-# Backup and config files with sensitive data
-# ======================
-*.backup
-config/local.json
-config/production.json
-settings.json
-
-# ======================
-# Build artifacts
-# ======================
-*.log
-logs/
-
-# ======================
-# Personal data and credentials
-# ======================
+# Sensitive credential files that should never be committed
+client_secret*.json
+oauth_secret*.json
+*secret*.json
+*key*.json
 *credentials*.json
 *auth*.json
 *token*.json
 *password*.json
-
-# ======================
-# Image files (large files) - تم إلغاء الاستبعاد لدعم Vercel
-# ======================
-# *.png
-# *.jpg
-# *.jpeg
-# *.gif
-# *.svg
-# *.ico
-# *.webp
-
-# ======================
-# Security Note
-# ======================
-# This .gitignore file has been updated to protect sensitive data
-# including API keys, passwords, and personal information.
-# Never commit files containing real credentials to version control.
-# Use environment variables and .env.example files instead.
+*.backup
