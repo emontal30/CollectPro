@@ -93,12 +93,74 @@ const auth = {
   },
 
   /**
+   * التحقق من صحة جلسة Supabase
+   * @param {Object} userData - بيانات المستخدم من Supabase
+   * @returns {boolean} صحة الجلسة
+   */
+  isValidSupabaseSession: function (userData) {
+    if (!userData || !userData.id || !userData.email) {
+      return false;
+    }
+
+    // التحقق من وجود access token
+    if (!userData.access_token) {
+      return false;
+    }
+
+    // التحقق من تاريخ انتهاء الصلاحية
+    if (userData.expires_at) {
+      const expiryTime = new Date(userData.expires_at * 1000); // Supabase يستخدم timestamp بالثواني
+      const currentTime = new Date();
+
+      if (expiryTime <= currentTime) {
+        return false;
+      }
+    }
+
+    // التحقق من أن وقت تسجيل الدخول ليس قديماً جداً (24 ساعة كحد أقصى)
+    if (userData.login_time) {
+      const loginTime = new Date(userData.login_time);
+      const currentTime = new Date();
+      const hoursDiff = (currentTime - loginTime) / (1000 * 60 * 60);
+
+      if (hoursDiff > 24) {
+        return false;
+      }
+    }
+
+    return true;
+  },
+
+  /**
    * التحقق من وجود جلسة مستخدم نشطة
    * @returns {Object|null} بيانات المستخدم أو null
    */
   checkUserSession: function () {
     try {
-      // التحقق من وجود بيانات في التخزين
+      // التحقق من وجود بيانات Supabase محدثة أولاً
+      const supabaseUserData = localStorage.getItem('supabaseUser');
+      if (supabaseUserData) {
+        try {
+          const userData = JSON.parse(supabaseUserData);
+          if (userData && userData.id && userData.email) {
+            // التحقق من صلاحية الجلسة
+            if (this.isValidSupabaseSession(userData)) {
+              console.log('✅ تم العثور على جلسة Supabase صالحة');
+              return userData;
+            } else {
+              console.log('⚠️ جلسة Supabase منتهية الصلاحية');
+              localStorage.removeItem('supabaseUser');
+              localStorage.removeItem('authProvider');
+            }
+          }
+        } catch (error) {
+          console.warn('خطأ في تحليل بيانات Supabase:', error);
+          localStorage.removeItem('supabaseUser');
+          localStorage.removeItem('authProvider');
+        }
+      }
+
+      // التحقق من وجود بيانات في التخزين التقليدي
       let encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
       if (!encryptedData) {
         // التحقق من جلسة Supabase إذا لم تكن هناك بيانات محلية
@@ -146,9 +208,31 @@ const auth = {
         return null;
       }
 
-      // التحقق من وجود دالة getConfig
-      if (typeof getConfig === 'undefined') {
-        console.error('دالة getConfig غير متوفرة. تأكد من تحميل config.js قبل auth.js');
+      // التحقق من وجود appConfig
+      if (typeof window === 'undefined' || !window.appConfig) {
+        console.error('appConfig غير متوفر. تأكد من تحميل config.js قبل auth.js');
+        // انتظار تحميل config.js
+        let attempts = 0;
+        while ((typeof window === 'undefined' || !window.appConfig) && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        if (typeof window === 'undefined' || !window.appConfig) {
+          console.error('فشل في تحميل config.js بعد عدة محاولات');
+          return null;
+        }
+      }
+
+      // الحصول على إعدادات Supabase من appConfig
+      const config = window.appConfig;
+      if (!config || !config.supabaseUrl || !config.supabaseAnonKey) {
+        console.error('إعدادات Supabase غير متوفرة');
+        return null;
+      }
+
+      // التحقق من أن الإعدادات ليست افتراضية
+      if (config.supabaseUrl.includes('your-project-id') || config.supabaseAnonKey.includes('your-supabase-anon-key')) {
+        console.warn('إعدادات Supabase لا تزال افتراضية');
         return null;
       }
 
@@ -158,12 +242,8 @@ const auth = {
         return null;
       }
 
-      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
-        return null;
-      }
-
       const { createClient } = window.supabase;
-      const supabaseClient = createClient(supabaseUrl, supabaseKey);
+      const supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
 
       // الحصول على الجلسة الحالية
       const { data: { session }, error } = await supabaseClient.auth.getSession();
@@ -209,6 +289,10 @@ const auth = {
       localStorage.removeItem('user');
       sessionStorage.removeItem('user');
       localStorage.removeItem('session_expiry');
+
+      // إزالة بيانات Supabase الجديدة
+      localStorage.removeItem('supabaseUser');
+      localStorage.removeItem('authProvider');
 
       // محاولة تسجيل الخروج من Supabase إذا كانت المكتبة متاحة
       if (window.supabase && window.supabase.auth) {

@@ -177,6 +177,10 @@ const sidebar = {
         sessionStorage.removeItem('user');
         localStorage.removeItem('session_expiry');
 
+        // مسح بيانات Supabase الجديدة
+        localStorage.removeItem('supabaseUser');
+        localStorage.removeItem('authProvider');
+
         // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
         setTimeout(() => {
           window.location.href = 'login.html';

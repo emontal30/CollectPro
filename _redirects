@@ -10,6 +10,7 @@
 /login /login.html 200
 /register /register.html 200
 /reset-password /reset-password.html 200
+/auth-callback /auth-callback.html 200
 
 # إعادة توجيه API
 /api/* /api/:splat 200

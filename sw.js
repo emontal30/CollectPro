@@ -6,8 +6,8 @@ const DYNAMIC_CACHE = 'collectpro-dynamic-v1';
 const STATIC_ASSETS = [
   'index.html',
   'manifest.json',
-  'public/logoapp.png',
-  'public/logo-momkn.png'
+  'logoapp.png',
+  'logo-momkn.png'
 ];
 
 const API_ENDPOINTS = [
@@ -38,7 +38,7 @@ self.addEventListener('install', function(event) {
           }
         })).then(responses => {
           console.log('🔍 Debug - All assets checked, adding to cache');
-          return cache.addAll(responses);
+          return cache.addAll(STATIC_ASSETS);
         });
       })
     ])

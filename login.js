@@ -655,7 +655,7 @@ async function realLoginRequest(email, password) {
     }
 
     // تسجيل الدخول
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
       email: email,
       password: password
     });
@@ -805,12 +805,23 @@ async function realGoogleLogin() {
     }
     console.log('✅ Supabase client is ready');
 
+    // الانتظار حتى يتم تحميل supabaseClient
+    attempts = 0;
+    while (typeof window.supabaseClient === 'undefined' && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    if (typeof window.supabaseClient === 'undefined') {
+      throw new Error('supabaseClient غير متاح');
+    }
+
     // تسجيل الدخول بـ Google
     console.log('🔐 Attempting Google OAuth login...');
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard.html`
+        redirectTo: window.appConfig?.googleRedirectUri || `${window.location.origin}/auth/v1/callback`
       }
     });
 
@@ -885,7 +896,7 @@ async function simpleGoogleLogin() {
     }
 
     // تسجيل الدخول بـ Google
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
       provider: 'google'
     });
 
