@@ -76,6 +76,12 @@ my-subscription.js           # Contains Supabase API keys
 subscriptions.js             # Contains Supabase API keys
 
 # ======================
+# Safe public files
+# ======================
+# These files are safe to commit (no real secrets)
+!public/js/cdn-config.js
+
+# ======================
 # Temporary files
 # ======================
 *.tmp
