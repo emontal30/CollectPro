@@ -17,7 +17,9 @@ module.exports = {
     admin: './admin.js',
     'my-subscription': './my-subscription.js',
     payment: './payment.js',
-    subscriptions: './subscriptions.js'
+    subscriptions: './subscriptions.js',
+    config: './config.js',
+    auth: './auth.js'
   },
   output: {
     filename: isDevelopment ? '[name].bundle.js' : '[name].[contenthash].bundle.js',
@@ -154,8 +156,6 @@ module.exports = {
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
         { from: 'env.js', to: 'env.js' },
-        { from: 'config.js', to: 'config.js' },
-        { from: 'auth.js', to: 'auth.js' },
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'sidebar.js', to: 'sidebar.js' },
         { from: 'script.js', to: 'script.js' },
