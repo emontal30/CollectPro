@@ -262,7 +262,7 @@ function setupNavigationArrows() {
   const prevBtn = document.getElementById("prevPage");
   const nextBtn = document.getElementById("nextPage");
   
-  const pages = ["index", "harvest", "archive"];
+  const pages = ["dashboard", "harvest", "archive"];
   const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
   const currentIndex = pages.indexOf(currentPage);
   
