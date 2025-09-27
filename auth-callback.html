@@ -138,8 +138,7 @@
     </div>
   </div>
 
-  <script type="module">
-    import { supabase } from "./supabaseClient.js";
+  <script>
 
     // Debug information
     document.getElementById('debug-url').textContent = 'Current URL: ' + window.location.href;
@@ -175,7 +174,20 @@
            setTimeout(() => reject(new Error('انتهت مهلة العملية')), 30000);
          });
 
-         const sessionPromise = supabase.auth.getSession();
+         // الانتظار حتى يتم تحميل supabaseClient
+         let attempts = 0;
+         const maxAttempts = 50;
+
+         while (typeof window.supabaseClient === 'undefined' && attempts < maxAttempts) {
+           await new Promise(resolve => setTimeout(resolve, 100));
+           attempts++;
+         }
+
+         if (typeof window.supabaseClient === 'undefined') {
+           throw new Error('supabaseClient غير متاح');
+         }
+
+         const sessionPromise = window.supabaseClient.auth.getSession();
          const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
 
          if (error) {
