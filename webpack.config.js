@@ -165,7 +165,7 @@ module.exports = {
         // The JS files below are now handled as webpack entry points and should not be copied directly.
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'sidebar.js', to: 'sidebar.js' },
-        { from: 'cdn-config.js', to: 'cdn-config.js' },,
+        { from: 'cdn-config.js', to: 'cdn-config.js' },
         // نسخ مجلد public بالكامل
         { from: 'public', to: 'public', noErrorOnMissing: true }
       ]
