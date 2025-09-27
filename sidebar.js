@@ -214,16 +214,33 @@ const sidebar = {
 
     // تحديث صورة المستخدم
     const avatarElement = document.querySelector('.sidebar-user-avatar');
-    if (avatarElement && user.avatar) {
-      avatarElement.src = user.avatar;
-      avatarElement.alt = user.name;
+    if (avatarElement) {
+      if (user.avatar) {
+        avatarElement.src = user.avatar;
+        avatarElement.alt = user.name || 'صورة المستخدم';
+      } else {
+        // إذا لم تكن هناك صورة، استخدم الحرف الأول من الاسم
+        avatarElement.textContent = (user.name || 'م').charAt(0).toUpperCase();
+      }
     }
 
     // تحديث البريد الإلكتروني
     const emailElement = document.querySelector('.sidebar-user-email');
     if (emailElement) {
-      emailElement.textContent = user.email || '';
+      emailElement.textContent = user.email || 'user@example.com';
     }
+
+    // تحديث معرف المستخدم
+    const idElement = document.querySelector('.sidebar-user-id');
+    if (idElement) {
+      idElement.textContent = user.id || 'غير محدد';
+    }
+
+    console.log('تم تحديث معلومات المستخدم:', {
+      name: user.name,
+      email: user.email,
+      id: user.id
+    });
   },
 
   /**

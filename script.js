@@ -218,72 +218,180 @@ function clearHarvestTable() {
 /* ========== Navigation ========== */
 // ======== تعديل رئيسي: دالة التنقل بين الصفحات ========
 function navigateTo(page) {
-  if (page === "harvest") {
-    const dataInput = document.getElementById("dataInput");
-    if (dataInput) {
-      const data = dataInput.value.trim();
-      
-      // تعديل هام: دائماً احفظ البيانات الجديدة في harvestData
-      if (data) {
-        try {
-          localStorage.setItem("harvestData", data);
-          localStorage.removeItem("clientData"); // مسح البيانات القديمة
-        } catch (error) {
-          console.error("خطأ في حفظ البيانات:", error);
-          showToast("حدث خطأ أثناء حفظ البيانات");
+  try {
+    console.log("Starting navigation to:", page);
+
+    if (page === "harvest") {
+      const dataInput = document.getElementById("dataInput");
+      if (dataInput) {
+        const data = dataInput.value.trim();
+
+        // تعديل هام: دائماً احفظ البيانات الجديدة في harvestData
+        if (data) {
+          try {
+            localStorage.setItem("harvestData", data);
+            localStorage.removeItem("clientData"); // مسح البيانات القديمة
+            console.log("Data saved successfully for harvest page");
+          } catch (error) {
+            console.error("خطأ في حفظ البيانات:", error);
+            showToast("حدث خطأ أثناء حفظ البيانات");
+            return; // لا نتابع التنقل إذا فشل الحفظ
+          }
+        } else {
+          console.log("No data to save for harvest page");
         }
       }
-    }
-    window.location.href = `${page}.html`;
-  } else if (page === "archive") {
-    const tbody = document.querySelector("#harvestTable tbody");
-    if (tbody) {
-      try {
-        localStorage.setItem("rowData", tbodyToStorage());
-      } catch (e) {
-        console.error("Failed to save row data", e);
+      console.log("Navigating to harvest.html");
+      window.location.href = `${page}.html`;
+    } else if (page === "archive") {
+      const tbody = document.querySelector("#harvestTable tbody");
+      if (tbody) {
+        try {
+          const rowData = tbodyToStorage();
+          localStorage.setItem("rowData", rowData);
+          console.log("Row data saved successfully for archive page");
+        } catch (e) {
+          console.error("Failed to save row data:", e);
+          showToast("تحذير: فشل في حفظ بيانات الجدول");
+          // نتابع التنقل رغم الخطأ في الحفظ
+        }
+      } else {
+        console.log("No harvest table found for archive navigation");
       }
-    }
-    window.location.href = `${page}.html`;
-  } else if (page === "index") {
-    const tbody = document.querySelector("#harvestTable tbody");
-    if (tbody) {
-      try {
-        localStorage.setItem("rowData", tbodyToStorage());
-      } catch (e) {
-        console.error("Failed to save row data", e);
+      console.log("Navigating to archive.html");
+      window.location.href = `${page}.html`;
+    } else if (page === "dashboard") {
+      const tbody = document.querySelector("#harvestTable tbody");
+      if (tbody) {
+        try {
+          const rowData = tbodyToStorage();
+          localStorage.setItem("rowData", rowData);
+          console.log("Row data saved successfully for dashboard page");
+        } catch (e) {
+          console.error("Failed to save row data:", e);
+          showToast("تحذير: فشل في حفظ بيانات الجدول");
+          // نتابع التنقل رغم الخطأ في الحفظ
+        }
+      } else {
+        console.log("No harvest table found for dashboard navigation");
       }
+      console.log("Navigating to dashboard.html");
+      window.location.href = `${page}.html`;
+    } else {
+      console.warn("Unknown page for navigation:", page);
+      showToast("صفحة غير معروفة للتنقل");
     }
-    window.location.href = `${page}.html`;
+  } catch (error) {
+    console.error("Error in navigateTo function:", error);
+    showToast("حدث خطأ أثناء التنقل بين الصفحات");
   }
 }
 /* ========== Navigation Arrows ========== */
 function setupNavigationArrows() {
-  const prevBtn = document.getElementById("prevPage");
-  const nextBtn = document.getElementById("nextPage");
-  
-  const pages = ["dashboard", "harvest", "archive"];
-  const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
-  const currentIndex = pages.indexOf(currentPage);
-  
-  if (prevBtn) {
+  try {
+    // انتظار تحميل DOM بالكامل
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => setupNavigationArrows());
+      return;
+    }
+
+    const prevBtn = document.getElementById("prevPage");
+    const nextBtn = document.getElementById("nextPage");
+
+    if (!prevBtn || !nextBtn) {
+      console.warn("Navigation buttons not found, retrying...");
+      setTimeout(() => setupNavigationArrows(), 100);
+      return;
+    }
+
+    // إزالة معالجات الأحداث الموجودة لتجنب التضارب
+    prevBtn.removeEventListener("click", handlePrevClick);
+    nextBtn.removeEventListener("click", handleNextClick);
+
+    const pages = ["dashboard", "harvest", "archive"];
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+    const currentIndex = pages.indexOf(currentPage);
+
+    console.log("Setting up navigation:", {
+      currentPage,
+      currentIndex,
+      pages,
+      prevBtn: !!prevBtn,
+      nextBtn: !!nextBtn
+    });
+
+    // إعداد زر السابق
     if (currentIndex > 0) {
-      prevBtn.addEventListener("click", () => navigateTo(pages[currentIndex - 1]));
       prevBtn.classList.remove("hidden");
+      prevBtn.style.display = "flex";
+      prevBtn.addEventListener("click", handlePrevClick);
+      console.log("Previous button enabled for:", pages[currentIndex - 1]);
     } else {
       prevBtn.classList.add("hidden");
+      prevBtn.style.display = "none";
+      console.log("Previous button hidden");
     }
-  }
-  
-  if (nextBtn) {
+
+    // إعداد زر التالي
     if (currentIndex < pages.length - 1) {
-      nextBtn.addEventListener("click", () => navigateTo(pages[currentIndex + 1]));
       nextBtn.classList.remove("hidden");
+      nextBtn.style.display = "flex";
+      nextBtn.addEventListener("click", handleNextClick);
+      console.log("Next button enabled for:", pages[currentIndex + 1]);
     } else {
       nextBtn.classList.add("hidden");
+      nextBtn.style.display = "none";
+      console.log("Next button hidden");
     }
+
+    // إضافة logging لتسهيل التشخيص
+    console.log("Navigation setup completed successfully");
+
+  } catch (error) {
+    console.error("Error in setupNavigationArrows:", error);
+    showToast("حدث خطأ في إعداد أزرار التنقل");
   }
 }
+
+// معالجات الأحداث المنفصلة لتجنب التضارب
+function handlePrevClick(e) {
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const pages = ["dashboard", "harvest", "archive"];
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+    const currentIndex = pages.indexOf(currentPage);
+
+    if (currentIndex > 0) {
+      console.log("Navigating to:", pages[currentIndex - 1]);
+      navigateTo(pages[currentIndex - 1]);
+    }
+  } catch (error) {
+    console.error("Error in handlePrevClick:", error);
+    showToast("حدث خطأ في التنقل للصفحة السابقة");
+  }
+}
+
+function handleNextClick(e) {
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const pages = ["dashboard", "harvest", "archive"];
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+    const currentIndex = pages.indexOf(currentPage);
+
+    if (currentIndex < pages.length - 1) {
+      console.log("Navigating to:", pages[currentIndex + 1]);
+      navigateTo(pages[currentIndex + 1]);
+    }
+  } catch (error) {
+    console.error("Error in handleNextClick:", error);
+    showToast("حدث خطأ في التنقل للصفحة التالية");
+  }
+}
+
 /* ========== Storage Functions ========== */
 function tbodyToStorage() {
   const tbody = document.querySelector("#harvestTable tbody");
@@ -997,7 +1105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }, 100);
 
   applyDarkModeFromStorage();
-  
+
   const toggleDarkBtn = document.getElementById("toggleDark");
   if (toggleDarkBtn) {
     toggleDarkBtn.addEventListener("click", () => {
@@ -1005,7 +1113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       localStorage.setItem("darkMode", document.body.classList.contains("dark") ? "on" : "off");
     });
   }
-  
+
   const todayEl = document.getElementById("currentDate");
   if (todayEl) {
     try {
@@ -1014,9 +1122,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       todayEl.textContent = new Date().toLocaleDateString();
     }
   }
-  
-  setupAutoSave();
+
+  // إعداد الأزرار السفلية مع إعادة المحاولة المحسنة
   setupNavigationArrows();
+
+  // إعادة المحاولة مرة واحدة فقط بعد ثانية للتأكد من تحميل DOM
+  setTimeout(() => {
+    const prevBtn = document.getElementById("prevPage");
+    const nextBtn = document.getElementById("nextPage");
+    if (prevBtn && nextBtn) {
+      console.log("Navigation buttons confirmed loaded");
+    } else {
+      console.warn("Retrying navigation setup...");
+      setupNavigationArrows();
+    }
+  }, 1000);
+
+  setupAutoSave();
   enhanceTableExperience();
   setupSummaryNumberFormatting();
   

@@ -117,6 +117,7 @@ body:not(.sidebar-collapsed)::before {
 }
 .user-name { font-weight: 700; font-size: 15px; color: var(--sb-fg); }
 .user-id { font-size: 12px; color: var(--sb-muted); }
+.user-email { font-size: 12px; color: var(--sb-muted); margin-bottom: 4px; }
 
 .sidebar-content {
   padding: 12px 8px;

@@ -8,7 +8,7 @@
   "devCommand": "npm run dev",
   "rewrites": [
     {
-      "source": "/((?!api|_next|favicon.ico|manifest.json|sw.js|public|auth|config|supabaseClient|env|sidebar|login|register|dashboard|harvest|archive|subscriptions|my-subscription|payment|admin|script|style|auth-callback|reset-password|supabase-loader|asset-optimizer|backup-manager|bug-tracker|cache-manager|error-logger|help-system|performance-monitor|update-env|update-manager|webpack|vercel|login\\.js|supabaseClient\\.js|auth\\.js|config\\.js|script\\.js|admin\\.js|my-subscription\\.js|payment\\.js|subscriptions\\.js|sidebar\\.js|cdn-config\\.js).*)",
+      "source": "/((?!api|_next|favicon.ico|manifest.json|sw-optimized\\.js|public|auth|config|supabaseClient|env|sidebar|login|register|dashboard|harvest|archive|subscriptions|my-subscription|payment|admin|script|style|auth-callback|reset-password|supabase-loader|asset-optimizer|backup-manager|bug-tracker|cache-manager|error-logger|help-system|performance-monitor|update-env|update-manager|webpack|vercel|performance-optimizer|seo-optimizer|spa-router|lazy-components|state-manager|test-optimizations|login\\.js|supabaseClient\\.js|auth\\.js|config\\.js|script\\.js|admin\\.js|my-subscription\\.js|payment\\.js|subscriptions\\.js|sidebar\\.js|cdn-config\\.js|performance-optimizer\\.js|seo-optimizer\\.js|spa-router\\.js|lazy-components\\.js|state-manager\\.js|test-optimizations\\.js).*)",
       "destination": "/index.html"
     }
   ],
@@ -90,6 +90,41 @@
       "source": "/sidebar.css",
       "headers": [
         { "key": "Content-Type", "value": "text/css; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/performance-optimizer.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/seo-optimizer.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/spa-router.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/lazy-components.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/state-manager.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }

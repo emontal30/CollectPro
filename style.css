@@ -832,6 +832,13 @@ body.dark .bottom-nav-btn:hover {
   background: linear-gradient(135deg, #555, #444);
 }
 
+/* عكس اتجاه الأسهم في جميع صفحات التنقل */
+.nav-icon {
+  transform: scaleX(-1);
+}
+
+
+
 /* تحسين شكل الأسهم */
 .nav-icon {
   font-size: 28px;
@@ -873,7 +880,24 @@ body.dark .bottom-nav-btn:hover {
 
 /* إخفاء الأزرار غير المناسبة */
 .bottom-nav-btn.hidden {
-  display: none;
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* تحسين إمكانية الوصول للأزرار */
+.bottom-nav-btn:focus {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.bottom-nav-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.bottom-nav-btn:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* تنسيقات للخلايا غير القابلة للتعديل */

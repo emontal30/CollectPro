@@ -170,41 +170,90 @@ module.exports = {
   ],
   optimization: {
     minimizer: [
-      new CssMinimizerPlugin(),
+      new CssMinimizerPlugin({
+        minimizerOptions: {
+          preset: [
+            'default',
+            {
+              discardComments: { removeAll: true },
+              normalizeWhitespace: true,
+            },
+          ],
+        },
+      }),
       new TerserPlugin({
         terserOptions: {
           compress: {
             drop_console: !isDevelopment,
+            drop_debugger: !isDevelopment,
+            pure_funcs: !isDevelopment ? ['console.log', 'console.info', 'console.debug'] : [],
+          },
+          mangle: {
+            safari10: true,
+          },
+          format: {
+            comments: false,
           },
         },
+        extractComments: false,
       }),
     ],
     splitChunks: {
       chunks: 'all',
       cacheGroups: {
-        vendor: {
+        default: false,
+        vendors: {
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors',
           chunks: 'all',
-          priority: 10,
+          priority: 20,
           enforce: true,
+          reuseExistingChunk: true,
         },
         supabase: {
           test: /[\\/]node_modules[\\/]@supabase[\\/]/,
           name: 'supabase',
           chunks: 'all',
           priority: 15,
+          enforce: true,
         },
-        // إضافة مجموعة مشتركة للملفات المستخدمة في كل الصفحات
+        auth: {
+          test: /auth\.js$/,
+          name: 'auth',
+          chunks: 'all',
+          priority: 12,
+          enforce: true,
+        },
+        sidebar: {
+          test: /sidebar\.js$/,
+          name: 'sidebar',
+          chunks: 'all',
+          priority: 11,
+          enforce: true,
+        },
+        // ملفات مشتركة للصفحات الرئيسية
         common: {
           name: 'common',
           minChunks: 2,
           chunks: 'all',
           priority: 5,
-          reuseExistingChunk: true
-        }
+          reuseExistingChunk: true,
+          minSize: 10000,
+        },
+        // ملفات CSS منفصلة
+        styles: {
+          name: 'styles',
+          type: 'css/mini-extract',
+          chunks: 'all',
+          enforce: true,
+        },
       },
     },
+    runtimeChunk: {
+      name: 'runtime',
+    },
+    moduleIds: 'deterministic',
+    chunkIds: 'deterministic',
   },
   cache: {
     type: 'filesystem',
