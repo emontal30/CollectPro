@@ -1,12 +1,27 @@
-// استخدام supabaseClient الجديد
-if (typeof window.supabase === 'undefined') {
-  console.error('مكتبة Supabase غير محملة');
-}
+// استخدام supabaseClient المركزي
+let supabase = null;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('إعدادات Supabase غير متوفرة في ملف config.js');
-} else {
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// دالة للحصول على supabase client
+function getSupabaseClient() {
+  if (supabase) return supabase;
+
+  // الانتظار حتى يتم تحميل supabaseClient
+  if (typeof window !== 'undefined' && window.supabaseClient) {
+    supabase = window.supabaseClient;
+    return supabase;
+  }
+
+  // في حالة عدم توفر supabaseClient، إنشاء عميل مؤقت للاختبار
+  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(
+      'https://altnvsolaqphpndyztup.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI'
+    );
+    return supabase;
+  }
+
+  return null;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // تطبيق الوضع الليلي
@@ -111,8 +126,14 @@ function setupEventListeners() {
 
 async function checkAdminAccess() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // التحقق من وجود جلسة مستخدم
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await client.auth.getUser();
     
     if (!user) {
       // إذا لم يكن المستخدم مسجلاً، توجيهه لصفحة تسجيل الدخول
@@ -122,7 +143,7 @@ async function checkAdminAccess() {
     
     // التحقق من صلاحيات الإدارة (في تطبيق حقيقي، سيتم التحقق من دور المستخدم)
     // هنا نقوم بمحاكاة التحقق من صلاحيات الإدارة
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -140,31 +161,37 @@ async function checkAdminAccess() {
 
 async function loadDashboardStats() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على إجمالي المستخدمين
-    const { count: totalUsers, error: usersError } = await supabase
+    const { count: totalUsers, error: usersError } = await client
       .from('profiles')
       .select('*', { count: 'exact', head: true });
       
     if (usersError) throw usersError;
     
     // الحصول على عدد الطلبات قيد المراجعة
-    const { count: pendingRequests, error: pendingError } = await supabase
+    const { count: pendingRequests, error: pendingError } = await client
       .from('Subscriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
-      
+
     if (pendingError) throw pendingError;
-    
+
     // الحصول على عدد الاشتراكات النشطة
-    const { count: activeSubscriptions, error: activeError } = await supabase
+    const { count: activeSubscriptions, error: activeError } = await client
       .from('Subscriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
-      
+
     if (activeError) throw activeError;
-    
+
     // الحصول على إجمالي الإيرادات
-    const { data: subscriptions, error: revenueError } = await supabase
+    const { data: subscriptions, error: revenueError } = await client
       .from('Subscriptions')
       .select('plan')
       .eq('status', 'active');
@@ -195,7 +222,13 @@ async function loadDashboardStats() {
 
 async function loadPendingSubscriptions() {
   try {
-    const { data, error } = await supabase
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
+    const { data, error } = await client
       .from('Subscriptions')
       .select('*')
       .eq('status', 'pending')
@@ -281,9 +314,15 @@ async function loadPendingSubscriptions() {
 
 async function loadAllSubscriptions() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     const statusFilter = document.getElementById('status-filter').value;
-    
-    let query = supabase
+
+    let query = client
       .from('Subscriptions')
       .select('*')
       .order('created_at', { ascending: false });
@@ -390,8 +429,14 @@ async function loadAllSubscriptions() {
 
 async function activateSubscription(subscriptionId) {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على بيانات الاشتراك
-    const { data: subscription, error: fetchError } = await supabase
+    const { data: subscription, error: fetchError } = await client
       .from('Subscriptions')
       .select('*')
       .eq('id', subscriptionId)
@@ -416,7 +461,7 @@ async function activateSubscription(subscriptionId) {
     const endDateString = endDate.toISOString().split('T')[0];
     
     // تحديث حالة الاشتراك
-    const { error: updateError } = await supabase
+    const { error: updateError } = await client
       .from('Subscriptions')
       .update({
         status: 'active',
@@ -443,8 +488,14 @@ async function activateSubscription(subscriptionId) {
 
 async function cancelSubscription(subscriptionId) {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // تحديث حالة الاشتراك
-    const { error } = await supabase
+    const { error } = await client
       .from('Subscriptions')
       .update({ status: 'cancelled' })
       .eq('id', subscriptionId);
@@ -467,17 +518,23 @@ async function cancelSubscription(subscriptionId) {
 
 async function activateAllSelectedSubscriptions() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على معرفات الاشتراكات المحددة
     const checkboxes = document.querySelectorAll('.subscription-checkbox:checked');
     const subscriptionIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
-    
+
     if (subscriptionIds.length === 0) {
       showAlert('يرجى اختيار اشتراك واحد على الأقل', 'danger');
       return;
     }
-    
+
     // تحديث حالة الاشتراكات
-    const { error } = await supabase
+    const { error } = await client
       .from('Subscriptions')
       .update({ status: 'active' })
       .in('id', subscriptionIds);
@@ -500,17 +557,23 @@ async function activateAllSelectedSubscriptions() {
 
 async function cancelAllSelectedSubscriptions() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على معرفات الاشتراكات المحددة
     const checkboxes = document.querySelectorAll('.subscription-checkbox:checked');
     const subscriptionIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
-    
+
     if (subscriptionIds.length === 0) {
       showAlert('يرجى اختيار اشتراك واحد على الأقل', 'danger');
       return;
     }
-    
+
     // تحديث حالة الاشتراكات
-    const { error } = await supabase
+    const { error } = await client
       .from('Subscriptions')
       .update({ status: 'cancelled' })
       .in('id', subscriptionIds);
@@ -533,8 +596,14 @@ async function cancelAllSelectedSubscriptions() {
 
 async function showSubscriptionDetails(subscriptionId) {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على بيانات الاشتراك
-    const { data: subscription, error } = await supabase
+    const { data: subscription, error } = await client
       .from('Subscriptions')
       .select('*')
       .eq('id', subscriptionId)
@@ -578,8 +647,15 @@ async function showSubscriptionDetails(subscriptionId) {
 
 async function handleLogout() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      window.location.href = 'login.html';
+      return;
+    }
+
     // تسجيل الخروج من Supabase
-    await supabase.auth.signOut();
+    await client.auth.signOut();
     
     // توجيه المستخدم لصفحة تسجيل الدخول
     window.location.href = 'login.html';
@@ -623,5 +699,4 @@ function showAlert(message, type = 'info') {
     alert.style.opacity = '0';
     setTimeout(() => alert.remove(), 300);
   }, 5000);
-}
 }

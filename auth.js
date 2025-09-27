@@ -363,8 +363,36 @@ const auth = {
     if (Array.isArray(roles)) {
       return roles.some(role => user.roles.includes(role));
     }
-    
+
     return user.roles.includes(roles);
+  },
+
+  /**
+   * التحقق من صلاحيات الإدارة
+   * @returns {boolean} true إذا كان المستخدم مسؤولاً
+   */
+  isAdmin: function () {
+    try {
+      const user = this.checkUserSession();
+      if (!user) return false;
+
+      // في تطبيق حقيقي، سيتم التحقق من دور المستخدم من قاعدة البيانات
+      // هنا نقوم بمحاكاة التحقق من صلاحيات الإدارة
+
+      // مثال: التحقق من البريد الإلكتروني
+      if (user.email === 'admin@example.com') return true;
+
+      // مثال: التحقق من وجود خاصية admin في بيانات المستخدم
+      if (user.role === 'admin') return true;
+
+      // مثال: التحقق من وجود صلاحية محددة
+      if (user.permissions && user.permissions.includes('admin')) return true;
+
+      return false;
+    } catch (error) {
+      console.error('خطأ في فحص صلاحيات الإدارة:', error);
+      return false;
+    }
   }
 };
 

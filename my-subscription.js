@@ -1,7 +1,27 @@
-// إعداد Supabase
-const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// إعداد Supabase - استخدام supabaseClient المركزي
+let supabase = null;
+
+// دالة للحصول على supabase client
+function getSupabaseClient() {
+  if (supabase) return supabase;
+
+  // الانتظار حتى يتم تحميل supabaseClient
+  if (typeof window !== 'undefined' && window.supabaseClient) {
+    supabase = window.supabaseClient;
+    return supabase;
+  }
+
+  // في حالة عدم توفر supabaseClient، إنشاء عميل مؤقت للاختبار
+  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(
+      'https://altnvsolaqphpndyztup.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI'
+    );
+    return supabase;
+  }
+
+  return null;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // تطبيق الوضع الليلي
@@ -69,8 +89,14 @@ function setupEventListeners() {
 
 async function loadSubscriptionData() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على بيانات المستخدم الحالي
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await client.auth.getUser();
 
     if (!user) {
       // إذا لم يكن المستخدم مسجلاً، السماح بالوصول وإظهار رسالة
@@ -79,7 +105,7 @@ async function loadSubscriptionData() {
     }
     
     // الحصول على بيانات الاشتراك النشط للمستخدم
-    const { data: subscription, error } = await supabase
+    const { data: subscription, error } = await client
       .from('Subscriptions')
       .select('*')
       .eq('user_id', user.id)
@@ -205,8 +231,14 @@ async function loadSubscriptionData() {
 
 async function loadSubscriptionHistory() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على بيانات المستخدم الحالي
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await client.auth.getUser();
 
     if (!user) {
       // إذا لم يكن مسجلاً، إخفاء الجدول وإظهار رسالة
@@ -220,7 +252,7 @@ async function loadSubscriptionHistory() {
     }
     
     // الحصول على سجل اشتراكات المستخدم
-    const { data: subscriptions, error } = await supabase
+    const { data: subscriptions, error } = await client
       .from('Subscriptions')
       .select('*')
       .eq('user_id', user.id)

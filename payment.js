@@ -1,7 +1,27 @@
-// إعداد Supabase
-const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// إعداد Supabase - استخدام supabaseClient المركزي
+let supabase = null;
+
+// دالة للحصول على supabase client
+function getSupabaseClient() {
+  if (supabase) return supabase;
+
+  // الانتظار حتى يتم تحميل supabaseClient
+  if (typeof window !== 'undefined' && window.supabaseClient) {
+    supabase = window.supabaseClient;
+    return supabase;
+  }
+
+  // في حالة عدم توفر supabaseClient، إنشاء عميل مؤقت للاختبار
+  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(
+      'https://altnvsolaqphpndyztup.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI'
+    );
+    return supabase;
+  }
+
+  return null;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // تطبيق الوضع الليلي
@@ -34,8 +54,14 @@ function setupEventListeners() {
 
 async function loadUserData() {
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      console.warn('Supabase client غير متاح');
+      return;
+    }
+
     // الحصول على بيانات المستخدم الحالي
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await client.auth.getUser();
 
     if (user) {
       // تعبئة حقول البريد الإلكتروني ومعرف المستخدم
@@ -106,7 +132,7 @@ async function handlePaymentSubmit(e) {
   }
   
   // التحقق من عدم تكرار رقم العملية
-  const { data: existingSubscriptions, error: checkError } = await supabase
+  const { data: existingSubscriptions, error: checkError } = await client
     .from('Subscriptions')
     .select('*')
     .eq('transaction_id', transactionId);
@@ -137,7 +163,7 @@ async function handlePaymentSubmit(e) {
     const plan = planMap[subscriptionType] || subscriptionType;
     
     // إدخال بيانات الاشتراك في قاعدة البيانات
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('Subscriptions')
       .insert([
         {
