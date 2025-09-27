@@ -4,10 +4,11 @@ const STATIC_CACHE = 'collectpro-static-v1';
 const DYNAMIC_CACHE = 'collectpro-dynamic-v1';
 
 const STATIC_ASSETS = [
+  '/',
   'index.html',
   'manifest.json',
-  'logoapp.png',
-  'logo-momkn.png'
+  'public/logoapp.png',
+  'public/logo-momkn.png'
 ];
 
 const API_ENDPOINTS = [
