@@ -1,5 +1,6 @@
 // تحميل مكتبة Supabase
 (function loadSupabase() {
+  console.log('⏳ بدء تحميل مكتبة Supabase...');
   const supabaseScript = document.createElement('script');
   supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js';
   supabaseScript.async = true;

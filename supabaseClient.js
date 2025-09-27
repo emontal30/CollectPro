@@ -12,10 +12,14 @@ function initializeSupabaseClient() {
     if (
       typeof window === 'undefined' ||
       !window.supabase ||
-      !window.supabase.createClient ||
-      !window.appConfig
+      !window.supabase.createClient
     ) {
-      console.warn('⚠️ Supabase client أو appConfig غير متاح');
+      console.warn('⚠️ مكتبة Supabase غير متاحة بعد');
+      return null;
+    }
+    
+    if (!window.appConfig) {
+      console.warn('⚠️ appConfig غير متاح');
       return null;
     }
 
@@ -145,9 +149,17 @@ function ensureSupabaseClient() {
  */
 if (typeof window !== 'undefined') {
   const checkSupabase = () => {
-    if (window.supabase && window.supabase.createClient && window.appConfig) {
+    let supabaseReady = window.supabase && window.supabase.createClient;
+    let configReady = window.appConfig;
+    
+    if (supabaseReady && configReady) {
       initializeSupabaseClient();
     } else {
+      // عرض رسائل تصحيح أكثر تفصيلاً
+      if (!supabaseReady) console.log('⏳ في انتظار تحميل مكتبة Supabase...');
+      if (!configReady) console.log('⏳ في انتظار تحميل الإعدادات...');
+      
+      // إعادة المحاولة بعد فترة وجيزة
       setTimeout(checkSupabase, 100);
     }
   };
