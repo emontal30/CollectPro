@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
+  "devCommand": "npm run dev",
   "rewrites": [
     {
       "source": "/((?!api|_next|favicon.ico|manifest.json|sw.js|public|auth|config|supabaseClient|env|sidebar|login|register|dashboard|harvest|archive|subscriptions|my-subscription|payment|admin|script|style|auth-callback|reset-password|supabase-loader|asset-optimizer|backup-manager|bug-tracker|cache-manager|error-logger|help-system|performance-monitor|update-env|update-manager|webpack|vercel|login\\.js|supabaseClient\\.js|auth\\.js|config\\.js|script\\.js|admin\\.js|my-subscription\\.js|payment\\.js|subscriptions\\.js|sidebar\\.js|cdn-config\\.js).*)",
