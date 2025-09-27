@@ -1,6 +1,46 @@
 // نظام المصادقة المحسن والمتكامل
 const auth = {
   // =================================================================
+  // 0. دوال مساعدة للتشفير وفك التشفير المتوافق مع Unicode
+  // =================================================================
+
+  /**
+   * تشفير سلسلة نصية (تدعم Unicode) إلى Base64.
+   * @param {string} str - السلسلة النصية المراد تشفيرها.
+   * @returns {string} السلسلة المشفرة.
+   */
+  _unicodeToBase64: function(str) {
+    try {
+      // أولاً، قم بتحويل السلسلة إلى صيغة متوافقة مع btoa باستخدام encodeURIComponent
+      // ثم قم بتشفيرها
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+          return String.fromCharCode('0x' + p1);
+      }));
+    } catch (e) {
+      console.error("Auth Error: فشل في تشفير البيانات.", e);
+      return null;
+    }
+  },
+
+  /**
+   * فك تشفير سلسلة نصية من Base64 (تدعم Unicode).
+   * @param {string} str - السلسلة المشفرة.
+   * @returns {string} السلسلة الأصلية.
+   */
+  _base64ToUnicode: function(str) {
+    try {
+      // قم بفك التشفير ثم استخدم decodeURIComponent لاستعادة الأحرف الأصلية
+      return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    } catch (e) {
+      console.error("Auth Error: فشل في فك تشفير البيانات.", e);
+      return null;
+    }
+  },
+
+  // =================================================================
   // 1. الوظائف الأساسية لإدارة الجلسة
   // =================================================================
 
@@ -26,8 +66,11 @@ const auth = {
     };
 
     const storage = remember ? localStorage : sessionStorage;
-    storage.setItem('user', btoa(JSON.stringify(userData))); // تشفير بسيط
-    console.log("🛡️ Auth: تم حفظ الجلسة بنجاح.", `المستخدم: ${userData.email}, التذكر: ${remember}`);
+    const encryptedData = this._unicodeToBase64(JSON.stringify(userData));
+    if (encryptedData) {
+      storage.setItem('user', encryptedData);
+      console.log("🛡️ Auth: تم حفظ الجلسة بنجاح.", `المستخدم: ${userData.email}, التذكر: ${remember}`);
+    }
   },
 
   /**
@@ -39,7 +82,10 @@ const auth = {
     if (!encryptedData) return null;
 
     try {
-      const userData = JSON.parse(atob(encryptedData));
+      const decryptedJson = this._base64ToUnicode(encryptedData);
+      if (!decryptedJson) return null;
+
+      const userData = JSON.parse(decryptedJson);
       // التحقق من أن البيانات ليست قديمة جدًا (صلاحية 7 أيام)
       const loginTime = new Date(userData.loginTime);
       const hoursDiff = (new Date() - loginTime) / (1000 * 60 * 60);
