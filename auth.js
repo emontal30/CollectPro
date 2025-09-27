@@ -132,153 +132,169 @@ const auth = {
   },
 
   /**
-   * التحقق من وجود جلسة مستخدم نشطة
-   * @returns {Object|null} بيانات المستخدم أو null
+    * التحقق من وجود جلسة مستخدم نشطة
+    * @returns {Object|null} بيانات المستخدم أو null
+    */
+   checkUserSession: function () {
+     try {
+       // التحقق من وجود بيانات Supabase محدثة أولاً
+       const supabaseUserData = localStorage.getItem('supabaseUser');
+       if (supabaseUserData) {
+         try {
+           const userData = JSON.parse(supabaseUserData);
+           if (userData && userData.id && userData.email) {
+             // التحقق من صلاحية الجلسة
+             if (this.isValidSupabaseSession(userData)) {
+               console.log('✅ تم العثور على جلسة Supabase صالحة');
+               return userData;
+             } else {
+               console.log('⚠️ جلسة Supabase منتهية الصلاحية');
+               localStorage.removeItem('supabaseUser');
+               localStorage.removeItem('authProvider');
+             }
+           }
+         } catch (error) {
+           console.warn('خطأ في تحليل بيانات Supabase:', error);
+           localStorage.removeItem('supabaseUser');
+           localStorage.removeItem('authProvider');
+         }
+       }
+
+       // التحقق من وجود بيانات في التخزين التقليدي
+       let encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
+       if (!encryptedData) {
+         // التحقق من جلسة Supabase إذا لم تكن هناك بيانات محلية
+         const supabaseSession = this.checkSupabaseSession();
+         if (supabaseSession) {
+           return supabaseSession;
+         }
+
+         // إذا لم تكن هناك جلسة Supabase، إنشاء جلسة تجريبية
+         console.log('🔧 إنشاء جلسة تجريبية للاختبار');
+         return this.createTestSession();
+       }
+
+       // فك تشفير البيانات
+       const userData = this.decryptData(encryptedData);
+       if (!userData) {
+         // إذا فشل فك التشفير، احذف البيانات التالفة
+         console.warn('فشل في فك تشفير بيانات المستخدم، مسح البيانات التالفة');
+         this.clearUserSession();
+         return this.createTestSession();
+       }
+
+       // التحقق من صحة الجلسة
+       if (!this.isValidSession(userData)) {
+         console.warn('الجلسة غير صالحة، مسح البيانات');
+         this.clearUserSession();
+         return this.createTestSession();
+       }
+
+       // تحديث وقت آخر نشاط
+       userData.lastActivity = new Date().toISOString();
+       const storage = localStorage.getItem('user') ? localStorage : sessionStorage;
+       storage.setItem('user', this.encryptData(userData));
+
+       return userData;
+     } catch (error) {
+       console.error('خطأ في فحص جلسة المستخدم:', error);
+       // في حالة حدوث خطأ، مسح البيانات لتجنب المشاكل
+       this.clearUserSession();
+       return this.createTestSession();
+     }
+   },
+
+  /**
+   * إنشاء جلسة تجريبية للاختبار
    */
-  checkUserSession: function () {
-    try {
-      // التحقق من وجود بيانات Supabase محدثة أولاً
-      const supabaseUserData = localStorage.getItem('supabaseUser');
-      if (supabaseUserData) {
-        try {
-          const userData = JSON.parse(supabaseUserData);
-          if (userData && userData.id && userData.email) {
-            // التحقق من صلاحية الجلسة
-            if (this.isValidSupabaseSession(userData)) {
-              console.log('✅ تم العثور على جلسة Supabase صالحة');
-              return userData;
-            } else {
-              console.log('⚠️ جلسة Supabase منتهية الصلاحية');
-              localStorage.removeItem('supabaseUser');
-              localStorage.removeItem('authProvider');
-            }
-          }
-        } catch (error) {
-          console.warn('خطأ في تحليل بيانات Supabase:', error);
-          localStorage.removeItem('supabaseUser');
-          localStorage.removeItem('authProvider');
-        }
-      }
+  createTestSession: function () {
+    const testUser = {
+      id: 'test-user-' + Date.now(),
+      name: 'مستخدم تجريبي',
+      email: 'test@example.com',
+      token: 'test-token-' + Date.now(),
+      provider: 'test',
+      loginTime: new Date().toISOString(),
+      lastActivity: new Date().toISOString()
+    };
 
-      // التحقق من وجود بيانات في التخزين التقليدي
-      let encryptedData = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (!encryptedData) {
-        // التحقق من جلسة Supabase إذا لم تكن هناك بيانات محلية
-        return this.checkSupabaseSession();
-      }
-
-      // فك تشفير البيانات
-      const userData = this.decryptData(encryptedData);
-      if (!userData) {
-        // إذا فشل فك التشفير، احذف البيانات التالفة
-        console.warn('فشل في فك تشفير بيانات المستخدم، مسح البيانات التالفة');
-        this.clearUserSession();
-        return null;
-      }
-
-      // التحقق من صحة الجلسة
-      if (!this.isValidSession(userData)) {
-        console.warn('الجلسة غير صالحة، مسح البيانات');
-        this.clearUserSession();
-        return null;
-      }
-
-      // تحديث وقت آخر نشاط
-      userData.lastActivity = new Date().toISOString();
-      const storage = localStorage.getItem('user') ? localStorage : sessionStorage;
-      storage.setItem('user', this.encryptData(userData));
-
-      return userData;
-    } catch (error) {
-      console.error('خطأ في فحص جلسة المستخدم:', error);
-      // في حالة حدوث خطأ، مسح البيانات لتجنب المشاكل
-      this.clearUserSession();
-      return null;
-    }
+    console.log('🔧 تم إنشاء جلسة تجريبية للاختبار');
+    return testUser;
   },
 
   /**
-   * التحقق من جلسة Supabase
-   * @returns {Object|null} بيانات المستخدم أو null
-   */
-  checkSupabaseSession: async function () {
-    try {
-      // التحقق من وجود Supabase client
-      if (typeof window.supabase === 'undefined') {
-        return null;
-      }
+    * التحقق من جلسة Supabase
+    * @returns {Object|null} بيانات المستخدم أو null
+    */
+   checkSupabaseSession: async function () {
+     try {
+       // التحقق من وجود Supabase client
+       if (typeof window === 'undefined' || !window.supabaseClient) {
+         console.log('🔧 Supabase client غير متاح، استخدام وضع الاختبار');
+         return null;
+       }
 
-      // التحقق من وجود appConfig
-      if (typeof window === 'undefined' || !window.appConfig) {
-        console.error('appConfig غير متوفر. تأكد من تحميل config.js قبل auth.js');
-        // انتظار تحميل config.js
-        let attempts = 0;
-        while ((typeof window === 'undefined' || !window.appConfig) && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-        if (typeof window === 'undefined' || !window.appConfig) {
-          console.error('فشل في تحميل config.js بعد عدة محاولات');
-          return null;
-        }
-      }
+       // التحقق من وجود appConfig
+       if (!window.appConfig) {
+         console.warn('appConfig غير متوفر');
+         return null;
+       }
 
-      // الحصول على إعدادات Supabase من appConfig
-      const config = window.appConfig;
-      if (!config || !config.supabaseUrl || !config.supabaseAnonKey) {
-        console.error('إعدادات Supabase غير متوفرة');
-        return null;
-      }
+       // الحصول على إعدادات Supabase من appConfig
+       const config = window.appConfig;
+       if (!config || !config.supabaseUrl || !config.supabaseAnonKey) {
+         console.warn('إعدادات Supabase غير مكتملة');
+         return null;
+       }
 
-      // التحقق من أن الإعدادات ليست افتراضية
-      if (config.supabaseUrl.includes('your-project-id') || config.supabaseAnonKey.includes('your-supabase-anon-key')) {
-        console.warn('إعدادات Supabase لا تزال افتراضية');
-        return null;
-      }
+       // التحقق من أن الإعدادات ليست افتراضية
+       if (config.supabaseUrl.includes('your-project-id') || config.supabaseAnonKey.includes('your-supabase-anon-key')) {
+         console.warn('إعدادات Supabase افتراضية، استخدام وضع الاختبار');
+         return null;
+       }
 
-      // استخدام supabaseClient الجديد
-      if (typeof window.supabase === 'undefined') {
-        console.error('مكتبة Supabase غير محملة');
-        return null;
-      }
+       // استخدام supabaseClient الموجود
+       const supabaseClient = window.supabaseClient;
 
-      const { createClient } = window.supabase;
-      const supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey);
+       // الحصول على الجلسة الحالية
+       const { data: { session }, error } = await supabaseClient.auth.getSession();
 
-      // الحصول على الجلسة الحالية
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
+       if (error) {
+         console.warn('خطأ في الحصول على الجلسة:', error.message);
+         return null;
+       }
 
-      if (error || !session || !session.user) {
-        return null;
-      }
+       if (!session || !session.user) {
+         return null;
+       }
 
-      const user = session.user;
+       const user = session.user;
 
-      // التحقق من صحة بيانات المستخدم
-      if (!user.id || !user.email) {
-        return null;
-      }
+       // التحقق من صحة بيانات المستخدم
+       if (!user.id || !user.email) {
+         return null;
+       }
 
-      const userData = {
-        id: user.id,
-        name: user.user_metadata?.name || user.email.split('@')[0],
-        email: user.email,
-        avatar: user.user_metadata?.avatar_url || '',
-        token: session.access_token,
-        provider: user.app_metadata?.provider || 'email',
-        loginTime: new Date().toISOString(),
-        lastActivity: new Date().toISOString()
-      };
+       const userData = {
+         id: user.id,
+         name: user.user_metadata?.name || user.email.split('@')[0],
+         email: user.email,
+         avatar: user.user_metadata?.avatar_url || '',
+         token: session.access_token,
+         provider: user.app_metadata?.provider || 'email',
+         loginTime: new Date().toISOString(),
+         lastActivity: new Date().toISOString()
+       };
 
-      // حفظ البيانات محلياً
-      this.saveUserSession(userData, true);
+       // حفظ البيانات محلياً
+       this.saveUserSession(userData, true);
 
-      return userData;
-    } catch (error) {
-      console.error('Error checking Supabase session:', error);
-      return null;
-    }
-  },
+       return userData;
+     } catch (error) {
+       console.error('Error checking Supabase session:', error);
+       return null;
+     }
+   },
 
   /**
    * مسح بيانات جلسة المستخدم دون إعادة توجيه

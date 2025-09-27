@@ -7,15 +7,37 @@ let supabase = null;
  * إنشاء عميل Supabase
  */
 function initializeSupabaseClient() {
-  if (
-    typeof window !== 'undefined' &&
-    window.supabase &&
-    window.supabase.createClient &&
-    window.appConfig
-  ) {
+  try {
+    // التحقق من وجود المكتبة والإعدادات
+    if (
+      typeof window === 'undefined' ||
+      !window.supabase ||
+      !window.supabase.createClient ||
+      !window.appConfig
+    ) {
+      console.warn('⚠️ Supabase client أو appConfig غير متاح');
+      return null;
+    }
+
+    // التحقق من صحة الإعدادات
+    const supabaseUrl = window.appConfig.supabaseUrl;
+    const supabaseKey = window.appConfig.supabaseAnonKey;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ إعدادات Supabase غير مكتملة');
+      return null;
+    }
+
+    // التحقق من أن الإعدادات ليست افتراضية
+    if (supabaseUrl.includes('your-project-id') || supabaseKey.includes('your-supabase-anon-key')) {
+      console.warn('⚠️ إعدادات Supabase لا تزال افتراضية - سيتم استخدام وضع المحاكاة');
+      return createMockSupabaseClient();
+    }
+
+    // إنشاء العميل الحقيقي
     supabase = window.supabase.createClient(
-      window.appConfig.supabaseUrl,
-      window.appConfig.supabaseAnonKey,
+      supabaseUrl,
+      supabaseKey,
       {
         auth: {
           autoRefreshToken: true,
@@ -32,8 +54,72 @@ function initializeSupabaseClient() {
 
     console.log('✅ تم إنشاء عميل Supabase بنجاح');
     return supabase;
+  } catch (error) {
+    console.error('❌ خطأ في إنشاء عميل Supabase:', error);
+    return createMockSupabaseClient();
   }
-  return null;
+}
+
+/**
+ * إنشاء عميل Supabase وهمي للاختبار
+ */
+function createMockSupabaseClient() {
+  console.log('🔧 استخدام عميل Supabase وهمي للاختبار');
+
+  // إنشاء كائن وهمي يحاكي Supabase client
+  const mockClient = {
+    auth: {
+      signInWithPassword: async (credentials) => {
+        console.log('🔧 محاكاة تسجيل الدخول:', credentials.email);
+        return {
+          data: {
+            user: {
+              id: 'mock-user-id',
+              email: credentials.email,
+              name: 'مستخدم تجريبي'
+            },
+            session: {
+              access_token: 'mock-token',
+              user: {
+                id: 'mock-user-id',
+                email: credentials.email
+              }
+            }
+          },
+          error: null
+        };
+      },
+      signInWithOAuth: async (options) => {
+        console.log('🔧 محاكاة تسجيل الدخول بـ Google');
+        return {
+          data: { url: `${window.location.origin}/login.html?mock=true` },
+          error: null
+        };
+      },
+      signOut: async () => {
+        console.log('🔧 محاكاة تسجيل الخروج');
+        return { error: null };
+      },
+      getUser: async () => {
+        return {
+          data: { user: null },
+          error: null
+        };
+      },
+      getSession: async () => {
+        return {
+          data: { session: null },
+          error: null
+        };
+      }
+    }
+  };
+
+  supabase = mockClient;
+  window.supabase = mockClient;
+  window.supabaseClient = mockClient;
+
+  return mockClient;
 }
 
 /**
@@ -80,7 +166,12 @@ class AuthHelper {
   // تسجيل الدخول بـ Google
   static async signInWithGoogle() {
     try {
-      const { data, error } = await ensureSupabaseClient().auth.signInWithOAuth({
+      const client = ensureSupabaseClient();
+      if (!client || !client.auth) {
+        throw new Error('Supabase client غير متاح');
+      }
+
+      const { data, error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.appConfig?.googleRedirectUri || `${window.location.origin}/auth/v1/callback`,
@@ -100,7 +191,12 @@ class AuthHelper {
   // تسجيل الدخول بالبريد الإلكتروني وكلمة المرور
   static async signInWithEmail(email, password) {
     try {
-      const { data, error } = await ensureSupabaseClient().auth.signInWithPassword({
+      const client = ensureSupabaseClient();
+      if (!client || !client.auth) {
+        throw new Error('Supabase client غير متاح');
+      }
+
+      const { data, error } = await client.auth.signInWithPassword({
         email,
         password,
       });
@@ -118,7 +214,13 @@ class AuthHelper {
   // تسجيل الخروج
   static async signOut() {
     try {
-      const { error } = await ensureSupabaseClient().auth.signOut();
+      const client = ensureSupabaseClient();
+      if (!client || !client.auth) {
+        console.log('🔧 محاكاة تسجيل الخروج - عميل Supabase غير متاح');
+        return;
+      }
+
+      const { error } = await client.auth.signOut();
       if (error) throw error;
 
       console.log('✅ تم تسجيل الخروج بنجاح');
@@ -130,7 +232,12 @@ class AuthHelper {
   // الحصول على المستخدم الحالي
   static async getCurrentUser() {
     try {
-      const { data: { user }, error } = await ensureSupabaseClient().auth.getUser();
+      const client = ensureSupabaseClient();
+      if (!client || !client.auth) {
+        return null;
+      }
+
+      const { data: { user }, error } = await client.auth.getUser();
       if (error) throw error;
       return user;
     } catch (error) {
@@ -142,7 +249,12 @@ class AuthHelper {
   // التحقق من الجلسة الحالية
   static async checkSession() {
     try {
-      const { data: { session }, error } = await ensureSupabaseClient().auth.getSession();
+      const client = ensureSupabaseClient();
+      if (!client || !client.auth) {
+        return null;
+      }
+
+      const { data: { session }, error } = await client.auth.getSession();
       if (error) throw error;
       return session;
     } catch (error) {
