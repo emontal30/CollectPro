@@ -1,6 +1,7 @@
-// إعداد Supabase
-const supabaseUrl = getConfig('supabase.url');
-const supabaseKey = getConfig('supabase.anonKey');
+// استخدام supabaseClient الجديد
+if (typeof window.supabase === 'undefined') {
+  console.error('مكتبة Supabase غير محملة');
+}
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('إعدادات Supabase غير متوفرة في ملف config.js');

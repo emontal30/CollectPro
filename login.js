@@ -649,17 +649,10 @@ async function realLoginRequest(email, password) {
       throw new Error('مكتبة Supabase غير محملة');
     }
 
-    // الحصول على إعدادات Supabase
-    const supabaseUrl = getConfig('supabase.url');
-    const supabaseKey = getConfig('supabase.anonKey');
-
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
-      throw new Error('إعدادات Supabase غير صحيحة. يرجى التحقق من متغيرات البيئة');
+    // استخدام supabaseClient الجديد
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('مكتبة Supabase غير محملة');
     }
-
-    // إنشاء Supabase client
-    const { createClient } = window.supabase;
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // تسجيل الدخول
     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -805,31 +798,12 @@ async function realGoogleLogin() {
     }
     console.log('✅ Supabase library loaded successfully');
 
-    // الحصول على إعدادات Supabase
-    console.log('🔧 Getting Supabase configuration...');
-    const supabaseUrl = getConfig('supabase.url');
-    const supabaseKey = getConfig('supabase.anonKey');
-
-    console.log('🔍 Supabase URL:', supabaseUrl ? 'Found' : 'Missing');
-    console.log('🔍 Supabase Key:', supabaseKey ? 'Found' : 'Missing');
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Missing Supabase configuration');
-      throw new Error('إعدادات Supabase غير متوفرة. يرجى التحقق من متغيرات البيئة');
+    // استخدام supabaseClient الجديد
+    console.log('🔧 Using supabaseClient...');
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('مكتبة Supabase غير محملة');
     }
-
-    if (supabaseUrl.includes('your-project-id') || supabaseKey.includes('your-supabase-anon-key')) {
-      console.warn('⚠️ Using default Supabase configuration - this is for development only!');
-      console.warn('⚠️ Please update your .env file with actual Supabase credentials for production');
-      // Allow testing with default credentials but show warning
-    }
-    console.log('✅ Supabase configuration is valid');
-
-    // إنشاء Supabase client
-    console.log('🏗️ Creating Supabase client...');
-    const { createClient } = window.supabase;
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
-    console.log('✅ Supabase client created');
+    console.log('✅ Supabase client is ready');
 
     // تسجيل الدخول بـ Google
     console.log('🔐 Attempting Google OAuth login...');
@@ -905,17 +879,10 @@ async function simpleGoogleLogin() {
       throw new Error('مكتبة Supabase غير محملة');
     }
 
-    // الحصول على إعدادات Supabase من متغيرات البيئة
-    const supabaseUrl = getConfig('supabase.url');
-    const supabaseKey = getConfig('supabase.anonKey');
-
-    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
-      throw new Error('إعدادات Supabase غير متوفرة. يرجى التحقق من متغيرات البيئة');
+    // استخدام supabaseClient الجديد
+    if (typeof window.supabase === 'undefined') {
+      throw new Error('مكتبة Supabase غير محملة');
     }
-
-    // إنشاء Supabase client
-    const { createClient } = window.supabase;
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // تسجيل الدخول بـ Google
     const { data, error } = await supabaseClient.auth.signInWithOAuth({

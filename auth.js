@@ -152,8 +152,11 @@ const auth = {
         return null;
       }
 
-      const supabaseUrl = getConfig('supabase.url');
-      const supabaseKey = getConfig('supabase.anonKey');
+      // استخدام supabaseClient الجديد
+      if (typeof window.supabase === 'undefined') {
+        console.error('مكتبة Supabase غير محملة');
+        return null;
+      }
 
       if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project-id')) {
         return null;

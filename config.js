@@ -1,58 +1,79 @@
-// إعدادات التطبيق
-// يمكن تحديث هذه القيم من متغيرات البيئة في ملف .env
+// config.js - ملف الإعدادات المحدث
+// يستخدم process.env مباشرة بدلاً من getConfig
 
-// التحقق من وجود دالة getEnv
-if (typeof getEnv === 'undefined') {
-  console.error('دالة getEnv غير متوفرة. تأكد من تحميل env.js قبل config.js');
-}
+export const appConfig = {
+  // إعدادات Supabase
+  supabaseUrl: typeof process !== 'undefined' && process.env
+    ? process.env.SUPABASE_URL || "https://your-project-id.supabase.co"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('SUPABASE_URL') || "https://your-project-id.supabase.co"
+       : "https://your-project-id.supabase.co"),
 
-const CONFIG = {
-  // إعدادات Supabase - احصل عليها من https://supabase.com
-  supabase: {
-    url: getEnv('SUPABASE_URL') || "https://your-project-id.supabase.co", // استبدل بـ URL مشروعك
-    anonKey: getEnv('SUPABASE_ANON_KEY') || "your-supabase-anon-key", // استبدل بـ anon key من مشروعك
-    serviceRoleKey: getEnv('SUPABASE_SERVICE_ROLE_KEY') || "your-service-role-key"
-  },
+  supabaseAnonKey: typeof process !== 'undefined' && process.env
+    ? process.env.SUPABASE_ANON_KEY || "your-supabase-anon-key"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('SUPABASE_ANON_KEY') || "your-supabase-anon-key"
+       : "your-supabase-anon-key"),
+
+  // إعدادات Google OAuth
+  googleClientId: typeof process !== 'undefined' && process.env
+    ? process.env.GOOGLE_CLIENT_ID || "your-google-client-id"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('GOOGLE_CLIENT_ID') || "your-google-client-id"
+       : "your-google-client-id"),
+
   // إعدادات API
-  api: {
-    baseUrl: getEnv('API_ENDPOINT') || "https://api.yourservice.com" // استبدل بعنوان API الخاص بك
-  },
+  apiEndpoint: typeof process !== 'undefined' && process.env
+    ? process.env.API_ENDPOINT || "/api"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('API_ENDPOINT') || "/api"
+       : "/api"),
+
   // إعدادات الأمان
-  security: {
-    csrfToken: getEnv('CSRF_SECRET') || "default-csrf-secret-change-in-production",
-    jwtSecret: getEnv('JWT_SECRET') || "default-jwt-secret-change-in-production"
-  },
+  csrfSecret: typeof process !== 'undefined' && process.env
+    ? process.env.CSRF_SECRET || "default-csrf-secret-change-in-production"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('CSRF_SECRET') || "default-csrf-secret-change-in-production"
+       : "default-csrf-secret-change-in-production"),
+
   // إعدادات البريد الإلكتروني
-  email: {
-    service: getEnv('EMAIL_SERVICE') || "sendgrid",
-    apiKey: getEnv('EMAIL_API_KEY') || "your-email-api-key",
-    from: getEnv('EMAIL_FROM') || "noreply@yourdomain.com"
-  }
+  emailService: typeof process !== 'undefined' && process.env
+    ? process.env.EMAIL_SERVICE || "sendgrid"
+    : (typeof window !== 'undefined' && window.getEnv
+       ? window.getEnv('EMAIL_SERVICE') || "sendgrid"
+       : "sendgrid"),
 };
 
-
-// دالة الحصول على الإعدادات
-function getConfig(key) {
-  // تقسيم المفتاح (مثال: "supabase.url" -> ["supabase", "url"])
-  const parts = key.split('.');
-
-  // البدء من الكائن الرئيسي
-  let result = CONFIG;
-
-  // التنقل عبر الأجزاء
-  for (const part of parts) {
-    // إذا كان الجزء موجود، انتقل إليه
-    if (result && typeof result === 'object' && part in result) {
-      result = result[part];
-    } else {
-      // إذا لم يكن موجود، أرجع قيمة فارغة
-      return null;
+// دالة احتياطية للحصول على الإعدادات (للتوافق مع الكود القديم)
+export function getConfig(key) {
+  if (typeof window !== 'undefined' && window.getEnv) {
+    // استخدام getEnv الموجودة
+    const keys = key.split('.');
+    if (keys.length === 2) {
+      const [category, setting] = keys;
+      switch (category) {
+        case 'supabase':
+          if (setting === 'url') return appConfig.supabaseUrl;
+          if (setting === 'anonKey') return appConfig.supabaseAnonKey;
+          break;
+        case 'api':
+          if (setting === 'baseUrl') return appConfig.apiEndpoint;
+          break;
+      }
     }
   }
 
-  return result;
+  // قيم افتراضية
+  const defaults = {
+    'supabase.url': appConfig.supabaseUrl,
+    'supabase.anonKey': appConfig.supabaseAnonKey,
+    'api.baseUrl': appConfig.apiEndpoint,
+  };
+
+  return defaults[key] || null;
 }
 
-
-// للسماح باستخدام getConfig في نطاق عام
-window.getConfig = getConfig;
+// للتوافق مع الكود القديم
+if (typeof window !== 'undefined') {
+  window.getConfig = getConfig;
+}
