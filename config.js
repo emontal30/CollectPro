@@ -32,7 +32,7 @@ const appConfig = {
 
   // إعدادات Google OAuth - استخدم متغيرات البيئة
   googleClientId: getConfigValue('GOOGLE_CLIENT_ID', "your-google-client-id"),
-  googleRedirectUri: getConfigValue('GOOGLE_REDIRECT_URI', "http://localhost:8080/auth-callback.html"),
+  googleRedirectUri: getConfigValue('GOOGLE_REDIRECT_URI', typeof window !== 'undefined' ? `${window.location.origin}/auth-callback.html` : null),
 
   // إعدادات API - استخدم متغيرات البيئة
   apiEndpoint: getConfigValue('API_ENDPOINT', "/api"),

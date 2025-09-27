@@ -8,7 +8,7 @@ window.ENV = {
   // إعدادات Google OAuth - استخدم متغيرات البيئة
   GOOGLE_CLIENT_ID: import.meta.env?.VITE_GOOGLE_CLIENT_ID || 'placeholder-client-id-12345',
   GOOGLE_CLIENT_SECRET: import.meta.env?.VITE_GOOGLE_CLIENT_SECRET || 'placeholder-client-secret-abcdef',
-  GOOGLE_REDIRECT_URI: import.meta.env?.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:8080/auth-callback.html',
+  GOOGLE_REDIRECT_URI: import.meta.env?.VITE_GOOGLE_REDIRECT_URI || (typeof window !== 'undefined' ? `${window.location.origin}/auth-callback.html` : null),
 
   // إعدادات البريد الإلكتروني - استخدم متغيرات البيئة
   EMAIL_SERVICE: import.meta.env?.VITE_EMAIL_SERVICE || 'sendgrid',
