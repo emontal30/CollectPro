@@ -162,13 +162,10 @@ module.exports = {
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
-        { from: 'env.js', to: 'env.js' },
-        { from: 'config.js', to: 'config.js' },
-        { from: 'auth.js', to: 'auth.js' },
+        // The JS files below are now handled as webpack entry points and should not be copied directly.
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'sidebar.js', to: 'sidebar.js' },
-        { from: 'script.js', to: 'script.js' },
-        { from: 'cdn-config.js', to: 'cdn-config.js' },
+        { from: 'cdn-config.js', to: 'cdn-config.js' },,
         // نسخ مجلد public بالكامل
         { from: 'public', to: 'public', noErrorOnMissing: true }
       ]
