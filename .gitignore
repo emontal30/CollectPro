@@ -67,6 +67,15 @@ oauth_secret*.json
 *key*.json
 
 # ======================
+# Files with sensitive data
+# ======================
+# These files contain real API keys, secrets, and credentials
+public/js/env-config.js      # Contains Supabase keys, OAuth secrets, email passwords
+payment.js                   # Contains Supabase API keys
+my-subscription.js           # Contains Supabase API keys
+subscriptions.js             # Contains Supabase API keys
+
+# ======================
 # Temporary files
 # ======================
 *.tmp
@@ -76,10 +85,26 @@ temp/
 tmp/
 
 # ======================
+# Backup and config files with sensitive data
+# ======================
+*.backup
+config/local.json
+config/production.json
+settings.json
+
+# ======================
 # Build artifacts
 # ======================
 *.log
 logs/
+
+# ======================
+# Personal data and credentials
+# ======================
+*credentials*.json
+*auth*.json
+*token*.json
+*password*.json
 
 # ======================
 # Image files (large files) - تم إلغاء الاستبعاد لدعم Vercel
@@ -91,3 +116,11 @@ logs/
 # *.svg
 # *.ico
 # *.webp
+
+# ======================
+# Security Note
+# ======================
+# This .gitignore file has been updated to protect sensitive data
+# including API keys, passwords, and personal information.
+# Never commit files containing real credentials to version control.
+# Use environment variables and .env.example files instead.
