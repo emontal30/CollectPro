@@ -8,7 +8,7 @@
 
   "rewrites": [
     {
-      "source": "/((?!api/|_redirects|public/|assets/|fonts/|sw.js|sw-optimized.js|manifest.json|favicon.ico|robots.txt|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|otf)).*)",
+      "source": "/((?!api/|_redirects|public/|assets/|fonts/|sw\\.js|sw-optimized\\.js|manifest\\.json|favicon\\.ico|robots\\.txt|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|otf)).*)",
       "destination": "/index.html"
     }
   ],
