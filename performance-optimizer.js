@@ -162,21 +162,27 @@ const PerformanceOptimizer = {
   },
 
   /**
-   * إعداد Service Worker للتخزين المؤقت
-   */
-  setupServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('Service Worker مسجل بنجاح:', registration);
-          })
-          .catch(error => {
-            console.log('فشل في تسجيل Service Worker:', error);
-          });
-      });
-    }
-  },
+    * إعداد Service Worker للتخزين المؤقت
+    */
+   setupServiceWorker() {
+     if ('serviceWorker' in navigator) {
+       // فحص أن التطبيق يعمل على HTTP/HTTPS وليس file://
+       if (window.location.protocol === 'file:') {
+         console.log('Service Worker غير مدعوم في file:// protocol');
+         return;
+       }
+
+       window.addEventListener('load', () => {
+         navigator.serviceWorker.register('/sw.js')
+           .then(registration => {
+             console.log('Service Worker مسجل بنجاح:', registration);
+           })
+           .catch(error => {
+             console.log('فشل في تسجيل Service Worker:', error);
+           });
+       });
+     }
+   },
 
   /**
    * تحسين الخطوط

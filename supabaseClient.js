@@ -27,6 +27,12 @@ function initializeSupabaseClient() {
     const supabaseUrl = window.appConfig?.supabaseUrl;
     const supabaseKey = window.appConfig?.supabaseAnonKey;
 
+    console.log('🔍 [DEBUG] إعدادات Supabase في supabaseClient:', {
+      supabaseUrl: supabaseUrl,
+      supabaseKey: supabaseKey ? '[PRESENT]' : '[MISSING]',
+      appConfigExists: typeof window.appConfig !== 'undefined'
+    });
+
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ إعدادات Supabase غير مكتملة');
       return null;

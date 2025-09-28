@@ -1,16 +1,12 @@
-# إعادة توجيهات Vercel
-/ /login.html 200
-/dashboard /dashboard.html 200
-/admin /admin.html 200
-/subscriptions /subscriptions.html 200
-/my-subscription /my-subscription.html 200
-/payment /payment.html 200
-/harvest /harvest.html 200
-/archive /archive.html 200
-/login /login.html 200
-/register /register.html 200
-/reset-password /reset-password.html 200
-/auth-callback /auth-callback.html 200
+# إعادة توجيه جميع المسارات إلى index.html لدعم SPA
+/*    /index.html   200
 
-# إعادة توجيه API
-/api/* /api/:splat 200
+# إعادة توجيه API routes إلى الخادم المناسب
+/api/*  https://your-project-id.supabase.co/rest/v1/:splat  200
+
+# استثناء الملفات الثابتة من إعادة التوجيه
+/assets/*   /assets/:splat   200
+/public/*   /public/:splat   200
+/fonts/*    /fonts/:splat    200
+/sw.js      /sw.js           200
+/manifest.json  /manifest.json  200

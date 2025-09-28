@@ -6,6 +6,18 @@ const TerserPlugin = require('terser-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
+// تحميل متغيرات البيئة من .env.local
+require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+
+// تحميل متغيرات البيئة من .env.local للتحقق من التحميل
+const dotenv = require('dotenv');
+const envConfig = dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+
+console.log('🔍 [DEBUG] تحميل .env.local:', envConfig.parsed ? 'نجح' : 'فشل');
+if (envConfig.parsed) {
+  console.log('🔍 [DEBUG] متغيرات البيئة المحملة:', Object.keys(envConfig.parsed));
+}
+
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isVercel = process.env.VERCEL === '1';
 const cdnUrl = process.env.CDN_URL || (isVercel ? '' : '');
@@ -26,8 +38,8 @@ module.exports = {
     filename: isDevelopment ? '[name].bundle.js' : '[name].[contenthash].bundle.js',
     path: path.resolve(__dirname, 'dist'),
     clean: true,
-    // تعديل مهم لـ Vercel
-    publicPath: isVercel ? '' : '/',
+    // تعديل مهم لـ Vercel - استخدام مسار نسبي
+    publicPath: isVercel ? './' : '/',
     assetModuleFilename: 'assets/[hash][ext][query]',
   },
   module: {
@@ -70,8 +82,8 @@ module.exports = {
         type: 'asset/resource',
         generator: {
           // تحسين معالجة الصور لـ Vercel - وضع الصور في مجلد public
-          filename: isVercel ? 'public/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/public/[name].[hash][ext]` : 'public/[name].[hash][ext]'),
-          publicPath: isVercel ? '/public/' : (cdnUrl ? `${cdnUrl}/` : '/'),
+          filename: isVercel ? 'public/[name].[hash][ext]' : (cdnUrl ? `public/[name].[hash][ext]` : 'public/[name].[hash][ext]'),
+          publicPath: isVercel ? '/public/' : (cdnUrl ? `${cdnUrl}/public/` : '/public/'),
         }
       },
       {
@@ -79,8 +91,8 @@ module.exports = {
         type: 'asset/resource',
         generator: {
           // تحسين معالجة الخطوط لـ Vercel
-          filename: isVercel ? 'fonts/[name].[hash][ext]' : (cdnUrl ? `${cdnUrl}/fonts/[name].[hash][ext]` : 'fonts/[name].[hash][ext]'),
-          publicPath: isVercel ? '' : (cdnUrl ? `${cdnUrl}/` : ''),
+          filename: isVercel ? 'fonts/[name].[hash][ext]' : (cdnUrl ? `fonts/[name].[hash][ext]` : 'fonts/[name].[hash][ext]'),
+          publicPath: isVercel ? '/fonts/' : (cdnUrl ? `${cdnUrl}/fonts/` : '/fonts/'),
         }
       },
     ],
@@ -89,7 +101,21 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
       'process.env.SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY),
+      'process.env.SUPABASE_SERVICE_ROLE_KEY': JSON.stringify(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID),
+      'process.env.GOOGLE_CLIENT_SECRET': JSON.stringify(process.env.GOOGLE_CLIENT_SECRET),
       'process.env.GOOGLE_REDIRECT_URI': JSON.stringify(process.env.GOOGLE_REDIRECT_URI),
+      'process.env.EMAIL_SERVICE': JSON.stringify(process.env.EMAIL_SERVICE),
+      'process.env.EMAIL_USER': JSON.stringify(process.env.EMAIL_USER),
+      'process.env.EMAIL_PASS': JSON.stringify(process.env.EMAIL_PASS),
+      'process.env.EMAIL_FROM': JSON.stringify(process.env.EMAIL_FROM),
+      'process.env.EMAIL_TO': JSON.stringify(process.env.EMAIL_TO),
+      'process.env.HOSTING_DOMAIN': JSON.stringify(process.env.HOSTING_DOMAIN),
+      'process.env.API_ENDPOINT': JSON.stringify(process.env.API_ENDPOINT),
+      'process.env.CSRF_SECRET': JSON.stringify(process.env.CSRF_SECRET),
+      'process.env.JWT_SECRET': JSON.stringify(process.env.JWT_SECRET),
+      'process.env.CDN_ENABLED': JSON.stringify(process.env.CDN_ENABLED),
+      'process.env.CDN_URL': JSON.stringify(process.env.CDN_URL),
     }),
     new MiniCssExtractPlugin({
       filename: isDevelopment ? '[name].css' : '[name].[contenthash].css',
@@ -162,7 +188,7 @@ module.exports = {
         { from: '*.json', to: '[name][ext]' },
         { from: '_redirects', to: '_redirects' },
         { from: 'sw.js', to: 'sw.js' },
-        // The JS files below are now handled as webpack entry points and should not be copied directly.
+        // الملفات الخاصة التي تحتاج إلى نسخ مباشر
         { from: 'supabase-loader.js', to: 'supabase-loader.js' },
         { from: 'sidebar.js', to: 'sidebar.js' },
         { from: 'cdn-config.js', to: 'cdn-config.js' },

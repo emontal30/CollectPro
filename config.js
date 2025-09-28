@@ -25,6 +25,8 @@ function getConfigValue(envKey, defaultValue) {
   return defaultValue;
 }
 
+console.log('🔍 [DEBUG] تحميل appConfig...');
+
 const appConfig = {
   // إعدادات Supabase - استخدم متغيرات البيئة
   supabaseUrl: getConfigValue('SUPABASE_URL', "https://your-project-id.supabase.co"),
@@ -46,7 +48,18 @@ const appConfig = {
   emailPass: getConfigValue('EMAIL_PASS', "your-app-password"),
   emailFrom: getConfigValue('EMAIL_FROM', "noreply@yourdomain.com"),
   emailTo: getConfigValue('EMAIL_TO', "your-email@domain.com"),
+
+  // إعدادات وضع التطوير والاختبار
+  testMode: getConfigValue('TEST_MODE', "false").toLowerCase() === 'true',
+  disableGoogleOauth: getConfigValue('DISABLE_GOOGLE_OAUTH', "false").toLowerCase() === 'true',
 };
+
+console.log('🔍 [DEBUG] appConfig بعد التحميل:', {
+  supabaseUrl: appConfig.supabaseUrl,
+  supabaseAnonKey: appConfig.supabaseAnonKey ? '[PRESENT]' : '[MISSING]',
+  googleClientId: appConfig.googleClientId ? '[PRESENT]' : '[MISSING]',
+  googleRedirectUri: appConfig.googleRedirectUri
+});
 
 // دالة احتياطية للحصول على الإعدادات (للتوافق مع الكود القديم)
 function getConfig(key) {

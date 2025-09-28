@@ -247,9 +247,9 @@ const SEOOptimizer = {
     // DNS Prefetch
     this.addDNSPrefetch('https://*.supabase.co');
 
-    // Preload للموارد المهمة
-    this.addPreloadLink('/script.js', 'script');
-    this.addPreloadLink('/style.css', 'style');
+    // Preload للموارد المهمة (تجنب preload للملفات المحلية لتجنب مشاكل CORS)
+    // this.addPreloadLink('/script.js', 'script');
+    // this.addPreloadLink('/style.css', 'style');
   },
 
   /**

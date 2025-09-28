@@ -89,17 +89,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (testData) {
     try {
-      const userData = JSON.parse(testData);
-      if (userData && (
-        userData.email === 'test@example.com' ||
-        userData.provider === 'test' ||
-        userData.name === 'مستخدم تجريبي'
-      )) {
-        console.log('⚠️ تم العثور على بيانات تجريبية، جاري المسح...');
-        clearTestData();
+      // فحص إذا كانت البيانات JSON صالح قبل التحليل
+      if (testData.trim().startsWith('{') && testData.trim().endsWith('}')) {
+        const userData = JSON.parse(testData);
+        if (userData && (
+          userData.email === 'test@example.com' ||
+          userData.provider === 'test' ||
+          userData.name === 'مستخدم تجريبي'
+        )) {
+          console.log('⚠️ تم العثور على بيانات تجريبية، جاري المسح...');
+          clearTestData();
+        }
+      } else {
+        // البيانات ليست JSON، تحقق من النص مباشرة
+        if (testData.includes('test@example.com') ||
+            testData.includes('مستخدم تجريبي')) {
+          console.log('⚠️ تم العثور على بيانات تجريبية، جاري المسح...');
+          clearTestData();
+        }
       }
     } catch (error) {
       console.warn('خطأ في فحص البيانات:', error);
+      // في حالة خطأ في التحليل، تحقق من النص مباشرة
+      if (testData.includes('test@example.com') ||
+          testData.includes('مستخدم تجريبي')) {
+        console.log('⚠️ تم العثور على بيانات تجريبية، جاري المسح...');
+        clearTestData();
+      }
     }
   }
 });

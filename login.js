@@ -832,6 +832,51 @@ async function realGoogleLogin() {
     // تسجيل الدخول بـ Google
     console.log('🔐 Attempting Google OAuth login...');
 
+    // التحقق من وضع الاختبار أولاً
+    const isTestMode = window.appConfig?.testMode === true || window.appConfig?.testMode === 'true';
+    const disableGoogleOAuth = window.appConfig?.disableGoogleOauth === true || window.appConfig?.disableGoogleOauth === 'true';
+
+    console.log('🔍 [DEBUG] التحقق من أوضاع النظام:', {
+      testMode: isTestMode,
+      disableGoogleOAuth: disableGoogleOAuth,
+      supabaseUrl: window.appConfig?.supabaseUrl,
+      supabaseAnonKey: window.appConfig?.supabaseAnonKey ? '[PRESENT]' : '[MISSING]',
+      urlIncludesDefault: window.appConfig?.supabaseUrl?.includes('your-project-id'),
+      keyIncludesDefault: window.appConfig?.supabaseAnonKey?.includes('your-supabase-anon-key')
+    });
+
+    // إذا كان الوضع الاختباري مفعل، استخدم وضع الاختبار
+    if (isTestMode) {
+      console.log('🧪 وضع الاختبار مفعل، استخدام وضع الاختبار');
+      return {
+        success: true,
+        message: 'تم تسجيل الدخول بنجاح (وضع الاختبار)',
+        testMode: true,
+        user: {
+          id: 'test-user-' + Date.now(),
+          name: 'مستخدم الاختبار',
+          email: 'test@example.com',
+          provider: 'test'
+        }
+      };
+    }
+
+    // إذا كان Google OAuth معطل، استخدم وضع الاختبار
+    if (disableGoogleOAuth) {
+      console.log('🚫 Google OAuth معطل، استخدام وضع الاختبار');
+      return {
+        success: true,
+        message: 'تم تسجيل الدخول بنجاح (وضع الاختبار - Google OAuth معطل)',
+        testMode: true,
+        user: {
+          id: 'test-user-' + Date.now(),
+          name: 'مستخدم الاختبار',
+          email: 'test@example.com',
+          provider: 'test'
+        }
+      };
+    }
+
     // التحقق من إعدادات Supabase
     if (!window.appConfig?.supabaseUrl || !window.appConfig?.supabaseAnonKey ||
         window.appConfig.supabaseUrl.includes('your-project-id') ||
