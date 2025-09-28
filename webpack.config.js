@@ -9,6 +9,11 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+if (isDevelopment) {
+  require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
+}
+
 const isVercel = process.env.VERCEL === '1';
 const cdnUrl = process.env.CDN_URL || (isVercel ? '' : '');
 
