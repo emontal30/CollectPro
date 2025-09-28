@@ -6,17 +6,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
-// تحميل متغيرات البيئة من .env.local
-require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
 
-// تحميل متغيرات البيئة من .env.local للتحقق من التحميل
-const dotenv = require('dotenv');
-const envConfig = dotenv.config({ path: path.resolve(__dirname, '.env.local') });
-
-console.log('🔍 [DEBUG] تحميل .env.local:', envConfig.parsed ? 'نجح' : 'فشل');
-if (envConfig.parsed) {
-  console.log('🔍 [DEBUG] متغيرات البيئة المحملة:', Object.keys(envConfig.parsed));
-}
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isVercel = process.env.VERCEL === '1';
