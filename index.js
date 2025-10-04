@@ -4,8 +4,8 @@ const { createClient } = supabase;
 const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
 
-// The redirect URI should point to the main page where this script runs
-const redirectUri = 'https://collectpro.vercel.app/';
+// The redirect URI must match the Vercel domain exactly
+const redirectUri = 'https://collect-pro.vercel.app/';
 
 const _supabase = createClient(supabaseUrl, supabaseKey);
 
