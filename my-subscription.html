@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>اشتراكي - CollectPro</title>
+  <!-- <link rel="manifest" href="manifest.json"> -->
+  <meta name="theme-color" content="#007965"/>
+  <link rel="apple-touch-icon" href="logoapp.png">
+  <script src="env.js"></script>
+  <script src="sidebar.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link rel="stylesheet" href="my-subscription.css" />
+</head>
+<body>
+  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <aside class="sidebar sidebar-collapsed">
+    <div class="sidebar-header">
+      <div class="user-box">
+        <div class="user-avatar">
+          <span id="user-initial">A</span>
+        </div>
+        <div class="user-meta">
+          <span class="user-name" id="user-name">اسم المستخدم</span>
+          <span class="user-email" id="user-email">user@example.com</span>
+          <span class="user-id" id="user-id"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-content">
+      <ul class="nav-links">
+        <li>
+          <a href="dashboard.html">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>إدخال البيانات</span>
+          </a>
+        </li>
+        <li>
+          <a href="harvest.html">
+            <i class="fas fa-donate"></i>
+            <span>التحصيلات</span>
+          </a>
+        </li>
+        <li>
+          <a href="archive.html">
+            <i class="fas fa-archive"></i>
+            <span>الأرشيف</span>
+          </a>
+        </li>
+        <li>
+          <a href="subscriptions.html">
+            <i class="fas fa-credit-card"></i>
+            <span>الاشتراكات</span>
+          </a>
+        </li>
+        <li>
+          <a href="my-subscription.html">
+            <i class="fas fa-user-shield"></i>
+            <span>اشتراكي</span>
+          </a>
+        </li>
+        <li>
+          <a href="admin.html">
+            <i class="fas fa-user-cog"></i>
+            <span>لوحة التحكم</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">
+        <button id="logout-btn" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>تسجيل الخروج</span>
+        </button>
+    </div>
+  </aside>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1>اشتراكي 👤</h1>
+  </header>
+
+  <main>
+    <div class="subscription-container">
+      <div class="subscription-card">
+        <div class="subscription-header">
+          <h2>تفاصيل اشتراكك</h2>
+          <div class="subscription-status" id="subscription-status">
+            <span class="status-badge">جاري التحميل...</span>
+          </div>
+        </div>
+
+        <div class="subscription-details" id="subscription-details">
+          <div class="detail-row">
+            <div class="detail-label">نوع الباقة:</div>
+            <div class="detail-value" id="plan-type">-</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">تاريخ البدء:</div>
+            <div class="detail-value" id="start-date">-</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">تاريخ الانتهاء:</div>
+            <div class="detail-value" id="end-date">-</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">حالة الاشتراك:</div>
+            <div class="detail-value" id="subscription-state">-</div>
+          </div>
+        </div>
+
+        <div class="subscription-actions" id="subscription-actions">
+          <!-- سيتم ملؤها ديناميكياً -->
+        </div>
+      </div>
+
+      <div class="subscription-history">
+        <h2>سجل الاشتراكات</h2>
+        <div class="table-container">
+          <table id="history-table">
+            <thead>
+              <tr>
+                <th>نوع الاشتراك</th>
+                <th>تاريخ البدء</th>
+                <th>تاريخ الانتهاء</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- سيتم ملؤها ديناميكياً -->
+            </tbody>
+          </table>
+          <div id="no-history" class="no-data">
+            <i class="fas fa-history"></i>
+            <p>لا يوجد سجل اشتراكات</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="alert-container" class="alert-container"></div>
+
+  <!-- نافذة تجديد الاشتراك -->
+  <div id="renew-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>تجديد الاشتراك</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>اختر خطة الاشتراك التي ترغب في تجديدها:</p>
+        <div class="renew-plans">
+          <div class="renew-plan" data-plan="monthly" data-price="30">
+            <h3>خطة شهرية</h3>
+            <div class="plan-price">30 ج.م</div>
+          </div>
+          <div class="renew-plan" data-plan="3-months" data-price="50">
+            <h3>خطة 3 شهور</h3>
+            <div class="plan-price">50 ج.م</div>
+          </div>
+          <div class="renew-plan" data-plan="yearly" data-price="360">
+            <h3>خطة سنوية</h3>
+            <div class="plan-price">360 ج.م</div>
+            <div class="plan-offer">+ شهر مجاني</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-renew-btn" class="btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script.js"></script>
+  <script src="my-subscription.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(registration => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

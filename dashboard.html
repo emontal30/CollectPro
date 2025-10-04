@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>إدخال البيانات</title>
+  <!-- <link rel="manifest" href="/manifest.json"> -->
+  <meta name="theme-color" content="#007965"/>
+  <link rel="apple-touch-icon" href="/logoapp.png">
+  <script src="sidebar.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+  <aside class="sidebar sidebar-collapsed">
+    <div class="sidebar-header">
+      <div class="user-box">
+        <div class="user-avatar">
+          <span id="user-initial">A</span>
+        </div>
+        <div class="user-meta">
+          <span class="user-name" id="user-name">اسم المستخدم</span>
+          <span class="user-email" id="user-email">user@example.com</span>
+          <span class="user-id" id="user-id"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-content">
+      <ul class="nav-links">
+        <li>
+          <a href="dashboard.html">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>إدخال البيانات</span>
+          </a>
+        </li>
+        <li>
+          <a href="harvest.html">
+            <i class="fas fa-donate"></i>
+            <span>التحصيلات</span>
+          </a>
+        </li>
+        <li>
+          <a href="archive.html">
+            <i class="fas fa-archive"></i>
+            <span>الأرشيف</span>
+          </a>
+        </li>
+        <li>
+          <a href="subscriptions.html">
+            <i class="fas fa-credit-card"></i>
+            <span>الاشتراكات</span>
+          </a>
+        </li>
+        <li>
+          <a href="my-subscription.html">
+            <i class="fas fa-user-shield"></i>
+            <span>اشتراكي</span>
+          </a>
+        </li>
+        <li>
+          <a href="admin.html">
+            <i class="fas fa-user-cog"></i>
+            <span>لوحة التحكم</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">
+        <button id="logout-btn" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>تسجيل الخروج</span>
+        </button>
+    </div>
+  </aside>
+  <header>
+    <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
+      <div class="logo-container">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+        <p class="app-name">CollectPro</p>
+      </div>
+    </div>
+    <h1> إدخال البيانات 📝</h1>
+  </header>
+  <main>
+    <textarea id="dataInput" placeholder="ألصق البيانات هنا..."></textarea>
+    <div class="buttons">
+      <button id="pasteBtn" class="btn-primary">📋 لصق البيانات</button>
+      <button id="saveGoBtn" class="btn-success">💾 حفظ وانتقال لصفحة التحصيل</button>
+      <button id="goToArchiveBtn" class="btn-info">📂 الذهاب للأرشيف</button>
+      <button id="clearBtnn" class="btn-danger">🗑️ مسح البيانات</button>
+    </div>
+  </main>
+  
+  <!-- شريط التنقل السفلي -->
+  <nav class="bottom-nav">
+    <button id="nextPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">→</span>
+    </button>
+    <div class="nav-spacer"></div>
+    <button id="prevPage" class="nav-btn bottom-nav-btn">
+      <span class="nav-icon">←</span>
+    </button>
+  </nav>
+  
+  <footer>
+    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  </footer>
+  <script src="script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, err => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
