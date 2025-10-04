@@ -17,8 +17,5 @@
     "url": "https://github.com/emontal30/CollectPro/issues"
   },
   "homepage": "https://github.com/emontal30/CollectPro#readme",
-  "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0"
-  }
+  "dependencies": {}
 }
