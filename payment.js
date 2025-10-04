@@ -1,20 +1,3 @@
-// إعداد Supabase
-console.log('بدء تحميل payment.js');
-console.log('env object:', window.env);
-
-const supabaseUrl = window.env.SUPABASE_URL;
-const supabaseKey = window.env.SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('خطأ: متغيرات البيئة مفقودة في payment.js');
-}
-
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key:', supabaseKey ? 'تم التحميل' : 'مفقود');
-
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-console.log('تم إنشاء Supabase client في payment.js');
-
 document.addEventListener('DOMContentLoaded', async () => {
   // إعداد مستمعي الأحداث
   setupEventListeners();
@@ -188,33 +171,6 @@ async function sendAdminEmail(email, userId, transactionId, subscriptionType) {
   
   // محاكاة تأخير إرسال البريد الإلكتروني
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // في تطبيق حقيقي، سيتم استخدام الكود التالي:
-  /*
-  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      service_id: 'your_service_id',
-      template_id: 'your_template_id',
-      user_id: 'your_user_id',
-      template_params: {
-        to_email: 'emontal.33@gmail.com',
-        from_name: 'CollectPro System',
-        user_id: userId,
-        email: email,
-        transaction_id: transactionId,
-        subscription_type: subscriptionType
-      }
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to send email');
-  }
-  */
 }
 
 function showAlert(message, type = 'info') {

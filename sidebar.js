@@ -1,9 +1,32 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // --- Supabase Client Setup ---
-  // We need to initialize Supabase here to handle logout securely.
-  const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
-  const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // --- New: Securely Populate User Data in Sidebar ---
+  const populateSidebarUserData = async () => {
+    const userNameEl = document.getElementById('user-name');
+    const userInitialEl = document.getElementById('user-initial');
+    const userEmailEl = document.getElementById('user-email');
+    const userIdEl = document.getElementById('user-id');
+
+    console.log('Fetching user data for sidebar...');
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      console.error('Error fetching user, or no user session found. Redirecting to login.', error);
+      // Clear any potentially corrupted local storage and redirect to login
+      localStorage.clear();
+      window.location.href = 'index.html';
+      return;
+    }
+
+    console.log('User data fetched successfully:', user);
+    const fullName = user.user_metadata?.full_name;
+    const email = user.email;
+
+    if (userNameEl && fullName) userNameEl.textContent = fullName;
+    if (userInitialEl && fullName) userInitialEl.textContent = fullName.charAt(0).toUpperCase();
+    if (userEmailEl && email) userEmailEl.textContent = email;
+    if (userIdEl && user.id) userIdEl.textContent = `ID: ${user.id}`;
+  };
 
   // --- Sidebar Toggle Functionality ---
   const sidebar = document.querySelector('.sidebar');
@@ -45,21 +68,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Correct Logout Functionality ---
+  // --- Correct Logout Functionality (using global supabase client) ---
   const logoutButton = document.getElementById('logout-btn');
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
       console.log('🔒 Logging out user...');
 
       // 1. Sign out from Supabase
-      const { error } = await _supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       
       // 2. Clear all local storage for a clean slate
       localStorage.clear();
 
       if (error) {
         console.error('❌ Error during logout:', error.message);
-        // Still redirect even if there was an error
       } else {
         console.log('✅ Logout successful.');
       }
@@ -68,4 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = 'index.html';
     });
   }
+
+  // --- Initial calls ---
+  await populateSidebarUserData();
+
 });

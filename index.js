@@ -1,12 +1,4 @@
-const { createClient } = supabase;
-
-// Initialize Supabase with hardcoded credentials
-const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
-
 const redirectUri = 'https://collect-pro.vercel.app/';
-
-const _supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Saves user data to localStorage.
@@ -33,7 +25,7 @@ async function createFreeSubscription(user) {
 
   console.log(`✨ Creating free subscription for new user: ${user.id}`);
   try {
-    const { data, error } = await _supabase.from('subscriptions').insert([
+    const { data, error } = await supabase.from('subscriptions').insert([
       {
         user_id: user.id,
         email: user.email,
@@ -71,7 +63,7 @@ async function redirectUser(user) {
 
   console.log('🔍 Checking user role for redirection. User ID:', user.id);
   try {
-    const { data, error } = await _supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -80,8 +72,8 @@ async function redirectUser(user) {
     if (error && error.code === 'PGRST116') {
       console.log('👤 New user or no profile found. Creating free subscription...');
       await createFreeSubscription(user);
-      console.log('Redirecting new user to subscription page.');
-      window.location.href = 'my-subscription.html';
+      console.log('Redirecting new user to dashboard page.');
+      window.location.href = 'dashboard.html';
       return;
     }
     if (error) throw error;
@@ -90,12 +82,12 @@ async function redirectUser(user) {
       console.log('👑 Admin user detected. Redirecting to admin dashboard.');
       window.location.href = 'admin.html';
     } else {
-      console.log('👤 Regular user detected. Redirecting to subscription page.');
-      window.location.href = 'my-subscription.html';
+      console.log('👤 Regular user detected. Redirecting to dashboard page.');
+      window.location.href = 'dashboard.html';
     }
   } catch (error) {
     console.error('❌ Error fetching user profile:', error);
-    window.location.href = 'my-subscription.html';
+    window.location.href = 'dashboard.html';
   }
 }
 
@@ -105,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const googleLoginBtn = document.getElementById('google-login-btn');
   let sessionHandled = false;
 
-  _supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     console.log(`🔧 Auth state changed: Event: ${event}, Session: ${!!session}`);
 
     if (sessionHandled) {
@@ -123,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     googleLoginBtn.addEventListener('click', async () => {
       console.log('🔧 Google login button clicked');
       try {
-        const { error } = await _supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: redirectUri,
