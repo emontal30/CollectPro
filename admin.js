@@ -1,16 +1,12 @@
 // إعداد Supabase
 console.log('بدء تحميل admin.js');
-console.log('env object:', window.env);
 
-const supabaseUrl = window.env.SUPABASE_URL;
-const supabaseKey = window.env.SUPABASE_KEY;
+const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('خطأ: متغيرات البيئة مفقودة في admin.js');
 }
-
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key:', supabaseKey ? 'تم التحميل' : 'مفقود');
 
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 console.log('تم إنشاء Supabase client في admin.js');
@@ -106,80 +102,65 @@ function setupEventListeners() {
 
 async function checkAdminAccess() {
   try {
-    // التحقق من وجود جلسة مستخدم
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
+    }
     
-    // تم التعديل: السماح بالوصول للصفحة بدون تسجيل دخول
-    // if (!user) {
-    //   // إذا لم يكن المستخدم مسجلاً، توجيهه لصفحة تسجيل الدخول
-    //   window.location.href = 'index.html';
-    //   return;
-    // }
-    
-    // التحقق من صلاحيات الإدارة (في تطبيق حقيقي، سيتم التحقق من دور المستخدم)
-    // هنا نقوم بمحاكاة التحقق من صلاحيات الإدارة
     const { data, error } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
       
-    // تم التعديل: السماح بالوصول للصفحة بدون صلاحيات المدير
-    // if (error || !data || data.role !== 'admin') {
-    //   // إذا لم يكن المستخدم مسؤولاً، توجيهه للصفحة الرئيسية
-    //   window.location.href = 'index.html';
-    // }
+    if (error || !data || data.role !== 'admin') {
+      window.location.href = 'index.html';
+    }
   } catch (error) {
     console.error('Error checking admin access:', error);
-    // تم التعديل: عدم التحويل التلقائي عند حدوث خطأ
-    // window.location.href = 'index.html';
+    window.location.href = 'index.html';
   }
 }
 
 async function loadDashboardStats() {
   try {
-    // الحصول على إجمالي المستخدمين
     const { count: totalUsers, error: usersError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
       
     if (usersError) throw usersError;
     
-    // الحصول على عدد الطلبات قيد المراجعة
     const { count: pendingRequests, error: pendingError } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
       
     if (pendingError) throw pendingError;
     
-    // الحصول على عدد الاشتراكات النشطة
     const { count: activeSubscriptions, error: activeError } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
       
     if (activeError) throw activeError;
     
-    // الحصول على إجمالي الإيرادات
-    const { data: subscriptions, error: revenueError } = await supabase
-      .from('Subscriptions')
+    const { data: subscriptionsData, error: revenueError } = await supabase
+      .from('subscriptions')
       .select('plan')
       .eq('status', 'active');
       
     if (revenueError) throw revenueError;
     
-    // حساب الإيرادات بناءً على الخطط
     let totalRevenue = 0;
-    if (subscriptions) {
-      subscriptions.forEach(sub => {
+    if (subscriptionsData) {
+      subscriptionsData.forEach(sub => {
         if (sub.plan === 'monthly') totalRevenue += 30;
         else if (sub.plan === '3-months') totalRevenue += 50;
         else if (sub.plan === 'yearly') totalRevenue += 360;
       });
     }
     
-    // تحديث واجهة المستخدم
     document.getElementById('total-users').textContent = totalUsers || 0;
     document.getElementById('pending-requests').textContent = pendingRequests || 0;
     document.getElementById('active-subscriptions').textContent = activeSubscriptions || 0;
@@ -194,7 +175,7 @@ async function loadDashboardStats() {
 async function loadPendingSubscriptions() {
   try {
     const { data, error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
@@ -208,7 +189,6 @@ async function loadPendingSubscriptions() {
       data.forEach(subscription => {
         const row = document.createElement('tr');
         
-        // تحويل نوع الخطة إلى الاسم المعروض
         const planNames = {
           'monthly': 'شهري',
           '3-months': '3 شهور',
@@ -240,7 +220,6 @@ async function loadPendingSubscriptions() {
         tbody.appendChild(row);
       });
       
-      // إضافة مستمعي الأحداث للأزرار
       document.querySelectorAll('.action-btn.approve').forEach(btn => {
         btn.addEventListener('click', () => {
           if (confirm('هل أنت متأكد من تفعيل هذا الاشتراك؟')) {
@@ -263,11 +242,9 @@ async function loadPendingSubscriptions() {
         });
       });
       
-      // إظهار الجدول وإخفاء رسالة عدم وجود بيانات
       document.getElementById('pending-subscriptions-table').style.display = 'table';
       document.getElementById('no-pending-requests').style.display = 'none';
     } else {
-      // إخفاء الجدول وإظهار رسالة عدم وجود بيانات
       document.getElementById('pending-subscriptions-table').style.display = 'none';
       document.getElementById('no-pending-requests').style.display = 'block';
     }
@@ -282,7 +259,7 @@ async function loadAllSubscriptions() {
     const statusFilter = document.getElementById('status-filter').value;
     
     let query = supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .order('created_at', { ascending: false });
       
@@ -301,14 +278,12 @@ async function loadAllSubscriptions() {
       data.forEach(subscription => {
         const row = document.createElement('tr');
         
-        // تحويل نوع الخطة إلى الاسم المعروض
         const planNames = {
           'monthly': 'شهري',
           '3-months': '3 شهور',
           'yearly': 'سنوي'
         };
         
-        // تحويل الحالة إلى الاسم المعروض
         const statusClasses = {
           'pending': 'status-pending',
           'active': 'status-active',
@@ -349,7 +324,6 @@ async function loadAllSubscriptions() {
         tbody.appendChild(row);
       });
       
-      // إضافة مستمعي الأحداث للأزرار
       document.querySelectorAll('.action-btn.approve').forEach(btn => {
         btn.addEventListener('click', () => {
           if (confirm('هل أنت متأكد من تفعيل هذا الاشتراك؟')) {
@@ -372,11 +346,9 @@ async function loadAllSubscriptions() {
         });
       });
       
-      // إظهار الجدول وإخفاء رسالة عدم وجود بيانات
       document.getElementById('all-subscriptions-table').style.display = 'table';
       document.getElementById('no-subscriptions').style.display = 'none';
     } else {
-      // إخفاء الجدول وإظهار رسالة عدم وجود بيانات
       document.getElementById('all-subscriptions-table').style.display = 'none';
       document.getElementById('no-subscriptions').style.display = 'block';
     }
@@ -388,16 +360,14 @@ async function loadAllSubscriptions() {
 
 async function activateSubscription(subscriptionId) {
   try {
-    // الحصول على بيانات الاشتراك
     const { data: subscription, error: fetchError } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .eq('id', subscriptionId)
       .single();
       
     if (fetchError) throw fetchError;
     
-    // حساب تاريخ البدء والانتهاء بناءً على الخطة
     const startDate = new Date().toISOString().split('T')[0];
     let endDate = new Date();
     
@@ -407,15 +377,13 @@ async function activateSubscription(subscriptionId) {
       endDate.setMonth(endDate.getMonth() + 3);
     } else if (subscription.plan === 'yearly') {
       endDate.setFullYear(endDate.getFullYear() + 1);
-      // إضافة شهر مجاني للخطة السنوية
       endDate.setMonth(endDate.getMonth() + 1);
     }
     
     const endDateString = endDate.toISOString().split('T')[0];
     
-    // تحديث حالة الاشتراك
     const { error: updateError } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .update({
         status: 'active',
         start_date: startDate,
@@ -425,10 +393,8 @@ async function activateSubscription(subscriptionId) {
       
     if (updateError) throw updateError;
     
-    // إظهار رسالة نجاح
     showAlert('تم تفعيل الاشتراك بنجاح', 'success');
     
-    // تحديث البيانات
     await loadDashboardStats();
     await loadPendingSubscriptions();
     await loadAllSubscriptions();
@@ -441,18 +407,15 @@ async function activateSubscription(subscriptionId) {
 
 async function cancelSubscription(subscriptionId) {
   try {
-    // تحديث حالة الاشتراك
     const { error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .update({ status: 'cancelled' })
       .eq('id', subscriptionId);
       
     if (error) throw error;
     
-    // إظهار رسالة نجاح
     showAlert('تم إلغاء الاشتراك بنجاح', 'success');
     
-    // تحديث البيانات
     await loadDashboardStats();
     await loadPendingSubscriptions();
     await loadAllSubscriptions();
@@ -465,7 +428,6 @@ async function cancelSubscription(subscriptionId) {
 
 async function activateAllSelectedSubscriptions() {
   try {
-    // الحصول على معرفات الاشتراكات المحددة
     const checkboxes = document.querySelectorAll('.subscription-checkbox:checked');
     const subscriptionIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
     
@@ -474,18 +436,15 @@ async function activateAllSelectedSubscriptions() {
       return;
     }
     
-    // تحديث حالة الاشتراكات
     const { error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .update({ status: 'active' })
       .in('id', subscriptionIds);
       
     if (error) throw error;
     
-    // إظهار رسالة نجاح
     showAlert(`تم تفعيل ${subscriptionIds.length} اشتراك بنجاح`, 'success');
     
-    // تحديث البيانات
     await loadDashboardStats();
     await loadPendingSubscriptions();
     await loadAllSubscriptions();
@@ -498,7 +457,6 @@ async function activateAllSelectedSubscriptions() {
 
 async function cancelAllSelectedSubscriptions() {
   try {
-    // الحصول على معرفات الاشتراكات المحددة
     const checkboxes = document.querySelectorAll('.subscription-checkbox:checked');
     const subscriptionIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
     
@@ -507,18 +465,15 @@ async function cancelAllSelectedSubscriptions() {
       return;
     }
     
-    // تحديث حالة الاشتراكات
     const { error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .update({ status: 'cancelled' })
       .in('id', subscriptionIds);
       
     if (error) throw error;
     
-    // إظهار رسالة نجاح
     showAlert(`تم إلغاء ${subscriptionIds.length} اشتراك بنجاح`, 'success');
     
-    // تحديث البيانات
     await loadDashboardStats();
     await loadPendingSubscriptions();
     await loadAllSubscriptions();
@@ -531,23 +486,20 @@ async function cancelAllSelectedSubscriptions() {
 
 async function showSubscriptionDetails(subscriptionId) {
   try {
-    // الحصول على بيانات الاشتراك
     const { data: subscription, error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .eq('id', subscriptionId)
       .single();
       
     if (error) throw error;
     
-    // تحويل نوع الخطة إلى الاسم المعروض
     const planNames = {
       'monthly': 'شهري',
       '3-months': '3 شهور',
       'yearly': 'سنوي'
     };
     
-    // تحويل الحالة إلى الاسم المعروض
     const statusNames = {
       'pending': 'قيد المراجعة',
       'active': 'نشط',
@@ -555,7 +507,6 @@ async function showSubscriptionDetails(subscriptionId) {
       'expired': 'منتهي'
     };
     
-    // تعبئة بيانات النافذة المنبثقة
     document.getElementById('detail-user-id').textContent = subscription.user_id;
     document.getElementById('detail-email').textContent = subscription.email;
     document.getElementById('detail-plan').textContent = planNames[subscription.plan] || subscription.plan;
@@ -565,7 +516,6 @@ async function showSubscriptionDetails(subscriptionId) {
     document.getElementById('detail-end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
     document.getElementById('detail-status').textContent = statusNames[subscription.status] || subscription.status;
     
-    // إظهار النافذة المنبثقة
     document.getElementById('subscription-details-modal').style.display = 'flex';
     
   } catch (error) {
@@ -576,7 +526,6 @@ async function showSubscriptionDetails(subscriptionId) {
 
 async function handleLogout() {
   try {
-    // تسجيل الخروج من Supabase
     await supabase.auth.signOut();
     
     window.location.href = 'index.html';
@@ -599,14 +548,11 @@ function showAlert(message, type = 'info') {
   const alertContainer = document.getElementById('alert-container');
   if (!alertContainer) return;
   
-  // إزالة التنبيهات الحالية
   alertContainer.innerHTML = '';
   
-  // إنشاء تنبيه جديد
   const alert = document.createElement('div');
   alert.className = `alert alert-${type}`;
   
-  // إضافة الأيقونة المناسبة
   let icon = 'fa-info-circle';
   if (type === 'success') icon = 'fa-check-circle';
   if (type === 'danger') icon = 'fa-exclamation-circle';
@@ -615,7 +561,6 @@ function showAlert(message, type = 'info') {
   
   alertContainer.appendChild(alert);
   
-  // إزالة التنبيه تلقائيًا بعد 5 ثوانٍ
   setTimeout(() => {
     alert.style.opacity = '0';
     setTimeout(() => alert.remove(), 300);

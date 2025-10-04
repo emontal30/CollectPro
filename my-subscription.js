@@ -1,16 +1,12 @@
 // إعداد Supabase
 console.log('بدء تحميل my-subscription.js');
-console.log('env object:', window.env);
 
-const supabaseUrl = window.env.SUPABASE_URL;
-const supabaseKey = window.env.SUPABASE_KEY;
+const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('خطأ: متغيرات البيئة مفقودة في my-subscription.js');
 }
-
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key:', supabaseKey ? 'تم التحميل' : 'مفقود');
 
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 console.log('تم إنشاء Supabase client في my-subscription.js');
@@ -42,11 +38,9 @@ function setupEventListeners() {
       const planType = plan.getAttribute('data-plan');
       const price = plan.getAttribute('data-price');
       
-      // حفظ الخطة المختارة في التخزين المحلي
       localStorage.setItem('selectedPlan', planType);
       localStorage.setItem('selectedPrice', price);
       
-      // التوجه لصفحة الدفع
       window.location.href = 'payment.html';
     });
   });
@@ -81,19 +75,15 @@ function setupEventListeners() {
 
 async function loadSubscriptionData() {
   try {
-    // الحصول على بيانات المستخدم الحالي
     const { data: { user } } = await supabase.auth.getUser();
     
-    // تم التعديل: السماح بالوصول للصفحة بدون تسجيل دخول
-    // if (!user) {
-    //   // إذا لم يكن المستخدم مسجلاً، توجيهه لصفحة تسجيل الدخول
-    //   window.location.href = 'index.html';
-    //   return;
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
     }
     
-    // الحصول على بيانات الاشتراك النشط للمستخدم
     const { data: subscription, error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
       .in('status', ['pending', 'active'])
@@ -101,7 +91,7 @@ async function loadSubscriptionData() {
       .limit(1)
       .single();
       
-    if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
     
@@ -110,14 +100,12 @@ async function loadSubscriptionData() {
     const subscriptionStatus = document.getElementById('subscription-status');
     
     if (subscription) {
-      // تحويل نوع الخطة إلى الاسم المعروض
       const planNames = {
         'monthly': 'شهري',
         '3-months': '3 شهور',
         'yearly': 'سنوي'
       };
       
-      // تحويل الحالة إلى الاسم المعروض
       const statusClasses = {
         'pending': 'status-pending',
         'active': 'status-active',
@@ -132,16 +120,13 @@ async function loadSubscriptionData() {
         'expired': 'منتهي'
       };
       
-      // تعبئة بيانات الاشتراك
       document.getElementById('plan-type').textContent = planNames[subscription.plan] || subscription.plan;
       document.getElementById('start-date').textContent = subscription.start_date ? formatDate(subscription.start_date) : '-';
       document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
       document.getElementById('subscription-state').textContent = statusNames[subscription.status] || subscription.status;
       
-      // تعبئة حالة الاشتراك
       subscriptionStatus.innerHTML = `<span class="status-badge ${statusClasses[subscription.status] || ''}">${statusNames[subscription.status] || subscription.status}</span>`;
       
-      // تعبئة أزرار الإجراءات بناءً على حالة الاشتراك
       subscriptionActions.innerHTML = '';
       
       if (subscription.status === 'pending') {
@@ -152,7 +137,6 @@ async function loadSubscriptionData() {
           </div>
         `;
       } else if (subscription.status === 'active') {
-        // التحقق من قرب انتهاء الاشتراك
         const endDate = new Date(subscription.end_date);
         const today = new Date();
         const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
@@ -169,7 +153,6 @@ async function loadSubscriptionData() {
             </button>
           `;
           
-          // إضافة مستمع حدث لزر التجديد
           document.getElementById('renew-btn').addEventListener('click', () => {
             document.getElementById('renew-modal').style.display = 'flex';
           });
@@ -183,7 +166,6 @@ async function loadSubscriptionData() {
         }
       }
     } else {
-      // لا يوجد اشتراك نشط
       subscriptionDetails.innerHTML = `
         <div class="no-subscription">
           <i class="fas fa-times-circle"></i>
@@ -200,7 +182,6 @@ async function loadSubscriptionData() {
         </button>
       `;
       
-      // إضافة مستمع حدث لزر الاشتراك
       document.getElementById('subscribe-btn').addEventListener('click', () => {
         window.location.href = 'subscriptions.html';
       });
@@ -213,16 +194,14 @@ async function loadSubscriptionData() {
 
 async function loadSubscriptionHistory() {
   try {
-    // الحصول على بيانات المستخدم الحالي
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
       return;
     }
     
-    // الحصول على سجل اشتراكات المستخدم
     const { data: subscriptions, error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -236,14 +215,12 @@ async function loadSubscriptionHistory() {
       subscriptions.forEach(subscription => {
         const row = document.createElement('tr');
         
-        // تحويل نوع الخطة إلى الاسم المعروض
         const planNames = {
           'monthly': 'شهري',
           '3-months': '3 شهور',
           'yearly': 'سنوي'
         };
         
-        // تحويل الحالة إلى الاسم المعروض
         const statusClasses = {
           'pending': 'status-pending',
           'active': 'status-active',
@@ -268,11 +245,9 @@ async function loadSubscriptionHistory() {
         tbody.appendChild(row);
       });
       
-      // إظهار الجدول وإخفاء رسالة عدم وجود بيانات
       document.getElementById('history-table').style.display = 'table';
       document.getElementById('no-history').style.display = 'none';
     } else {
-      // إخفاء الجدول وإظهار رسالة عدم وجود بيانات
       document.getElementById('history-table').style.display = 'none';
       document.getElementById('no-history').style.display = 'block';
     }
@@ -295,14 +270,11 @@ function showAlert(message, type = 'info') {
   const alertContainer = document.getElementById('alert-container');
   if (!alertContainer) return;
   
-  // إزالة التنبيهات الحالية
   alertContainer.innerHTML = '';
   
-  // إنشاء تنبيه جديد
   const alert = document.createElement('div');
   alert.className = `alert alert-${type}`;
   
-  // إضافة الأيقونة المناسبة
   let icon = 'fa-info-circle';
   if (type === 'success') icon = 'fa-check-circle';
   if (type === 'danger') icon = 'fa-exclamation-circle';
@@ -311,7 +283,6 @@ function showAlert(message, type = 'info') {
   
   alertContainer.appendChild(alert);
   
-  // إزالة التنبيه تلقائيًا بعد 5 ثوانٍ
   setTimeout(() => {
     alert.style.opacity = '0';
     setTimeout(() => alert.remove(), 300);
