@@ -1,4 +1,4 @@
-const redirectUri = 'https://collect-pro.vercel.app/';
+const redirectUri = window.location.origin;
 
 /**
  * Saves user data to localStorage.
