@@ -1,234 +1,148 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>الاشتراكات - CollectPro</title>
-  <!-- <link rel="manifest" href="manifest.json"> -->
-  <meta name="theme-color" content="#007965"/>
-  <link rel="apple-touch-icon" href="logoapp.png">
-  <script src="env.js"></script>
-  <script src="sidebar.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="subscriptions.css" />
-</head>
-<body>
-  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
-  </button>
 
-  <aside class="sidebar sidebar-collapsed">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
-        </div>
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-          <span class="user-id" id="user-id"></span>
-        </div>
-      </div>
-    </div>
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#007965"/>
+        <link rel="apple-touch-icon" href="/logoapp.png">
+        <title>الاشتراكات - CollectPro</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="sidebar.css" />
+        <link rel="stylesheet" href="subscriptions.css" />
+      </head>
+      <body>
+        <div class="container">
+          <!-- Sidebar -->
+          <aside class="sidebar"></aside>
+      
+          <!-- Main Content -->
+          <div class="main-content">
+            <header>
+              <button id="menu-toggle"><i class="fas fa-bars"></i></button>
+              <h1>الاشتراكات</h1>
+              <div class="user-info-container">
+                <div class="user-info">
+                  <span id="user-name">اسم المستخدم</span>
+                  <img id="user-avatar" src="logoapp.png" alt="الصورة الرمزية للمستخدم" />
+                </div>
+                <div class="dropdown-menu">
+                  <ul>
+                    <li><a href="my-subscription.html">ملفي الشخصي</a></li>
+                    <li><a id="logout-btn" href="#">تسجيل الخروج</a></li>
+                  </ul>
+                </div>
+              </div>
+            </header>
+      
+            <main>
+              <section class="subscription-intro">
+                <h2>اختر خطة الاشتراك المناسبة لك</h2>
+                <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
+              </section>
+      
+              <div class="plans-container">
+                <!-- الخطة الشهرية -->
+                <div class="plan-card">
+                  <div class="plan-header">
+                    <h3>خطة شهرية</h3>
+                    <div class="plan-price">
+                      <span class="currency">ج.م</span>
+                      <span class="price">30</span>
+                      <span class="period">/ شهر</span>
+                    </div>
+                  </div>
+                  <div class="plan-features">
+                    <ul>
+                      <li><i class="fas fa-check"></i> الوصول الكامل للتطبيق</li>
+                      <li><i class="fas fa-check"></i> تحديثات شهرية</li>
+                      <li><i class="fas fa-check"></i> دعم فني أساسي</li>
+                      <li><i class="fas fa-check"></i> تخزين البيانات السحابي</li>
+                    </ul>
+                  </div>
+                  <div class="plan-footer">
+                    <button class="choose-plan-btn" data-plan-id="price_1PgEU9RpN92qb2qTu219Z9G7">اختر الخطة</button>
+                  </div>
+                </div>
+      
+                <!-- الخطة الربع سنوية -->
+                <div class="plan-card featured">
+                   <div class="featured-badge">الأكثر شيوعًا</div>
+                  <div class="plan-header">
+                    <h3>خطة ربع سنوية</h3>
+                    <div class="plan-price">
+                      <span class="currency">ج.م</span>
+                      <span class="price">80</span>
+                      <span class="period">/ 3 أشهر</span>
+                    </div>
+                  </div>
+                  <div class="plan-features">
+                    <ul>
+                      <li><i class="fas fa-check"></i> كل مميزات الخطة الشهرية</li>
+                      <li><i class="fas fa-check"></i> توفير 10 جنيه مقارنة بالخطة الشهرية</li>
+                      <li><i class="fas fa-check"></i> دعم فني ذو أولوية</li>
+                      <li><i class="fas fa-check"></i> تقارير تحليلية متقدمة</li>
+                    </ul>
+                  </div>
+                  <div class="plan-footer">
+                    <button class="choose-plan-btn" data-plan-id="price_1PgEUzRpN92qb2qT52L0kY5p">اختر الخطة</button>
+                  </div>
+                </div>
+      
+                <!-- الخطة السنوية -->
+                <div class="plan-card">
+                  <div class="plan-header">
+                    <h3>خطة سنوية</h3>
+                    <div class="plan-price">
+                      <span class="currency">ج.م</span>
+                      <span class="price">300</span>
+                      <span class="period">/ سنة</span>
+                    </div>
+                  </div>
+                  <div class="plan-features">
+                    <ul>
+                      <li><i class="fas fa-check"></i> كل مميزات الخطة الربع سنوية</li>
+                      <li><i class="fas fa-check"></i> وصول مبكر للميزات الجديدة</li>
+                      <li><i class="fas fa-check"></i> مدير حساب مخصص</li>
+                    </ul>
+                  </div>
+                  <div class="plan-footer">
+                    <button class="choose-plan-btn" data-plan-id="price_1PgEVKRpN92qb2qT7gYIEN1M">اختر الخطة</button>
+                  </div>
+                </div>
+              </div>
 
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li>
-          <a href="dashboard.html">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>إدخال البيانات</span>
-          </a>
-        </li>
-        <li>
-          <a href="harvest.html">
-            <i class="fas fa-donate"></i>
-            <span>التحصيلات</span>
-          </a>
-        </li>
-        <li>
-          <a href="archive.html">
-            <i class="fas fa-archive"></i>
-            <span>الأرشيف</span>
-          </a>
-        </li>
-        <li>
-          <a href="subscriptions.html">
-            <i class="fas fa-credit-card"></i>
-            <span>الاشتراكات</span>
-          </a>
-        </li>
-        <li>
-          <a href="my-subscription.html">
-            <i class="fas fa-user-shield"></i>
-            <span>اشتراكي</span>
-          </a>
-        </li>
-        <li>
-          <a href="admin.html">
-            <i class="fas fa-user-cog"></i>
-            <span>لوحة التحكم</span>
-          </a>
-        </li>
-      </ul>
-    </div>
-
-    <div class="sidebar-footer">
-        <button id="logout-btn" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>تسجيل الخروج</span>
-        </button>
-    </div>
-  </aside>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>الاشتراكات 💳</h1>
-  </header>
-
-  <main>
-    <section class="subscription-intro">
-      <h2>اختر خطة الاشتراك المناسبة لك</h2>
-      <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
-    </section>
-
-    <div class="plans-container">
-      <!-- الخطة الشهرية -->
-      <div class="plan-card">
-        <div class="plan-header">
-          <h3>خطة شهرية</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">30</span>
-            <span class="period">/ شهر</span>
+              <!-- قسم الأسئلة الشائعة -->
+              <section class="faq-section">
+                <h2>الأسئلة الشائعة</h2>
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <h3>هل يمكنني إلغاء اشتراكي في أي وقت؟</h3>
+                    <i class="fas fa-chevron-down"></i>
+                  </div>
+                  <div class="faq-answer">
+                    <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال صفحة "ملفي الشخصي". سيظل بإمكانك الوصول إلى الميزات المدفوعة حتى نهاية فترة الفوترة الحالية.</p>
+                  </div>
+                </div>
+                <div class="faq-item">
+                  <div class="faq-question">
+                    <h3>ما هي طرق الدفع المقبولة؟</h3>
+                    <i class="fas fa-chevron-down"></i>
+                  </div>
+                  <div class="faq-answer">
+                    <p>نحن نقبل جميع بطاقات الائتمان والخصم الرئيسية. تتم معالجة جميع المدفوعات بشكل آمن من خلال Stripe.</p>
+                  </div>
+                </div>
+              </section>
+            </main>
           </div>
         </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> الوصول الكامل للتطبيق</li>
-            <li><i class="fas fa-check"></i> تحديثات شهرية</li>
-            <li><i class="fas fa-check"></i> دعم فني أساسي</li>
-            <li><i class="fas fa-check"></i> تخزين البيانات السحابي</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="monthly" data-price="30">
-            اختر الخطة
-          </button>
-        </div>
-      </div>
-
-      <!-- الخطة المفضلة (3 شهور) -->
-      <div class="plan-card featured">
-        <div class="plan-badge">الأكثر شعبية</div>
-        <div class="plan-header">
-          <h3>خطة 3 شهور</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">50</span>
-            <span class="period">/ 3 شهور</span>
-          </div>
-        </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> كل ميزات الخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> توفير 40% مقارنة بالخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> دعم فني متميز</li>
-            <li><i class="fas fa-check"></i> تقارير متقدمة</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="3-months" data-price="50">
-            اختر الخطة
-          </button>
-        </div>
-      </div>
-
-      <!-- الخطة السنوية -->
-      <div class="plan-card">
-        <div class="plan-header">
-          <h3>خطة سنوية</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">360</span>
-            <span class="period">/ سنة</span>
-          </div>
-          <div class="plan-offer">+ شهر مجاني</div>
-        </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> كل ميزات الخطة المفضلة</li>
-            <li><i class="fas fa-check"></i> توفير 50% مقارنة بالخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> شهر إضافي مجاني</li>
-            <li><i class="fas fa-check"></i> دعم فني على مدار الساعة</li>
-            <li><i class="fas fa-check"></i> جلسات تدريبية مجانية</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="yearly" data-price="360">
-            اختر الخطة
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <section class="faq-section">
-      <h2>الأسئلة الشائعة</h2>
-      <div class="faq-container">
-        <div class="faq-item">
-          <div class="faq-question">
-            <h3>كيف يمكنني الدفع؟</h3>
-            <i class="fas fa-chevron-down"></i>
-          </div>
-          <div class="faq-answer">
-            <p>يمكنك الدفع عن طريق التحويل البنكي أو المحافظ الإلكترونية. بعد اختيار الخطة، سيتم توجيهك لصفحة الدفع لإدخال بيانات التحويل.</p>
-          </div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">
-            <h3>هل يمكنني إلغاء اشتراكي؟</h3>
-            <i class="fas fa-chevron-down"></i>
-          </div>
-          <div class="faq-answer">
-            <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال صفحة إدارة اشتراكي. لن يتم تجديد الاشتراك تلقائياً.</p>
-          </div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-question">
-            <h3>ماذا يحدث بعد انتهاء الاشتراك؟</h3>
-            <i class="fas fa-chevron-down"></i>
-          </div>
-          <div class="faq-answer">
-            <p>بعد انتهاء الاشتراك، ستحتفظ ببياناتك لمدة 30 يوماً. يمكنك تجديد الاشتراك في أي وقت خلال هذه الفترة.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="script.js"></script>
-  <script src="subscriptions.js"></script>
-  <script>
-    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }, err => {
-          console.log('ServiceWorker registration failed: ', err);
-        });
-      });
-    }
-  </script>
-</body>
-</html>
+      
+        <script src="https://js.stripe.com/v3/"></script>
+        <script src="env.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="sidebar.js"></script>
+        <script src="subscriptions.js"></script>
+      </body>
+      </html>

@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Debugging Google Login - Environment Variables:', {
     SUPABASE_URL: window.env?.SUPABASE_URL,
     SUPABASE_KEY: window.env?.SUPABASE_KEY ? '***configured***' : 'NOT SET',
-    GOOGLE_REDIRECT_URI: window.env?.GOOGLE_REDIRECT_URI
   });
 
   // Validate environment variables
@@ -41,7 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('🔧 Supabase client initialized:', !!_supabase);
 
         const { data, error } = await _supabase.auth.signInWithOAuth({
-          provider: 'google'
+          provider: 'google',
+          options: {
+            redirectTo: window.env.GOOGLE_REDIRECT_URI
+          }
         });
 
         console.log('🔧 OAuth call completed. Data:', data);
