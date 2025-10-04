@@ -102,8 +102,8 @@ async function handlePaymentSubmit(e) {
   
   // التحقق من عدم تكرار رقم العملية
   const { data: existingSubscriptions, error: checkError } = await supabase
-    .from('Subscriptions')
-    .select('*')
+    .from('subscriptions')
+    .select('transaction_id')
     .eq('transaction_id', transactionId);
     
   if (checkError) {
@@ -133,12 +133,12 @@ async function handlePaymentSubmit(e) {
     
     // إدخال بيانات الاشتراك في قاعدة البيانات
     const { data, error } = await supabase
-      .from('Subscriptions')
+      .from('subscriptions')
       .insert([
         {
           user_id: userId,
           email: email,
-          plan: plan,
+          subscription_type: plan,
           transaction_id: transactionId,
           status: 'pending',
           created_at: new Date().toISOString()

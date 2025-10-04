@@ -97,7 +97,7 @@ async function loadSubscriptionData() {
     
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('plan, start_date, end_date, status')
+      .select('subscription_type, start_date, end_date, status')
       .eq('user_id', user.id)
       .in('status', ['pending', 'active'])
       .order('created_at', { ascending: false })
@@ -133,7 +133,7 @@ async function loadSubscriptionData() {
         'expired': 'منتهي'
       };
       
-      document.getElementById('plan-type').textContent = planNames[subscription.plan] || subscription.plan;
+      document.getElementById('plan-type').textContent = planNames[subscription.subscription_type] || subscription.subscription_type;
       document.getElementById('start-date').textContent = subscription.start_date ? formatDate(subscription.start_date) : '-';
       document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
       document.getElementById('subscription-state').textContent = statusNames[subscription.status] || subscription.status;
@@ -215,7 +215,7 @@ async function loadSubscriptionHistory() {
     
     const { data: subscriptions, error } = await supabase
       .from('subscriptions')
-      .select('plan, start_date, end_date, status, created_at')
+      .select('subscription_type, start_date, end_date, status, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
       
@@ -249,7 +249,7 @@ async function loadSubscriptionHistory() {
         };
         
         row.innerHTML = `
-          <td>${planNames[subscription.plan] || subscription.plan}</td>
+          <td>${planNames[subscription.subscription_type] || subscription.subscription_type}</td>
           <td>${subscription.start_date ? formatDate(subscription.start_date) : '-'}</td>
           <td>${subscription.end_date ? formatDate(subscription.end_date) : '-'}</td>
           <td><span class="status-badge ${statusClasses[subscription.status] || ''}">${statusNames[subscription.status] || subscription.status}</span></td>

@@ -1,9 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // --- Supabase Client Setup ---
+  // We need to initialize Supabase here to handle logout securely.
+  const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
+  const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  // --- Sidebar Toggle Functionality ---
   const sidebar = document.querySelector('.sidebar');
   const sidebarToggle = document.querySelector('.sidebar-toggle');
 
   if (sidebar && sidebarToggle) {
-    // التأكد من أن الزر ظاهر دائماً
     sidebarToggle.style.visibility = 'visible';
     sidebarToggle.style.opacity = '1';
     
@@ -12,16 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.toggle('sidebar-collapsed');
       
       if (sidebar.classList.contains('sidebar-collapsed')) {
-        // IS NOW COLLAPSED (closing)
         sidebarToggle.style.transform = 'translateX(0)';
       } else {
-        // IS NOW OPEN
         const sidebarWidth = sidebar.offsetWidth;
         sidebarToggle.style.transform = `translateX(-${sidebarWidth}px)`;
       }
     });
 
-    // Close sidebar when clicking outside on mobile
     document.addEventListener('click', (e) => {
       if (window.innerWidth < 769) {
         if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
@@ -33,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Set active link
+  // --- Set Active Navigation Link ---
   const currentPage = window.location.pathname.split('/').pop();
   const navLinks = document.querySelectorAll('.nav-links a');
   navLinks.forEach(link => {
@@ -42,18 +45,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Logout functionality
+  // --- Correct Logout Functionality ---
   const logoutButton = document.getElementById('logout-btn');
   if (logoutButton) {
-    logoutButton.addEventListener('click', () => {
-      // Clear user data from local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userInitial');
+    logoutButton.addEventListener('click', async () => {
+      console.log('🔒 Logging out user...');
 
-      // Redirect to the login page
+      // 1. Sign out from Supabase
+      const { error } = await _supabase.auth.signOut();
+      
+      // 2. Clear all local storage for a clean slate
+      localStorage.clear();
+
+      if (error) {
+        console.error('❌ Error during logout:', error.message);
+        // Still redirect even if there was an error
+      } else {
+        console.log('✅ Logout successful.');
+      }
+
+      // 3. Redirect to the login page
       window.location.href = 'index.html';
     });
   }
