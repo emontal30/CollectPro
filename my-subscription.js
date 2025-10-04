@@ -97,7 +97,7 @@ async function loadSubscriptionData() {
     
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('*')
+      .select('plan, start_date, end_date, status')
       .eq('user_id', user.id)
       .in('status', ['pending', 'active'])
       .order('created_at', { ascending: false })
@@ -215,7 +215,7 @@ async function loadSubscriptionHistory() {
     
     const { data: subscriptions, error } = await supabase
       .from('subscriptions')
-      .select('*')
+      .select('plan, start_date, end_date, status, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
       
