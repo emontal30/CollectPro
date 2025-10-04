@@ -4,7 +4,7 @@ const { createClient } = supabase;
 const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
 
-// The redirect URI should point to the main page to handle the login
+// The redirect URI should point to the main page where this script runs
 const redirectUri = 'https://collectpro.vercel.app/';
 
 const _supabase = createClient(supabaseUrl, supabaseKey);
@@ -24,17 +24,15 @@ async function redirectUser(user) {
       .eq('id', user.id)
       .single();
 
-    if (error) {
-      // If the profile doesn't exist, it might be a new user.
-      // Redirect to the default non-admin page.
-      if (error.code === 'PGRST116') {
-        console.log('👤 New user or no profile found. Redirecting to subscription page.');
-        window.location.href = 'my-subscription.html';
-        return;
-      }
-      throw error;
+    // Handle case where profile doesn't exist (e.g., new user)
+    if (error && error.code === 'PGRST116') {
+      console.log('👤 New user or no profile found. Redirecting to subscription page.');
+      window.location.href = 'my-subscription.html';
+      return;
     }
+    if (error) throw error;
 
+    // Redirect based on role
     if (data && data.role === 'admin') {
       console.log('👑 Admin user detected. Redirecting to admin dashboard.');
       window.location.href = 'admin.html';
@@ -53,30 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Initializing application for production');
 
   const googleLoginBtn = document.getElementById('google-login-btn');
+  let sessionHandled = false; // Flag to prevent multiple redirections
 
-  // Handle the redirect from Google OAuth.
-  // This will be triggered when the user is redirected back to the app.
+  // onAuthStateChange handles all auth events: initial load, login, logout.
   _supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔧 Auth state changed:', { event, hasSession: !!session });
-    // We only care about the SIGNED_IN event.
-    if (event === 'SIGNED_IN' && session) {
-        console.log('✅ User signed in successfully.');
-        redirectUser(session.user);
+    console.log(`🔧 Auth state changed: Event: ${event}, Session: ${!!session}`);
+
+    if (sessionHandled) {
+      return;
+    }
+
+    // 'INITIAL_SESSION' is for existing sessions on page load.
+    // 'SIGNED_IN' is for after a successful login.
+    if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
+      sessionHandled = true; // Prevent this from running again
+      console.log(`✅ User session found (Event: ${event}). Redirecting...`);
+      redirectUser(session.user);
     }
   });
 
-  // Check if there's already an active session when the page loads.
-  _supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-        console.log('✅ User already has a session.');
-        redirectUser(session.user);
-    } else {
-        console.log('📭 No active session found.');
-    }
-  });
-
-
-  // Handle Google login button click.
+  // Handle Google login button click
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
       console.log('🔧 Google login button clicked');
@@ -84,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await _supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: redirectUri
-          }
+            redirectTo: redirectUri,
+          },
         });
 
         if (error) {
