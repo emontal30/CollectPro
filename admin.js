@@ -526,9 +526,16 @@ async function showSubscriptionDetails(subscriptionId) {
 
 async function handleLogout() {
   try {
-    await supabase.auth.signOut();
-    
-    window.location.href = 'index.html';
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error.message);
+      showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+      return;
+    }
+    // Add a small delay to ensure the session is cleared before redirecting
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 300); // 300ms delay
   } catch (error) {
     console.error('Error logging out:', error);
     showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');

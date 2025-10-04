@@ -23,7 +23,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSubscriptionHistory();
 });
 
+function applyDarkModeFromStorage() {
+  const darkMode = localStorage.getItem('darkMode');
+  if (darkMode === 'on') {
+    document.body.classList.add('dark');
+  }
+}
+
 function setupEventListeners() {
+  // زر تسجيل الخروج
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+
   // زر تجديد الاشتراك
   const renewBtn = document.getElementById('renew-btn');
   if (renewBtn) {
@@ -254,6 +267,24 @@ async function loadSubscriptionHistory() {
   } catch (error) {
     console.error('Error loading subscription history:', error);
     showAlert('حدث خطأ أثناء تحميل سجل الاشتراكات', 'danger');
+  }
+}
+
+async function handleLogout() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error.message);
+      showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+      return;
+    }
+    // Add a small delay to ensure the session is cleared before redirecting
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 300); // 300ms delay
+  } catch (error) {
+    console.error('Error logging out:', error);
+    showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
   }
 }
 
