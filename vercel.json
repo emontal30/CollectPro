@@ -3,35 +3,29 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "index.html",
-          "dashboard.html",
-          "admin.html",
-          "login.html",
-          "payment.html",
-          "subscriptions.html",
-          "style.css",
-          "admin.css",
-          "login.css",
-          "dashboard.css",
-          "payment.css",
-          "subscriptions.css",
-          "auth.js",
-          "admin.js",
-          "dashboard.js",
-          "payment.js",
-          "subscriptions.js",
-          "node_modules/supabase-js/dist/umd/supabase.min.js"
-        ]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/env.js",
       "dest": "server.js"
+    },
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.css)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.js)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.png)",
+      "dest": "/$1"
     }
   ]
 }
