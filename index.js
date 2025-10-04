@@ -1,22 +1,6 @@
 const redirectUri = window.location.origin;
 
 /**
- * Saves user data to localStorage.
- * @param {Object} user The Supabase user object.
- */
-function saveUserToStorage(user) {
-  if (!user) return;
-  const userData = {
-    id: user.id,
-    email: user.email,
-    name: user.user_metadata?.full_name || user.email, // Fallback to email if name is not available
-  };
-  localStorage.setItem('user', JSON.stringify(userData));
-  console.log('💾 User data saved to localStorage:', userData);
-}
-
-
-/**
  * Creates a free subscription for a new user.
  * @param {Object} user The Supabase user object.
  */
@@ -57,9 +41,6 @@ async function createFreeSubscription(user) {
  */
 async function redirectUser(user) {
   if (!user) return;
-
-  // Save user data to localStorage first
-  saveUserToStorage(user);
 
   console.log('🔍 Checking user role for redirection. User ID:', user.id);
   try {
