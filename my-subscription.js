@@ -30,7 +30,7 @@ async function loadUserDataAndSubscription() {
 
     const { data: subscription, error } = await supabase
       .from('subscriptions')
-      .select('subscription_type, start_date, end_date, status, plan_id')
+      .select('start_date, end_date, status, plan_id')
       .eq('user_id', user.id)
       .in('status', ['active', 'pending', 'expired'])
       .order('created_at', { ascending: false })
@@ -64,7 +64,6 @@ function updateSubscriptionDisplay(subscription) {
   if (subscription) {
     const status = subscription.status;
     statusContainer.innerHTML = `<span class="status-badge ${statusClasses[status] || ''}">${statusNames[status] || status}</span>`;
-    document.getElementById('plan-type').textContent = subscription.subscription_type || '-';
     document.getElementById('start-date').textContent = subscription.start_date ? formatDate(subscription.start_date) : '-';
     document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
     document.getElementById('subscription-state').textContent = statusNames[status] || status;
@@ -95,7 +94,7 @@ function updateSubscriptionDisplay(subscription) {
 
 async function loadSubscriptionHistory(userId) {
   try {
-    const { data: history, error } = await supabase.from('subscriptions').select('subscription_type, start_date, end_date, status').eq('user_id', userId).order('created_at', { ascending: false });
+    const { data: history, error } = await supabase.from('subscriptions').select('start_date, end_date, status').eq('user_id', userId).order('created_at', { ascending: false });
     if (error) throw error;
 
     const tbody = document.querySelector('#history-table tbody');
@@ -105,7 +104,7 @@ async function loadSubscriptionHistory(userId) {
     if (history.length > 0) {
       history.forEach(sub => {
         const row = tbody.insertRow();
-        row.innerHTML = `<td>${sub.subscription_type || '-'}</td><td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}">${sub.status}</span></td>`;
+        row.innerHTML = `<td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}">${sub.status}</span></td>`;
       });
       noHistory.style.display = 'none';
       tbody.parentElement.style.display = 'table';
@@ -132,7 +131,7 @@ async function showRenewModal() {
   modal.style.display = 'flex';
 
   try {
-    const { data: plans, error } = await supabase.from('plans').select('*').eq('active', true);
+    const { data: plans, error } = await supabase.from('payments').select('*').eq('active', true);
     if (error) throw error;
 
     plansContainer.innerHTML = ''; // Clear loading indicator

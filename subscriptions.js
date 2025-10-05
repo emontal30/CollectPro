@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         const { data: plans, error } = await supabase
-            .from('plans')
+            .from('payments')
             .select('*')
             .eq('active', true)
             .order('price', { ascending: true });
