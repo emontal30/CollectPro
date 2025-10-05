@@ -40,16 +40,16 @@ body.dark {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.10);
+  box-shadow: 0 6pxc 22px rgba(0,0,0,0.10);
   backdrop-filter: blur(6px);
   opacity: 1 !important;
   transition: all 0.3s ease-in-out;
-  transform: translateX(0);
+  /* --- FIX: Remove transform from the default state --- */
   visibility: visible !important;
 }
 .sidebar-toggle:hover {
   background: var(--sb-accent-hover);
-  transform: scale(1.05) translateX(0); /* Keep transform for movement */
+  transform: scale(1.05); /* Keep scale for hover effect */
 }
 .sidebar-toggle i {
   font-size: 18px;
@@ -74,8 +74,28 @@ body.dark {
   touch-action: pan-y;
   box-shadow: -5px 0 25px rgba(0,0,0,0.07);
 }
-.sidebar:not(.sidebar-collapsed) { transform: translateX(0); }
-.sidebar.sidebar-collapsed { transform: translateX(100%); }
+.sidebar:not(.sidebar-collapsed) {
+  transform: translateX(0);
+}
+/* --- FIX: Remove redundant rule --- */
+/* .sidebar.sidebar-collapsed { transform: translateX(100%); } */
+
+
+body.sidebar-collapsed .sidebar {
+    transform: translateX(100%);
+}
+
+body:not(.sidebar-collapsed) .sidebar {
+    transform: translateX(0);
+}
+
+/* Adjust main content padding when sidebar is open on larger screens */
+@media (min-width: 769px) {
+  body:not(.sidebar-collapsed) {
+    padding-right: var(--sb-width);
+  }
+}
+
 
 /* Overlay for mobile/tablet when sidebar is open */
 body:not(.sidebar-collapsed)::before {
@@ -116,16 +136,16 @@ body:not(.sidebar-collapsed)::before {
   display: flex; flex-direction: column;
   overflow: hidden;
 }
-.user-name { 
-  font-weight: 700; 
-  font-size: 16px; 
+.user-name {
+  font-weight: 700;
+  font-size: 16px;
   color: var(--sb-fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.user-email, .user-id { 
-  font-size: 13px; 
+.user-email, .user-id {
+  font-size: 13px;
   color: var(--sb-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -151,26 +171,26 @@ body:not(.sidebar-collapsed)::before {
   gap: 14px;
   padding: 12px 16px;
   border-radius: 10px;
-  color: var(--sb-muted); 
+  color: var(--sb-muted);
   text-decoration: none;
   font-weight: 600;
   font-size: 15px;
   transition: all 0.2s ease;
 }
-.nav-links a:hover { 
+.nav-links a:hover {
   background: var(--sb-accent-hover);
   color: var(--sb-accent);
 }
-.nav-links a.active { 
-  background: var(--sb-accent-active-bg); 
-  color: var(--sb-accent); 
-  font-weight: 700; 
+.nav-links a.active {
+  background: var(--sb-accent-active-bg);
+  color: var(--sb-accent);
+  font-weight: 700;
 }
 .nav-links a.active i {
   transform: scale(1.1);
 }
-.nav-links i { 
-  width: 22px; 
+.nav-links i {
+  width: 22px;
   text-align: center;
   font-size: 18px;
   transition: transform 0.2s ease;
@@ -180,8 +200,8 @@ body:not(.sidebar-collapsed)::before {
 .sidebar-footer {
   border-top: 1px solid var(--sb-border);
   padding: 16px;
-  display: flex; 
-  flex-direction: column; 
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 .logout-btn {

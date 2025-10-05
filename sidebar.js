@@ -1,6 +1,6 @@
- اdocument.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
-  // --- New: Securely Populate User Data in Sidebar ---
+  // --- Securely Populate User Data in Sidebar ---
   const populateSidebarUserData = async () => {
     const userNameEl = document.getElementById('user-name');
     const userInitialEl = document.getElementById('user-initial');
@@ -8,20 +8,16 @@
     const userIdEl = document.getElementById('user-id');
 
     console.log('Fetching user data for sidebar...');
-    // --- FIX: More robustly check for user data ---
     const { data, error } = await supabase.auth.getUser();
 
-    // Check for errors or if the user object is missing
     if (error || !data?.user) {
       console.error('Error fetching user, or no user session found. Redirecting to login.', error);
-      localStorage.clear(); // Clear storage for a clean login
+      localStorage.clear();
       window.location.href = 'index.html';
-      return; // Stop further execution
+      return;
     }
 
-    // Now it's safe to get the user
     const { user } = data;
-
     console.log('User data fetched successfully:', user);
     const fullName = user.user_metadata?.full_name;
     const email = user.email;
@@ -32,32 +28,32 @@
     if (userIdEl && user.id) userIdEl.textContent = `ID: ${user.id.substring(0, 5)}...`;
   };
 
-  // --- Sidebar Toggle Functionality ---
+  // --- Sidebar Toggle Functionality (REVISED) ---
   const sidebar = document.querySelector('.sidebar');
   const sidebarToggle = document.querySelector('.sidebar-toggle');
 
+  // Ensure the body starts in a collapsed state for consistency.
+  document.body.classList.add('sidebar-collapsed');
+
   if (sidebar && sidebarToggle) {
+    // Make the button visible now that JS is controlling it.
     sidebarToggle.style.visibility = 'visible';
     sidebarToggle.style.opacity = '1';
     
+    // Event to toggle the sidebar on button click.
     sidebarToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('sidebar-collapsed');
+      // Simply toggle the class on the body. CSS handles all transitions.
       document.body.classList.toggle('sidebar-collapsed');
-      
-      if (sidebar.classList.contains('sidebar-collapsed')) {
-        sidebarToggle.style.transform = 'translateX(0)';
-      } else {
-        const sidebarWidth = sidebar.offsetWidth;
-        sidebarToggle.style.transform = `translateX(-${sidebarWidth}px)`;
-      }
     });
 
+    // Event to close the sidebar when clicking outside of it on mobile.
     document.addEventListener('click', (e) => {
-      if (window.innerWidth < 769) {
-        if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-          sidebar.classList.add('sidebar-collapsed');
+      const isSidebarOpen = !document.body.classList.contains('sidebar-collapsed');
+      // Execute only on smaller screens and when the sidebar is open.
+      if (isSidebarOpen && window.innerWidth < 769) {
+        // If the click target is not the sidebar or a child of it, and not the toggle button.
+        if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
           document.body.classList.add('sidebar-collapsed');
-          sidebarToggle.style.transform = 'translateX(0)';
         }
       }
     });
@@ -72,32 +68,23 @@
     }
   });
 
-  // --- Correct Logout Functionality (using global supabase client) ---
+  // --- Correct Logout Functionality ---
   const logoutButton = document.getElementById('logout-btn');
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
       console.log('🔒 Logging out user...');
-
-      // 1. Sign out from Supabase --- FIX: signOut takes no arguments ---
       const { error } = await supabase.auth.signOut();
-      
-      // 2. Clear all local storage for a clean slate
       localStorage.clear();
-
       if (error) {
         console.error('❌ Error during logout:', error.message);
       } else {
         console.log('✅ Logout successful.');
       }
-
-      // 3. Redirect to the login page
       window.location.href = 'index.html';
     });
   }
 
   // --- Initial calls ---
-  // The await here ensures user data is populated before anything else happens.
-  // If the user is not logged in, it will redirect inside the function.
   await populateSidebarUserData();
 
 });
