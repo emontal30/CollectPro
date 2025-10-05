@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+ اdocument.addEventListener('DOMContentLoaded', async () => {
 
   // --- New: Securely Populate User Data in Sidebar ---
   const populateSidebarUserData = async () => {
@@ -8,15 +8,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userIdEl = document.getElementById('user-id');
 
     console.log('Fetching user data for sidebar...');
-    const { data: { user }, error } = await supabase.auth.getUser();
+    // --- FIX: More robustly check for user data ---
+    const { data, error } = await supabase.auth.getUser();
 
-    if (error || !user) {
+    // Check for errors or if the user object is missing
+    if (error || !data?.user) {
       console.error('Error fetching user, or no user session found. Redirecting to login.', error);
-      // Clear any potentially corrupted local storage and redirect to login
-      localStorage.clear();
+      localStorage.clear(); // Clear storage for a clean login
       window.location.href = 'index.html';
-      return;
+      return; // Stop further execution
     }
+
+    // Now it's safe to get the user
+    const { user } = data;
 
     console.log('User data fetched successfully:', user);
     const fullName = user.user_metadata?.full_name;
@@ -74,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoutButton.addEventListener('click', async () => {
       console.log('🔒 Logging out user...');
 
-      // 1. Sign out from Supabase
+      // 1. Sign out from Supabase --- FIX: signOut takes no arguments ---
       const { error } = await supabase.auth.signOut();
       
       // 2. Clear all local storage for a clean slate
@@ -92,6 +96,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- Initial calls ---
+  // The await here ensures user data is populated before anything else happens.
+  // If the user is not logged in, it will redirect inside the function.
   await populateSidebarUserData();
 
 });
