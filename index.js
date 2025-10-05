@@ -97,10 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('🔧 Google login button clicked');
       try {
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: redirectUri,
-          },
+          provider: 'google'
         });
 
         if (error) {
