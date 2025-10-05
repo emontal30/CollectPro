@@ -27,8 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     googleLoginBtn.disabled = true;
     googleLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        queryParams: {
+          prompt: 'select_account' // يجبر جوجل يسألك تختار حساب من جديد
+        }
+      }
     });
 
     if (error) {

@@ -72,15 +72,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const logoutButton = document.getElementById('logout-btn');
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
-      console.log('🔒 Logging out user...');
-      const { error } = await supabase.auth.signOut();
-      localStorage.clear();
-      if (error) {
-        console.error('❌ Error during logout:', error.message);
+      const { error } = await supabase.auth.signOut()
+
+      if (!error) {
+        console.log('تم تسجيل الخروج بنجاح')
+        window.location.href = 'index.html' // رجّع المستخدم لصفحة تسجيل الدخول
       } else {
-        console.log('✅ Logout successful.');
+        console.error('خطأ أثناء تسجيل الخروج:', error.message)
       }
-      window.location.href = 'index.html';
     });
   }
 
