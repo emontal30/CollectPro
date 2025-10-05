@@ -1,19 +1,15 @@
-
 document.addEventListener('DOMContentLoaded', async () => {
-  // التحقق من وجود supabase client قبل استخدامه
   if (!window.supabase) {
     console.error('Supabase client is not initialized.');
     showAlert('حدث خطأ فادح في تهيئة التطبيق.', 'danger');
     return;
   }
 
-  // تحميل بيانات المستخدم والاشتراك
   const user = await loadUserDataAndSubscription();
   if (user) {
     await loadSubscriptionHistory(user.id);
   }
 
-  // إعداد مستمعي الأحداث
   setupEventListeners();
 });
 
@@ -25,7 +21,6 @@ async function loadUserDataAndSubscription() {
       return null;
     }
 
-    // تعبئة بيانات المستخدم في الشريط الجانبي
     document.getElementById('user-name').textContent = user.user_metadata?.full_name || user.email;
     document.getElementById('user-email').textContent = user.email;
     document.getElementById('user-id').textContent = `ID: ${user.id.substring(0, 8)}...`;
@@ -33,20 +28,16 @@ async function loadUserDataAndSubscription() {
         document.getElementById('user-initial').textContent = user.user_metadata.full_name.charAt(0).toUpperCase();
     }
 
-
-    // جلب أحدث اشتراك فعال أو قيد المراجعة
     const { data: subscription, error } = await supabase
       .from('subscriptions')
       .select('subscription_type, start_date, end_date, status, plan_id')
       .eq('user_id', user.id)
-      .in('status', ['active', 'pending'])
+      .in('status', ['active', 'pending', 'expired'])
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // تجاهل خطأ عدم وجود صفوف
-      throw error;
-    }
+    if (error && error.code !== 'PGRST116') throw error;
 
     updateSubscriptionDisplay(subscription);
     return user;
@@ -62,13 +53,13 @@ function updateSubscriptionDisplay(subscription) {
   const statusContainer = document.getElementById('subscription-status');
   const detailsContainer = document.getElementById('subscription-details');
   const actionsContainer = document.getElementById('subscription-actions');
+  const loadingContainer = document.getElementById('loading-container');
 
-  const statusClasses = {
-    pending: 'status-pending', active: 'status-active', expired: 'status-expired'
-  };
-  const statusNames = {
-    pending: 'قيد المراجعة', active: 'نشط', expired: 'منتهي الصلاحية'
-  };
+  loadingContainer.style.display = 'none';
+  detailsContainer.style.display = 'block';
+
+  const statusClasses = { pending: 'status-pending', active: 'status-active', expired: 'status-expired' };
+  const statusNames = { pending: 'قيد المراجعة', active: 'نشط', expired: 'منتهي الصلاحية' };
 
   if (subscription) {
     const status = subscription.status;
@@ -86,10 +77,13 @@ function updateSubscriptionDisplay(subscription) {
         actionsContainer.innerHTML = `
           <div class="action-warning"><i class="fas fa-exclamation-triangle"></i><p>اشتراكك ينتهي خلال ${daysLeft} أيام.</p></div>
           <button id="renew-btn" class="btn-primary"><i class="fas fa-sync-alt"></i> تجديد الاشتراك</button>`;
-        document.getElementById('renew-btn').addEventListener('click', () => showRenewModal());
+        document.getElementById('renew-btn').addEventListener('click', showRenewModal);
       } else {
         actionsContainer.innerHTML = `<div class="action-info"><i class="fas fa-check-circle"></i><p>اشتراكك نشط ومستمر.</p></div>`;
       }
+    } else { // Expired or other statuses
+      actionsContainer.innerHTML = `<button id="subscribe-now-btn" class="btn-primary"><i class="fas fa-rocket"></i> اشترك الآن</button>`;
+      document.getElementById('subscribe-now-btn').addEventListener('click', () => { window.location.href = 'subscriptions.html'; });
     }
   } else {
     statusContainer.innerHTML = `<span class="status-badge status-expired">لا يوجد اشتراك</span>`;
@@ -101,31 +95,23 @@ function updateSubscriptionDisplay(subscription) {
 
 async function loadSubscriptionHistory(userId) {
   try {
-    const { data: history, error } = await supabase
-      .from('subscriptions')
-      .select('subscription_type, start_date, end_date, status')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
+    const { data: history, error } = await supabase.from('subscriptions').select('subscription_type, start_date, end_date, status').eq('user_id', userId).order('created_at', { ascending: false });
     if (error) throw error;
 
     const tbody = document.querySelector('#history-table tbody');
     const noHistory = document.getElementById('no-history');
-    tbody.innerHTML = ''; // Clear existing rows
+    tbody.innerHTML = '';
 
     if (history.length > 0) {
-        history.forEach(sub => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${sub.subscription_type || '-'}</td>
-                <td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td>
-                <td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td>
-                <td><span class="status-badge status-${sub.status}">${sub.status}</span></td>
-            `;
-        });
-        noHistory.style.display = 'none';
+      history.forEach(sub => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${sub.subscription_type || '-'}</td><td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}">${sub.status}</span></td>`;
+      });
+      noHistory.style.display = 'none';
+      tbody.parentElement.style.display = 'table';
     } else {
-        noHistory.style.display = 'block';
+      noHistory.style.display = 'block';
+      tbody.parentElement.style.display = 'none';
     }
   } catch (error) {
     console.error('Error loading subscription history:', error);
@@ -134,36 +120,36 @@ async function loadSubscriptionHistory(userId) {
 }
 
 function setupEventListeners() {
-  // تعريف معرّفات الخطط للتجديد
-  const RENEW_PLAN_IDS = {
-    monthly: 'price_1PgEU9RpN92qb2qTu219Z9G7',
-    '3-months': 'price_1PgEUzRpN92qb2qT52L0kY5p',
-    yearly: 'price_1PgEVKRpN92qb2qT7gYIEN1M'
-  };
-
-  // إضافة مستمعي الأحداث لأزرار التجديد
-  document.querySelectorAll('.renew-plan').forEach(el => {
-    el.addEventListener('click', () => {
-      const planType = el.dataset.plan; // 'monthly', '3-months', etc.
-      const planId = RENEW_PLAN_IDS[planType];
-      if (planId) {
-        localStorage.setItem('selectedPlanId', planId);
-        window.location.href = 'payment.html';
-      } else {
-        console.error(`Invalid plan type for renewal: ${planType}`);
-        showAlert('خطة تجديد غير صالحة.', 'danger');
-      }
-    });
-  });
-
-  // إغلاق نافذة التجديد
   const modal = document.getElementById('renew-modal');
   modal.querySelector('.close-modal').addEventListener('click', () => modal.style.display = 'none');
   document.getElementById('cancel-renew-btn').addEventListener('click', () => modal.style.display = 'none');
 }
 
-function showRenewModal() {
-  document.getElementById('renew-modal').style.display = 'flex';
+async function showRenewModal() {
+  const modal = document.getElementById('renew-modal');
+  const plansContainer = document.getElementById('renew-plans-container');
+  plansContainer.innerHTML = '<div class="loading-container"><p>جاري تحميل الخطط...</p></div>';
+  modal.style.display = 'flex';
+
+  try {
+    const { data: plans, error } = await supabase.from('plans').select('*').eq('active', true);
+    if (error) throw error;
+
+    plansContainer.innerHTML = ''; // Clear loading indicator
+    plans.forEach(plan => {
+      const planElement = document.createElement('div');
+      planElement.className = 'renew-plan';
+      planElement.innerHTML = `<h3>${plan.name}</h3><div class="plan-price">${plan.price} ج.م</div>${plan.features ? `<div class="plan-offer">${plan.features}</div>` : ''}`;
+      planElement.addEventListener('click', () => {
+        localStorage.setItem('selectedPlanId', plan.plan_id);
+        window.location.href = 'payment.html';
+      });
+      plansContainer.appendChild(planElement);
+    });
+  } catch (error) {
+    console.error('Error loading renewal plans:', error);
+    plansContainer.innerHTML = '<p>حدث خطأ أثناء تحميل الخطط. يرجى المحاولة مرة أخرى.</p>';
+  }
 }
 
 function formatDate(dateString) {

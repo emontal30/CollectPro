@@ -1,37 +1,87 @@
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('subscriptions.js loaded and DOM fully parsed.');
 
-  // أزرار اختيار الخطة
-  const planButtons = document.querySelectorAll('.choose-plan-btn');
-  console.log(`Found ${planButtons.length} plan buttons.`);
+document.addEventListener('DOMContentLoaded', async () => {
+    const plansContainer = document.querySelector('.plans-container');
+    if (!plansContainer) {
+        console.error("Plans container not found!");
+        return;
+    }
 
-  planButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const planId = btn.getAttribute('data-plan-id');
-      console.log(`Plan selected: ${planId}`);
+    const originalContent = plansContainer.innerHTML;
+    plansContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الخطط...</div>';
 
-      if (planId) {
-        // حفظ الخطة المختارة في التخزين المحلي
-        localStorage.setItem('selectedPlanId', planId);
-        console.log(`Saved plan ID to localStorage.`);
-        
-        // التوجه لصفحة الدفع
-        window.location.href = 'payment.html';
-      } else {
-        console.error('Missing data-plan-id attribute on button.');
-        alert('حدث خطأ أثناء اختيار الخطة. يرجى المحاولة مرة أخرى.');
-      }
+    try {
+        const { data: plans, error } = await supabase
+            .from('plans')
+            .select('*')
+            .eq('active', true)
+            .order('price', { ascending: true });
+
+        if (error) {
+            throw error;
+        }
+
+        plansContainer.innerHTML = ''; 
+
+        if (plans && plans.length > 0) {
+            plans.forEach(plan => {
+                const planCard = document.createElement('div');
+                planCard.className = `plan-card ${plan.metadata?.featured ? 'featured' : ''}`;
+                
+                let featuresHtml = '';
+                if (plan.metadata?.features) {
+                    try {
+                        const features = JSON.parse(plan.metadata.features);
+                        featuresHtml = features.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('');
+                    } catch (e) {
+                        console.error('Error parsing plan features:', e);
+                        featuresHtml = '<li><i class="fas fa-exclamation-circle"></i> خطأ في عرض الميزات</li>';
+                    }
+                }
+
+                planCard.innerHTML = `
+                    ${plan.metadata?.featured ? '<div class="featured-badge">الأكثر شيوعًا</div>' : ''}
+                    <div class="plan-header">
+                        <h3>${plan.name || 'خطة مخصصة'}</h3>
+                        <div class="plan-price">
+                            <span class="currency">ج.م</span>
+                            <span class="price">${plan.price || 0}</span>
+                            <span class="period">/ ${plan.metadata?.period || ''}</span>
+                        </div>
+                    </div>
+                    <div class="plan-features">
+                        <ul>${featuresHtml}</ul>
+                    </div>
+                    <div class="plan-footer">
+                        <button class="choose-plan-btn" data-plan-id="${plan.plan_id}">اختر الخطة</button>
+                    </div>
+                `;
+                plansContainer.appendChild(planCard);
+            });
+
+            document.querySelectorAll('.choose-plan-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const planId = btn.getAttribute('data-plan-id');
+                    if (planId) {
+                        localStorage.setItem('selectedPlanId', planId);
+                        window.location.href = 'payment.html';
+                    }
+                });
+            });
+
+        } else {
+            plansContainer.innerHTML = '<p class="error-message"><i class="fas fa-info-circle"></i> لا توجد خطط اشتراك متاحة حاليًا.</p>';
+        }
+
+    } catch (error) {
+        console.error("Error fetching subscription plans:", error);
+        plansContainer.innerHTML = `<p class="error-message"><i class="fas fa-exclamation-triangle"></i> حدث خطأ أثناء تحميل الخطط. يرجى المحاولة مرة أخرى لاحقًا.</p>`;
+    }
+
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', () => {
+            const faqItem = question.parentElement;
+            faqItem.classList.toggle('active');
+        });
     });
-  });
-
-  // قسم الأسئلة الشائعة
-  const faqQuestions = document.querySelectorAll('.faq-question');
-  console.log(`Found ${faqQuestions.length} FAQ items.`);
-
-  faqQuestions.forEach(question => {
-    question.addEventListener('click', () => {
-      const faqItem = question.parentElement;
-      faqItem.classList.toggle('active');
-    });
-  });
 });

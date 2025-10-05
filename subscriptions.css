@@ -46,7 +46,7 @@
   transform: scale(1.05);
 }
 
-.plan-badge {
+.featured-badge {
   position: absolute;
   top: 15px;
   left: -30px;
@@ -138,7 +138,7 @@
   text-align: center;
 }
 
-.select-plan-btn {
+.choose-plan-btn {
   background: linear-gradient(135deg, var(--primary), #00a085);
   color: white;
   border: none;
@@ -151,7 +151,7 @@
   width: 100%;
 }
 
-.select-plan-btn:hover {
+.choose-plan-btn:hover {
   background: linear-gradient(135deg, #00a085, var(--primary));
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);

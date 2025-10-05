@@ -64,12 +64,6 @@
           </a>
         </li>
         <li>
-          <a href="payment.html">
-            <i class="fas fa-money-bill-wave"></i>
-            <span>الدفع</span>
-          </a>
-        </li>
-        <li>
           <a href="admin.html">
             <i class="fas fa-user-cog"></i>
             <span>لوحة التحكم</span>
@@ -145,31 +139,13 @@
                 <i class="fas fa-receipt input-icon"></i>
                 <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل" required />
               </div>
-              <span class="help-text">أدخل رقم العملية الذي حصلت عليه بعد إتمام التحويل البنكي</span>
+              <span class="help-text">أدخل رقم العملية الذي حصلت عليه بعد إتمام التحويل</span>
             </div>
 
             <div class="payment-methods">
               <h3>طرق الدفع المتاحة</h3>
-              <div class="payment-method">
-                <div class="method-icon">
-                  <i class="fas fa-university"></i>
-                </div>
-                <div class="method-details">
-                  <h4>التحويل البنكي</h4>
-                  <p>حساب بنكي: 1234567890</p>
-                  <p>اسم المستفيد: شركة CollectPro</p>
-                </div>
-              </div>
-              <div class="payment-method">
-                <div class="method-icon">
-                  <i class="fas fa-wallet"></i>
-                </div>
-                <div class="method-details">
-                  <h4>المحافظ الإلكترونية</h4>
-                  <p>Vodafone Cash: 01012345678</p>
-                  <p>Fawry: 987654321</p>
-                </div>
-              </div>
+              <p class="payment-info-text">الرجاء استخدام إحدى الطرق الموضحة أدناه لإتمام عملية الدفع، ثم أدخل رقم العملية في الحقل أعلاه.</p>
+              <!-- سيتم هنا عرض تفاصيل الدفع بشكل آمن -->
             </div>
 
             <button type="submit" class="submit-btn">
@@ -191,7 +167,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script src="script.js"></script>
   <script src="payment.js"></script>
 </body>
 </html>

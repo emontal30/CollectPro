@@ -28,28 +28,30 @@
   font-size: 1.8rem;
 }
 
+/* أنماط شارة الحالة المحسنة */
 .status-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.status-pending {
-  background: rgba(243, 156, 18, 0.2);
+  padding: 5px 15px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .status-active {
-  background: rgba(39, 174, 96, 0.2);
+  background-color: #dcfce7; /* أخضر فاتح */
+  color: #166534; /* أخضر داكن */
 }
 
+.status-pending {
+  background-color: #fef9c3; /* أصفر فاتح */
+  color: #854d0e; /* أصفر داكن */
+}
+
+.status-expired,
 .status-cancelled {
-  background: rgba(231, 76, 60, 0.2);
-}
-
-.status-expired {
-  background: rgba(52, 73, 94, 0.2);
+  background-color: #fee2e2; /* أحمر فاتح */
+  color: #991b1b; /* أحمر داكن */
 }
 
 .subscription-details {
@@ -174,6 +176,23 @@
 body.dark .subscription-card {
   background: var(--dark-bg);
   color: var(--dark-text);
+}
+
+/* أنماط شارات الوضع الليلي */
+body.dark .status-active {
+  background-color: #166534; /* أخضر داكن */
+  color: #dcfce7; /* أخضر فاتح */
+}
+
+body.dark .status-pending {
+  background-color: #854d0e; /* أصفر داكن */
+  color: #fef9c3; /* أصفر فاتح */
+}
+
+body.dark .status-expired,
+body.dark .status-cancelled {
+  background-color: #991b1b; /* أحمر داكن */
+  color: #fee2e2; /* أحمر فاتح */
 }
 
 body.dark .subscription-details {
