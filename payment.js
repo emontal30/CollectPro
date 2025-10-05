@@ -1,32 +1,32 @@
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // إعداد مستمعي الأحداث
-  setupEventListeners();
-  
+  // تعريف تفاصيل الخطط لربط معرف السعر بالاسم والسعر
+  const PLAN_DETAILS = {
+    'price_1PgEU9RpN92qb2qTu219Z9G7': { name: 'خطة شهرية', price: '30' },
+    'price_1PgEUzRpN92qb2qT52L0kY5p': { name: 'خطة ربع سنوية', price: '80' },
+    'price_1PgEVKRpN92qb2qT7gYIEN1M': { name: 'خطة سنوية', price: '300' }
+  };
+
   // تحميل بيانات المستخدم والخطة المختارة
   await loadUserData();
-  await loadSelectedPlan();
-});
+  loadSelectedPlan(PLAN_DETAILS);
 
-function setupEventListeners() {
-  // نموذج الدفع
+  // إعداد مستمع حدث لإرسال النموذج
   const paymentForm = document.getElementById('payment-form');
   if (paymentForm) {
-    paymentForm.addEventListener('submit', handlePaymentSubmit);
+    paymentForm.addEventListener('submit', (e) => handlePaymentSubmit(e, PLAN_DETAILS));
   }
-}
+});
 
 async function loadUserData() {
   try {
-    // الحصول على بيانات المستخدم الحالي
     const { data: { user } } = await supabase.auth.getUser();
-    
     if (user) {
-      // تعبئة حقول البريد الإلكتروني ومعرف المستخدم
       document.getElementById('email').value = user.email || '';
       document.getElementById('user-id').value = user.id || '';
     } else {
-      // تم التعديل: السماح بالوصول للصفحة بدون تسجيل دخول
-      // window.location.href = 'index.html';
+      showAlert('يجب تسجيل الدخول أولاً للمتابعة', 'danger');
+      setTimeout(() => { window.location.href = 'index.html'; }, 2500);
     }
   } catch (error) {
     console.error('Error loading user data:', error);
@@ -34,29 +34,18 @@ async function loadUserData() {
   }
 }
 
-async function loadSelectedPlan() {
+function loadSelectedPlan(planDetails) {
   try {
-    // الحصول على الخطة المختارة من التخزين المحلي
-    const selectedPlan = localStorage.getItem('selectedPlan');
-    const selectedPrice = localStorage.getItem('selectedPrice');
-    
-    if (selectedPlan && selectedPrice) {
-      // تعبئة حقل نوع الاشتراك
-      const planNames = {
-        'monthly': 'شهري',
-        '3-months': '3 شهور',
-        'yearly': 'سنوي'
-      };
-      
-      document.getElementById('subscription-type').value = planNames[selectedPlan] || '';
-      document.getElementById('selected-plan').textContent = planNames[selectedPlan] || '';
-      document.getElementById('plan-price').textContent = `${selectedPrice} ج.م`;
+    const selectedPlanId = localStorage.getItem('selectedPlanId');
+    const plan = planDetails[selectedPlanId];
+
+    if (plan) {
+      document.getElementById('selected-plan').textContent = plan.name;
+      document.getElementById('plan-price').textContent = `${plan.price} ج.م`;
+      document.getElementById('subscription-type').value = plan.name;
     } else {
-      // إذا لم تكن هناك خطة مختارة، توجيه المستخدم لصفحة الاشتراكات
-      showAlert('لم يتم اختيار خطة اشتراك', 'danger');
-      setTimeout(() => {
-        window.location.href = 'subscriptions.html';
-      }, 2000);
+      showAlert('لم يتم اختيار خطة اشتراك. سيتم توجيهك لاختيار خطة.', 'danger');
+      setTimeout(() => { window.location.href = 'subscriptions.html'; }, 2500);
     }
   } catch (error) {
     console.error('Error loading selected plan:', error);
@@ -64,127 +53,88 @@ async function loadSelectedPlan() {
   }
 }
 
-async function handlePaymentSubmit(e) {
+async function handlePaymentSubmit(e, planDetails) {
   e.preventDefault();
-  
-  // إعادة تعيين رسائل الخطأ
-  document.getElementById('transaction-id').classList.remove('error');
-  
-  // الحصول على قيم النموذج
-  const email = document.getElementById('email').value;
-  const userId = document.getElementById('user-id').value;
-  const subscriptionType = document.getElementById('subscription-type').value;
-  const transactionId = document.getElementById('transaction-id').value.trim();
-  
-  // التحقق من صحة البيانات
-  if (!transactionId) {
-    document.getElementById('transaction-id').classList.add('error');
-    showAlert('رقم عملية التحويل مطلوب', 'danger');
-    return;
-  }
-  
-  // التحقق من عدم تكرار رقم العملية
-  const { data: existingSubscriptions, error: checkError } = await supabase
-    .from('subscriptions')
-    .select('transaction_id')
-    .eq('transaction_id', transactionId);
-    
-  if (checkError) {
-    console.error('Error checking existing subscriptions:', checkError);
-    showAlert('حدث خطأ أثناء التحقق من البيانات', 'danger');
-    return;
-  }
-  
-  if (existingSubscriptions && existingSubscriptions.length > 0) {
-    showAlert('رقم عملية التحويل مسجل بالفعل', 'danger');
-    return;
-  }
-  
-  // إظهار حالة التحميل
-  const submitBtn = document.querySelector('.submit-btn');
+  const submitBtn = e.target.querySelector('.submit-btn');
   submitBtn.classList.add('loading');
-  
+  submitBtn.disabled = true;
+
   try {
-    // تحويل نوع الاشتراك إلى القيمة المناسبة للقاعدة
-    const planMap = {
-      'شهري': 'monthly',
-      '3 شهور': '3-months',
-      'سنوي': 'yearly'
-    };
-    
-    const plan = planMap[subscriptionType] || subscriptionType;
-    
-    // إدخال بيانات الاشتراك في قاعدة البيانات
-    const { data, error } = await supabase
+    const userId = document.getElementById('user-id').value;
+    const email = document.getElementById('email').value;
+    const transactionId = document.getElementById('transaction-id').value.trim();
+    const selectedPlanId = localStorage.getItem('selectedPlanId');
+    const plan = planDetails[selectedPlanId];
+
+    if (!userId) {
+        throw new Error("المستخدم غير مسجل دخوله.");
+    }
+    if (!transactionId) {
+      showAlert('رقم عملية التحويل مطلوب', 'danger');
+      return;
+    }
+    if (!plan || !selectedPlanId) {
+      showAlert('خطة الاشتراك غير معروفة. يرجى الاختيار مرة أخرى.', 'danger');
+      return;
+    }
+
+    // التحقق من عدم تكرار رقم العملية
+    const { data: existing, error: checkError } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('transaction_id', transactionId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = 'لم يتم العثور على صف واحد بالضبط'
+        throw checkError;
+    }
+    if (existing) {
+      showAlert('رقم عملية التحويل هذا مستخدم بالفعل.', 'danger');
+      return;
+    }
+
+    // إدراج طلب اشتراك جديد
+    const { error: insertError } = await supabase
       .from('subscriptions')
       .insert([
         {
           user_id: userId,
           email: email,
-          subscription_type: plan,
+          plan_id: selectedPlanId, 
+          subscription_type: plan.name, 
           transaction_id: transactionId,
-          status: 'pending',
-          created_at: new Date().toISOString()
+          status: 'pending'
         }
       ]);
-      
-    if (error) {
-      throw error;
+
+    if (insertError) {
+      throw insertError;
     }
-    
-    // إرسال بريد إلكتروني للإدارة
-    await sendAdminEmail(email, userId, transactionId, subscriptionType);
-    
-    // إظهار رسالة نجاح
-    showAlert('تم استلام طلبك وسيتم مراجعته قريبًا', 'success');
-    
-    // مسح البيانات المؤقتة
-    localStorage.removeItem('selectedPlan');
-    localStorage.removeItem('selectedPrice');
-    
-    // التوجيه لصفحة اشتراك المستخدم بعد ثانيتين
+
+    showAlert('تم استلام طلبك بنجاح. سيتم مراجعته وتفعيل اشتراكك قريباً.', 'success');
+    localStorage.removeItem('selectedPlanId');
+
+    // إعادة التوجيه إلى صفحة "اشتراكي"
     setTimeout(() => {
       window.location.href = 'my-subscription.html';
-    }, 2000);
-    
-  } catch (error) {
-    console.error('Error submitting payment:', error);
-    showAlert('حدث خطأ أثناء إرسال طلب الدفع', 'danger');
-  } finally {
-    // إخفاء حالة التحميل
-    submitBtn.classList.remove('loading');
-  }
-}
+    }, 3000);
 
-async function sendAdminEmail(email, userId, transactionId, subscriptionType) {
-  // في تطبيق حقيقي، سيتم استخدام خدمة إرسال بريد إلكتروني مثل SendGrid أو AWS SES
-  // هنا نقوم بمحاكاة إرسال البريد الإلكتروني
-  
-  console.log('Sending email to admin:');
-  console.log('To: emontal.33@gmail.com');
-  console.log('Subject: طلب اشتراك جديد');
-  console.log('Body:');
-  console.log(`User ID: ${userId}`);
-  console.log(`Email: ${email}`);
-  console.log(`Transaction ID: ${transactionId}`);
-  console.log(`Subscription Type: ${subscriptionType}`);
-  
-  // محاكاة تأخير إرسال البريد الإلكتروني
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  } catch (error) {
+    console.error('Error submitting payment request:', error);
+    showAlert(`حدث خطأ أثناء إرسال طلبك: ${error.message}`, 'danger');
+  } finally {
+    submitBtn.classList.remove('loading');
+    submitBtn.disabled = false;
+  }
 }
 
 function showAlert(message, type = 'info') {
   const alertContainer = document.getElementById('alert-container');
   if (!alertContainer) return;
-  
-  // إزالة التنبيهات الحالية
-  alertContainer.innerHTML = '';
-  
-  // إنشاء تنبيه جديد
+
   const alert = document.createElement('div');
-  alert.className = `alert alert-${type}`;
+  alert.className = `alert alert-${type} show`;
   
-  // إضافة الأيقونة المناسبة
   let icon = 'fa-info-circle';
   if (type === 'success') icon = 'fa-check-circle';
   if (type === 'danger') icon = 'fa-exclamation-circle';
@@ -193,9 +143,8 @@ function showAlert(message, type = 'info') {
   
   alertContainer.appendChild(alert);
   
-  // إزالة التنبيه تلقائيًا بعد 5 ثوانٍ
   setTimeout(() => {
-    alert.style.opacity = '0';
-    setTimeout(() => alert.remove(), 300);
+    alert.classList.remove('show');
+    setTimeout(() => alert.remove(), 500);
   }, 5000);
 }

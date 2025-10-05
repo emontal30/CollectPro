@@ -72,42 +72,54 @@ async function redirectUser(user) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🔧 Initializing application for production');
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🔧 Initializing login page...');
 
+  // أولاً، تحقق من وجود جلسة نشطة عند تحميل الصفحة
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error("Error checking for active session:", sessionError);
+  }
+
+  // إذا كان المستخدم مسجل دخوله بالفعل، قم بإعادة توجيهه فوراً
+  if (session) {
+    console.log('✅ Active session found, redirecting...');
+    await redirectUser(session.user);
+    return; // أوقف تنفيذ باقي السكربت
+  }
+
+  // إذا لم تكن هناك جلسة، اعرض صفحة تسجيل الدخول وانتظر الإجراء
+  console.log('No active session. Waiting for user action.');
+  const pageContent = document.getElementById('page-content');
+  if(pageContent) pageContent.style.opacity = 1; // إظهار المحتوى
+
+  // إعداد زر تسجيل الدخول
   const googleLoginBtn = document.getElementById('google-login-btn');
-  let sessionHandled = false;
-
-  supabase.auth.onAuthStateChange((event, session) => {
-    console.log(`🔧 Auth state changed: Event: ${event}, Session: ${!!session}`);
-
-    if (sessionHandled) {
-      return;
-    }
-
-    if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
-      sessionHandled = true;
-      console.log(`✅ User session found (Event: ${event}). Processing...`);
-      redirectUser(session.user);
-    }
-  });
-
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
       console.log('🔧 Google login button clicked');
-      try {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google'
-        });
+      googleLoginBtn.disabled = true;
+      googleLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوجيه...';
 
-        if (error) {
-          console.error('❌ Error initiating Google login:', error.message);
-        } else {
-          console.log('✅ OAuth initiated successfully. Redirecting to Google...');
-        }
-      } catch (error) {
-        console.error('❌ An unexpected error occurred during login initiation:', error);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+
+      if (error) {
+        console.error('❌ Error initiating Google login:', error.message);
+        googleLoginBtn.disabled = false;
+        googleLoginBtn.innerHTML = '<i class="fab fa-google"></i> تسجيل الدخول باستخدام جوجل';
+        alert('حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.');
       }
     });
   }
+
+  // هذا المستمع سيعمل فقط عندما يعود المستخدم من صفحة جوجل بعد المصادقة
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      console.log('✅ User has returned from OAuth. Redirecting...');
+      redirectUser(session.user);
+    }
+  });
 });

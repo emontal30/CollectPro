@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (userNameEl && fullName) userNameEl.textContent = fullName;
     if (userInitialEl && fullName) userInitialEl.textContent = fullName.charAt(0).toUpperCase();
     if (userEmailEl && email) userEmailEl.textContent = email;
-    if (userIdEl && user.id) userIdEl.textContent = `ID: ${user.id}`;
+    if (userIdEl && user.id) userIdEl.textContent = `ID: ${user.id.substring(0, 5)}...`;
   };
 
   // --- Sidebar Toggle Functionality ---
