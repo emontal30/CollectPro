@@ -7,17 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
   googleLoginBtn.style.display = 'none';
 
   // onAuthStateChange هو المصدر الوحيد للحقيقة
-  supabase.auth.onAuthStateChange((event, session) => {
-    console.log(`Auth event: ${event}`);
-    // إذا كان المستخدم مسجلاً دخوله (إما من جلسة سابقة أو تسجيل دخول جديد)
-    if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-      if (session) {
-        console.log('✅ Active session found, redirecting...');
-        redirectUser(session.user);
-      }
-    } 
-    // إذا لم يكن المستخدم مسجلاً دخوله
-    else if (event === 'SIGNED_OUT' || !session) {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    // يتم استدعاء هذا عند التحميل الأولي وعندما تتغير حالة المصادقة.
+    if (session) {
+      // المستخدم مسجل دخوله.
+      console.log('✅ Active session found, redirecting...');
+      redirectUser(session.user);
+    } else {
+      // المستخدم غير مسجل دخوله.
       console.log('No active session. Showing login UI.');
       // إظهار زر تسجيل الدخول فقط عندما نتأكد من عدم وجود جلسة
       googleLoginBtn.style.display = 'flex'; 
