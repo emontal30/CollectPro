@@ -49,8 +49,8 @@ body.dark {
 /* Icon inside the toggle */
 .sidebar-toggle i {
   font-size: 22px;
-  color: #ffffff; /* White icon for light mode (on green header) */
-  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  color: var(--sb-fg); /* Changed to a dynamic color for visibility */
+  text-shadow: none; /* Removed shadow for better dark icon rendering */
   transition: color 0.3s ease;
 }
 

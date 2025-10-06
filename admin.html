@@ -14,10 +14,10 @@
   <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
+  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
   <aside class="sidebar sidebar-collapsed">
-    <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
-    </button>
     <div class="sidebar-header">
       <div class="user-box">
         <div class="user-avatar">
@@ -47,38 +47,40 @@
         </button>
     </div>
   </aside>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
+  <div class="main-content">
+    <header>
+      <div class="header-top">
+        <button id="toggleDark" class="dark-btn-icon">🌙</button>
+        <div class="logo-container">
+          <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+          <p class="app-name">CollectPro</p>
+        </div>
       </div>
-    </div>
-    <h1>لوحة تحكم الإدارة 👨‍💼</h1>
-  </header>
+      <h1>لوحة تحكم الإدارة 👨‍💼</h1>
+    </header>
 
-  <main>
-    <!-- ... محتوى الصفحة يبقى كما هو ... -->
-    <div class="admin-dashboard">
-      <div class="stats-container">
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-content"><h3>إجمالي المستخدمين</h3><p class="stat-value" id="total-users">0</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-content"><h3>طلبات قيد المراجعة</h3><p class="stat-value" id="pending-requests">0</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-content"><h3>اشتراكات نشطة</h3><p class="stat-value" id="active-subscriptions">0</p></div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div class="stat-content"><h3>إجمالي الإيرادات</h3><p class="stat-value" id="total-revenue">0 ج.م</p></div></div>
+    <main>
+      <!-- ... محتوى الصفحة يبقى كما هو ... -->
+      <div class="admin-dashboard">
+        <div class="stats-container">
+          <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-content"><h3>إجمالي المستخدمين</h3><p class="stat-value" id="total-users">0</p></div></div>
+          <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-content"><h3>طلبات قيد المراجعة</h3><p class="stat-value" id="pending-requests">0</p></div></div>
+          <div class="stat-card"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-content"><h3>اشتراكات نشطة</h3><p class="stat-value" id="active-subscriptions">0</p></div></div>
+          <div class="stat-card"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div class="stat-content"><h3>إجمالي الإيرادات</h3><p class="stat-value" id="total-revenue">0 ج.م</p></div></div>
+        </div>
+        <div class="admin-section"><div class="section-header"><h2>طلبات الاشتراك قيد المراجعة</h2><div class="section-actions"><button id="activate-all-btn" class="btn-success"><i class="fas fa-check-double"></i>تفعيل الكل</button><button id="cancel-all-btn" class="btn-danger"><i class="fas fa-times-circle"></i>إلغاء الكل</button></div></div><div class="table-container"><table id="pending-subscriptions-table"><thead><tr><th><input type="checkbox" id="select-all" class="select-all-checkbox" /></th><th>معرف المستخدم</th><th>البريد الإلكتروني</th><th>نوع الاشتراك</th><th>رقم العملية</th><th>تاريخ الطلب</th><th>الإجراءات</th></tr></thead><tbody></tbody></table><div id="no-pending-requests" class="no-data"><i class="fas fa-inbox"></i><p>لا توجد طلبات اشتراك قيد المراجعة</p></div></div></div>
+        <div class="admin-section"><div class="section-header"><h2>جميع الاشتراكات</h2><div class="filter-container"><select id="status-filter" class="filter-select"><option value="all">جميع الحالات</option><option value="pending">قيد المراجعة</option><option value="active">نشط</option><option value="cancelled">ملغي</option><option value="expired">منتهي</option></select><button id="refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt"></i>تحديث</button></div></div><div class="table-container"><table id="all-subscriptions-table"><thead><tr><th>معرف المستخدم</th><th>البريد الإلكتروني</th><th>نوع الاشتراك</th><th>رقم العملية</th><th>تاريخ البدء</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody></tbody></table><div id="no-subscriptions" class="no-data"><i class="fas fa-inbox"></i><p>لا توجد اشتراكات</p></div></div></div>
       </div>
-      <div class="admin-section"><div class="section-header"><h2>طلبات الاشتراك قيد المراجعة</h2><div class="section-actions"><button id="activate-all-btn" class="btn-success"><i class="fas fa-check-double"></i>تفعيل الكل</button><button id="cancel-all-btn" class="btn-danger"><i class="fas fa-times-circle"></i>إلغاء الكل</button></div></div><div class="table-container"><table id="pending-subscriptions-table"><thead><tr><th><input type="checkbox" id="select-all" class="select-all-checkbox" /></th><th>معرف المستخدم</th><th>البريد الإلكتروني</th><th>نوع الاشتراك</th><th>رقم العملية</th><th>تاريخ الطلب</th><th>الإجراءات</th></tr></thead><tbody></tbody></table><div id="no-pending-requests" class="no-data"><i class="fas fa-inbox"></i><p>لا توجد طلبات اشتراك قيد المراجعة</p></div></div></div>
-      <div class="admin-section"><div class="section-header"><h2>جميع الاشتراكات</h2><div class="filter-container"><select id="status-filter" class="filter-select"><option value="all">جميع الحالات</option><option value="pending">قيد المراجعة</option><option value="active">نشط</option><option value="cancelled">ملغي</option><option value="expired">منتهي</option></select><button id="refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt"></i>تحديث</button></div></div><div class="table-container"><table id="all-subscriptions-table"><thead><tr><th>معرف المستخدم</th><th>البريد الإلكتروني</th><th>نوع الاشتراك</th><th>رقم العملية</th><th>تاريخ البدء</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody></tbody></table><div id="no-subscriptions" class="no-data"><i class="fas fa-inbox"></i><p>لا توجد اشتراكات</p></div></div></div>
-    </div>
-  </main>
+    </main>
 
-  <div id="alert-container" class="alert-container"></div>
+    <div id="alert-container" class="alert-container"></div>
 
-  <div id="subscription-details-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تفاصيل الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><div class="details-container"><div class="detail-item"><span class="detail-label">معرف المستخدم:</span><span class="detail-value" id="detail-user-id">-</span></div><div class="detail-item"><span class="detail-label">البريد الإلكتروني:</span><span class="detail-value" id="detail-email">-</span></div><div class="detail-item"><span class="detail-label">نوع الاشتراك:</span><span class="detail-value" id="detail-plan">-</span></div><div class="detail-item"><span class="detail-label">رقم العملية:</span><span class="detail-value" id="detail-transaction-id">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الطلب:</span><span class="detail-value" id="detail-created-at">-</span></div><div class="detail-item"><span class="detail-label">تاريخ البدء:</span><span class="detail-value" id="detail-start-date">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الانتهاء:</span><span class="detail-value" id="detail-end-date">-</span></div><div class="detail-item"><span class="detail-label">الحالة:</span><span class="detail-value" id="detail-status">-</span></div></div></div><div class="modal-footer"><button id="close-details-btn" class="btn-secondary">إغلاق</button></div></div>
+    <div id="subscription-details-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تفاصيل الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><div class="details-container"><div class="detail-item"><span class="detail-label">معرف المستخدم:</span><span class="detail-value" id="detail-user-id">-</span></div><div class="detail-item"><span class="detail-label">البريد الإلكتروني:</span><span class="detail-value" id="detail-email">-</span></div><div class="detail-item"><span class="detail-label">نوع الاشتراك:</span><span class="detail-value" id="detail-plan">-</span></div><div class="detail-item"><span class="detail-label">رقم العملية:</span><span class="detail-value" id="detail-transaction-id">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الطلب:</span><span class="detail-value" id="detail-created-at">-</span></div><div class="detail-item"><span class="detail-label">تاريخ البدء:</span><span class="detail-value" id="detail-start-date">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الانتهاء:</span><span class="detail-value" id="detail-end-date">-</span></div><div class="detail-item"><span class="detail-label">الحالة:</span><span class="detail-value" id="detail-status">-</span></div></div></div><div class="modal-footer"><button id="close-details-btn" class="btn-secondary">إغلاق</button></div></div>
 
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
+    <footer>
+      <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+    </footer>
+  </div>
 
   <!-- Scripts at the end for correct order and performance -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

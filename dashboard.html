@@ -14,10 +14,10 @@
   <link rel="stylesheet" href="sidebar.css" />
 </head>
 <body>
+  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
   <aside class="sidebar sidebar-collapsed">
-    <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
-    </button>
     <div class="sidebar-header">
       <div class="user-box">
         <div class="user-avatar">
@@ -79,35 +79,37 @@
     </div>
   </aside>
 
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>إدخال بيانات التحصيل 📝</h1>
-  </header>
-  
-  <main>
-    <div class="data-entry-container">
-      <div class="data-input-card">
-        <label for="dataInput" class="data-label">أدخل بيانات التحصيل هنا:</label>
-        <textarea id="dataInput" class="data-textarea" placeholder="الصق البيانات المنسخة من ملف التقرير هنا..."></textarea>
-        <div class="button-group">
-          <button id="pasteBtn" class="action-btn paste-btn"><i class="fas fa-paste"></i> لصق</button>
-          <button id="clearBtn" class="action-btn clear-btn"><i class="fas fa-eraser"></i> مسح</button>
-          <button id="saveGoBtn" class="action-btn save-go-btn"><i class="fas fa-arrow-left"></i> حفظ والذهاب للتحصيل</button>
-          <button id="goToArchiveBtn" class="action-btn archive-btn"><i class="fas fa-archive"></i> الذهاب للأرشيف</button>
+  <div class="main-content">
+    <header>
+      <div class="header-top">
+        <button id="toggleDark" class="dark-btn-icon">🌙</button>
+        <div class="logo-container">
+          <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+          <p class="app-name">CollectPro</p>
         </div>
       </div>
-    </div>
-  </main>
-  
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
+      <h1>إدخال بيانات التحصيل 📝</h1>
+    </header>
+    
+    <main>
+      <div class="data-entry-container">
+        <div class="data-input-card">
+          <label for="dataInput" class="data-label">أدخل بيانات التحصيل هنا:</label>
+          <textarea id="dataInput" class="data-textarea" placeholder="الصق البيانات المنسخة من ملف التقرير هنا..."></textarea>
+          <div class="button-group">
+            <button id="pasteBtn" class="action-btn paste-btn"><i class="fas fa-paste"></i> لصق</button>
+            <button id="clearBtn" class="action-btn clear-btn"><i class="fas fa-eraser"></i> مسح</button>
+            <button id="saveGoBtn" class="action-btn save-go-btn"><i class="fas fa-arrow-left"></i> حفظ والذهاب للتحصيل</button>
+            <button id="goToArchiveBtn" class="action-btn archive-btn"><i class="fas fa-archive"></i> الذهاب للأرشيف</button>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <footer>
+      <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+    </footer>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
