@@ -1,12 +1,37 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
-  // --- Create and Append Sidebar Overlay ---
-  // A dedicated overlay element is more robust for handling outside clicks.
+  // --- إنشاء وإضافة طبقة التغطية ---
   const overlay = document.createElement('div');
   overlay.className = 'sidebar-overlay';
   document.body.appendChild(overlay);
 
-  // --- Securely Populate User Data in Sidebar ---
+  // --- التأكد من وجود زر التبديل وإنشاؤه إذا لزم الأمر ---
+  let sidebarToggle = document.getElementById('sidebarToggle');
+  if (!sidebarToggle) {
+    console.warn('زر التبديل لم يتم العثور عليه في HTML، جاري إنشائه...');
+    sidebarToggle = document.createElement('button');
+    sidebarToggle.className = 'sidebar-toggle';
+    sidebarToggle.id = 'sidebarToggle';
+    sidebarToggle.setAttribute('aria-label', 'تبديل القائمة الجانبية');
+    sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+    document.body.appendChild(sidebarToggle);
+  }
+
+  // --- تحديث أيقونة زر التبديل ---
+  const updateToggleIcon = () => {
+    const icon = sidebarToggle.querySelector('i');
+    if (icon) {
+      if (document.body.classList.contains('sidebar-collapsed')) {
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+      } else {
+        icon.classList.remove('fa-bars');
+        icon.classList.add('fa-times');
+      }
+    }
+  };
+
+  // --- ملء بيانات المستخدم بشكل آمن ---
   const populateSidebarUserData = async () => {
     const userNameEl = document.getElementById('user-name');
     const userInitialEl = document.getElementById('user-initial');
@@ -17,80 +42,90 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { data, error } = await supabase.auth.getUser();
 
       if (error || !data?.user) {
-        console.error('Error fetching user, or no user session found. Redirecting to login.', error);
-        localStorage.clear();
-        // window.location.href = 'index.html';
+        console.error('خطأ في جلب بيانات المستخدم، أو لا توجد جلسة.', error);
+        // يمكنك إعادة توجيه المستخدم لصفحة تسجيل الدخول هنا
+        // window.location.href = 'login.html';
         return;
       }
 
       const { user } = data;
-      const fullName = user.user_metadata?.full_name;
+      const fullName = user.user_metadata?.full_name || 'مستخدم';
       const email = user.email;
 
-      if (userNameEl && fullName) userNameEl.textContent = fullName;
-      if (userInitialEl && fullName) userInitialEl.textContent = fullName.charAt(0).toUpperCase();
-      if (userEmailEl && email) userEmailEl.textContent = email;
-      if (userIdEl && user.id) userIdEl.textContent = `ID: ${user.id.substring(0, 5)}...`;
+      if (userNameEl) userNameEl.textContent = fullName;
+      if (userInitialEl) userInitialEl.textContent = fullName.charAt(0).toUpperCase();
+      if (userEmailEl) userEmailEl.textContent = email;
+      if (userIdEl) userIdEl.textContent = `ID: ${user.id.substring(0, 5)}...`;
     
     } catch (e) {
-        console.error('A critical error occurred while populating user data:', e);
-        // window.location.href = 'index.html';
+        console.error('حدث خطأ حرج أثناء ملء بيانات المستخدم:', e);
     }
   };
 
-  // --- Sidebar Toggle Functionality (Using Overlay) ---
-  const sidebarToggle = document.querySelector('.sidebar-toggle');
-
-  // Ensure the body starts in a collapsed state for consistency.
+  // --- وظيفة التبديل للشريط الجانبي ---
+  // التأكد من أن الجسم يبدأ في حالة مغلق
   document.body.classList.add('sidebar-collapsed');
 
   if (sidebarToggle && overlay) {
-    // Event to toggle the sidebar on button click.
     sidebarToggle.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent the click from bubbling to the document
+      e.stopPropagation();
       document.body.classList.toggle('sidebar-collapsed');
+      updateToggleIcon();
     });
 
-    // Event to close the sidebar when clicking the overlay.
     overlay.addEventListener('click', () => {
       document.body.classList.add('sidebar-collapsed');
+      updateToggleIcon();
     });
+  } else {
+    console.error('لم يتم العثور على زر التبديل أو طبقة التغطية.');
   }
 
-  // --- Set Active Navigation Link ---
+  // --- التعامل مع تغيير حجم النافذة ---
+  const handleWindowResize = () => {
+    if (window.innerWidth <= 768) {
+      document.body.classList.add('sidebar-collapsed');
+      updateToggleIcon();
+    }
+  };
+  window.addEventListener('resize', handleWindowResize);
+  handleWindowResize(); // استدعاء مرة واحدة عند التحميل
+
+  // --- تحديد رابط التنقل النشط ---
   try {
-    const currentPage = window.location.pathname.split('/').pop();
+    const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
     const navLinks = document.querySelectorAll('.nav-links a');
     navLinks.forEach(link => {
+      link.classList.remove('active');
       if (link.getAttribute('href') === currentPage) {
         link.classList.add('active');
       }
     });
   } catch(e) {
-      console.warn('Could not set active navigation link.', e);
+      console.warn('لا يمكن تعيين رابط التنقل النشط.', e);
   }
 
-  // --- Logout Functionality ---
+  // --- وظيفة تسجيل الخروج ---
   const logoutButton = document.getElementById('logout-btn');
   if (logoutButton) {
     logoutButton.addEventListener('click', async () => {
       logoutButton.disabled = true;
-      logoutButton.textContent = 'جاري تسجيل الخروج...';
+      logoutButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الخروج...';
+      
       const { error } = await supabase.auth.signOut();
 
       if (!error) {
-        console.log('Logout successful');
-        window.location.href = 'index.html';
+        console.log('تم تسجيل الخروج بنجاح');
+        window.location.href = 'login.html'; // وجه إلى صفحة تسجيل الدخول
       } else {
-        console.error('Logout failed:', error.message);
-        // Restore button state on failure
+        console.error('فشل تسجيل الخروج:', error.message);
         logoutButton.disabled = false;
         logoutButton.innerHTML = '<i class="fas fa-sign-out-alt"></i><span>تسجيل الخروج</span>';
       }
     });
   }
 
-  // --- Initial calls ---
+  // --- الاستدعاءات الأولية ---
+  updateToggleIcon();
   await populateSidebarUserData();
-
 });
