@@ -6,10 +6,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const originalContent = plansContainer.innerHTML;
+    // Show loading indicator
     plansContainer.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الخطط...</div>';
 
     try {
+        // Fetch plans from the database
         const { data: plans, error } = await supabase
             .from('payments')
             .select('*')
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw error;
         }
 
+        // Clear loading indicator
         plansContainer.innerHTML = ''; 
 
         if (plans && plans.length > 0) {
@@ -30,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let featuresHtml = '';
                 if (plan.metadata?.features) {
                     try {
+                        // Safely parse features
                         const features = JSON.parse(plan.metadata.features);
                         featuresHtml = features.map(feature => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('');
                     } catch (e) {
@@ -58,6 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 plansContainer.appendChild(planCard);
             });
 
+            // Add event listeners to the buttons
             document.querySelectorAll('.choose-plan-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const planId = btn.getAttribute('data-plan-id');
@@ -77,6 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         plansContainer.innerHTML = `<p class="error-message"><i class="fas fa-exclamation-triangle"></i> حدث خطأ أثناء تحميل الخطط. يرجى المحاولة مرة أخرى لاحقًا.</p>`;
     }
 
+    // FAQ Accordion
     const faqQuestions = document.querySelectorAll('.faq-question');
     faqQuestions.forEach(question => {
         question.addEventListener('click', () => {
