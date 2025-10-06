@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (error || !data?.user) {
         console.error('Error fetching user, or no user session found. Redirecting to login.', error);
         localStorage.clear();
-        window.location.href = 'index.html';
+        // window.location.href = 'index.html';
         return;
       }
 
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     } catch (e) {
         console.error('A critical error occurred while populating user data:', e);
-        window.location.href = 'index.html';
+        // window.location.href = 'index.html';
     }
   };
 
