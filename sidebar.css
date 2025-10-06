@@ -203,7 +203,7 @@ body.dark .sidebar-toggle:hover {
 }
 
 body.dark .sidebar-toggle i {
-    color: var(--sb-fg);
+    color: #ffffff;
 }
 
 /* Small screens adjustments */
