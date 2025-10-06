@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CollectPro</title>
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007965"/>
-  <link rel="apple-touch-icon" href="logoapp.png">
-  <link rel="icon" type="image/png" href="logoapp.png">
+  <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
+  <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
@@ -35,6 +36,7 @@
         <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
         <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
         <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
         <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
       </ul>
     </div>
@@ -83,7 +85,7 @@
 
   <div id="alert-container" class="alert-container"></div>
 
-  <div id="renew-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تجديد الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><p>اختر خطة الاشتراك التي ترغب في تجديدها:</p><div class="renew-plans" id="renew-plans-container"><!-- سيتم ملء هذا القسم ديناميكيًا --></div></div><div class="modal-footer"><button id="cancel-renew-btn" class="btn-secondary">إلغاء</button></div></div></div>
+  <div id="renew-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تجديد الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><p>اختر خطة الاشتراك التي ترغب في تجديدها:</p><div class="renew-plans" id="renew-plans-container"></div></div><div class="modal-footer"><button id="cancel-renew-btn" class="btn-secondary">إلغاء</button></div></div></div>
 
   <footer>
     <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>

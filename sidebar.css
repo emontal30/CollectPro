@@ -36,32 +36,13 @@ body.dark {
   transition: right 0.4s ease-in-out;
 }
 
-/* Hide original Font Awesome icon, if present */
+/* Show Font Awesome icon */
 .sidebar-toggle i {
-  display: none;
-}
-
-/* Styling for the hamburger bars */
-.hamburger-bar {
   display: block;
-  position: absolute;
-  left: 50%;
-  width: 28px;
-  height: 3px; /* Prominent thickness */
-  background: var(--sb-fg);
-  border-radius: 2px;
-  transform: translateX(-50%);
-  /* No transition on the bars themselves */
-}
-
-.bar-top {
-  top: 10px;
-}
-.bar-middle {
-  top: 18px;
-}
-.bar-bottom {
-  top: 26px;
+  font-size: 24px;
+  color: var(--sb-fg);
+  line-height: 40px;
+  text-align: center;
 }
 
 /* Sidebar Panel */

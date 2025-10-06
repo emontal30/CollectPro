@@ -1104,7 +1104,7 @@ function setupIndexPageEvents() {
   });
   
   document.getElementById("goToArchiveBtn")?.addEventListener("click", () => navigateTo(PAGES.ARCHIVE));
-  document.getElementById("clearBtnn")?.addEventListener("click", clearIndexFields);
+  document.getElementById("clearBtn")?.addEventListener("click", clearIndexFields);
   
   const savedClient = localStorage.getItem(STORAGE_KEYS.CLIENT_DATA);
   if (savedClient) dataInput.value = savedClient;

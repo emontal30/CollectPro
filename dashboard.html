@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>CollectPro</title>
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007965"/>
   <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
   <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
@@ -13,9 +14,7 @@
 <body>
   <aside class="sidebar sidebar-collapsed">
     <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <span class="hamburger-bar bar-top"></span>
-      <span class="hamburger-bar bar-middle"></span>
-      <span class="hamburger-bar bar-bottom"></span>
+      <i class="fas fa-bars"></i>
     </button>
     <div class="sidebar-header">
       <div class="user-box">
@@ -48,11 +47,11 @@
   </aside>
   <header>
     <div class="header-top">
+      <button id="toggleDark" class="dark-btn-icon">🌙</button>
       <div class="logo-container">
         <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
         <p class="app-name">CollectPro</p>
       </div>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
     </div>
     <h1> إدخال البيانات 📝</h1>
   </header>
