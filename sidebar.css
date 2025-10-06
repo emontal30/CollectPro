@@ -21,28 +21,37 @@ body.dark {
   --sb-border: #374151;
 }
 
-/* --- Custom Hamburger Toggle Button (No Animation) --- */
+/* --- Custom Hamburger Toggle Button --- */
 .sidebar-toggle {
   position: fixed;
-  top: 12px;
+  top: 15px;
   right: 15px;
   z-index: 1100;
-  width: 40px;
-  height: 40px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
   cursor: pointer;
-  transition: right 0.4s ease-in-out;
+  transition: right 0.4s ease-in-out, background 0.3s ease, transform 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* Show Font Awesome icon */
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+/* Icon inside the toggle */
 .sidebar-toggle i {
-  display: block;
-  font-size: 24px;
-  color: var(--sb-fg);
-  line-height: 40px;
-  text-align: center;
+  font-size: 22px;
+  color: #ffffff; /* White icon for light mode (on green header) */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: color 0.3s ease;
 }
 
 /* Sidebar Panel */
@@ -182,6 +191,20 @@ body:not(.sidebar-collapsed) .sidebar-overlay {
 }
 .logout-btn:hover { opacity: 0.85; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 .logout-btn i { font-size: 17px; }
+
+/* Dark Mode Overrides */
+body.dark .sidebar-toggle {
+  background: rgba(40, 40, 40, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .sidebar-toggle:hover {
+  background: rgba(50, 50, 50, 0.6);
+}
+
+body.dark .sidebar-toggle i {
+    color: var(--sb-fg);
+}
 
 /* Small screens adjustments */
 @media (max-width: 768px) {

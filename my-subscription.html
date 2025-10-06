@@ -62,43 +62,65 @@
           <p class="app-name">CollectPro</p>
         </div>
       </div>
-      <h1><i class="fas fa-user-shield"></i> اشتراكي</h1>
+      <h1><i class="fas fa-user-shield"></i> تفاصيل اشتراكي</h1>
     </header>
     
     <main>
         <div class="subscription-status-card">
-            <h2>حالة اشتراكك</h2>
-            <p><strong>الحالة:</strong> <span id="sub-status" class="status-active">فعال</span></p>
-            <p><strong>تاريخ الانتهاء:</strong> <span id="sub-expiry">2024-08-15</span></p>
-            <p><strong>الأيام المتبقية:</strong> <span id="sub-remaining">30 يومًا</span></p>
+            <div class="card-header">
+                <h2>حالة الاشتراك</h2>
+            </div>
+            <div class="card-body">
+                <p><strong>نوع الباقة:</strong> <span id="user-plan-type">-</span></p>
+                <p><strong>تاريخ انتهاء الصلاحية:</strong> <span id="user-expiry-date">-</span></p>
+                <p><strong>الأيام المتبقية:</strong> <span id="user-days-left">-</span></p>
+                <div class="status-indicator">
+                    <span>الحالة:</span>
+                    <span id="user-subscription-status" class="status-active">نشط</span>
+                </div>
+                <button id="renew-subscription-btn" class="btn-renew">جدد اشتراكك الآن</button>
+            </div>
         </div>
 
-        <div class="subscription-details-card">
-            <h2>تفاصيل الاشتراك</h2>
-            <p><strong>نوع الباقة:</strong> <span id="plan-name">الباقة الاحترافية</span></p>
-            <p><strong>مميزات الباقة:</strong></p>
-            <ul id="plan-features">
-                <li><i class="fas fa-check-circle"></i> عدد غير محدود من التحصيلات</li>
-                <li><i class="fas fa-check-circle"></i> أرشفة تلقائية للبيانات</li>
-                <li><i class="fas fa-check-circle"></i> دعم فني عبر البريد الإلكتروني</li>
-            </ul>
-        </div>
-
-        <div class="renew-subscription-card">
-            <h2>تجديد الاشتراك</h2>
-            <p>يمكنك تجديد اشتراكك للحفاظ على الوصول إلى جميع الميزات.</p>
-            <a href="payment.html" class="btn-renew">جدد الآن</a>
+        <div class="payment-history-card">
+            <div class="card-header">
+                <h2>سجل المدفوعات</h2>
+            </div>
+            <div class="card-body">
+                <table class="payment-history-table">
+                    <thead>
+                        <tr>
+                            <th>تاريخ الدفع</th>
+                            <th>المبلغ</th>
+                            <th>الباقة</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payment-history-body">
+                        <!-- بيانات سجل الدفع ستضاف هنا -->
+                        <tr>
+                            <td>2023-10-01</td>
+                            <td>$10</td>
+                            <td>الباقة الاحترافية</td>
+                            <td>ناجح</td>
+                        </tr>
+                        <!-- ...المزيد من الصفوف... -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
     
     <footer>
-      <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+        <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
     </footer>
   </div>
   
+  <script src="https.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
   <script src="script.js"></script>
+
 </body>
 </html>

@@ -163,7 +163,7 @@ main {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  padding-bottom: 80px;
+  padding-bottom: 20px; /* Reduced padding */
 }
 
 /* حقول الإدخال */
@@ -303,7 +303,6 @@ footer {
   border-top-left-radius: 15px; 
   border-top-right-radius: 15px;
   box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
-  margin-bottom: 70px;
 }
 
 footer strong { 
@@ -724,116 +723,6 @@ body.dark #totalRow {
   color: var(--dark-mode-green); 
 }
 
-/* ====== الشريط السفلي ====== */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 15px 20px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-body.dark .bottom-nav {
-  background-color: rgba(30, 30, 30, 0.9);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* مسافة بين الأزرار */
-.nav-spacer {
-  width: 80px;
-}
-
-/* تحسين شكل الأزرار */
-.bottom-nav-btn {
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-  color: #555;
-  border: none;
-  border-radius: 50%;
-  width: 56px;
-  height: 56px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.bottom-nav-btn:hover {
-  background: linear-gradient(135deg, #e0e0e0, #d0d0d0);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.bottom-nav-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-body.dark .bottom-nav-btn {
-  background: linear-gradient(135deg, #444, #333);
-  color: #ccc;
-}
-
-body.dark .bottom-nav-btn:hover {
-  background: linear-gradient(135deg, #555, #444);
-}
-
-/* تحسين شكل الأسهم */
-.nav-icon {
-  font-size: 28px;
-  font-weight: bold;
-  line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* تأثير التموج عند النقر */
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-.bottom-nav-btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.bottom-nav-btn:active::before {
-  width: 120px;
-  height: 120px;
-  animation: ripple 0.6s linear;
-}
-
-/* إخفاء الأزرار غير المناسبة */
-.bottom-nav-btn.hidden {
-  display: none;
-}
-
 /* ====== الخلايا القابلة للتعديل وغير القابلة للتعديل ====== */
 .non-editable {
   background-color: #f8f9fa;
@@ -1107,26 +996,7 @@ body.dark .toast-close:hover {
   #toggleDark .moon-icon {
     font-size: 18px;
   }
-  
-  /* تعديل حجم الشريط السفلي */
-  .bottom-nav-btn {
-    width: 48px;
-    height: 48px;
-    margin: 0 6px;
-  }
-  
-  .nav-icon {
-    font-size: 22px;
-  }
-  
-  .nav-spacer {
-    width: 60px;
-  }
-  
-  .bottom-nav {
-    padding: 12px 15px;
-  }
-  
+
   /* تعديل حجم الإشعارات للشاشات الصغيرة */
   .toast {
     min-width: 200px;
