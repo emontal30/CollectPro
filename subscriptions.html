@@ -3,15 +3,17 @@
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>CollectPro</title>
+        <title>الاشتراكات - CollectPro</title>
         <link rel="manifest" href="manifest.json">
         <meta name="theme-color" content="#007965"/>
         <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
         <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
+        
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link rel="stylesheet" href="style.css" />
         <link rel="stylesheet" href="sidebar.css" />
-        <link rel="stylesheet" href="subscriptions.css" />
+        <link rel="stylesheet" href="subscription.css">
+      
       </head>
       <body>
         <aside class="sidebar sidebar-collapsed">
@@ -26,20 +28,23 @@
               <div class="user-meta">
                 <span class="user-name" id="user-name">اسم المستخدم</span>
                 <span class="user-email" id="user-email">user@example.com</span>
-                <span class="user-id" id="user-id"></span>
               </div>
             </div>
           </div>
+      
           <div class="sidebar-content">
             <ul class="nav-links">
-              <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-              <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-              <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-              <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-              <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-              <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+                <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+                <li><a href="archive.html
+                "><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+                <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+                <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+                <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
             </ul>
-          </div>
+        </div>
+
+      
           <div class="sidebar-footer">
               <button id="logout-btn" class="logout-btn">
                   <i class="fas fa-sign-out-alt"></i>
@@ -48,61 +53,69 @@
           </div>
         </aside>
       
+      
         <!-- Main Content -->
         <div class="main-content">
-            <header>
-              <div class="header-top">
-                <button id="toggleDark" class="dark-btn-icon">🌙</button>
-                <div class="logo-container">
-                  <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-                  <p class="app-name">CollectPro</p>
-                </div>
+          <header>
+            <div class="header-top">
+              <button id="toggleDark" class="dark-btn-icon">🌙</button>
+              <div class="logo-container">
+                <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+                <p class="app-name">CollectPro</p>
               </div>
-              <h1>الاشتراكات 💳</h1>
-            </header>
-      
-            <main>
-              <section class="subscription-intro">
-                <h2>اختر خطة الاشتراك المناسبة لك</h2>
-                <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
-              </section>
-      
-              <div class="plans-container">
-              </div>
-
-              <!-- قسم الأسئلة الشائعة -->
-              <section class="faq-section">
-                <h2>الأسئلة الشائعة</h2>
-                <div class="faq-item">
-                  <div class="faq-question">
-                    <h3>هل يمكنني إلغاء اشتراكي في أي وقت؟</h3>
-                    <i class="fas fa-chevron-down"></i>
-                  </div>
-                  <div class="faq-answer">
-                    <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال صفحة "ملفي الشخصي". سيظل بإمكانك الوصول إلى الميزات المدفوعة حتى نهاية فترة الفوترة الحالية.</p>
-                  </div>
+            </div>
+            <h1><i class="fas fa-credit-card"></i> باقات الاشتراك</h1>
+          </header>
+          
+          <main>
+            <div class="pricing-grid">
+                <!-- الباقة الأساسية -->
+                <div class="pricing-card">
+                    <h3 class="plan-title">الباقة الأساسية</h3>
+                    <p class="plan-price">$5 <span>/ شهريًا</span></p>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i>  ميزة 1</li>
+                        <li><i class="fas fa-check-circle"></i>  ميزة 2</li>
+                        <li><i class="fas fa-times-circle"></i> ميزة 3</li>
+                    </ul>
+                    <a href="payment.html?plan=basic" class="btn-select-plan">اختر الباقة</a>
                 </div>
-                <div class="faq-item">
-                  <div class="faq-question">
-                    <h3>ما هي طرق الدفع المقبولة؟</h3>
-                    <i class="fas fa-chevron-down"></i>
-                  </div>
-                  <div class="faq-answer">
-                    <p>نحن نقبل جميع بطاقات الائتمان والخصم الرئيسية. تتم معالجة جميع المدفوعات بشكل آمن من خلال Stripe.</p>
-                  </div>
+    
+                <!-- الباقة الاحترافية -->
+                <div class="pricing-card featured">
+                    <h3 class="plan-title">الباقة الاحترافية</h3>
+                    <p class="plan-price">$10 <span>/ شهريًا</span></p>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i> ميزة 1</li>
+                        <li><i class="fas fa-check-circle"></i> ميزة 2</li>
+                        <li><i class="fas fa-check-circle"></i> ميزة 3</li>
+                        <li><i class="fas fa-star"></i> ميزة إضافية</li>
+                    </ul>
+                    <a href="payment.html?plan=professional" class="btn-select-plan">اختر الباقة</a>
                 </div>
-              </section>
-            </main>
-            <footer>
-              <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-            </footer>
-          </div>
+    
+                <!-- باقة الشركات -->
+                <div class="pricing-card">
+                    <h3 class="plan-title">باقة الشركات</h3>
+                    <p class="plan-price">$20 <span>/ شهريًا</span></p>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i> جميع مزايا الباقة الاحترافية</li>
+                        <li><i class="fas fa-plus-circle"></i> دعم فني مخصص</li>
+                        <li><i class="fas fa-users"></i> حسابات متعددة للموظفين</li>
+                    </ul>
+                    <a href="payment.html?plan=enterprise" class="btn-select-plan">اختر الباقة</a>
+                </div>
+            </div>
+        </main>
+          
+          <footer>
+            <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+          </footer>
         </div>
-      
-        <script src="https://js.stripe.com/v3/"></script>
+        
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
         <script src="supabase-client.js"></script>
         <script src="sidebar.js"></script>
-        <script src="subscriptions.js"></script>
+        <script src="script.js"></script>
       </body>
       </html>

@@ -2,11 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>CollectPro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدخال البيانات - CollectPro</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007965"/>
   <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
   <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
@@ -24,20 +26,51 @@
         <div class="user-meta">
           <span class="user-name" id="user-name">اسم المستخدم</span>
           <span class="user-email" id="user-email">user@example.com</span>
-          <span class="user-id" id="user-id"></span>
         </div>
       </div>
     </div>
+
     <div class="sidebar-content">
       <ul class="nav-links">
-        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        <li>
+          <a href="dashboard.html">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>إدخال البيانات</span>
+          </a>
+        </li>
+        <li>
+          <a href="harvest.html">
+            <i class="fas fa-donate"></i>
+            <span>التحصيلات</span>
+          </a>
+        </li>
+        <li>
+          <a href="archive.html">
+            <i class="fas fa-archive"></i>
+            <span>الأرشيف</span>
+          </a>
+        </li>
+        <li>
+          <a href="subscriptions.html">
+            <i class="fas fa-credit-card"></i>
+            <span>الاشتراكات</span>
+          </a>
+        </li>
+        <li>
+          <a href="my-subscription.html">
+            <i class="fas fa-user-shield"></i>
+            <span>اشتراكي</span>
+          </a>
+        </li>
+        <li>
+          <a href="admin.html">
+            <i class="fas fa-user-cog"></i>
+            <span>لوحة التحكم</span>
+          </a>
+        </li>
       </ul>
     </div>
+
     <div class="sidebar-footer">
         <button id="logout-btn" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
@@ -45,6 +78,7 @@
         </button>
     </div>
   </aside>
+
   <header>
     <div class="header-top">
       <button id="toggleDark" class="dark-btn-icon">🌙</button>
@@ -53,35 +87,28 @@
         <p class="app-name">CollectPro</p>
       </div>
     </div>
-    <h1> إدخال البيانات 📝</h1>
+    <h1>إدخال بيانات التحصيل 📝</h1>
   </header>
+  
   <main>
-    <textarea id="dataInput" placeholder="ألصق البيانات هنا..."></textarea>
-    <div class="buttons">
-      <button id="pasteBtn" class="btn-primary">📋 لصق البيانات</button>
-      <button id="saveGoBtn" class="btn-success">💾 حفظ وانتقال لصفحة التحصيل</button>
-      <button id="goToArchiveBtn" class="btn-info">📂 الذهاب للأرشيف</button>
-      <button id="clearBtn" class="btn-danger">🗑️ مسح البيانات</button>
+    <div class="data-entry-container">
+      <div class="data-input-card">
+        <label for="dataInput" class="data-label">أدخل بيانات التحصيل هنا:</label>
+        <textarea id="dataInput" class="data-textarea" placeholder="الصق البيانات المنسخة من ملف التقرير هنا..."></textarea>
+        <div class="button-group">
+          <button id="pasteBtn" class="action-btn paste-btn"><i class="fas fa-paste"></i> لصق</button>
+          <button id="clearBtn" class="action-btn clear-btn"><i class="fas fa-eraser"></i> مسح</button>
+          <button id="saveGoBtn" class="action-btn save-go-btn"><i class="fas fa-arrow-left"></i> حفظ والذهاب للتحصيل</button>
+          <button id="goToArchiveBtn" class="action-btn archive-btn"><i class="fas fa-archive"></i> الذهاب للأرشيف</button>
+        </div>
+      </div>
     </div>
   </main>
-  
-  <nav class="bottom-nav">
-    <button id="prevPage" class="nav-btn bottom-nav-btn">
-        <i class="fas fa-arrow-left"></i>
-    </button>
-    <button id="settingsBtn" class="nav-btn bottom-nav-btn">
-      <i class="fas fa-cog"></i>
-    </button>
-    <button id="nextPage" class="nav-btn bottom-nav-btn">
-        <i class="fas fa-arrow-right"></i>
-    </button>
-  </nav>
   
   <footer>
     <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
   </footer>
 
-  <!-- Scripts at the end for better performance -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>

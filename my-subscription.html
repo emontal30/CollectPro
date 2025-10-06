@@ -3,97 +3,102 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CollectPro</title>
+  <title>اشتراكي - CollectPro</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#007965"/>
   <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
   <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="my-subscription.css" />
+  <link rel="stylesheet" href="subscription.css">
+
 </head>
 <body>
   <aside class="sidebar sidebar-collapsed">
     <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
+        <i class="fas fa-bars"></i>
     </button>
     <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
+        <div class="user-box">
+            <div class="user-avatar">
+                <span id="user-initial">A</span>
+            </div>
+            <div class="user-meta">
+                <span class="user-name" id="user-name">اسم المستخدم</span>
+                <span class="user-email" id="user-email">user@example.com</span>
+            </div>
         </div>
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-          <span class="user-id" id="user-id"></span>
-        </div>
-      </div>
     </div>
+
     <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-      </ul>
+        <ul class="nav-links">
+            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+            <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        </ul>
     </div>
+
     <div class="sidebar-footer">
         <button id="logout-btn" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
             <span>تسجيل الخروج</span>
         </button>
     </div>
-  </aside>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>اشتراكي 👤</h1>
-  </header>
+</aside>
 
-  <main>
-    <div class="subscription-container">
-      <div class="subscription-card">
-        <div class="subscription-header">
-          <h2>تفاصيل اشتراكك</h2>
-          <div class="subscription-status" id="subscription-status"></div>
-        </div>
-        <div id="loading-container" class="loading-container"><p>جاري التحميل...</p></div>
-        <div class="subscription-details" id="subscription-details" style="display: none;">
-          <div class="detail-row"><div class="detail-label">تاريخ البدء:</div><div class="detail-value" id="start-date">-</div></div>
-          <div class="detail-row"><div class="detail-label">تاريخ الانتهاء:</div><div class="detail-value" id="end-date">-</div></div>
-          <a href="subscriptions.html" class="detail-row"><div class="detail-label">حالة الاشتراك:</div><div class="detail-value" id="subscription-state">-</div></a>
-        </div>
-        <div class="subscription-actions" id="subscription-actions"></div>
-      </div>
-      <div class="subscription-history">
-        <h2>سجل الاشتراكات</h2>
-        <div class="table-container">
-          <table id="history-table" style="display: none;"><thead><tr><th>تاريخ البدء</th><th>تاريخ الانتهاء</th><th>الحالة</th></tr></thead><tbody></tbody></table>
-          <div id="no-history" class="no-data"><i class="fas fa-history"></i><p>لا يوجد سجل اشتراكات</p></div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <div class="header-top">
+        <button id="toggleDark" class="dark-btn-icon">🌙</button>
+        <div class="logo-container">
+          <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+          <p class="app-name">CollectPro</p>
         </div>
       </div>
-    </div>
-  </main>
+      <h1><i class="fas fa-user-shield"></i> اشتراكي</h1>
+    </header>
+    
+    <main>
+        <div class="subscription-status-card">
+            <h2>حالة اشتراكك</h2>
+            <p><strong>الحالة:</strong> <span id="sub-status" class="status-active">فعال</span></p>
+            <p><strong>تاريخ الانتهاء:</strong> <span id="sub-expiry">2024-08-15</span></p>
+            <p><strong>الأيام المتبقية:</strong> <span id="sub-remaining">30 يومًا</span></p>
+        </div>
 
-  <div id="alert-container" class="alert-container"></div>
+        <div class="subscription-details-card">
+            <h2>تفاصيل الاشتراك</h2>
+            <p><strong>نوع الباقة:</strong> <span id="plan-name">الباقة الاحترافية</span></p>
+            <p><strong>مميزات الباقة:</strong></p>
+            <ul id="plan-features">
+                <li><i class="fas fa-check-circle"></i> عدد غير محدود من التحصيلات</li>
+                <li><i class="fas fa-check-circle"></i> أرشفة تلقائية للبيانات</li>
+                <li><i class="fas fa-check-circle"></i> دعم فني عبر البريد الإلكتروني</li>
+            </ul>
+        </div>
 
-  <div id="renew-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تجديد الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><p>اختر خطة الاشتراك التي ترغب في تجديدها:</p><div class="renew-plans" id="renew-plans-container"></div></div><div class="modal-footer"><button id="cancel-renew-btn" class="btn-secondary">إلغاء</button></div></div></div>
-
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-
+        <div class="renew-subscription-card">
+            <h2>تجديد الاشتراك</h2>
+            <p>يمكنك تجديد اشتراكك للحفاظ على الوصول إلى جميع الميزات.</p>
+            <a href="payment.html" class="btn-renew">جدد الآن</a>
+        </div>
+    </main>
+    
+    <footer>
+      <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+    </footer>
+  </div>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script src="my-subscription.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

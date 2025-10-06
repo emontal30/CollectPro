@@ -1,106 +1,110 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <title>CollectPro</title>
-  <meta name="theme-color" content="#007965"/>
-  <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
-  <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="sidebar.css" />
-</head>
-<body>
-  <aside class="sidebar sidebar-collapsed">
-    <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <span class="hamburger-bar bar-top"></span>
-      <span class="hamburger-bar bar-middle"></span>
-      <span class="hamburger-bar bar-bottom"></span>
-    </button>
-    <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
-        </div>
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-          <span class="user-id" id="user-id"></span>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-      </ul>
-    </div>
-    <div class="sidebar-footer">
-        <button id="logout-btn" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>تسجيل الخروج</span>
-        </button>
-    </div>
-  </aside>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>الأرشيف 📂</h1>
-  </header>
-  <main>
-    <!-- ... محتوى الصفحة يبقى كما هو ... -->
-    <div class="archive-controls">
-      <div class="control-group"><label>اختر التاريخ:<select id="archiveSelect"><option value="">-- اختر تاريخ --</option></select></label></div>
-      <div class="control-group"><label>بحث:<input type="text" id="archiveSearch" placeholder="اكتب اسم المحل أو الكود" /></label></div>
-    </div>
-    <table id="archiveTable">
-      <thead>
-        <tr>
-          <th>📅 التاريخ</th>
-          <th>🏪 المحل</th>
-          <th>🔢 الكود</th>
-          <th>💸 مبلغ التحويل</th>
-          <th>➕ تحويل إضافي</th>
-          <th>💰 المحصّل</th>
-          <th>⚖️ الصافي</th>
-          <th>✅ الحالة</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div class="buttons">
-      <button id="backToHarvestBtn" class="btn-secondary">🏠 رجوع للتحصيلات</button>
-      <button id="deleteArchiveBtn" class="btn-danger">🗑️ حذف التاريخ الحالي</button>
-    </div>
-  </main>
-  
-  <nav class="bottom-nav">
-    <button id="nextPage" class="nav-btn bottom-nav-btn">
-      <i class="fas fa-arrow-right"></i>
-    </button>
-    <div class="nav-spacer"></div>
-    <button id="prevPage" class="nav-btn bottom-nav-btn">
-      <i class="fas fa-arrow-left"></i>
-    </button>
-  </nav>
-  
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
+      <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8" />
+        <title>CollectPro</title>
+        <meta name="theme-color" content="#007965"/>
+        <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
+        <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="sidebar.css" />
+      </head>
+      <body>
+        <aside class="sidebar sidebar-collapsed">
+          <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="sidebar-header">
+            <div class="user-box">
+              <div class="user-avatar">
+                <span id="user-initial">A</span>
+              </div>
+              <div class="user-meta">
+                <span class="user-name" id="user-name">اسم المستخدم</span>
+                <span class="user-email" id="user-email">user@example.com</span>
+                <span class="user-id" id="user-id"></span>
+              </div>
+            </div>
+          </div>
+          <div class="sidebar-content">
+            <ul class="nav-links">
+              <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+              <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+              <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+              <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+              <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+              <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+            </ul>
+          </div>
+          <div class="sidebar-footer">
+              <button id="logout-btn" class="logout-btn">
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>تسجيل الخروج</span>
+              </button>
+          </div>
+        </aside>
+      
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+              <div class="header-top">
+                <button id="toggleDark" class="dark-btn-icon">🌙</button>
+                <div class="logo-container">
+                  <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+                  <p class="app-name">CollectPro</p>
+                </div>
+              </div>
+              <h1>الأرشيف 🗄️</h1>
+            </header>
+      
+            <main>
+                <div class="archive-controls">
+                    <select id="archiveSelect" class="styled-select">
+                        <option value="">اختر تاريخًا لعرضه</option>
+                    </select>
+                    <input type="search" id="archiveSearch" class="search-input" placeholder="أو ابحث بالاسم أو الكود...">
+                    <button id="deleteArchiveBtn" class="danger-btn">
+                        <i class="fas fa-trash-alt"></i>
+                        حذف الأرشيف المحدد
+                    </button>
+                </div>
 
-  <!-- Scripts at the end for better performance -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js"></script>
-  <script src="sidebar.js"></script>
-  <script src="script.js"></script>
-</body>
-</html>
+                <div class="table-container">
+                    <table id="archiveTable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>اسم المحل</th>
+                                <th>الكود</th>
+                                <th>التحويل</th>
+                                <th>الزيادة</th>
+                                <th>التحصيل</th>
+                                <th>الصافي</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- سيتم تعبئة البيانات هنا بواسطة JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+            
+            <footer>
+                <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+            </footer>
+        </div>
+        
+        <div class="navigation-arrows">
+            <button id="backToHarvestBtn" class="nav-btn">
+                <i class="fas fa-arrow-left"></i> العودة للتحصيلات
+            </button>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="supabase-client.js"></script>
+        <script src="sidebar.js"></script>
+        <script src="script.js"></script>
+      </body>
+      </html>

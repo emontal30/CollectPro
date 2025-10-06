@@ -12,64 +12,35 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="payment.css" />
+  <link rel="stylesheet" href="subscription.css">
+
 </head>
 <body>
   <aside class="sidebar sidebar-collapsed">
     <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
+        <i class="fas fa-bars"></i>
     </button>
     <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
+        <div class="user-box">
+            <div class="user-avatar">
+                <span id="user-initial">A</span>
+            </div>
+            <div class="user-meta">
+                <span class="user-name" id="user-name">اسم المستخدم</span>
+                <span class="user-email" id="user-email">user@example.com</span>
+            </div>
         </div>
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-        </div>
-      </div>
     </div>
 
     <div class="sidebar-content">
-      <ul class="nav-links">
-        <li>
-          <a href="dashboard.html">
-            <i class="fas fa-tachometer-alt"></i>
-            <span>إدخال البيانات</span>
-          </a>
-        </li>
-        <li>
-          <a href="harvest.html">
-            <i class="fas fa-donate"></i>
-            <span>التحصيلات</span>
-          </a>
-        </li>
-        <li>
-          <a href="archive.html">
-            <i class="fas fa-archive"></i>
-            <span>الأرشيف</span>
-          </a>
-        </li>
-        <li>
-          <a href="subscriptions.html">
-            <i class="fas fa-credit-card"></i>
-            <span>الاشتراكات</span>
-          </a>
-        </li>
-        <li>
-          <a href="my-subscription.html">
-            <i class="fas fa-user-shield"></i>
-            <span>اشتراكي</span>
-          </a>
-        </li>
-        <li>
-          <a href="admin.html">
-            <i class="fas fa-user-cog"></i>
-            <span>لوحة التحكم</span>
-          </a>
-        </li>
-      </ul>
+        <ul class="nav-links">
+            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+            <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        </ul>
     </div>
 
     <div class="sidebar-footer">
@@ -78,95 +49,63 @@
             <span>تسجيل الخروج</span>
         </button>
     </div>
-  </aside>
-  <header>
-    <div class="header-top">
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>إتمام الدفع 💳</h1>
-  </header>
+</aside>
 
-  <main>
-    <div class="payment-container">
-      <div class="payment-card">
-        <div class="payment-header">
-          <h2>تفاصيل الدفع</h2>
-          <div class="plan-summary">
-            <div class="plan-info">
-              <span class="plan-label">الخطة المختارة:</span>
-              <span class="plan-value" id="selected-plan">-</span>
-            </div>
-            <div class="plan-info">
-              <span class="plan-label">السعر:</span>
-              <span class="plan-value" id="plan-price">-</span>
-            </div>
-          </div>
-        </div>
 
-        <div class="payment-form">
-          <form id="payment-form">
-            <div class="form-group">
-              <label for="email">البريد الإلكتروني</label>
-              <div class="input-container">
-                <i class="fas fa-envelope input-icon"></i>
-                <input type="email" id="email" name="email" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="user-id">معرف المستخدم</label>
-              <div class="input-container">
-                <i class="fas fa-user input-icon"></i>
-                <input type="text" id="user-id" name="user-id" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="subscription-type">نوع الاشتراك</label>
-              <div class="input-container">
-                <i class="fas fa-calendar-alt input-icon"></i>
-                <input type="text" id="subscription-type" name="subscription-type" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="transaction-id">رقم عملية التحويل</label>
-              <div class="input-container">
-                <i class="fas fa-receipt input-icon"></i>
-                <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل" required />
-              </div>
-              <span class="help-text">أدخل رقم العملية الذي حصلت عليه بعد إتمام التحويل</span>
-            </div>
-
-            <div class="payment-methods">
-              <h3>طرق الدفع المتاحة</h3>
-              <p class="payment-info-text">الرجاء استخدام إحدى الطرق الموضحة أدناه لإتمام عملية الدفع، ثم أدخل رقم العملية في الحقل أعلاه.</p>
-              <!-- سيتم هنا عرض تفاصيل الدفع بشكل آمن -->
-            </div>
-
-            <button type="submit" class="submit-btn">
-              <span class="btn-text">إرسال طلب الدفع</span>
-              <i class="fas fa-spinner fa-spin spinner"></i>
-            </button>
-          </form>
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <div class="header-top">
+        <button id="toggleDark" class="dark-btn-icon">🌙</button>
+        <div class="logo-container">
+          <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+          <p class="app-name">CollectPro</p>
         </div>
       </div>
-    </div>
-  </main>
+      <h1><i class="fas fa-money-check-alt"></i> إتمام الدفع</h1>
+    </header>
+    
+    <main>
+        <div class="payment-summary-card">
+            <h2>ملخص الطلب</h2>
+            <p><strong>الباقة المحددة:</strong> <span id="selected-plan">الباقة الاحترافية</span></p>
+            <p><strong>التكلفة:</strong> <span id="plan-cost">$10 شهريًا</span></p>
+            <hr>
+            <p><strong>المبلغ الإجمالي للدفع:</strong> <strong id="total-amount">$10</strong></p>
+        </div>
 
-  <div id="alert-container" class="alert-container"></div>
-
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-
+        <div class="payment-form-card">
+            <h2>معلومات الدفع</h2>
+            <form id="payment-form">
+                <div class="form-group">
+                    <label for="card-number">رقم البطاقة</label>
+                    <input type="text" id="card-number" placeholder="xxxx-xxxx-xxxx-xxxx" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expiry-date">تاريخ الانتهاء</label>
+                        <input type="text" id="expiry-date" placeholder="MM/YY" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cvc">CVC</label>
+                        <input type="text" id="cvc" placeholder="123" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit-payment">تأكيد الدفع</button>
+            </form>
+        </div>
+    </main>
+    
+    <footer>
+        <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+    </footer>
+  </div>
+  
+  <script src="https.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script src="payment.js"></script>
+  <script src="script.js"></script>
+
 </body>
 </html>
