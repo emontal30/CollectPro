@@ -1,131 +1,307 @@
-document.addEventListener('DOMContentLoaded', async () => {
+// إدارة الشريط الجانبي
+const sidebar = {
+  /**
+   * تهيئة الشريط الجانبي
+   */
+  init: function () {
+    // التحقق مما إذا كان الشريط الجانبي موجود في الصفحة
+    const sidebarElement = document.querySelector('.sidebar');
+    if (!sidebarElement) return;
 
-  // --- إنشاء وإضافة طبقة التغطية ---
-  const overlay = document.createElement('div');
-  overlay.className = 'sidebar-overlay';
-  document.body.appendChild(overlay);
+    // إضافة مستمعي الأحداث
+    this.setupEventListeners();
 
-  // --- التأكد من وجود زر التبديل وإنشاؤه إذا لزم الأمر ---
-  let sidebarToggle = document.getElementById('sidebarToggle');
-  if (!sidebarToggle) {
-    console.warn('زر التبديل لم يتم العثور عليه في HTML، جاري إنشائه...');
-    sidebarToggle = document.createElement('button');
-    sidebarToggle.className = 'sidebar-toggle';
-    sidebarToggle.id = 'sidebarToggle';
-    sidebarToggle.setAttribute('aria-label', 'تبديل القائمة الجانبية');
-    sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
-    document.body.appendChild(sidebarToggle);
-  }
+    // تحديث معلومات المستخدم
+    this.updateUserInfo();
 
-  // --- تحديث أيقونة زر التبديل ---
-  const updateToggleIcon = () => {
-    const icon = sidebarToggle.querySelector('i');
-    if (icon) {
-      if (document.body.classList.contains('sidebar-collapsed')) {
-        icon.classList.remove('fa-times');
-        icon.classList.add('fa-bars');
-      } else {
-        icon.classList.remove('fa-bars');
-        icon.classList.add('fa-times');
-      }
+    // تمييز العنصر النشط في القائمة
+    this.highlightActiveMenuItem();
+
+    // تحديث مؤشرات الإشعارات
+    this.updateNotificationBadges();
+
+    // التحقق من صلاحية الجلسة
+    this.checkSessionExpiry();
+  },
+
+  /**
+   * إعداد مستمعي الأحداث للشريط الجانبي
+   */
+  setupEventListeners: function () {
+    // زر توسيع/طي الشريط الجانبي
+    const toggleButton = document.getElementById('sidebar-toggle');
+    if (toggleButton) {
+      toggleButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar();
+      });
     }
-  };
 
-  // --- ملء بيانات المستخدم بشكل آمن ---
-  const populateSidebarUserData = async () => {
-    const userNameEl = document.getElementById('user-name');
-    const userInitialEl = document.getElementById('user-initial');
-    const userEmailEl = document.getElementById('user-email');
-    const userIdEl = document.getElementById('user-id');
+    // إغلاق القائمة الجانبية عند النقر خارجها
+    document.addEventListener('click', (e) => {
+      const sidebar = document.querySelector('.sidebar');
+      const toggleButton = document.getElementById('sidebar-toggle');
 
-    try {
-      const { data, error } = await supabase.auth.getUser();
-
-      if (error || !data?.user) {
-        console.error('خطأ في جلب بيانات المستخدم، أو لا توجد جلسة.', error);
-        // يمكنك إعادة توجيه المستخدم لصفحة تسجيل الدخول هنا
-        // window.location.href = 'login.html';
-        return;
+      if (sidebar && !sidebar.contains(e.target) && e.target !== toggleButton) {
+        if (!sidebar.classList.contains('sidebar-collapsed')) {
+          this.closeSidebar();
+        }
       }
+    });
 
-      const { user } = data;
-      const fullName = user.user_metadata?.full_name || 'مستخدم';
-      const email = user.email;
+    // منع إغلاق القائمة عند النقر داخلها
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
 
-      if (userNameEl) userNameEl.textContent = fullName;
-      if (userInitialEl) userInitialEl.textContent = fullName.charAt(0).toUpperCase();
-      if (userEmailEl) userEmailEl.textContent = email;
-      if (userIdEl) userIdEl.textContent = `ID: ${user.id.substring(0, 5)}...`;
+    // إغلاق القائمة الجانبية عند الضغط على Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar && !sidebar.classList.contains('sidebar-collapsed')) {
+          this.closeSidebar();
+        }
+      }
+    });
+
+    // زر تبديل الوضع المظلم
+    const darkModeToggle = document.getElementById('toggleDark');
+    if (darkModeToggle) {
+      darkModeToggle.addEventListener('click', () => this.toggleDarkMode());
+    }
+
+    // زر تسجيل الخروج
+    const logoutButton = document.getElementById('logout-btn');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', () => this.handleLogout());
+    }
+
+    // قائمة التنقل الرئيسية
+    const menuLinks = document.querySelectorAll('.nav-links a');
+    menuLinks.forEach(link => {
+      link.addEventListener('click', (e) => this.handleMenuItemClick(e, link));
+    });
+  },
+
+  /**
+   * تبديل حالة الشريط الجانبي (مطوي/موسع)
+   */
+  toggleSidebar: function () {
+    const body = document.body;
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+      // تبديل حالة القائمة الجانبية
+      sidebar.classList.toggle('sidebar-collapsed');
+    }
+
+    // تبديل حالة الجسم للتنسيقات الأخرى
+    body.classList.toggle('sidebar-collapsed');
+
+    // حفظ حالة الشريط الجانبي في التخزين المحلي
+    const isCollapsed = body.classList.contains('sidebar-collapsed');
+    localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
+  },
+
+  closeSidebar: function () {
+    const body = document.body;
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+      sidebar.classList.add('sidebar-collapsed');
+    }
+
+    body.classList.add('sidebar-collapsed');
+
+    // حفظ الحالة المغلقة
+    localStorage.setItem('sidebar-collapsed', 'true');
+  },
+
+  /**
+   * تبديل الوضع المظلم
+   */
+  toggleDarkMode: function () {
+    const body = document.body;
+    body.classList.toggle('dark');
     
-    } catch (e) {
-        console.error('حدث خطأ حرج أثناء ملء بيانات المستخدم:', e);
-    }
-  };
+    // حفظ تفضيل الوضع المظلم
+    const isDarkMode = body.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode ? 'on' : 'off');
+  },
 
-  // --- وظيفة التبديل للشريط الجانبي ---
-  // التأكد من أن الجسم يبدأ في حالة مغلق
-  document.body.classList.add('sidebar-collapsed');
-
-  if (sidebarToggle && overlay) {
-    sidebarToggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.body.classList.toggle('sidebar-collapsed');
-      updateToggleIcon();
+  /**
+   * معالجة النقر على عناصر القائمة
+   */
+  handleMenuItemClick: function (event, link) {
+    // إزالة الفئة النشطة من جميع العناصر
+    document.querySelectorAll('.nav-links a').forEach(item => {
+      item.classList.remove('active');
     });
 
-    overlay.addEventListener('click', () => {
-      document.body.classList.add('sidebar-collapsed');
-      updateToggleIcon();
-    });
-  } else {
-    console.error('لم يتم العثور على زر التبديل أو طبقة التغطية.');
-  }
+    // إضافة الفئة النشطة إلى العنصر المنقور
+    link.classList.add('active');
+  },
 
-  // --- التعامل مع تغيير حجم النافذة ---
-  const handleWindowResize = () => {
-    if (window.innerWidth <= 768) {
-      document.body.classList.add('sidebar-collapsed');
-      updateToggleIcon();
-    }
-  };
-  window.addEventListener('resize', handleWindowResize);
-  handleWindowResize(); // استدعاء مرة واحدة عند التحميل
+  /**
+   * معالجة تسجيل الخروج
+   */
+  handleLogout: function () {
+    try {
+      // إغلاق القائمة الجانبية أولاً
+      this.closeSidebar();
 
-  // --- تحديد رابط التنقل النشط ---
-  try {
-    const currentPage = window.location.pathname.split('/').pop() || 'dashboard.html';
-    const navLinks = document.querySelectorAll('.nav-links a');
-    navLinks.forEach(link => {
-      link.classList.remove('active');
-      if (link.getAttribute('href') === currentPage) {
-        link.classList.add('active');
-      }
-    });
-  } catch(e) {
-      console.warn('لا يمكن تعيين رابط التنقل النشط.', e);
-  }
+      // استخدام وظيفة تسجيل الخروج من نظام المصادقة
+      if (window.auth && typeof window.auth.logout === 'function') {
+        const logoutResult = window.auth.logout();
 
-  // --- وظيفة تسجيل الخروج ---
-  const logoutButton = document.getElementById('logout-btn');
-  if (logoutButton) {
-    logoutButton.addEventListener('click', async () => {
-      logoutButton.disabled = true;
-      logoutButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الخروج...';
-      
-      const { error } = await supabase.auth.signOut();
-
-      if (!error) {
-        console.log('تم تسجيل الخروج بنجاح');
-        window.location.href = 'login.html'; // وجه إلى صفحة تسجيل الدخول
+        if (logoutResult !== false) {
+          // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 100);
+        } else {
+          // إذا فشل تسجيل الخروج، أظهر رسالة خطأ
+          console.error('فشل في تسجيل الخروج');
+          if (typeof showAlert === 'function') {
+            showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+          } else {
+            alert('حدث خطأ أثناء تسجيل الخروج');
+          }
+        }
       } else {
-        console.error('فشل تسجيل الخروج:', error.message);
-        logoutButton.disabled = false;
-        logoutButton.innerHTML = '<i class="fas fa-sign-out-alt"></i><span>تسجيل الخروج</span>';
+        // إذا لم يكن نظام المصادقة متاح، قم بمسح البيانات يدوياً
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('session_expiry');
+
+        // مسح بيانات Supabase الجديدة
+        localStorage.removeItem('supabaseUser');
+        localStorage.removeItem('authProvider');
+
+        // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 100);
+      }
+    } catch (error) {
+      console.error('خطأ في تسجيل الخروج:', error);
+      if (typeof showAlert === 'function') {
+        showAlert('حدث خطأ أثناء تسجيل الخروج', 'danger');
+      } else {
+        alert('حدث خطأ أثناء تسجيل الخروج');
+      }
+    }
+  },
+
+  /**
+   * تحديث معلومات المستخدم في الشريط الجانبي
+   */
+  updateUserInfo: function () {
+    if (!window.auth) return;
+
+    // الحصول على بيانات المستخدم
+    const user = window.auth.checkUserSession();
+    if (!user) return;
+
+    // تحديث اسم المستخدم
+    const nameElement = document.querySelector('.sidebar-user-name');
+    if (nameElement) {
+      nameElement.textContent = user.name || 'المستخدم';
+    }
+
+    // تحديث صورة المستخدم
+    const avatarElement = document.querySelector('.sidebar-user-avatar');
+    if (avatarElement) {
+      if (user.avatar) {
+        avatarElement.src = user.avatar;
+        avatarElement.alt = user.name || 'صورة المستخدم';
+      } else {
+        // إذا لم تكن هناك صورة، استخدم الحرف الأول من الاسم
+        avatarElement.textContent = (user.name || 'م').charAt(0).toUpperCase();
+      }
+    }
+
+    // تحديث البريد الإلكتروني
+    const emailElement = document.querySelector('.sidebar-user-email');
+    if (emailElement) {
+      emailElement.textContent = user.email || 'user@example.com';
+    }
+
+    // تحديث معرف المستخدم
+    const idElement = document.querySelector('.sidebar-user-id');
+    if (idElement) {
+      idElement.textContent = user.id || 'غير محدد';
+    }
+
+    console.log('تم تحديث معلومات المستخدم:', {
+      name: user.name,
+      email: user.email,
+      id: user.id
+    });
+  },
+
+  /**
+   * تمييز العنصر النشط في القائمة بناءً على الصفحة الحالية
+   */
+  highlightActiveMenuItem: function () {
+    // الحصول على اسم الصفحة الحالية
+    const currentPage = window.location.pathname.split('/').pop();
+
+    // العثور على العنصر المطابق في القائمة
+    const menuItems = document.querySelectorAll('.nav-links a');
+    menuItems.forEach(item => {
+      const href = item.getAttribute('href');
+      if (href === currentPage || href === `/${currentPage}`) {
+        item.classList.add('active');
       }
     });
+  },
+
+  /**
+   * تحديث مؤشرات الإشعارات
+   */
+  updateNotificationBadges: function () {
+    // يمكن تنفيذ هذا في المستقبل عند وجود نظام إشعارات
+  },
+
+  /**
+   * التحقق من صلاحية جلسة المستخدم
+   */
+  checkSessionExpiry: function () {
+    if (!window.auth) return;
+    
+    // الحصول على بيانات المستخدم
+    const user = window.auth.checkUserSession();
+    
+    // إذا لم تكن هناك جلسة نشطة وهذه ليست صفحة تسجيل الدخول، إعادة التوجيه
+    const isLoginPage = window.location.pathname.indexOf('login.html') !== -1;
+    if (!user && !isLoginPage) {
+      window.auth.redirectToLogin('session_expired');
+    }
+  }
+};
+
+// تصدير كائن sidebar
+window.sidebar = sidebar;
+
+// تهيئة الشريط الجانبي عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+  // تطبيق الوضع الليلي المحفوظ
+  const isDarkMode = localStorage.getItem("darkMode") === "on";
+  if (isDarkMode) {
+    document.body.classList.add("dark");
   }
 
-  // --- الاستدعاءات الأولية ---
-  updateToggleIcon();
-  await populateSidebarUserData();
+  // تطبيق حالة طي الشريط الجانبي المحفوظة
+  const isSidebarCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+  if (isSidebarCollapsed) {
+    document.body.classList.add("sidebar-collapsed");
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.add("sidebar-collapsed");
+    }
+  }
 });
