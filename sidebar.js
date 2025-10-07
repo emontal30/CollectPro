@@ -29,7 +29,7 @@ const sidebar = {
    */
   setupEventListeners: function () {
     // زر توسيع/طي الشريط الجانبي
-    const toggleButton = document.getElementById('sidebar-toggle');
+    const toggleButton = document.querySelector('.sidebar-toggle');
     if (toggleButton) {
       toggleButton.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -40,9 +40,9 @@ const sidebar = {
     // إغلاق القائمة الجانبية عند النقر خارجها
     document.addEventListener('click', (e) => {
       const sidebar = document.querySelector('.sidebar');
-      const toggleButton = document.getElementById('sidebar-toggle');
+      const toggleButton = document.querySelector('.sidebar-toggle');
 
-      if (sidebar && !sidebar.contains(e.target) && e.target !== toggleButton) {
+      if (sidebar && !sidebar.contains(e.target) && e.target !== toggleButton && !toggleButton.contains(e.target)) {
         if (!sidebar.classList.contains('sidebar-collapsed')) {
           this.closeSidebar();
         }
@@ -160,7 +160,7 @@ const sidebar = {
         if (logoutResult !== false) {
           // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
           setTimeout(() => {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
           }, 100);
         } else {
           // إذا فشل تسجيل الخروج، أظهر رسالة خطأ
@@ -183,7 +183,7 @@ const sidebar = {
 
         // إعادة توجيه المستخدم إلى صفحة تسجيل الدخول
         setTimeout(() => {
-          window.location.href = 'login.html';
+          window.location.href = 'index.html';
         }, 100);
       }
     } catch (error) {
@@ -200,47 +200,17 @@ const sidebar = {
    * تحديث معلومات المستخدم في الشريط الجانبي
    */
   updateUserInfo: function () {
-    if (!window.auth) return;
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (user) {
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        const userInitial = document.getElementById('user-initial');
 
-    // الحصول على بيانات المستخدم
-    const user = window.auth.checkUserSession();
-    if (!user) return;
-
-    // تحديث اسم المستخدم
-    const nameElement = document.querySelector('.sidebar-user-name');
-    if (nameElement) {
-      nameElement.textContent = user.name || 'المستخدم';
+        if (userName) userName.textContent = user.name;
+        if (userEmail) userEmail.textContent = user.email;
+        if (userInitial) userInitial.textContent = user.name ? user.name.charAt(0).toUpperCase() : '';
     }
-
-    // تحديث صورة المستخدم
-    const avatarElement = document.querySelector('.sidebar-user-avatar');
-    if (avatarElement) {
-      if (user.avatar) {
-        avatarElement.src = user.avatar;
-        avatarElement.alt = user.name || 'صورة المستخدم';
-      } else {
-        // إذا لم تكن هناك صورة، استخدم الحرف الأول من الاسم
-        avatarElement.textContent = (user.name || 'م').charAt(0).toUpperCase();
-      }
-    }
-
-    // تحديث البريد الإلكتروني
-    const emailElement = document.querySelector('.sidebar-user-email');
-    if (emailElement) {
-      emailElement.textContent = user.email || 'user@example.com';
-    }
-
-    // تحديث معرف المستخدم
-    const idElement = document.querySelector('.sidebar-user-id');
-    if (idElement) {
-      idElement.textContent = user.id || 'غير محدد';
-    }
-
-    console.log('تم تحديث معلومات المستخدم:', {
-      name: user.name,
-      email: user.email,
-      id: user.id
-    });
   },
 
   /**
@@ -277,15 +247,12 @@ const sidebar = {
     const user = window.auth.checkUserSession();
     
     // إذا لم تكن هناك جلسة نشطة وهذه ليست صفحة تسجيل الدخول، إعادة التوجيه
-    const isLoginPage = window.location.pathname.indexOf('login.html') !== -1;
+    const isLoginPage = window.location.pathname.includes('index.html');
     if (!user && !isLoginPage) {
       window.auth.redirectToLogin('session_expired');
     }
   }
 };
-
-// تصدير كائن sidebar
-window.sidebar = sidebar;
 
 // تهيئة الشريط الجانبي عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
@@ -297,11 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // تطبيق حالة طي الشريط الجانبي المحفوظة
   const isSidebarCollapsed = localStorage.getItem("sidebar-collapsed") === "true";
+  const sidebar = document.querySelector('.sidebar');
   if (isSidebarCollapsed) {
     document.body.classList.add("sidebar-collapsed");
-    const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
       sidebar.classList.add("sidebar-collapsed");
     }
   }
+
+  // تهيئة الشريط الجانبي
+  sidebar.init();
 });
