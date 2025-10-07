@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>CollectPro</title>
+  <title>جدول التحصيلات - CollectPro</title>
   <link rel="manifest" href="site.webmanifest">
   <meta name="theme-color" content="#ffffff"/>
   <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
@@ -14,40 +14,9 @@
 </head>
 <body>
   <aside class="sidebar sidebar-collapsed">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
-        </div>
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-content">
-        <ul class="nav-links">
-            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-            <li><a href="subscriptions.html
-            "><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-        </ul>
-    </div>
-
-    <div class="sidebar-footer">
-        <button id="logout-btn" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>تسجيل الخروج</span>
-        </button>
-    </div>
+    <!-- Sidebar content will be dynamically injected by script.js -->
   </aside>
 
-
-  <!-- Main Content -->
   <div class="main-content">
     <header>
         <div class="header-top">
@@ -83,18 +52,8 @@
             </tr>
           </thead>
           <tbody>
-            <!-- Data will be populated here by script.js -->
+            <!-- سيتم تعبئة البيانات هنا بواسطة script.js -->
           </tbody>
-          <tfoot id="totalRow">
-            <tr class="total-row-footer">
-                <td colspan="3"><strong>الإجماليات</strong></td>
-                <td id="totalAmount">0</td>
-                <td id="totalExtra">0</td>
-                <td id="totalCollector">0</td>
-                <td id="totalNet">0</td>
-                <td></td>
-            </tr>
-        </tfoot>
         </table>
       </div>
       <div id="summary">
@@ -107,11 +66,11 @@
             <label>المبلغ المسلم: <input type="number" id="deliveredAmount" class="bold-input" placeholder="أدخل المبلغ المسلم"></label>
             <label>الفارق: <span id="difference" class="calc-field">0</span></label>
         </div>
-    </div>
+      </div>
       <div class="buttons">
-        <button id="archiveBtn" class="btn-archive"><i class="fas fa-archive"></i> أرشفة البيانات</button>
-        <button id="exportBtn" class="btn-export"><i class="fas fa-file-excel"></i> تصدير كـ Excel</button>
-        <button id="copyWhatsAppBtn" class="btn-info"><i class="fab fa-whatsapp"></i> نسخ ملخص للواتساب</button>
+        <button id="archiveTodayBtn" class="btn-archive"><i class="fas fa-archive"></i> أرشفة البيانات</button>
+        <button id="exportExcelBtn" class="btn-export"><i class="fas fa-file-excel"></i> تصدير كـ Excel</button>
+        <button id="copySummaryBtn" class="btn-info"><i class="fab fa-whatsapp"></i> نسخ ملخص للواتساب</button>
       </div>
     </main>
     
@@ -123,7 +82,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
-  <script src="sidebar.js"></script>
   <script src="script.js"></script>
 
 </body>

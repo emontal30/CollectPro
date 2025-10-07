@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('❌ Error initiating Google login:', error.message);
       googleLoginBtn.disabled = false;
       googleLoginBtn.innerHTML = '<i class="fab fa-google"></i> تسجيل الدخول باستخدام جوجل';
-      alert('حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.');
+      showErrorToast('حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.');
     }
   });
 });

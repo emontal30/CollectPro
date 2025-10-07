@@ -16,51 +16,27 @@
 
 </head>
 <body>
-  <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
-  </button>
   <aside class="sidebar sidebar-collapsed">
-    <div class="sidebar-header">
-        <div class="user-box">
-            <div class="user-avatar">
-                <span id="user-initial">A</span>
-            </div>
-            <div class="user-meta">
-                <span class="user-name" id="user-name">اسم المستخدم</span>
-                <span class="user-email" id="user-email">user@example.com</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="sidebar-content">
-        <ul class="nav-links">
-            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-            <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-        </ul>
-    </div>
-
-    <div class="sidebar-footer">
-        <button id="logout-btn" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>تسجيل الخروج</span>
-        </button>
-    </div>
-</aside>
+    <!-- Sidebar content will be dynamically injected by script.js -->
+  </aside>
 
 
   <!-- Main Content -->
   <div class="main-content">
     <header>
       <div class="header-top">
-        <button id="toggleDark" class="dark-btn-icon">🌙</button>
-        <div class="logo-container">
-          <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-          <p class="app-name">CollectPro</p>
-        </div>
+          <div class="header-actions-left">
+              <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+                  <i class="fas fa-bars"></i>
+              </button>
+          </div>
+          <div class="logo-container">
+              <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+              <p class="app-name">CollectPro</p>
+          </div>
+          <div class="header-actions-right">
+              <button id="toggleDark" class="dark-btn-icon">🌙</button>
+          </div>
       </div>
       <h1><i class="fas fa-user-shield"></i> تفاصيل اشتراكي</h1>
     </header>
@@ -118,7 +94,6 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
-  <script src="sidebar.js"></script>
   <script src="script.js"></script>
 
 </body>

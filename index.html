@@ -10,6 +10,7 @@
   <title>CollectPro</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="style.css"> <!-- إضافة style.css للإشعارات -->
 </head>
 <body>
   <div class="login-page">
@@ -27,7 +28,7 @@
         </button>
 
         <p class="privacy-policy">
-          بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
+          بالتسجيل، أنت توافق على <a href="policy.html">سياسة الخصوصية</a> و <a href="policy.html">شروط الاستخدام</a>.
         </p>
       </div>
     </div>
@@ -38,21 +39,7 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
-  
   <script src="index.js"></script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
-    }
-  </script>
+  <script src="sw-register.js" defer></script>
 </body>
 </html>
