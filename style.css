@@ -61,12 +61,24 @@ header {
 }
 
 .header-actions-left, .header-actions-right {
-    flex: 1;
+    /* flex: 1; */ /* This was causing the overlap issue */
 }
 
 .header-actions-right {
     text-align: left;
 }
+
+/* Override for sidebar-toggle button */
+.sidebar-toggle {
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-size: 24px !important;
+    padding: 5px !important;
+    margin: 0 !important; /* Reset margin */
+    box-shadow: none !important; /* Reset box-shadow */
+}
+
 
 /* أيقونة الوضع الليلي */
 #toggleDark {
