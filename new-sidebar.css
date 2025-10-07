@@ -17,6 +17,25 @@
     right: 0; /* Slide in */
 }
 
+/* === Main Content === */
+.main-content {
+    transition: margin-right 0.3s ease-in-out;
+}
+
+.main-content.sidebar-active {
+    margin-right: 250px; /* Push content when sidebar is open */
+}
+
+/* === Toggle Button === */
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+}
+
 .sidebar-header {
     display: flex;
     justify-content: space-between;
@@ -67,4 +86,33 @@
     font-size: 1rem;
     width: 20px;
     text-align: center;
+}
+
+/* === Dark Mode === */
+body.dark .sidebar {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+    box-shadow: -2px 0 5px rgba(255,255,255,0.1);
+}
+
+body.dark .sidebar-header {
+    border-bottom: 1px solid #444;
+}
+
+body.dark .sidebar-header h2 {
+    color: #f1f1f1;
+}
+
+body.dark .close-sidebar {
+    color: #aaa;
+}
+
+body.dark .sidebar-nav li a {
+    color: #ccc;
+}
+
+body.dark .sidebar-nav li a:hover,
+body.dark .sidebar-nav li a.active {
+    background-color: #333;
+    color: #00c896;
 }
