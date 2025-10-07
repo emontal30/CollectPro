@@ -1,0 +1,70 @@
+/* === Sidebar Styles === */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: -280px; /* Start hidden off-screen */
+    width: 250px;
+    height: 100%;
+    background-color: #fff;
+    color: #333;
+    padding: 20px;
+    transition: right 0.3s ease-in-out;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.sidebar.show {
+    right: 0; /* Slide in */
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.close-sidebar {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #888;
+}
+
+.sidebar-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #555;
+    border-radius: 5px;
+    transition: background-color 0.2s, color 0.2s;
+    font-weight: 500;
+}
+
+.sidebar-nav li a:hover,
+.sidebar-nav li a.active {
+    background-color: #f0f0f0;
+    color: #007bff;
+}
+
+.sidebar-nav li a i {
+    margin-left: 10px; /* For RTL */
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
