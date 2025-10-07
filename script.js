@@ -9,7 +9,6 @@ const STORAGE_KEYS = {
   CLIENT_DATA: "clientData",
   ARCHIVE_INDEX: "archiveIndex", 
   USER: "user",
-  SIDEBAR_COLLAPSED: "sidebar-collapsed",
 };
 
 const PAGES = {
@@ -24,8 +23,6 @@ const PAGES = {
 
 const SELECTORS = {
   // General
-  SIDEBAR: ".sidebar",
-  SIDEBAR_TOGGLE: ".sidebar-toggle",
   TOGGLE_DARK: "toggleDark",
   LOGOUT_BTN: "logout-btn",
   USER_NAME: "#user-name",
@@ -142,12 +139,6 @@ const navigateTo = (page) => { window.location.href = page; };
 const applyInitialThemeAndSidebarState = () => {
     const isDarkMode = localStorage.getItem(STORAGE_KEYS.DARK_MODE) === "on";
     document.body.classList.toggle("dark", isDarkMode);
-    const isSidebarCollapsed = localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true";
-    document.body.classList.toggle("sidebar-collapsed", isSidebarCollapsed);
-    const sidebar = document.querySelector(SELECTORS.SIDEBAR);
-    if (sidebar) {
-      sidebar.classList.toggle("sidebar-collapsed", isSidebarCollapsed);
-    }
 };
 
 const toggleDarkMode = () => {
@@ -203,19 +194,10 @@ const getSidebarHTML = () => {
 };
 
 const injectSidebar = () => {
-  const sidebar = document.querySelector(SELECTORS.SIDEBAR);
+  const sidebar = document.querySelector(".sidebar");
   if (sidebar) {
     sidebar.innerHTML = getSidebarHTML();
   }
-};
-
-const toggleSidebar = () => {
-    const isCollapsed = document.body.classList.toggle("sidebar-collapsed");
-    const sidebar = document.querySelector(SELECTORS.SIDEBAR);
-    if (sidebar) {
-      sidebar.classList.toggle("sidebar-collapsed", isCollapsed);
-    }
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, isCollapsed);
 };
 
 const highlightActiveMenuItem = () => {
@@ -246,8 +228,6 @@ const setupCommonUI = () => {
       const logoutBtn = document.getElementById(SELECTORS.LOGOUT_BTN.substring(1));
       if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     }
-    const sidebarToggle = document.querySelector(SELECTORS.SIDEBAR_TOGGLE);
-    if(sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
     const toggleDarkBtn = document.getElementById(SELECTORS.TOGGLE_DARK.substring(1));
     if(toggleDarkBtn) toggleDarkBtn.addEventListener('click', toggleDarkMode);
 
