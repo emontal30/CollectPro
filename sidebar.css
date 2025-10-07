@@ -6,7 +6,6 @@
   --sb-accent: #3b82f6;
   --sb-border: #e5e7eb;
   --sb-danger: #ef4444;
-  --sb-width: 300px; /* used for positioning toggle when open */
 }
 
 body.dark {
@@ -20,32 +19,20 @@ body.dark {
 
 /* Toggle button */
 .sidebar-toggle {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 1200;
-  background: var(--sb-bg);
-  color: var(--sb-fg);
-  border: 1px solid var(--sb-border);
-  border-radius: 50%;
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.10);
-  backdrop-filter: blur(6px);
-  opacity: 0.92;
+    background: transparent;
+    border: none;
+    color: var(--sb-fg);
+    cursor: pointer;
+    font-size: 24px;
+    padding: 5px;
 }
 
-/* Nudge the toggle slightly left when sidebar is open so it doesn't overlap panel edge */
-body:not(.sidebar-collapsed) .sidebar-toggle {
-  right: calc(var(--sb-width) + 10px);
+.sidebar-toggle:hover {
+    opacity: 0.7;
 }
+
 .sidebar-toggle i {
-  font-size: 18px;
+  font-size: 22px;
   pointer-events: none;
 }
 .sidebar-toggle span { display: none; }
@@ -86,7 +73,6 @@ body:not(.sidebar-collapsed)::before {
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 1080;
-  pointer-events: none;
 }
 
 @media (min-width: 769px) {
@@ -153,7 +139,6 @@ body:not(.sidebar-collapsed)::before {
   padding: 8px 15px;
   border-radius: 6px;
   cursor: pointer;
-  transition: var(--transition);
 }
 .logout-btn:hover {
   background: rgba(255, 255, 255, 0.3);
@@ -171,7 +156,6 @@ body:not(.sidebar-collapsed)::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: var(--transition);
 }
 .sidebar-footer .logout-btn:hover {
   background: var(--danger);
@@ -182,17 +166,6 @@ body:not(.sidebar-collapsed)::before {
   .sidebar {
     width: 85vw;
     max-width: 320px;
-  }
-
-  .sidebar-toggle {
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .sidebar-toggle i {
-    font-size: 16px;
   }
 }
 

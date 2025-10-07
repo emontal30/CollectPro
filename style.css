@@ -44,28 +44,32 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  opacity: 0;
-}
-
-body.loaded {
-  opacity: 1;
 }
 
 /* ====== الهيدر والشعار ====== */
 header {
-  text-align: center;
   padding: 15px;
   background: var(--primary);
   color: white;
-  position: relative;
   box-shadow: var(--shadow);
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-actions-left, .header-actions-right {
+    flex: 1;
+}
+
+.header-actions-right {
+    text-align: left;
 }
 
 /* أيقونة الوضع الليلي */
 #toggleDark {
-  position: absolute;
-  top: 15px;
-  left: 15px;
   background: transparent;
   border: none;
   width: 40px;
@@ -76,63 +80,21 @@ header {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
   border-radius: 50%;
-  overflow: hidden;
+  color: white;
 }
 
 #toggleDark:hover {
   transform: scale(1.1);
 }
 
-/* أيقونات الشمس والقمر */
-#toggleDark .icon {
-  position: absolute;
-  transition: var(--transition);
-  opacity: 0;
-  transform: rotate(180deg) scale(0);
-}
-
-#toggleDark .icon.active {
-  opacity: 1;
-  transform: rotate(0) scale(1);
-}
-
-#toggleDark .sun-icon {
-  color: #f39c12;
-  font-size: 24px;
-}
-
-#toggleDark .moon-icon {
-  color: #3498db;
-  font-size: 22px;
-}
-
-/* تأثيرات إضافية لأيقونة الوضع الليلي */
-#toggleDark::before {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(0);
-  transition: transform 0.3s ease;
-}
-
-#toggleDark:hover::before {
-  transform: scale(1);
-}
 
 /* اللوجو واسم التطبيق */
 .logo-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 0 auto 10px;
   text-align: center;
-  position: relative;
-  z-index: 1;
 }
 
 .logo {
@@ -152,8 +114,9 @@ header {
 }
 
 h1 { 
-  margin: 0; 
+  margin: 10px 0 0;
   font-size: 1.8rem;
+  text-align: center;
 }
 
 /* ====== المحتوى الرئيسي ====== */
@@ -475,149 +438,6 @@ input[type=number] {
   box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.2);
 }
 
-/* ====== النوافذ المنبثقة ====== */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 25px;
-  border-radius: var(--border-radius);
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 5px 25px rgba(0,0,0,0.2);
-  animation: modalSlide 0.3s ease;
-}
-
-@keyframes modalSlide {
-  from {
-    transform: translateY(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modal h3 {
-  margin-top: 0;
-  color: var(--primary);
-  text-align: center;
-}
-
-.modal p {
-  margin: 15px 0;
-  line-height: 1.6;
-}
-
-.modal-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.modal button {
-  padding: 10px 20px;
-}
-
-/* ====== أنواع الأزرار المختلفة ====== */
-.btn-base {
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  color: white;
-}
-
-.btn-base:hover {
-  transform: translateY(-2px);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #007965, #00a085);
-  box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #00a085, #007965);
-  box-shadow: 0 6px 20px rgba(0, 121, 101, 0.4);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #27ae60, #2ecc71);
-  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
-}
-
-.btn-secondary {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-}
-
-.btn-secondary:hover {
-  background: linear-gradient(135deg, #2980b9, #3498db);
-  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-}
-
-.btn-info {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
-}
-
-.btn-info:hover {
-  background: linear-gradient(135deg, #8e44ad, #9b59b6);
-  box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-}
-
-.btn-danger:hover {
-  background: linear-gradient(135deg, #c0392b, #e74c3c);
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-}
-
-.btn-export {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
-}
-
-.btn-export:hover {
-  background: linear-gradient(135deg, #e67e22, #f39c12);
-  box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
-}
-
-.btn-archive {
-  background: linear-gradient(135deg, #16a085, #1abc9c);
-  padding: 8px 16px;
-  font-size: 14px;
-  box-shadow: 0 3px 10px rgba(22, 160, 133, 0.3);
-}
-
-.btn-archive:hover {
-  background: linear-gradient(135deg, #1abc9c, #16a085);
-  box-shadow: 0 5px 15px rgba(22, 160, 133, 0.4);
-}
-
 /* ====== الوضع الليلي ====== */
 body.dark { 
   background: var(--dark-bg); 
@@ -686,11 +506,6 @@ body.dark #archiveSearch {
   color: var(--dark-text);
 }
 
-body.dark .modal-content {
-  background: #2a2a2a;
-  color: var(--dark-text);
-}
-
 body.dark textarea {
   background: #2a2a2a;
   border-color: var(--dark-mode-green);
@@ -706,14 +521,6 @@ body.dark #toggleDark {
   background: transparent;
 }
 
-body.dark #toggleDark .sun-icon {
-  color: #f39c12;
-}
-
-body.dark #toggleDark .moon-icon {
-  color: #f1c40f;
-}
-
 /* الوضع الليلي للجداول */
 body.dark tbody tr:hover {
   background-color: rgba(0, 200, 150, 0.2);
@@ -721,177 +528,6 @@ body.dark tbody tr:hover {
 
 body.dark #totalRow { 
   color: var(--dark-mode-green); 
-}
-
-/* ====== الخلايا القابلة للتعديل وغير القابلة للتعديل ====== */
-.non-editable {
-  background-color: #f8f9fa;
-  color: #495057;
-  cursor: not-allowed;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-body.dark .non-editable {
-  background-color: #2a2a2a;
-  color: #aaa;
-}
-
-.editable {
-  background-color: transparent;
-  color: inherit;
-  cursor: text;
-}
-
-/* تمييز الصفوف القابلة للتعديل */
-tr.editable-row td {
-  background-color: rgba(0, 123, 255, 0.05);
-}
-
-body.dark tr.editable-row td {
-  background-color: rgba(0, 123, 255, 0.1);
-}
-
-/* ====== تنسيقات خاصة بصفحة الأرشيف ====== */
-body.archive .logo-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0 auto 10px;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-body.archive .logo {
-  display: block;
-  margin: 0 auto 5px;
-}
-
-body.archive .app-name {
-  text-align: center;
-  margin: 0;
-}
-
-/* ====== إشعارات Toast المنبثقة ====== */
-.toast-container {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.toast {
-  background: white;
-  color: #333;
-  padding: 16px 24px;
-  border-radius: var(--border-radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 300px;
-  max-width: 90%;
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: auto;
-  border-left: 4px solid var(--primary);
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.toast-icon {
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toast-message {
-  flex: 1;
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  color: #777;
-  cursor: pointer;
-  font-size: 20px;
-  padding: 0;
-  margin: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s ease;
-}
-
-.toast-close:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-/* أنواع الإشعارات */
-.toast.success {
-  border-left-color: var(--success);
-}
-
-.toast.success .toast-icon {
-  color: var(--success);
-}
-
-.toast.error {
-  border-left-color: var(--danger);
-}
-
-.toast.error .toast-icon {
-  color: var(--danger);
-}
-
-.toast.warning {
-  border-left-color: var(--secondary);
-}
-
-.toast.warning .toast-icon {
-  color: var(--secondary);
-}
-
-.toast.info {
-  border-left-color: #3498db;
-}
-
-.toast.info .toast-icon {
-  color: #3498db;
-}
-
-/* الوضع الليلي للإشعارات */
-body.dark .toast {
-  background: #2a2a2a;
-  color: var(--dark-text);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-body.dark .toast-close {
-  color: #aaa;
-}
-
-body.dark .toast-close:hover {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* ====== التصميم المتجاوب ====== */
@@ -944,31 +580,8 @@ body.dark .toast-close:hover {
   #toggleDark {
     width: 36px;
     height: 36px;
-    top: 12px;
-    left: 12px;
   }
-  
-  #toggleDark .sun-icon {
-    font-size: 22px;
-  }
-  
-  #toggleDark .moon-icon {
-    font-size: 20px;
-  }
-  
-  /* تعديل حجم الإشعارات للشاشات المتوسطة */
-  .toast {
-    min-width: 250px;
-    padding: 14px 20px;
-  }
-  
-  .toast-message {
-    font-size: 15px;
-  }
-  
-  .toast-icon {
-    font-size: 22px;
-  }
+
 }
 
 @media (max-width: 480px) {
@@ -985,35 +598,6 @@ body.dark .toast-close:hover {
   #toggleDark {
     width: 32px;
     height: 32px;
-    top: 10px;
-    left: 10px;
-  }
-  
-  #toggleDark .sun-icon {
-    font-size: 20px;
-  }
-  
-  #toggleDark .moon-icon {
-    font-size: 18px;
   }
 
-  /* تعديل حجم الإشعارات للشاشات الصغيرة */
-  .toast {
-    min-width: 200px;
-    padding: 12px 16px;
-  }
-  
-  .toast-message {
-    font-size: 14px;
-  }
-  
-  .toast-icon {
-    font-size: 20px;
-  }
-  
-  .toast-close {
-    font-size: 18px;
-    width: 20px;
-    height: 20px;
-  }
 }
