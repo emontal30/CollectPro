@@ -90,7 +90,6 @@ const sidebar = {
    * تبديل حالة الشريط الجانبي (مطوي/موسع)
    */
   toggleSidebar: function () {
-    console.log("Sidebar toggle button clicked!"); // For debugging
     const body = document.body;
     const sidebar = document.querySelector('.sidebar');
 
