@@ -61,11 +61,17 @@ header {
 }
 
 .header-actions-left, .header-actions-right {
-    /* flex: 1; */ /* This was causing the overlap issue */
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.header-actions-left {
+    justify-content: flex-start; /* Aligns items to the start (right in RTL) */
 }
 
 .header-actions-right {
-    text-align: left;
+    justify-content: flex-end; /* Aligns items to the end (left in RTL) */
 }
 
 /* Override for sidebar-toggle button */
