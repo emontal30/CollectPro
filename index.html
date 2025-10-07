@@ -11,35 +11,42 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="index.css" />
   <link rel="stylesheet" href="style.css"> <!-- إضافة style.css للإشعارات -->
+  <link rel="stylesheet" href="sidebar.css" />
 </head>
 <body>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-card">
-        <div class="logo-container">
-          <img src="logo-momkn.png" alt="شعار التطبيق" class="logo" />
-          <h1 class="app-name">CollectPro</h1>
-          <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
+  <aside class="sidebar sidebar-collapsed">
+    <!-- Sidebar content will be dynamically injected by sidebar.js -->
+  </aside>
+  <div class="main-content">
+    <div class="login-page">
+      <div class="login-container">
+        <div class="login-card">
+          <div class="logo-container">
+            <img src="logo-momkn.png" alt="شعار التطبيق" class="logo" />
+            <h1 class="app-name">CollectPro</h1>
+            <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
+          </div>
+
+          <button id="google-login-btn" class="google-login-btn">
+            <i class="fab fa-google"></i>
+            <span>تسجيل الدخول باستخدام Google</span>
+          </button>
+
+          <p class="privacy-policy">
+            بالتسجيل، أنت توافق على <a href="policy.html">سياسة الخصوصية</a> و <a href="policy.html">شروط الاستخدام</a>.
+          </p>
         </div>
-
-        <button id="google-login-btn" class="google-login-btn">
-          <i class="fab fa-google"></i>
-          <span>تسجيل الدخول باستخدام Google</span>
-        </button>
-
-        <p class="privacy-policy">
-          بالتسجيل، أنت توافق على <a href="policy.html">سياسة الخصوصية</a> و <a href="policy.html">شروط الاستخدام</a>.
-        </p>
       </div>
-    </div>
-    <div class="footer">
-      <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+      <div class="footer">
+        <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+      </div>
     </div>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="index.js"></script>
+  <script src="sidebar.js"></script>
   <script src="sw-register.js" defer></script>
 </body>
 </html>

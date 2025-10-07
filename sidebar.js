@@ -2,7 +2,7 @@
 // Reads user from localStorage/sessionStorage ('user') and subscription from localStorage ('subscriptionSummary')
 (function () {
     const PAGES = [
-      { href: 'index.html', icon: 'fa-home', label: 'ادخال البيانات' },
+      { href: 'dashboard.html', icon: 'fa-home', label: 'ادخال البيانات' },
       { href: 'harvest.html', icon: 'fa-hand-holding-usd', label: 'التحصيل' },
       { href: 'archive.html', icon: 'fa-archive', label: 'الأرشيف' },
       { href: 'subscriptions.html', icon: 'fa-tags', label: 'الاشتراكات' },
