@@ -1,3 +1,4 @@
+
 /* ====== استيراد الخطوط والمتغيرات ====== */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap');
 
@@ -46,7 +47,7 @@ header {
 .sidebar-toggle {
     background: transparent;
     border: none;
-    color: white;
+    color: #333;
     font-size: 24px;
     padding: 5px;
     margin: 0;
