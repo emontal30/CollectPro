@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -14,96 +13,60 @@
     <link rel="stylesheet" href="new-sidebar.css" />
 </head>
 <body class="loaded">
-
-    <!-- 🔝 Topbar -->
-    <div class="topbar">
-        <div class="actions">
-            <button id="toggleDark" class="dark-btn-icon">🌙</button>
-        </div>
-        <div class="logo-container">
-            <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-            <p class="app-name">CollectPro</p>
-        </div>
-        <div class="actions">
-            <button class="toggle-btn" id="sidebar-toggle-btn"><i class="fa-solid fa-bars"></i></button>
-        </div>
-    </div>
-
-    <!-- 🎨 Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="user-box">
-                <div class="user-avatar">
-                    <span id="user-initial">A</span>
-                </div>
-                <div class="user-meta">
-                    <span class="user-name" id="user-name">اسم المستخدم</span>
-                    <span class="user-email" id="user-email">user@example.com</span>
-                </div>
-            </div>
-        </div>
-        <ul class="nav-links">
-            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-            <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-        </ul>
-        <div class="sidebar-footer">
-            <button id="logout-btn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>تسجيل الخروج</span>
+  <header>
+      <div class="header-top">
+          <div class="header-actions-left">
+              <button id="toggleDark" class="dark-btn-icon">🌙</button>
+          </div>
+          <div class="logo-container">
+              <img src="logo-tick.png" alt="شعار ممكن" class="logo" />
+              <p class="app-name">CollectPro</p>
+          </div>
+          <div class="header-actions-right">
+              <button class="sidebar-toggle" aria-label="Toggle Sidebar">
+                  <i class="fas fa-bars"></i>
+              </button>
+          </div>
+      </div>
+      <h1>الأرشيف 🗄️</h1>
+  </header>
+    
+    <main>
+        <div class="archive-controls">
+            <select id="archiveSelect" class="styled-select">
+                <option value="">اختر تاريخًا لعرضه</option>
+            </select>
+            <input type="search" id="archiveSearch" class="search-input" placeholder="أو ابحث بالاسم أو الكود...">
+            <button id="deleteArchiveBtn" class="danger-btn">
+                <i class="fas fa-trash-alt"></i>
+                حذف الأرشيف المحدد
             </button>
         </div>
-    </aside>
 
-    <!-- Overlay -->
-    <div class="overlay" id="overlay"></div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <header>
-            <h1>الأرشيف 🗄️</h1>
-        </header>
-        
-        <main>
-            <div class="archive-controls">
-                <select id="archiveSelect" class="styled-select">
-                    <option value="">اختر تاريخًا لعرضه</option>
-                </select>
-                <input type="search" id="archiveSearch" class="search-input" placeholder="أو ابحث بالاسم أو الكود...">
-                <button id="deleteArchiveBtn" class="danger-btn">
-                    <i class="fas fa-trash-alt"></i>
-                    حذف الأرشيف المحدد
-                </button>
-            </div>
-
-            <div class="table-container">
-                <table id="archiveTable">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>اسم المحل</th>
-                            <th>الكود</th>
-                            <th>التحويل</th>
-                            <th>الزيادة</th>
-                            <th>التحصيل</th>
-                            <th>الصافي</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- سيتم تعبئة البيانات هنا بواسطة JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </main>
-        
-        <footer>
-            <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-        </footer>
-    </div>
+        <div class="table-container">
+            <table id="archiveTable">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>اسم المحل</th>
+                        <th>الكود</th>
+                        <th>التحويل</th>
+                        <th>الزيادة</th>
+                        <th>التحصيل</th>
+                        <th>الصافي</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- سيتم تعبئة البيانات هنا بواسطة JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+    
+    <footer>
+        <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-client.js"></script>
