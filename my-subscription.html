@@ -1,101 +1,127 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>اشتراكي - CollectPro</title>
-  <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#ffffff"/>
-  <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
-  <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="my-subscription.css">
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Subscription - CollectPro</title>
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#ffffff"/>
+    <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png">
+    <link rel="icon" type="image/png" href="/web-app-manifest-192x192.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="my-subscription.css">
+    <link rel="stylesheet" href="new-sidebar.css" />
 </head>
-<body>
-  <aside class="sidebar sidebar-collapsed">
-    <!-- Sidebar content will be dynamically injected by script.js -->
-  </aside>
+<body class="loaded">
 
+    <!-- 🔝 Topbar -->
+    <div class="topbar">
+        <div class="actions">
+            <button id="toggleDark" class="dark-btn-icon">🌙</button>
+        </div>
+        <div class="logo-container">
+            <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
+            <p class="app-name">CollectPro</p>
+        </div>
+        <div class="actions">
+            <button class="toggle-btn" id="sidebar-toggle-btn"><i class="fa-solid fa-bars"></i></button>
+        </div>
+    </div>
 
-  <!-- Main Content -->
-  <div class="main-content">
-    <header>
-      <div class="header-top">
-          <div class="header-actions-left">
-              <button class="sidebar-toggle" aria-label="Toggle Sidebar">
-                  <i class="fas fa-bars"></i>
-              </button>
-          </div>
-          <div class="logo-container">
-              <img src="logo-momkn.png" alt="شعار ممكن" class="logo" />
-              <p class="app-name">CollectPro</p>
-          </div>
-          <div class="header-actions-right">
-              <button id="toggleDark" class="dark-btn-icon">🌙</button>
-          </div>
-      </div>
-      <h1><i class="fas fa-user-shield"></i> تفاصيل اشتراكي</h1>
-    </header>
-    
-    <main>
-        <div class="subscription-status-card">
-            <div class="card-header">
-                <h2>حالة الاشتراك</h2>
-            </div>
-            <div class="card-body">
-                <p><strong>نوع الباقة:</strong> <span id="user-plan-type">-</span></p>
-                <p><strong>تاريخ انتهاء الصلاحية:</strong> <span id="user-expiry-date">-</span></p>
-                <p><strong>الأيام المتبقية:</strong> <span id="user-days-left">-</span></p>
-                <div class="status-indicator">
-                    <span>الحالة:</span>
-                    <span id="user-subscription-status" class="status-active">نشط</span>
+    <!-- 🎨 Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="user-box">
+                <div class="user-avatar">
+                    <span id="user-initial">A</span>
                 </div>
-                <button id="renew-subscription-btn" class="btn-renew">جدد اشتراكك الآن</button>
+                <div class="user-meta">
+                    <span class="user-name" id="user-name">اسم المستخدم</span>
+                    <span class="user-email" id="user-email">user@example.com</span>
+                </div>
             </div>
         </div>
-
-        <div class="payment-history-card">
-            <div class="card-header">
-                <h2>سجل المدفوعات</h2>
-            </div>
-            <div class="card-body">
-                <table class="payment-history-table">
-                    <thead>
-                        <tr>
-                            <th>تاريخ الدفع</th>
-                            <th>المبلغ</th>
-                            <th>الباقة</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payment-history-body">
-                        <!-- بيانات سجل الدفع ستضاف هنا -->
-                        <tr>
-                            <td>2023-10-01</td>
-                            <td>$10</td>
-                            <td>الباقة الاحترافية</td>
-                            <td>ناجح</td>
-                        </tr>
-                        <!-- ...المزيد من الصفوف... -->
-                    </tbody>
-                </table>
-            </div>
+        <ul class="nav-links">
+            <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+            <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+            <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+            <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+            <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+            <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <button id="logout-btn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل الخروج</span>
+            </button>
         </div>
-    </main>
-    
-    <footer>
-        <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-    </footer>
-  </div>
-  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js"></script>
-  <script src="script.js"></script>
-  <script src="sidebar.js"></script>
+    </aside>
 
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <h1><i class="fas fa-user-shield"></i> تفاصيل اشتراكي</h1>
+        </header>
+        
+        <main>
+            <div class="subscription-status-card">
+                <div class="card-header">
+                    <h2>حالة الاشتراك</h2>
+                </div>
+                <div class="card-body">
+                    <p><strong>نوع الباقة:</strong> <span id="user-plan-type">-</span></p>
+                    <p><strong>تاريخ انتهاء الصلاحية:</strong> <span id="user-expiry-date">-</span></p>
+                    <p><strong>الأيام المتبقية:</strong> <span id="user-days-left">-</span></p>
+                    <div class="status-indicator">
+                        <span>الحالة:</span>
+                        <span id="user-subscription-status" class="status-active">نشط</span>
+                    </div>
+                    <button id="renew-subscription-btn" class="btn-renew">جدد اشتراكك الآن</button>
+                </div>
+            </div>
+
+            <div class="payment-history-card">
+                <div class="card-header">
+                    <h2>سجل المدفوعات</h2>
+                </div>
+                <div class="card-body">
+                    <table class="payment-history-table">
+                        <thead>
+                            <tr>
+                                <th>تاريخ الدفع</th>
+                                <th>المبلغ</th>
+                                <th>الباقة</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-history-body">
+                            <!-- بيانات سجل الدفع ستضاف هنا -->
+                            <tr>
+                                <td>2023-10-01</td>
+                                <td>$10</td>
+                                <td>الباقة الاحترافية</td>
+                                <td>ناجح</td>
+                            </tr>
+                            <!-- ...المزيد من الصفوف... -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="script.js"></script>
+    <script src="new-sidebar.js"></script>
 </body>
 </html>

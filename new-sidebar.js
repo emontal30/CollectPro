@@ -1,55 +1,49 @@
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Sidebar Elements and Toggle --- //
-    const sidebar = document.createElement('aside');
-    sidebar.className = 'sidebar';
+    const sidebar = document.getElementById("sidebar");
+    const toggleBtn = document.getElementById("sidebar-toggle-btn");
+    const overlay = document.getElementById("overlay");
 
-    const mainContent = document.querySelector('.main-content');
+    if (toggleBtn && sidebar && overlay) {
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation(); // Stop the event from bubbling up
+            sidebar.classList.toggle("active");
+            overlay.classList.toggle("active");
+        });
 
-    // Sidebar HTML Structure
-    sidebar.innerHTML = `
-        <div class="sidebar-header">
-            <h2>القائمة</h2>
-            <button class="close-sidebar">&times;</button>
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li><a href="/index.html"><i class="fas fa-home"></i>الرئيسية</a></li>
-                <li><a href="/harvest.html"><i class="fas fa-tractor"></i>متابعة التحصيل</a></li>
-                <li><a href="/shops.html"><i class="fas fa-store"></i>المحلات</a></li>
-                <li><a href="/monthly-reports.html"><i class="fas fa-chart-bar"></i>تقارير شهرية</a></li>
-                <li><a href="/daily-reports.html"><i class="fas fa-chart-line"></i>تقارير يومية</a></li>
-                <li><a href="/all-reports.html"><i class="fas fa-globe"></i>تقارير عامة</a></li>
-                <li><a href="/settings.html"><i class="fas fa-cog"></i>الإعدادات</a></li>
-                <li><a href="/profile.html"><i class="fas fa-user"></i>الملف الشخصي</a></li>
-            </ul>
-        </nav>
-    `;
-
-    document.body.appendChild(sidebar);
-
-    const sidebarToggle = document.querySelector('.sidebar-toggle');
-    const closeSidebarBtn = sidebar.querySelector('.close-sidebar');
-
-    // Function to toggle sidebar visibility
-    const toggleSidebar = () => {
-        sidebar.classList.toggle('show');
-        mainContent.classList.toggle('sidebar-active'); // Optional: for adjusting main content
-    };
-
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', toggleSidebar);
+        overlay.addEventListener("click", () => {
+            sidebar.classList.remove("active");
+            overlay.classList.remove("active");
+        });
     }
 
-    if (closeSidebarBtn) {
-        closeSidebarBtn.addEventListener('click', toggleSidebar);
+    // Logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            // Assuming _supabase is available globally from supabase-client.js
+            if (window._supabase) {
+                window._supabase.auth.signOut()
+                    .then(() => {
+                        console.log('User signed out successfully.');
+                        // Clear any user-related data from local storage
+                        localStorage.removeItem('user-data');
+                        localStorage.removeItem('token');
+                        // Redirect to the login page
+                        window.location.href = 'index.html'; 
+                    })
+                    .catch(error => {
+                        console.error('Error signing out:', error.message);
+                    });
+            }
+        });
     }
 
-    // --- Active Link Highlighting --- //
-    const currentPath = window.location.pathname;
-    const navLinks = sidebar.querySelectorAll('.sidebar-nav a');
-
+    // Set active link in sidebar
+    const currentPage = window.location.pathname.split('/').pop();
+    const navLinks = document.querySelectorAll('.sidebar .nav-links a');
     navLinks.forEach(link => {
-        if (link.getAttribute('href') === currentPath) {
+        if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
         }
     });
