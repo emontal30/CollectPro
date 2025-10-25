@@ -1,7 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
-
-import { sendMail } from "../../lib/mailer.js";
+import { sendMail } from "../lib/mailer.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST")
