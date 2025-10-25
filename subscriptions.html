@@ -3,67 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#007965" />
+  <meta name="theme-color" content="#ffffff"/>
   <title>الاشتراكات - CollectPro</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="subscriptions.css" />
 </head>
-<body>
-  <!-- الشريط الجانبي -->
+<body class="loaded">
+  <!-- حاوية التنبيهات -->
+  <div id="alert-container" class="alert-container"></div>
+
+  <!-- 🔝 الشريط العلوي -->
+  <div class="topbar">
+    <div class="actions">
+      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
+    </div>
+    <div class="logo">
+      <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+      <p class="app-name">CollectPro</p>
+    </div>
+  </div>
+
+  <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="user-box">
-        <div class="user-avatar sidebar-user-avatar">أ</div>
+        <div class="user-avatar">
+          <span id="user-initial">A</span>
+        </div>
         <div class="user-meta">
-          <div class="user-name sidebar-user-name">المستخدم</div>
-          <div class="user-email sidebar-user-email">user@example.com</div>
-          <div class="user-id">ID: <span class="sidebar-user-id">user123</span></div>
+          <span class="user-name" id="user-name">اسم المستخدم</span>
+          <span class="user-email" id="user-email">user@example.com</span>
+          <span class="user-id" id="user-id"></span>
         </div>
       </div>
     </div>
-
     <div class="sidebar-content">
       <ul class="nav-links">
-        <li><a href="dashboard.html" class="nav-link">
-          <i class="fas fa-edit"></i>
-          <span>إدخال البيانات</span>
-        </a></li>
-        <li><a href="harvest.html" class="nav-link">
-          <i class="fas fa-coins"></i>
-          <span>صفحة التحصيل</span>
-        </a></li>
-        <li><a href="archive.html" class="nav-link">
-          <i class="fas fa-archive"></i>
-          <span>الأرشيف</span>
-        </a></li>
-        <li><a href="subscriptions.html" class="nav-link">
-          <i class="fas fa-list"></i>
-          <span>الاشتراكات</span>
-        </a></li>
-        <li><a href="my-subscription.html" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>اشتراكي</span>
-        </a></li>
-        <li><a href="payment.html" class="nav-link">
-          <i class="fas fa-credit-card"></i>
-          <span>المدفوعات</span>
-        </a></li>
-        <li><a href="admin.html" class="nav-link">
-          <i class="fas fa-cog"></i>
-          <span>إدارة النظام</span>
-        </a></li>
+        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+        <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
+        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
       </ul>
     </div>
-
     <div class="sidebar-footer">
-      <div class="sub-meta">
-        <span>الإصدار:</span>
-        <span class="value">1.0.0</span>
-      </div>
       <button id="logout-btn" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
         <span>تسجيل الخروج</span>
@@ -71,196 +58,60 @@
     </div>
   </div>
 
-  <header>
-    <div class="header-top">
-      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
-        <i class="fas fa-bars"></i>
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <button id="toggleDark" title="تبديل الوضع الليلي">
+        🌙
       </button>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>الاشتراكات 💳</h1>
-  </header>
+      <h1>الاشتراكات 💳</h1>
+    </header>
 
-  <main>
-    <section class="subscription-intro">
-      <h2>اختر خطة الاشتراك المناسبة لك</h2>
-      <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
-    </section>
+    <main>
+      <section class="subscription-intro">
+        <h2>اختر خطة الاشتراك المناسبة لك</h2>
+        <p>تمتع بجميع ميزات تطبيق CollectPro مع خطط اشتراك مرنة تناسب احتياجاتك</p>
+      </section>
 
-    <div class="plans-container">
-      <!-- الخطة الشهرية -->
-      <div class="plan-card">
-        <div class="plan-header">
-          <h3>خطة شهرية</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">30</span>
-            <span class="period">/ شهر</span>
-          </div>
-        </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> الوصول الكامل للتطبيق</li>
-            <li><i class="fas fa-check"></i> تحديثات شهرية</li>
-            <li><i class="fas fa-check"></i> دعم فني أساسي</li>
-            <li><i class="fas fa-check"></i> تخزين البيانات السحابي</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="monthly" data-price="30">
-            اختر الخطة
-          </button>
-        </div>
+      <div class="plans-container">
+        <!-- سيتم ملء هذا القسم ديناميكيًا بواسطة subscriptions.js -->
       </div>
 
-      <!-- الخطة المفضلة (3 شهور) -->
-      <div class="plan-card featured">
-        <div class="plan-badge">الأكثر شعبية</div>
-        <div class="plan-header">
-          <h3>خطة 3 شهور</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">50</span>
-            <span class="period">/ 3 شهور</span>
-          </div>
-        </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> كل ميزات الخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> توفير 40% مقارنة بالخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> دعم فني متميز</li>
-            <li><i class="fas fa-check"></i> تقارير متقدمة</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="3-months" data-price="50">
-            اختر الخطة
-          </button>
-        </div>
-      </div>
-
-      <!-- الخطة السنوية -->
-      <div class="plan-card">
-        <div class="plan-header">
-          <h3>خطة سنوية</h3>
-          <div class="plan-price">
-            <span class="currency">ج.م</span>
-            <span class="price">360</span>
-            <span class="period">/ سنة</span>
-          </div>
-          <div class="plan-offer">+ شهر مجاني</div>
-        </div>
-        <div class="plan-features">
-          <ul>
-            <li><i class="fas fa-check"></i> كل ميزات الخطة المفضلة</li>
-            <li><i class="fas fa-check"></i> توفير 50% مقارنة بالخطة الشهرية</li>
-            <li><i class="fas fa-check"></i> شهر إضافي مجاني</li>
-            <li><i class="fas fa-check"></i> دعم فني على مدار الساعة</li>
-            <li><i class="fas fa-check"></i> جلسات تدريبية مجانية</li>
-          </ul>
-        </div>
-        <div class="plan-footer">
-          <button class="select-plan-btn" data-plan="yearly" data-price="360">
-            اختر الخطة
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <section class="faq-section">
-      <h2>الأسئلة الشائعة</h2>
-      <div class="faq-container">
+      <!-- قسم الأسئلة الشائعة -->
+      <section class="faq-section">
+        <h2>الأسئلة الشائعة</h2>
         <div class="faq-item">
           <div class="faq-question">
-            <h3>كيف يمكنني الدفع؟</h3>
+            <h3>هل يمكنني إلغاء اشتراكي في أي وقت؟</h3>
             <i class="fas fa-chevron-down"></i>
           </div>
           <div class="faq-answer">
-            <p>يمكنك الدفع عن طريق التحويل البنكي أو المحافظ الإلكترونية. بعد اختيار الخطة، سيتم توجيهك لصفحة الدفع لإدخال بيانات التحويل.</p>
+            <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال التواصل مع الادمن . سيظل بإمكانك الوصول إلى الميزات المدفوعة حتى نهاية فترة الفوترة الحالية او بما تراه الاداره .</p>
           </div>
         </div>
         <div class="faq-item">
           <div class="faq-question">
-            <h3>هل يمكنني إلغاء اشتراكي؟</h3>
+            <h3>ما هي طرق الدفع المقبولة؟</h3>
             <i class="fas fa-chevron-down"></i>
           </div>
           <div class="faq-answer">
-            <p>نعم، يمكنك إلغاء اشتراكك في أي وقت من خلال صفحة إدارة اشتراكي. لن يتم تجديد الاشتراك تلقائياً.</p>
+            <p>نحن نقبل الدفع عن طريق تحويلات الكاش , وانستا باى . تتم معالجة جميع المدفوعات بشكل آمن .</p>
           </div>
         </div>
-        <div class="faq-item">
-          <div class="faq-question">
-            <h3>ماذا يحدث بعد انتهاء الاشتراك؟</h3>
-            <i class="fas fa-chevron-down"></i>
-          </div>
-          <div class="faq-answer">
-            <p>بعد انتهاء الاشتراك، ستحتفظ ببياناتك لمدة 30 يوماً. يمكنك تجديد الاشتراك في أي وقت خلال هذه الفترة.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
+  </div>
 
-  <div id="alert-container" class="alert-container"></div>
+  <div class="footer">
+    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
+    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
+  </div>
 
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-
-  <script src="env.js" type="module"></script>
-  <script src="config.js"></script>
-  <script src="supabase-loader.js"></script>
-  <script src="auth.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script>
-    // فحص المصادقة عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', function() {
-      // التحقق من وجود جلسة مستخدم نشطة
-      if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (!user) {
-          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
-          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-          return;
-        }
-
-        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
-        console.log('المستخدم مصادق:', user.email);
-      } else {
-        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
-        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
-        return;
-      }
-
-      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
-      if (typeof sidebar !== 'undefined') {
-        sidebar.init();
-      }
-    });
-  </script>
   <script src="script.js"></script>
   <script src="subscriptions.js"></script>
-  <!-- تم تعطيل Service Worker مؤقتاً لتجنب الخطأ عند التشغيل المحلي -->
-  <!-- <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-        })
-        .catch(function(error) {
-          console.log('Service Worker registration failed:', error);
-        });
-    }
-  </script> -->
-  </script>
 </body>
 </html>
-
-
-
-
-

@@ -1,107 +1,91 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#007965" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>الأرشيف</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
+  <meta name="theme-color" content="#ffffff"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="style.css" />
-  <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
+  <link rel="stylesheet" href="sidebar.css" />
 </head>
-<body>
-  <!-- الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar sidebar-user-avatar">أ</div>
-        <div class="user-meta">
-          <div class="user-name sidebar-user-name">المستخدم</div>
-          <div class="user-email sidebar-user-email">user@example.com</div>
-          <div class="user-id">ID: <span class="sidebar-user-id">user123</span></div>
-        </div>
-      </div>
-    </div>
+<body class="loaded">
+  <!-- حاوية التنبيهات -->
+  <div id="alert-container" class="alert-container"></div>
 
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html" class="nav-link">
-          <i class="fas fa-edit"></i>
-          <span>إدخال البيانات</span>
-        </a></li>
-        <li><a href="harvest.html" class="nav-link">
-          <i class="fas fa-coins"></i>
-          <span>صفحة التحصيل</span>
-        </a></li>
-        <li><a href="archive.html" class="nav-link">
-          <i class="fas fa-archive"></i>
-          <span>الأرشيف</span>
-        </a></li>
-        <li><a href="subscriptions.html" class="nav-link">
-          <i class="fas fa-list"></i>
-          <span>الاشتراكات</span>
-        </a></li>
-        <li><a href="my-subscription.html" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>اشتراكي</span>
-        </a></li>
-        <li><a href="payment.html" class="nav-link">
-          <i class="fas fa-credit-card"></i>
-          <span>المدفوعات</span>
-        </a></li>
-        <li><a href="admin.html" class="nav-link">
-          <i class="fas fa-cog"></i>
-          <span>إدارة النظام</span>
-        </a></li>
-      </ul>
+  <!-- 🔝 الشريط العلوي -->
+  <div class="topbar">
+    <div class="actions">
+      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
     </div>
-
-    <div class="sidebar-footer">
-      <div class="sub-meta">
-        <span>الإصدار:</span>
-        <span class="value">1.0.0</span>
-      </div>
-      <button id="logout-btn" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>تسجيل الخروج</span>
-      </button>
+    <div class="logo">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+        <p class="app-name">CollectPro</p>
     </div>
   </div>
 
-  <header>
-    <div class="header-top">
-      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
-        <i class="fas fa-bars"></i>
-      </button>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="public/logo-archive.png" alt="شعار الأرشيف" class="logo" />
+  <!-- 🎨 الشريط الجانبي -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="user-box">
+          <div class="user-avatar">
+            <span id="user-initial">A</span>
+          </div>
+          <div class="user-meta">
+            <span class="user-name" id="user-name">اسم المستخدم</span>
+            <span class="user-email" id="user-email">user@example.com</span>
+            <span class="user-id" id="user-id"></span>
+          </div>
+        </div>
       </div>
-    </div>
+      <div class="sidebar-content">
+        <ul class="nav-links">
+          <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+          <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+          <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+          <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
+          <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+          <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+          <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        </ul>
+      </div>
+      <div class="sidebar-footer">
+          <button id="logout-btn" class="logout-btn">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>تسجيل الخروج</span>
+          </button>
+      </div>
+  </div>
+
+  <!-- خلفية شفافة -->
+  <div class="overlay" id="overlay"></div>
+
+  <header>
+    <button id="toggleDark" title="تبديل الوضع الليلي">
+      🌙
+    </button>
     <h1>الأرشيف 📂</h1>
   </header>
   <main>
-    <!-- اختيار التاريخ والبحث -->
+    <!-- ... محتوى الصفحة يبقى كما هو ... -->
     <div class="archive-controls">
       <div class="control-group">
-        <label>اختر التاريخ:
+        <label>
+          <i class="fas fa-calendar-alt control-icon"></i>
+          اختر التاريخ:
           <select id="archiveSelect">
             <option value="">-- اختر تاريخ --</option>
           </select>
         </label>
       </div>
       <div class="control-group">
-        <label>بحث:
+        <label>
+          <i class="fas fa-search control-icon"></i>
+          بحث:
           <input type="text" id="archiveSearch" placeholder="اكتب اسم المحل أو الكود" />
         </label>
       </div>
     </div>
-    
-    <!-- جدول الأرشيف -->
     <table id="archiveTable">
       <thead>
         <tr>
@@ -109,82 +93,36 @@
           <th>🏪 المحل</th>
           <th>🔢 الكود</th>
           <th>💸 مبلغ التحويل</th>
-          <th>➕ تحويل إضافي</th>
+          <th class="extra"><i class="fas fa-refresh"></i> اخرى</th>
           <th>💰 المحصّل</th>
           <th>⚖️ الصافي</th>
-          <th>✅ الحالة</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
-    
-    <!-- أزرار التحكم -->
     <div class="buttons">
-      <button id="deleteArchiveBtn" class="btn-danger">🗑️ حذف التاريخ الحالي</button>
+      <button id="backToHarvestBtn" class="btn">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع للتحصيلات</span>
+      </button>
+      <button id="deleteArchiveBtn" class="btn">
+        <i class="fas fa-trash-alt"></i>
+        <span>حذف التاريخ الحالي</span>
+      </button>
     </div>
   </main>
   
-  <!-- شريط التنقل السفلي -->
-  <nav class="bottom-nav">
-    <button id="prevPage" class="nav-btn bottom-nav-btn">
-      <span class="nav-icon">←</span>
-    </button>
-    <div class="nav-spacer"></div>
-    <button id="nextPage" class="nav-btn bottom-nav-btn hidden">
-      <span class="nav-icon">→</span>
-    </button>
-  </nav>
+  <!-- إزالة أزرار التنقل السفلي -->
+  
+  <div class="footer">
+    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
+    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
+  </div>
 
-  <div id="alert-container" class="alert-container"></div>
-
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
-  <!-- ملفات تحسين الأداء والـ SEO -->
-  <script src="performance-optimizer.js" defer></script>
-  <script src="seo-optimizer.js" defer></script>
-  <script src="spa-router.js" defer></script>
-  <script src="lazy-components.js" defer></script>
-  <script src="state-manager.js" defer></script>
-  <script src="clear-test-data.js" defer></script>
-
-  <!-- ملفات النظام الأساسية -->
-  <script src="env.js" type="module" defer></script>
-  <script src="config.js" defer></script>
-  <script src="supabase-loader.js" defer></script>
-  <script src="auth.js" defer></script>
-  <script src="sidebar.js" defer></script>
-  <script>
-    // فحص المصادقة عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', function() {
-      // التحقق من وجود جلسة مستخدم نشطة
-      if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (!user) {
-          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
-          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-          return;
-        }
-
-        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
-        console.log('المستخدم مصادق:', user.email);
-      } else {
-        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
-        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
-        return;
-      }
-
-      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
-      if (typeof sidebar !== 'undefined') {
-        sidebar.init();
-      }
-    });
-  </script>
+  <!-- Scripts at the end for better performance -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="sidebar.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-

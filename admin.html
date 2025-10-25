@@ -1,158 +1,228 @@
-<!DOCTYPE html>
+م<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#007965" />
   <title>لوحة التحكم - CollectPro</title>
-  <!-- تم تعطيل ملف manifest.json مؤقتاً لتجنب خطأ CORS عند التطوير المحلي -->
-  <!-- <link rel="manifest" href="manifest.json" /> -->
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
+  <meta name="theme-color" content="#ffffff"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="admin.css" />
 </head>
-<body>
-  <!-- الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <div class="user-avatar sidebar-user-avatar">أ</div>
-        <div class="user-meta">
-          <div class="user-name sidebar-user-name">المستخدم</div>
-          <div class="user-email sidebar-user-email">user@example.com</div>
-          <div class="user-id">ID: <span class="sidebar-user-id">user123</span></div>
-        </div>
-      </div>
+<body class="loaded">
+  <!-- 🔝 الشريط العلوي -->
+  <div class="topbar">
+    <div class="actions">
+      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
     </div>
-
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html" class="nav-link">
-          <i class="fas fa-edit"></i>
-          <span>إدخال البيانات</span>
-        </a></li>
-        <li><a href="harvest.html" class="nav-link">
-          <i class="fas fa-coins"></i>
-          <span>صفحة التحصيل</span>
-        </a></li>
-        <li><a href="archive.html" class="nav-link">
-          <i class="fas fa-archive"></i>
-          <span>الأرشيف</span>
-        </a></li>
-        <li><a href="subscriptions.html" class="nav-link">
-          <i class="fas fa-list"></i>
-          <span>الاشتراكات</span>
-        </a></li>
-        <li><a href="my-subscription.html" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>اشتراكي</span>
-        </a></li>
-        <li><a href="payment.html" class="nav-link">
-          <i class="fas fa-credit-card"></i>
-          <span>المدفوعات</span>
-        </a></li>
-        <li><a href="admin.html" class="nav-link">
-          <i class="fas fa-cog"></i>
-          <span>إدارة النظام</span>
-        </a></li>
-      </ul>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="sub-meta">
-        <span>الإصدار:</span>
-        <span class="value">1.0.0</span>
-      </div>
-      <button id="logout-btn" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>تسجيل الخروج</span>
-      </button>
+    <div class="logo">
+        <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+        <p class="app-name">CollectPro</p>
     </div>
   </div>
 
+  <!-- 🎨 الشريط الجانبي -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="user-box">
+          <div class="user-avatar">
+            <span id="user-initial">A</span>
+          </div>
+          <div class="user-meta">
+            <span class="user-name" id="user-name">اسم المستخدم</span>
+            <span class="user-email" id="user-email">user@example.com</span>
+            <span class="user-id" id="user-id"></span>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-content">
+        <ul class="nav-links">
+          <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+          <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+          <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+          <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
+          <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+          <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+          <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
+        </ul>
+      </div>
+      <div class="sidebar-footer">
+          <button id="logout-btn" class="logout-btn">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>تسجيل الخروج</span>
+          </button>
+      </div>
+  </div>
+
+  <!-- خلفية شفافة -->
+  <div class="overlay" id="overlay"></div>
+
   <header>
-    <div class="header-top">
-      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
-        <i class="fas fa-bars"></i>
+    <button id="toggleDark" title="تبديل الوضع الليلي">
+      <i class="fas fa-moon"></i>
+    </button>
+    <h1><i class="fas fa-cog"></i> لوحة تحكم الإدارة</h1>
+    <div class="header-actions">
+      <button id="export-data" title="تصدير البيانات" class="header-btn">
+        <i class="fas fa-download"></i>
       </button>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-      <div class="admin-menu">
-        <!-- تم نقل زر تسجيل الخروج إلى القائمة الجانبية -->
-      </div>
+      <button id="settings" title="الإعدادات" class="header-btn">
+        <i class="fas fa-cogs"></i>
+      </button>
     </div>
-    <h1>لوحة تحكم الإدارة 👨‍💼</h1>
   </header>
 
   <main>
     <div class="admin-dashboard">
       <div class="stats-container">
         <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-users"></i>
-          </div>
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-content">
             <h3>إجمالي المستخدمين</h3>
             <p class="stat-value" id="total-users">0</p>
+            <div class="stat-trend positive">
+              <i class="fas fa-arrow-up"></i>
+              <span>+12%</span>
+            </div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-clock"></i>
-          </div>
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
           <div class="stat-content">
             <h3>طلبات قيد المراجعة</h3>
             <p class="stat-value" id="pending-requests">0</p>
+            <div class="stat-trend neutral">
+              <i class="fas fa-clock"></i>
+              <span>تحتاج مراجعة</span>
+            </div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
+          <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
           <div class="stat-content">
             <h3>اشتراكات نشطة</h3>
             <p class="stat-value" id="active-subscriptions">0</p>
+            <div class="stat-trend positive">
+              <i class="fas fa-arrow-up"></i>
+              <span>+8%</span>
+            </div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-money-bill-wave"></i>
-          </div>
+          <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
           <div class="stat-content">
             <h3>إجمالي الإيرادات</h3>
             <p class="stat-value" id="total-revenue">0 ج.م</p>
+            <div class="stat-trend neutral">
+              <i class="fas fa-chart-line"></i>
+              <span>هذا الشهر</span>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- مخطط بسيط للإحصائيات -->
       <div class="admin-section">
         <div class="section-header">
-          <h2>طلبات الاشتراك قيد المراجعة</h2>
-          <div class="section-actions">
-            <button id="activate-all-btn" class="btn-success">
-              <i class="fas fa-check-double"></i>
-              تفعيل الكل
+          <h2><i class="fas fa-chart-bar"></i> نظرة عامة على الإحصائيات</h2>
+          <div class="chart-controls">
+            <button class="chart-toggle active" data-chart="bars">
+              <i class="fas fa-chart-bar"></i>
             </button>
-            <button id="cancel-all-btn" class="btn-danger">
-              <i class="fas fa-times-circle"></i>
-              إلغاء الكل
+            <button class="chart-toggle" data-chart="pie">
+              <i class="fas fa-chart-pie"></i>
+            </button>
+            <button class="chart-toggle" data-chart="line">
+              <i class="fas fa-chart-line"></i>
             </button>
           </div>
         </div>
+        <div class="chart-container">
+          <div class="simple-chart active" id="bars-chart">
+            <div class="chart-bar" data-value="85" data-label="الرضا العام">
+              <div class="bar-fill" style="height: 85%"></div>
+              <span class="bar-label">85%</span>
+            </div>
+            <div class="chart-bar" data-value="92" data-label="معدل النجاح">
+              <div class="bar-fill" style="height: 92%"></div>
+              <span class="bar-label">92%</span>
+            </div>
+            <div class="chart-bar" data-value="78" data-label="النمو الشهري">
+              <div class="bar-fill" style="height: 78%"></div>
+              <span class="bar-label">78%</span>
+            </div>
+            <div class="chart-bar" data-value="95" data-label="الأداء">
+              <div class="bar-fill" style="height: 95%"></div>
+              <span class="bar-label">95%</span>
+            </div>
+          </div>
 
+          <div class="pie-chart" id="pie-chart">
+            <div class="pie-container">
+              <div class="pie-segment" style="--percentage: 85; --color: #007965;"></div>
+              <div class="pie-segment" style="--percentage: 92; --color: #00a085;"></div>
+              <div class="pie-segment" style="--percentage: 78; --color: #28a745;"></div>
+              <div class="pie-segment" style="--percentage: 95; --color: #f39c12;"></div>
+            </div>
+            <div class="pie-legend">
+              <div class="legend-item">
+                <span class="legend-color" style="background: #007965;"></span>
+                <span>الرضا العام (85%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background: #00a085;"></span>
+                <span>معدل النجاح (92%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background: #28a745;"></span>
+                <span>النمو الشهري (78%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background: #f39c12;"></span>
+                <span>الأداء (95%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="line-chart" id="line-chart">
+            <svg class="line-svg" viewBox="0 0 400 200">
+              <polyline class="line-path" points="50,150 125,120 200,160 275,80 350,60"/>
+              <circle class="line-point" cx="50" cy="150" r="4"/>
+              <circle class="line-point" cx="125" cy="120" r="4"/>
+              <circle class="line-point" cx="200" cy="160" r="4"/>
+              <circle class="line-point" cx="275" cy="80" r="4"/>
+              <circle class="line-point" cx="350" cy="60" r="4"/>
+            </svg>
+            <div class="line-labels">
+              <span>يناير</span>
+              <span>فبراير</span>
+              <span>مارس</span>
+              <span>أبريل</span>
+              <span>مايو</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="admin-section">
+        <div class="section-header">
+          <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة</h2>
+          <div class="section-actions">
+            <button id="activate-all-btn" class="btn-success">
+              <i class="fas fa-check-double"></i>تفعيل الكل
+            </button>
+            <button id="cancel-all-btn" class="btn-danger">
+              <i class="fas fa-times-circle"></i>إلغاء الكل
+            </button>
+          </div>
+        </div>
         <div class="table-container">
           <table id="pending-subscriptions-table">
             <thead>
               <tr>
-                <th>
-                  <input type="checkbox" id="select-all" class="select-all-checkbox" />
-                </th>
+                <th><input type="checkbox" id="select-all" class="select-all-checkbox" /></th>
                 <th>معرف المستخدم</th>
+                <th>اسم المستخدم</th>
                 <th>البريد الإلكتروني</th>
                 <th>نوع الاشتراك</th>
                 <th>رقم العملية</th>
@@ -160,9 +230,7 @@
                 <th>الإجراءات</th>
               </tr>
             </thead>
-            <tbody>
-              <!-- سيتم ملؤها ديناميكياً -->
-            </tbody>
+            <tbody></tbody>
           </table>
           <div id="no-pending-requests" class="no-data">
             <i class="fas fa-inbox"></i>
@@ -173,7 +241,7 @@
 
       <div class="admin-section">
         <div class="section-header">
-          <h2>جميع الاشتراكات</h2>
+          <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
           <div class="filter-container">
             <select id="status-filter" class="filter-select">
               <option value="all">جميع الحالات</option>
@@ -183,17 +251,16 @@
               <option value="expired">منتهي</option>
             </select>
             <button id="refresh-btn" class="btn-secondary">
-              <i class="fas fa-sync-alt"></i>
-              تحديث
+              <i class="fas fa-sync-alt"></i>تحديث
             </button>
           </div>
         </div>
-
         <div class="table-container">
           <table id="all-subscriptions-table">
             <thead>
               <tr>
                 <th>معرف المستخدم</th>
+                <th>اسم المستخدم</th>
                 <th>البريد الإلكتروني</th>
                 <th>نوع الاشتراك</th>
                 <th>رقم العملية</th>
@@ -203,9 +270,7 @@
                 <th>الإجراءات</th>
               </tr>
             </thead>
-            <tbody>
-              <!-- سيتم ملؤها ديناميكياً -->
-            </tbody>
+            <tbody></tbody>
           </table>
           <div id="no-subscriptions" class="no-data">
             <i class="fas fa-inbox"></i>
@@ -214,112 +279,38 @@
         </div>
       </div>
     </div>
+
+    <!-- قسم مراجعة الاشتراكات -->
+    <section class="pending-subscriptions-section">
+      <h2>الاشتراكات قيد المراجعة</h2>
+      <div id="pending-subscriptions" class="subscriptions-grid">
+        <!-- سيتم إضافة بطاقات الاشتراكات هنا -->
+      </div>
+    </section>
+
+    <!-- قسم جميع الاشتراكات -->
+    <section class="all-subscriptions-section">
+      <h2>جميع الاشتراكات</h2>
+      <div id="all-subscriptions" class="subscriptions-grid">
+        <!-- سيتم إضافة بطاقات الاشتراكات هنا -->
+      </div>
+    </section>
   </main>
 
   <div id="alert-container" class="alert-container"></div>
 
-  <!-- نافذة تفاصيل الاشتراك -->
-  <div id="subscription-details-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>تفاصيل الاشتراك</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="details-container">
-          <div class="detail-item">
-            <span class="detail-label">معرف المستخدم:</span>
-            <span class="detail-value" id="detail-user-id">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">البريد الإلكتروني:</span>
-            <span class="detail-value" id="detail-email">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">نوع الاشتراك:</span>
-            <span class="detail-value" id="detail-plan">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">رقم العملية:</span>
-            <span class="detail-value" id="detail-transaction-id">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">تاريخ الطلب:</span>
-            <span class="detail-value" id="detail-created-at">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">تاريخ البدء:</span>
-            <span class="detail-value" id="detail-start-date">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">تاريخ الانتهاء:</span>
-            <span class="detail-value" id="detail-end-date">-</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">الحالة:</span>
-            <span class="detail-value" id="detail-status">-</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="close-details-btn" class="btn-secondary">إغلاق</button>
-      </div>
-    </div>
-  </div>
+  <div id="subscription-details-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تفاصيل الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><div class="details-container"><div class="detail-item"><span class="detail-label">معرف المستخدم:</span><span class="detail-value" id="detail-user-id">-</span></div><div class="detail-item"><span class="detail-label">البريد الإلكتروني:</span><span class="detail-value" id="detail-email">-</span></div><div class="detail-item"><span class="detail-label">نوع الاشتراك:</span><span class="detail-value" id="detail-plan">-</span></div><div class="detail-item"><span class="detail-label">رقم العملية:</span><span class="detail-value" id="detail-transaction-id">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الطلب:</span><span class="detail-value" id="detail-created-at">-</span></div><div class="detail-item"><span class="detail-label">تاريخ البدء:</span><span class="detail-value" id="detail-start-date">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الانتهاء:</span><span class="detail-value" id="detail-end-date">-</span></div><div class="detail-item"><span class="detail-label">الحالة:</span><span class="detail-value" id="detail-status">-</span></div></div></div><div class="modal-footer"><button id="close-details-btn" class="btn-secondary">إغلاق</button></div></div>
 
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
+  <footer id="footer" class="footer">
+    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
+    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
   </footer>
 
-  <script src="supabase-loader.js"></script>
-  <script src="env.js" type="module"></script>
-  <script src="config.js"></script>
-  <script src="supabaseClient.js"></script>
-  <script src="auth.js"></script>
+  <!-- Scripts at the end for correct order and performance -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script>
-    // استخدام دالة الحماية الموحدة للتحقق من الوصول
-    document.addEventListener('DOMContentLoaded', async function() {
-      // انتظر حتى يتم تحميل كائن المصادقة
-      if (typeof auth !== 'undefined') {
-        const hasAccess = await auth.checkPageAccess();
-        if (hasAccess) {
-          // إذا كان الوصول مسموحًا، قم بتهيئة الشريط الجانبي
-          if (typeof sidebar !== 'undefined') {
-            sidebar.init();
-          }
-          console.log("تم التحقق من صلاحية الوصول بنجاح.");
-        }
-      } else {
-          // في حالة عدم تحميل ملف المصادقة، أعد المحاولة
-          console.warn("Auth object not found, retrying...");
-          setTimeout(() => {
-            if(typeof auth !== 'undefined' && typeof auth.checkPageAccess === 'function') {
-              auth.checkPageAccess();
-            } else {
-              window.location.href = 'login.html?reason=' + encodeURIComponent('فشل تحميل نظام المصادقة');
-            }
-          }, 100);
-      }
-    });
-  </script>
   <script src="script.js"></script>
   <script src="admin.js"></script>
-  <script>
-    // تسجيل Service Worker فقط في بيئة الإنتاج
-    if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-        })
-        .catch(function(error) {
-          console.log('Service Worker registration failed:', error);
-        });
-    }
-  </script>
 </body>
 </html>
-
-
-
-

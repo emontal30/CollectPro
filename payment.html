@@ -3,67 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#007965" />
   <title>الدفع - CollectPro</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
+  <meta name="theme-color" content="#ffffff"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="payment.css" />
+  <script type="module" src="payment.js"></script>
 </head>
-<body>
-  <!-- الشريط الجانبي -->
+<body class="loaded">
+  <!-- 🔝 الشريط العلوي -->
+  <div class="topbar">
+    <div class="actions">
+      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
+    </div>
+    <div class="logo">
+      <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+      <p class="app-name">CollectPro</p>
+    </div>
+  </div>
+
+  <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="user-box">
-        <div class="user-avatar sidebar-user-avatar">أ</div>
+        <div class="user-avatar">
+          <span id="user-initial">A</span>
+        </div>
         <div class="user-meta">
-          <div class="user-name sidebar-user-name">المستخدم</div>
-          <div class="user-email sidebar-user-email">user@example.com</div>
-          <div class="user-id">ID: <span class="sidebar-user-id">user123</span></div>
+          <span class="user-name" id="user-name">اسم المستخدم</span>
+          <span class="user-email" id="user-email">user@example.com</span>
+          <span class="user-id" id="sidebar-user-id"></span>
         </div>
       </div>
     </div>
 
     <div class="sidebar-content">
       <ul class="nav-links">
-        <li><a href="dashboard.html" class="nav-link">
-          <i class="fas fa-edit"></i>
-          <span>إدخال البيانات</span>
-        </a></li>
-        <li><a href="harvest.html" class="nav-link">
-          <i class="fas fa-coins"></i>
-          <span>صفحة التحصيل</span>
-        </a></li>
-        <li><a href="archive.html" class="nav-link">
-          <i class="fas fa-archive"></i>
-          <span>الأرشيف</span>
-        </a></li>
-        <li><a href="subscriptions.html" class="nav-link">
-          <i class="fas fa-list"></i>
-          <span>الاشتراكات</span>
-        </a></li>
-        <li><a href="my-subscription.html" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>اشتراكي</span>
-        </a></li>
-        <li><a href="payment.html" class="nav-link">
-          <i class="fas fa-credit-card"></i>
-          <span>المدفوعات</span>
-        </a></li>
-        <li><a href="admin.html" class="nav-link">
-          <i class="fas fa-cog"></i>
-          <span>إدارة النظام</span>
-        </a></li>
+        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
       </ul>
     </div>
 
     <div class="sidebar-footer">
-      <div class="sub-meta">
-        <span>الإصدار:</span>
-        <span class="value">1.0.0</span>
-      </div>
       <button id="logout-btn" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
         <span>تسجيل الخروج</span>
@@ -71,164 +57,147 @@
     </div>
   </div>
 
-  <header>
-    <div class="header-top">
-      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
-        <i class="fas fa-bars"></i>
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <button id="toggleDark" title="تبديل الوضع الليلي">
+        🌙
       </button>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>إتمام الدفع 💳</h1>
-  </header>
+      <h1>إتمام الدفع 💳</h1>
+    </header>
 
-  <main>
-    <div class="payment-container">
-      <div class="payment-card">
-        <div class="payment-header">
-          <h2>تفاصيل الدفع</h2>
-          <div class="plan-summary">
-            <div class="plan-info">
-              <span class="plan-label">الخطة المختارة:</span>
-              <span class="plan-value" id="selected-plan">-</span>
-            </div>
-            <div class="plan-info">
-              <span class="plan-label">السعر:</span>
-              <span class="plan-value" id="plan-price">-</span>
+    <main>
+      <div class="payment-container">
+        <div class="payment-card">
+          <div class="payment-header">
+            <h2>تفاصيل الدفع</h2>
+            <div class="plan-summary">
+              <div class="plan-info">
+                <span class="plan-label">الخطة المختارة:</span>
+                <span class="plan-value" id="selected-plan">-</span>
+              </div>
+              <div class="plan-info">
+                <span class="plan-label">السعر:</span>
+                <span class="plan-value" id="plan-price">-</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="payment-form">
-          <form id="payment-form">
-            <div class="form-group">
-              <label for="email">البريد الإلكتروني</label>
-              <div class="input-container">
-                <i class="fas fa-envelope input-icon"></i>
-                <input type="email" id="email" name="email" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="user-id">معرف المستخدم</label>
-              <div class="input-container">
-                <i class="fas fa-user input-icon"></i>
-                <input type="text" id="user-id" name="user-id" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="subscription-type">نوع الاشتراك</label>
-              <div class="input-container">
-                <i class="fas fa-calendar-alt input-icon"></i>
-                <input type="text" id="subscription-type" name="subscription-type" readonly />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="transaction-id">رقم عملية التحويل</label>
-              <div class="input-container">
-                <i class="fas fa-receipt input-icon"></i>
-                <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل من InstaPay أو Vodafone Cash" required />
-              </div>
-              <span class="help-text">أدخل رقم عملية التحويل من InstaPay أو Vodafone Cash</span>
-            </div>
-
-            <div class="payment-methods">
-              <h3>طرق الدفع المتاحة</h3>
-              <div class="payment-method">
-                <div class="method-icon">
-                  <i class="fas fa-exchange-alt"></i>
+          <div class="payment-form">
+            <form id="payment-form">
+              <div class="form-group">
+                <label for="user-name-field">اسم المستخدم <span class="required">*</span></label>
+                <div class="input-container">
+                  <i class="fas fa-user input-icon"></i>
+                  <input type="text" id="user-name-field" name="user-name" readonly required />
                 </div>
-                <div class="method-details">
-                  <h4>InstaPay</h4>
-                  <p>رقم الحساب: 01094085228</p>
-                  <p>اسم المستفيد: أيمن حافظ</p>
+                <small class="field-note">يتم جلب اسم المستخدم من حسابك المسجل في قاعدة البيانات</small>
+              </div>
+
+              <div class="form-group">
+                <label for="email">البريد الإلكتروني <span class="required">*</span></label>
+                <div class="input-container">
+                  <i class="fas fa-envelope input-icon"></i>
+                  <input type="email" id="email" name="email" readonly required />
+                </div>
+                <small class="field-note">يتم جلب البريد الإلكتروني من حسابك المسجل في قاعدة البيانات</small>
+              </div>
+
+              <div class="form-group">
+                <label for="user-id">معرف المستخدم <span class="required">*</span></label>
+                <div class="input-container">
+                  <i class="fas fa-user input-icon"></i>
+                  <input type="text" id="user-id" name="user-id" readonly required />
+                </div>
+                <small class="field-note">يتم جلب معرف المستخدم من حسابك المسجل في قاعدة البيانات</small>
+              </div>
+
+              <div class="form-group">
+                <label for="subscription-type">نوع الاشتراك</label>
+                <div class="input-container">
+                  <i class="fas fa-calendar-alt input-icon"></i>
+                  <input type="text" id="subscription-type" name="subscription-type" readonly />
                 </div>
               </div>
-              <div class="payment-method">
-                <div class="method-icon">
-                  <i class="fas fa-mobile-alt"></i>
+
+              <div class="form-group">
+                <label for="transaction-id">رقم عملية التحويل</label>
+                <div class="input-container">
+                  <i class="fas fa-receipt input-icon"></i>
+                  <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل" required />
                 </div>
-                <div class="method-details">
-                  <h4>Vodafone Cash</h4>
-                  <p>رقم المحفظة: 01094085228</p>
-                  <p>اسم المستفيد: أيمن حافظ</p>
+                <span class="help-text">أدخل رقم العملية الذي حصلت عليه بعد إتمام التحويل</span>
+              </div>
+
+              <div class="payment-methods">
+                <h3>طرق الدفع المتاحة</h3>
+                <p class="payment-info-text">اختر طريقة الدفع المفضلة لديك، ثم أدخل رقم عملية التحويل في الحقل أعلاه.</p>
+
+                <div class="payment-options">
+                  <div class="payment-option active" data-method="vodafone-cash">
+                    <div class="payment-icon">
+                      <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="payment-details">
+                      <h4>فودافون كاش</h4>
+                      <p>ادفع بسهولة من خلال تطبيق فودافون كاش</p>
+                      <div class="payment-steps">
+                        <p><strong>الخطوات:</strong></p>
+                        <ol>
+                          <li>افتح تطبيق - فودافون كاش</li>
+                          <li>اختر "تحويل الأموال"</li>
+                          <li>ادخل رقم الحساب: <strong>01094085228</strong></li>
+                          <li>ادخل المبلغ المطلوب</li>
+                          <li>انسخ رقم العملية وأدخله في الحقل أعلاه</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="payment-option" data-method="instapay">
+                    <div class="payment-icon">
+                      <i class="fas fa-university"></i>
+                    </div>
+                    <div class="payment-details">
+                      <h4>انستا باي</h4>
+                      <p>ادفع مباشرة من خلال خدمة انستا باي البنكية</p>
+                      <div class="payment-steps">
+                        <p><strong>الخطوات:</strong></p>
+                        <ol>
+                          <li>افتح تطبيق - انستا باي</li>
+                          <li>اختر "تحويل لحساب آخر"</li>
+                          <li>ادخل رقم الحساب : <strong>01094085228</strong></li>
+                        
+                          <li>ادخل المبلغ المطلوب</li>
+                          <li>انسخ رقم العملية وأدخله في الحقل أعلاه</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <button type="submit" class="submit-btn">
-              <span class="btn-text">إرسال طلب الدفع</span>
-              <i class="fas fa-spinner fa-spin spinner"></i>
-            </button>
-          </form>
+              <button type="submit" class="submit-btn">
+                <span class="btn-text">إرسال طلب الدفع</span>
+                <i class="fas fa-spinner fa-spin spinner"></i>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
-  </main>
+    </main>
 
-  <div id="alert-container" class="alert-container"></div>
+    <div id="alert-container" class="alert-container"></div>
 
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
+  <div class="footer">
+    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
+    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
+  </div>
 
-  <script src="env.js" type="module"></script>
-  <script src="config.js"></script>
-  <script src="supabase-loader.js"></script>
-  <script src="auth.js"></script>
-  <script src="sidebar.js"></script>
-  <script>
-    // فحص المصادقة عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', async function() {
-      // التحقق من وجود جلسة مستخدم نشطة
-      if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (!user) {
-          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
-          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-          return;
-        }
-
-        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
-        console.log('المستخدم مصادق:', user.email);
-      } else {
-        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
-        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
-        return;
-      }
-
-      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
-      if (typeof sidebar !== 'undefined') {
-        sidebar.init();
-      }
-
-      // تحميل بيانات المستخدم والخطة المختارة بعد التحقق من الصلاحية
-      await loadUserData();
-      await loadSelectedPlan();
-    });
-  </script>
-  <script src="script.js"></script>
-  <script src="payment.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-        })
-        .catch(function(error) {
-          console.log('Service Worker registration failed:', error);
-        });
-    }
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-

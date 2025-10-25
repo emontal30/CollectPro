@@ -46,7 +46,7 @@
   transform: scale(1.05);
 }
 
-.plan-badge {
+.featured-badge {
   position: absolute;
   top: 15px;
   left: -30px;
@@ -138,7 +138,7 @@
   text-align: center;
 }
 
-.select-plan-btn {
+.choose-plan-btn {
   background: linear-gradient(135deg, var(--primary), #00a085);
   color: white;
   border: none;
@@ -151,7 +151,7 @@
   width: 100%;
 }
 
-.select-plan-btn:hover {
+.choose-plan-btn:hover {
   background: linear-gradient(135deg, #00a085, var(--primary));
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);
@@ -267,16 +267,185 @@ body.dark .faq-question h3 {
 
 /* تصميم متجاوب */
 @media (max-width: 768px) {
+  .subscription-intro {
+    margin-bottom: 30px;
+  }
+
+  .subscription-intro h2 {
+    font-size: 1.6rem;
+  }
+
+  .subscription-intro p {
+    font-size: 1rem;
+    padding: 0 15px;
+  }
+
   .plans-container {
     flex-direction: column;
     align-items: center;
+    gap: 20px;
+    margin-bottom: 40px;
   }
-  
+
   .plan-card.featured {
     transform: scale(1);
   }
-  
+
   .plan-card {
     max-width: 100%;
+    width: 100%;
+  }
+
+  .plan-header {
+    padding: 25px 20px;
+  }
+
+  .plan-header h3 {
+    font-size: 1.4rem;
+  }
+
+  .plan-price {
+    margin-bottom: 8px;
+  }
+
+  .price {
+    font-size: 2.2rem;
+  }
+
+  .plan-features {
+    padding: 15px;
+  }
+
+  .plan-features li {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+
+  .plan-footer {
+    padding: 15px;
+  }
+
+  .choose-plan-btn {
+    padding: 14px 25px;
+    font-size: 16px;
+    min-height: 50px;
+    border-radius: 10px;
+  }
+
+  .faq-section {
+    padding: 0 15px;
+  }
+
+  .faq-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+
+  .faq-question {
+    padding: 15px;
+  }
+
+  .faq-question h3 {
+    font-size: 1rem;
+  }
+
+  .faq-answer p {
+    padding: 0 15px 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .subscription-intro {
+    margin-bottom: 25px;
+  }
+
+  .subscription-intro h2 {
+    font-size: 1.4rem;
+  }
+
+  .subscription-intro p {
+    font-size: 0.95rem;
+  }
+
+  .plans-container {
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+
+  .plan-card {
+    border-radius: 12px;
+  }
+
+  .plan-header {
+    padding: 20px 15px;
+  }
+
+  .plan-header h3 {
+    font-size: 1.3rem;
+  }
+
+  .plan-price {
+    margin-bottom: 6px;
+  }
+
+  .price {
+    font-size: 2rem;
+  }
+
+  .plan-offer {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+
+  .plan-features {
+    padding: 12px;
+  }
+
+  .plan-features li {
+    padding: 6px 0;
+    font-size: 13px;
+  }
+
+  .plan-features i {
+    font-size: 1.1rem;
+    margin-left: 8px;
+  }
+
+  .plan-footer {
+    padding: 12px;
+  }
+
+  .choose-plan-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    min-height: 45px;
+    border-radius: 8px;
+  }
+
+  .faq-section {
+    padding: 0 10px;
+  }
+
+  .faq-section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+  }
+
+  .faq-question {
+    padding: 12px;
+  }
+
+  .faq-question h3 {
+    font-size: 0.95rem;
+  }
+
+  .faq-question i {
+    font-size: 14px;
+  }
+
+  .faq-answer p {
+    padding: 0 12px 12px;
+    font-size: 13px;
   }
 }

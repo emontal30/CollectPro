@@ -1,66 +1,27 @@
 {
   "name": "collectpro",
   "version": "1.0.0",
-  "description": "نظام متكامل لإدارة التحصيلات والاشتراكات والمدفوعات",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npx webpack --mode production",
-    "dev": "npx webpack serve --mode development",
-    "start": "npm run dev",
-    "serve": "npx http-server dist -p 8000 -c-1",
-    "test": "node test-optimizations.js",
-    "test:performance": "node performance-test.js",
-    "test:seo": "node seo-test.js",
-    "analyze": "npx webpack-bundle-analyzer dist/assets/*.js",
-    "deploy": "npm run build && vercel --prod",
-    "preview": "npm run build && npx http-server dist -p 8000 -o"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "تحصيلات",
-    "إدارة",
-    "بيانات",
-    "تطبيق ويب",
-    "اشتراكات",
-    "مدفوعات"
-  ],
-  "author": "أيمن حافظ",
-  "license": "MIT",
-  "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "autoprefixer": "^10.4.21",
-    "babel-loader": "^9.2.1",
-    "compression-webpack-plugin": "^10.0.0",
-    "copy-webpack-plugin": "^11.0.0",
-    "css-loader": "^6.11.0",
-    "css-minimizer-webpack-plugin": "^4.2.2",
-    "dotenv": "^17.2.2",
-    "dotenv-webpack": "^8.1.1",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^8.10.2",
-    "eslint-plugin-prettier": "^4.2.5",
-    "html-webpack-plugin": "^5.6.4",
-    "image-minimizer-webpack-plugin": "^3.8.3",
-    "mini-css-extract-plugin": "^2.9.4",
-    "postcss": "^8.5.6",
-    "postcss-loader": "^7.3.4",
-    "prettier": "^2.8.8",
-    "style-loader": "^3.3.4",
-    "terser-webpack-plugin": "^5.3.14",
-    "webpack": "^5.101.3",
-    "webpack-bundle-analyzer": "^4.10.2",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.2"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emontal30/CollectPro.git"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/emontal30/CollectPro/issues"
+  },
+  "homepage": "https://github.com/emontal30/CollectPro#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.11.0",
-    "bootstrap": "^5.3.0",
-    "jquery": "^3.6.4"
+    "@emailjs/browser": "^3.11.0",
+    "@supabase/supabase-js": "^2.76.1",
+    "dotenv": "^16.3.1",
+    "nodemailer": "^6.9.7"
   },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead",
-    "not ie <= 11"
-  ]
+  "type": "module"
 }

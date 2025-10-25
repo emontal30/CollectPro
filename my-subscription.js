@@ -1,373 +1,244 @@
-// إعداد Supabase - استخدام supabaseClient المركزي
-let supabase = null;
+// Global error handlers
+window.onerror = function(message, source, lineno, colno, error) {
+  console.error("An unhandled error occurred:", {
+    message: message,
+    source: source,
+    lineno: lineno,
+    colno: colno,
+    error: error
+  });
+  // Here you could send the error to a logging service
+};
 
-// دالة للحصول على supabase client
-function getSupabaseClient() {
-  if (supabase) return supabase;
-
-  // الانتظار حتى يتم تحميل supabaseClient
-  if (typeof window !== 'undefined' && window.supabaseClient) {
-    supabase = window.supabaseClient;
-    return supabase;
-  }
-
-  // في حالة عدم توفر supabaseClient، إنشاء عميل مؤقت للاختبار
-  if (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(
-      'https://altnvsolaqphpndyztup.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI'
-    );
-    return supabase;
-  }
-
-  return null;
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  // تطبيق الوضع الليلي
-  applyDarkModeFromStorage();
-  
-  // إعداد مستمعي الأحداث
-  setupEventListeners();
-  
-  // تحميل بيانات الاشتراك
-  await loadSubscriptionData();
-  await loadSubscriptionHistory();
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Unhandled promise rejection:', {
+    reason: event.reason
+  });
+  // Here you could send the error to a logging service
 });
 
-function setupEventListeners() {
-  // زر تجديد الاشتراك
-  const renewBtn = document.getElementById('renew-btn');
-  if (renewBtn) {
-    renewBtn.addEventListener('click', () => {
-      document.getElementById('renew-modal').style.display = 'flex';
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.supabase) {
+    console.error('Supabase client is not initialized.');
+    showAlert('حدث خطأ فادح في تهيئة التطبيق.', 'danger');
+    return;
   }
-  
-  // أزرار اختيار خطة التجديد
-  document.querySelectorAll('.renew-plan').forEach(plan => {
-    plan.addEventListener('click', () => {
-      const planType = plan.getAttribute('data-plan');
-      const price = plan.getAttribute('data-price');
-      
-      // حفظ الخطة المختارة في التخزين المحلي
-      localStorage.setItem('selectedPlan', planType);
-      localStorage.setItem('selectedPrice', price);
-      
-      // التوجه لصفحة الدفع
-      window.location.href = 'payment.html';
-    });
-  });
-  
-  // زر إلغاء التجديد
-  const cancelRenewBtn = document.getElementById('cancel-renew-btn');
-  if (cancelRenewBtn) {
-    cancelRenewBtn.addEventListener('click', () => {
-      document.getElementById('renew-modal').style.display = 'none';
-    });
-  }
-  
-  // أزرار الإغلاق للنوافذ المنبثقة
-  document.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modal = btn.closest('.modal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    });
-  });
-  
-  // زر الوضع الليلي
-  const toggleDarkBtn = document.getElementById('toggleDark');
-  if (toggleDarkBtn) {
-    toggleDarkBtn.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      localStorage.setItem('darkMode', document.body.classList.contains('dark') ? 'on' : 'off');
-    });
-  }
-}
 
-async function loadSubscriptionData() {
+  const user = await loadUserDataAndSubscription();
+  if (user) {
+    await loadSubscriptionHistory(user.id);
+  }
+
+  // تحديث بيانات المستخدم في الشريط الجانبي
+  if (window.populateUserData) {
+    await window.populateUserData();
+  }
+
+  setupEventListeners();
+});
+
+async function loadUserDataAndSubscription() {
   try {
-    const client = getSupabaseClient();
-    if (!client) {
-      console.warn('Supabase client غير متاح');
-      return;
-    }
-
-    // الحصول على بيانات المستخدم الحالي
-    const { data: { user } } = await client.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      // إذا لم يكن المستخدم مسجلاً، السماح بالوصول وإظهار رسالة
-      showNotLoggedInMessage();
-      return;
+      window.location.href = 'index.html';
+      return null;
     }
-    
-    // الحصول على بيانات الاشتراك النشط للمستخدم
-    const { data: subscription, error } = await client
-      .from('Subscriptions')
-      .select('*')
+
+    document.getElementById('user-name').textContent = user.user_metadata?.full_name || user.email;
+    document.getElementById('user-email').textContent = user.email;
+    document.getElementById('user-id').textContent = `ID: ${user.id.substring(0, 7)}`;
+    if (user.user_metadata?.full_name) {
+        document.getElementById('user-initial').textContent = user.user_metadata.full_name.charAt(0).toUpperCase();
+    }
+
+    // Fetch the user's most recent subscription from the database
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
+      .select(`
+        *,
+        subscription_plans:plan_id (
+          name,
+          name_ar
+        )
+      `)
       .eq('user_id', user.id)
-      .in('status', ['pending', 'active'])
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
-      
-    if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-      throw error;
+
+    // Handle case where user has no subscription, which is not an actual error
+    if (error && error.code !== 'PGRST116') {
+        throw error;
     }
-    
-    const subscriptionDetails = document.getElementById('subscription-details');
-    const subscriptionActions = document.getElementById('subscription-actions');
-    const subscriptionStatus = document.getElementById('subscription-status');
-    
-    if (subscription) {
-      // تحويل نوع الخطة إلى الاسم المعروض
-      const planNames = {
-        'monthly': 'شهري',
-        '3-months': '3 شهور',
-        'yearly': 'سنوي'
-      };
-      
-      // تحويل الحالة إلى الاسم المعروض
-      const statusClasses = {
-        'pending': 'status-pending',
-        'active': 'status-active',
-        'cancelled': 'status-cancelled',
-        'expired': 'status-expired'
-      };
-      
-      const statusNames = {
-        'pending': 'قيد المراجعة',
-        'active': 'نشط',
-        'cancelled': 'ملغي',
-        'expired': 'منتهي'
-      };
-      
-      // تعبئة بيانات الاشتراك
-      document.getElementById('plan-type').textContent = planNames[subscription.plan] || subscription.plan;
-      document.getElementById('start-date').textContent = subscription.start_date ? formatDate(subscription.start_date) : '-';
-      document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
-      document.getElementById('subscription-state').textContent = statusNames[subscription.status] || subscription.status;
-      
-      // تعبئة حالة الاشتراك
-      subscriptionStatus.innerHTML = `<span class="status-badge ${statusClasses[subscription.status] || ''}">${statusNames[subscription.status] || subscription.status}</span>`;
-      
-      // تحديث بيانات الاشتراك في السايدبار
-      if (window.Sidebar && typeof window.Sidebar.setSubscription === 'function') {
-        window.Sidebar.setSubscription(subscription.plan, subscription.end_date ? formatDate(subscription.end_date) : '-');
-      }
-      
-      // تعبئة أزرار الإجراءات بناءً على حالة الاشتراك
-      subscriptionActions.innerHTML = '';
-      
-      if (subscription.status === 'pending') {
-        subscriptionActions.innerHTML = `
-          <div class="action-info">
-            <i class="fas fa-clock"></i>
-            <p>طلبك قيد المراجعة، سيتم تفعيل اشتراكك قريبًا</p>
-          </div>
-        `;
-      } else if (subscription.status === 'active') {
-        // التحقق من قرب انتهاء الاشتراك
-        const endDate = new Date(subscription.end_date);
-        const today = new Date();
-        const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-        
-        if (daysLeft <= 7) {
-          subscriptionActions.innerHTML = `
-            <div class="action-warning">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p>سيتم انتهاء اشتراكك خلال ${daysLeft} يوم</p>
-            </div>
-            <button id="renew-btn" class="btn-primary">
-              <i class="fas fa-sync-alt"></i>
-              تجديد الاشتراك
-            </button>
-          `;
-          
-          // إضافة مستمع حدث لزر التجديد
-          document.getElementById('renew-btn').addEventListener('click', () => {
-            document.getElementById('renew-modal').style.display = 'flex';
-          });
-        } else {
-          subscriptionActions.innerHTML = `
-            <div class="action-info">
-              <i class="fas fa-check-circle"></i>
-              <p>اشتراكك نشط حتى ${formatDate(subscription.end_date)}</p>
-            </div>
-          `;
-        }
-      }
-    } else {
-      // لا يوجد اشتراك نشط
-      subscriptionDetails.innerHTML = `
-        <div class="no-subscription">
-          <i class="fas fa-times-circle"></i>
-          <p>لا يوجد اشتراك نشط</p>
-        </div>
-      `;
-      
-      subscriptionStatus.innerHTML = `<span class="status-badge status-expired">منتهي</span>`;
-      
-      subscriptionActions.innerHTML = `
-        <button id="subscribe-btn" class="btn-primary">
-          <i class="fas fa-plus"></i>
-          اشترك الآن
-        </button>
-      `;
-      
-      // إضافة مستمع حدث لزر الاشتراك
-      document.getElementById('subscribe-btn').addEventListener('click', () => {
-        window.location.href = 'subscriptions.html';
-      });
-    }
+
+    updateSubscriptionDisplay(subscription);
+    return user;
+
   } catch (error) {
     console.error('Error loading subscription data:', error);
-    showAlert('حدث خطأ أثناء تحميل بيانات الاشتراك', 'danger');
+    showAlert('حدث خطأ أثناء تحميل بيانات اشتراكك.', 'danger');
+    const loadingContainer = document.getElementById('loading-container');
+    const detailsContainer = document.getElementById('subscription-details');
+    if(loadingContainer) loadingContainer.style.display = 'none';
+    if(detailsContainer) detailsContainer.innerHTML = '<p>لا يمكن عرض تفاصيل الاشتراك حاليًا.</p>';
+    return null;
   }
 }
 
-async function loadSubscriptionHistory() {
-  try {
-    const client = getSupabaseClient();
-    if (!client) {
-      console.warn('Supabase client غير متاح');
-      return;
-    }
+function updateSubscriptionDisplay(subscription) {
+   const statusContainer = document.getElementById('subscription-status');
+   const detailsContainer = document.getElementById('subscription-details');
+   const actionsContainer = document.getElementById('subscription-actions');
+   const loadingContainer = document.getElementById('loading-container');
 
-    // الحصول على بيانات المستخدم الحالي
-    const { data: { user } } = await client.auth.getUser();
+   if(loadingContainer) loadingContainer.style.display = 'none';
+   if(detailsContainer) detailsContainer.style.display = 'block';
 
-    if (!user) {
-      // إذا لم يكن مسجلاً، إخفاء الجدول وإظهار رسالة
-      document.getElementById('history-table').style.display = 'none';
-      document.getElementById('no-history').innerHTML = `
-        <i class="fas fa-user-lock"></i>
-        <p>يرجى تسجيل الدخول لرؤية سجل اشتراكاتك</p>
-      `;
-      document.getElementById('no-history').style.display = 'block';
-      return;
+   const statusClasses = { pending: 'status-pending', active: 'status-active', cancelled: 'status-cancelled', expired: 'status-expired' };
+   const statusNames = { pending: 'قيد المراجعة', active: 'نشط', cancelled: 'ملغي', expired: 'منتهي الصلاحية' };
+
+   if (subscription) {
+     const status = subscription.status;
+     statusContainer.innerHTML = `<span class="status-badge ${statusClasses[status] || ''}">${statusNames[status] || status}</span>`;
+
+     const planName = subscription.subscription_plans?.name_ar || subscription.subscription_plans?.name || 'خطة غير معروفة';
+     document.getElementById('plan-type').textContent = planName;
+    document.getElementById('start-date').textContent = subscription.start_date ? formatDate(subscription.start_date) : '-';
+    document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
+    document.getElementById('subscription-state').textContent = statusNames[status] || status;
+
+    if (status === 'pending') {
+      actionsContainer.innerHTML = `<div class="action-info"><i class="fas fa-clock"></i><p>طلبك قيد المراجعة. سيتم تفعيل اشتراكك خلال 24 ساعة.</p></div>`;
+    } else if (status === 'active') {
+      const daysLeft = subscription.end_date ? Math.ceil((new Date(subscription.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+      if (daysLeft <= 7 && daysLeft > 0) {
+        actionsContainer.innerHTML = `
+          <div class="action-warning"><i class="fas fa-exclamation-triangle"></i><p>اشتراكك ينتهي خلال ${daysLeft} أيام.</p></div>
+          <button id="renew-btn" class="btn-primary"><i class="fas fa-sync-alt"></i> تجديد الاشتراك</button>`;
+        document.getElementById('renew-btn').addEventListener('click', showRenewModal);
+      } else if (daysLeft <= 0) {
+        actionsContainer.innerHTML = `<div class="action-info"><i class="fas fa-info-circle"></i><p>انتهى اشتراكك. جدد الآن للاستمرار.</p></div><button id="subscribe-now-btn" class="btn-primary"><i class="fas fa-rocket"></i> اشترك الآن</button>`;
+        document.getElementById('subscribe-now-btn').addEventListener('click', () => { window.location.href = 'subscriptions.html'; });
+      } else {
+        actionsContainer.innerHTML = `<div class="action-info"><i class="fas fa-check-circle"></i><p>اشتراكك نشط ومستمر.</p></div>`;
+      }
+    } else { // Expired, cancelled, or other statuses
+      actionsContainer.innerHTML = `<button id="subscribe-now-btn" class="btn-primary"><i class="fas fa-rocket"></i> اشترك الآن</button>`;
+      document.getElementById('subscribe-now-btn').addEventListener('click', () => { window.location.href = 'subscriptions.html'; });
     }
-    
-    // الحصول على سجل اشتراكات المستخدم
-    const { data: subscriptions, error } = await client
-      .from('Subscriptions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
-    
-    const tbody = document.querySelector('#history-table tbody');
-    tbody.innerHTML = '';
-    
-    if (subscriptions && subscriptions.length > 0) {
-      subscriptions.forEach(subscription => {
-        const row = document.createElement('tr');
-        
-        // تحويل نوع الخطة إلى الاسم المعروض
-        const planNames = {
-          'monthly': 'شهري',
-          '3-months': '3 شهور',
-          'yearly': 'سنوي'
-        };
-        
-        // تحويل الحالة إلى الاسم المعروض
-        const statusClasses = {
-          'pending': 'status-pending',
-          'active': 'status-active',
-          'cancelled': 'status-cancelled',
-          'expired': 'status-expired'
-        };
-        
-        const statusNames = {
-          'pending': 'قيد المراجعة',
-          'active': 'نشط',
-          'cancelled': 'ملغي',
-          'expired': 'منتهي'
-        };
-        
-        row.innerHTML = `
-          <td>${planNames[subscription.plan] || subscription.plan}</td>
-          <td>${subscription.start_date ? formatDate(subscription.start_date) : '-'}</td>
-          <td>${subscription.end_date ? formatDate(subscription.end_date) : '-'}</td>
-          <td><span class="status-badge ${statusClasses[subscription.status] || ''}">${statusNames[subscription.status] || subscription.status}</span></td>
-        `;
-        
-        tbody.appendChild(row);
-      });
-      
-      // إظهار الجدول وإخفاء رسالة عدم وجود بيانات
-      document.getElementById('history-table').style.display = 'table';
-      document.getElementById('no-history').style.display = 'none';
-    } else {
-      // إخفاء الجدول وإظهار رسالة عدم وجود بيانات
-      document.getElementById('history-table').style.display = 'none';
-      document.getElementById('no-history').style.display = 'block';
-    }
-  } catch (error) {
-    console.error('Error loading subscription history:', error);
-    showAlert('حدث خطأ أثناء تحميل سجل الاشتراكات', 'danger');
+  } else {
+    statusContainer.innerHTML = `<span class="status-badge status-expired">لا يوجد اشتراك</span>`;
+    detailsContainer.innerHTML = `<div class="no-subscription"><i class="fas fa-info-circle"></i><p>أنت غير مشترك حاليًا في أي باقة.</p></div>`;
+    actionsContainer.innerHTML = `<button id="subscribe-now-btn" class="btn-primary"><i class="fas fa-rocket"></i> اشترك الآن</button>`;
+    document.getElementById('subscribe-now-btn').addEventListener('click', () => { window.location.href = 'subscriptions.html'; });
   }
+}
+
+async function loadSubscriptionHistory(userId) {
+   try {
+     const { data: history, error } = await supabase
+        .from('subscriptions')
+        .select(`
+            *,
+            subscription_plans:plan_id (
+                name,
+                name_ar
+            )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+     const tbody = document.querySelector('#history-table tbody');
+     const noHistory = document.getElementById('no-history');
+     tbody.innerHTML = '';
+
+     if (history && history.length > 0) {
+       const statusNames = { pending: 'قيد المراجعة', active: 'نشط', cancelled: 'ملغي', expired: 'منتهي الصلاحية' };
+       history.forEach(sub => {
+         const planName = sub.subscription_plans?.name_ar || sub.subscription_plans?.name || 'خطة غير معروفة';
+         const statusText = statusNames[sub.status] || sub.status;
+         const row = tbody.insertRow();
+         row.innerHTML = `<td>${planName}</td><td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}">${statusText}</span></td>`;
+       });
+       noHistory.style.display = 'none';
+       tbody.parentElement.style.display = 'table';
+     } else {
+       noHistory.style.display = 'block';
+       tbody.parentElement.style.display = 'none';
+     }
+   } catch (error) {
+     console.error('Error loading subscription history:', error);
+     showAlert('حدث خطأ في تحميل سجل الاشتراكات.', 'danger');
+   }
+}
+
+function setupEventListeners() {
+  const modal = document.getElementById('renew-modal');
+  if (modal) {
+    modal.querySelector('.close-modal').addEventListener('click', () => modal.style.display = 'none');
+    document.getElementById('cancel-renew-btn').addEventListener('click', () => modal.style.display = 'none');
+  }
+}
+
+async function showRenewModal() {
+   const modal = document.getElementById('renew-modal');
+   const plansContainer = document.getElementById('renew-plans-container');
+   plansContainer.innerHTML = '<div class="loading-container"><p>جاري تحميل الخطط...</p></div>';
+   modal.style.display = 'flex';
+
+   try {
+     const { data: plans, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+    if (error) throw error;
+
+     const durationMap = {
+        1: 'monthly',
+        3: 'quarterly',
+        12: 'yearly'
+     };
+
+     plansContainer.innerHTML = ''; 
+     plans.forEach(plan => {
+       const planIdentifier = durationMap[plan.duration_months];
+       if (!planIdentifier) return; 
+
+       const planElement = document.createElement('div');
+       planElement.className = 'renew-plan';
+       const features = plan.description || 'وصول كامل للمنصة.';
+       planElement.innerHTML = `<h3>${plan.name_ar || plan.name}</h3><div class="plan-price">${plan.price} ج.م</div><div class="plan-offer">${features}</div>`;
+       planElement.addEventListener('click', () => {
+         localStorage.setItem('selectedPlanId', planIdentifier);
+         window.location.href = 'payment.html';
+       });
+       plansContainer.appendChild(planElement);
+     });
+   } catch (error) {
+     console.error('Error loading renewal plans:', error);
+     plansContainer.innerHTML = '<p>حدث خطأ أثناء تحميل الخطط. يرجى المحاولة مرة أخرى.</p>';
+   }
 }
 
 function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
-function showNotLoggedInMessage() {
-  const subscriptionDetails = document.getElementById('subscription-details');
-  const subscriptionActions = document.getElementById('subscription-actions');
-  const subscriptionStatus = document.getElementById('subscription-status');
-
-  // إظهار رسالة لتسجيل الدخول
-  subscriptionDetails.innerHTML = `
-    <div class="no-subscription">
-      <i class="fas fa-user-lock"></i>
-      <p>يرجى تسجيل الدخول لرؤية بيانات اشتراكك</p>
-    </div>
-  `;
-
-  subscriptionStatus.innerHTML = `<span class="status-badge status-expired">غير مسجل</span>`;
-
-  subscriptionActions.innerHTML = `
-    <button onclick="window.location.href='login.html'" class="btn-primary">
-      <i class="fas fa-sign-in-alt"></i>
-      تسجيل الدخول
-    </button>
-  `;
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('ar-EG-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function showAlert(message, type = 'info') {
-  const alertContainer = document.getElementById('alert-container');
-  if (!alertContainer) return;
-
-  // إزالة التنبيهات الحالية
-  alertContainer.innerHTML = '';
-
-  // إنشاء تنبيه جديد
+  const container = document.getElementById('alert-container');
+  if (!container) return;
   const alert = document.createElement('div');
-  alert.className = `alert alert-${type}`;
-
-  // إضافة الأيقونة المناسبة
-  let icon = 'fa-info-circle';
-  if (type === 'success') icon = 'fa-check-circle';
-  if (type === 'danger') icon = 'fa-exclamation-circle';
-
-  alert.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
-
-  alertContainer.appendChild(alert);
-
-  // إزالة التنبيه تلقائيًا بعد 5 ثوانٍ
+  alert.className = `alert alert-${type} show`;
+  alert.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+  container.appendChild(alert);
   setTimeout(() => {
-    alert.style.opacity = '0';
-    setTimeout(() => alert.remove(), 300);
+    alert.classList.remove('show');
+    setTimeout(() => alert.remove(), 500);
   }, 5000);
 }

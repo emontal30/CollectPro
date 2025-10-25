@@ -3,67 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#007965" />
   <title>اشتراكي - CollectPro</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
+  <meta name="theme-color" content="#ffffff"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="sidebar.css" />
   <link rel="stylesheet" href="my-subscription.css" />
 </head>
-<body>
-  <!-- الشريط الجانبي -->
+<body class="loaded">
+  <!-- حاوية التنبيهات -->
+  <div id="alert-container" class="alert-container"></div>
+
+  <!-- 🔝 الشريط العلوي -->
+  <div class="topbar">
+    <div class="actions">
+      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
+    </div>
+    <div class="logo">
+      <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+      <p class="app-name">CollectPro</p>
+    </div>
+  </div>
+
+  <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="user-box">
-        <div class="user-avatar sidebar-user-avatar">أ</div>
+        <div class="user-avatar">
+          <span id="user-initial">A</span>
+        </div>
         <div class="user-meta">
-          <div class="user-name sidebar-user-name">المستخدم</div>
-          <div class="user-email sidebar-user-email">user@example.com</div>
-          <div class="user-id">ID: <span class="sidebar-user-id">user123</span></div>
+          <span class="user-name" id="user-name">اسم المستخدم</span>
+          <span class="user-email" id="user-email">user@example.com</span>
+          <span class="user-id" id="user-id"></span>
         </div>
       </div>
     </div>
-
     <div class="sidebar-content">
       <ul class="nav-links">
-        <li><a href="dashboard.html" class="nav-link">
-          <i class="fas fa-edit"></i>
-          <span>إدخال البيانات</span>
-        </a></li>
-        <li><a href="harvest.html" class="nav-link">
-          <i class="fas fa-coins"></i>
-          <span>صفحة التحصيل</span>
-        </a></li>
-        <li><a href="archive.html" class="nav-link">
-          <i class="fas fa-archive"></i>
-          <span>الأرشيف</span>
-        </a></li>
-        <li><a href="subscriptions.html" class="nav-link">
-          <i class="fas fa-list"></i>
-          <span>الاشتراكات</span>
-        </a></li>
-        <li><a href="my-subscription.html" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>اشتراكي</span>
-        </a></li>
-        <li><a href="payment.html" class="nav-link">
-          <i class="fas fa-credit-card"></i>
-          <span>المدفوعات</span>
-        </a></li>
-        <li><a href="admin.html" class="nav-link">
-          <i class="fas fa-cog"></i>
-          <span>إدارة النظام</span>
-        </a></li>
+        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
+        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
+        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
+        <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
+        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
+        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
+        <li><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
       </ul>
     </div>
-
     <div class="sidebar-footer">
-      <div class="sub-meta">
-        <span>الإصدار:</span>
-        <span class="value">1.0.0</span>
-      </div>
       <button id="logout-btn" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
         <span>تسجيل الخروج</span>
@@ -71,170 +58,108 @@
     </div>
   </div>
 
-  <header>
-    <div class="header-top">
-      <button id="sidebar-toggle" class="sidebar-toggle" title="القائمة الجانبية">
-        <i class="fas fa-bars"></i>
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <button id="toggleDark" title="تبديل الوضع الليلي">
+        🌙
       </button>
-      <button id="toggleDark" class="dark-btn-icon">🌙</button>
-      <div class="logo-container">
-        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <p class="app-name">CollectPro</p>
-      </div>
-    </div>
-    <h1>اشتراكي 👤</h1>
-  </header>
+      <h1>اشتراكي 👤</h1>
+    </header>
 
-  <main>
-    <div class="subscription-container">
-      <div class="subscription-card">
-        <div class="subscription-header">
-          <h2>تفاصيل اشتراكك</h2>
-          <div class="subscription-status" id="subscription-status">
-            <span class="status-badge">جاري التحميل...</span>
+    <main>
+      <div class="subscription-container">
+        <!-- حالة التحميل -->
+        <div id="loading-container" class="subscription-card">
+          <div class="subscription-details">
+            <div class="loading-spinner">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>جاري تحميل بيانات اشتراكك...</p>
+            </div>
           </div>
         </div>
 
-        <div class="subscription-details" id="subscription-details">
-          <div class="detail-row">
-            <div class="detail-label">نوع الباقة:</div>
-            <div class="detail-value" id="plan-type">-</div>
+        <!-- بطاقة الاشتراك -->
+        <div class="subscription-card">
+          <div class="subscription-header">
+            <h2>حالة اشتراكك</h2>
+            <div id="subscription-status"></div>
           </div>
-          <div class="detail-row">
-            <div class="detail-label">تاريخ البدء:</div>
-            <div class="detail-value" id="start-date">-</div>
+          <div id="subscription-details" class="subscription-details">
+            <div class="detail-row">
+              <span class="detail-label">نوع الخطة:</span>
+              <span class="detail-value" id="plan-type">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">تاريخ البدء:</span>
+              <span class="detail-value" id="start-date">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">تاريخ الانتهاء:</span>
+              <span class="detail-value" id="end-date">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">الحالة:</span>
+              <span class="detail-value" id="subscription-state">-</span>
+            </div>
           </div>
-          <div class="detail-row">
-            <div class="detail-label">تاريخ الانتهاء:</div>
-            <div class="detail-value" id="end-date">-</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">حالة الاشتراك:</div>
-            <div class="detail-value" id="subscription-state">-</div>
+          <div id="subscription-actions" class="subscription-actions">
+            <!-- سيتم ملؤها بواسطة جافاسكريبت -->
           </div>
         </div>
 
-        <div class="subscription-actions" id="subscription-actions">
-          <!-- سيتم ملؤها ديناميكياً -->
-        </div>
-      </div>
-
-      <div class="subscription-history">
-        <h2>سجل الاشتراكات</h2>
-        <div class="table-container">
-          <table id="history-table">
-            <thead>
-              <tr>
-                <th>نوع الاشتراك</th>
-                <th>تاريخ البدء</th>
-                <th>تاريخ الانتهاء</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- سيتم ملؤها ديناميكياً -->
-            </tbody>
-          </table>
-          <div id="no-history" class="no-data">
-            <i class="fas fa-history"></i>
-            <p>لا يوجد سجل اشتراكات</p>
+        <!-- تاريخ الاشتراكات -->
+        <div class="subscription-history">
+          <h2>تاريخ الاشتراكات</h2>
+          <div class="table-container">
+            <table id="history-table">
+              <thead>
+                <tr>
+                  <th>نوع الخطة</th>
+                  <th>تاريخ البدء</th>
+                  <th>تاريخ الانتهاء</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="no-history" class="no-data">
+              <i class="fas fa-inbox"></i>
+              <p>لا يوجد تاريخ اشتراكات</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
 
-  <div id="alert-container" class="alert-container"></div>
-
-  <!-- نافذة تجديد الاشتراك -->
-  <div id="renew-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>تجديد الاشتراك</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p>اختر خطة الاشتراك التي ترغب في تجديدها:</p>
-        <div class="renew-plans">
-          <div class="renew-plan" data-plan="monthly" data-price="30">
-            <h3>خطة شهرية</h3>
-            <div class="plan-price">30 ج.م</div>
+      <!-- نافذة تجديد الاشتراك -->
+      <div id="renew-modal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>تجديد الاشتراك</h2>
+            <button class="close-modal">&times;</button>
           </div>
-          <div class="renew-plan" data-plan="3-months" data-price="50">
-            <h3>خطة 3 شهور</h3>
-            <div class="plan-price">50 ج.م</div>
+          <div class="modal-body">
+            <div id="renew-plans-container" class="renew-plans">
+              <!-- سيتم ملؤها بواسطة جافاسكريبت -->
+            </div>
           </div>
-          <div class="renew-plan" data-plan="yearly" data-price="360">
-            <h3>خطة سنوية</h3>
-            <div class="plan-price">360 ج.م</div>
-            <div class="plan-offer">+ شهر مجاني</div>
+          <div class="modal-footer">
+            <button id="cancel-renew-btn" class="btn-secondary">إلغاء</button>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button id="cancel-renew-btn" class="btn-secondary">إلغاء</button>
-      </div>
-    </div>
+    </main>
   </div>
 
-  <footer>
-    <p>تم التصميم والتطوير بواسطة <strong>أيمن حافظ</strong></p>
-  </footer>
+  <div class="footer">
+    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
+    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
+  </div>
 
-  <script src="env.js" type="module"></script>
-  <script src="config.js"></script>
-  <script src="supabase-loader.js"></script>
-  <script src="auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
   <script src="sidebar.js"></script>
-  <script>
-    // فحص المصادقة عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', async function() {
-      // التحقق من وجود جلسة مستخدم نشطة
-      if (typeof auth !== 'undefined') {
-        const user = auth.checkUserSession();
-        if (!user) {
-          // إعادة توجيه إلى صفحة تسجيل الدخول إذا لم يكن المستخدم مصادقاً
-          auth.redirectToLogin('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-          return;
-        }
-
-        // إذا كان المستخدم مصادقاً، متابعة تحميل الصفحة
-        console.log('المستخدم مصادق:', user.email);
-      } else {
-        // إذا لم يكن نظام المصادقة متاح، إعادة توجيه للأمان
-        window.location.href = 'login.html?reason=' + encodeURIComponent('يجب تسجيل الدخول أولاً');
-        return;
-      }
-
-      // تهيئة الشريط الجانبي بعد تحميل جميع المكتبات
-      if (typeof sidebar !== 'undefined') {
-        sidebar.init();
-      }
-
-      // تحميل بيانات الاشتراك بعد التحقق من الصلاحية
-      await loadSubscriptionData();
-      await loadSubscriptionHistory();
-    });
-  </script>
   <script src="script.js"></script>
   <script src="my-subscription.js"></script>
-  <!-- تم تعطيل Service Worker مؤقتاً لتجنب الخطأ عند التشغيل المحلي -->
-  <!-- <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-        })
-        .catch(function(error) {
-          console.log('Service Worker registration failed:', error);
-        });
-    }
-  </script> -->
-  </script>
 </body>
 </html>
-
-
-
-
-

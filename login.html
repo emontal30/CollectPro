@@ -1,319 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#007965" />
-  <title>تسجيل الدخول - CollectPro</title>
-  <!-- تم تفعيل ملف manifest.json لدعم خصائص PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="public/logoapp.png" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="sidebar.css" />
-  <link rel="stylesheet" href="login.css" />
-  <meta name="csrf-token" content="YOUR_CSRF_TOKEN_HERE">
-</head>
-<body>
-  <div class="login-container">
-    <div class="login-card">
-      <!-- شعار التطبيق -->
-      <div class="logo-container">
-        <img src="public/logo-momkn.png" alt="شعار ممكن" class="logo" />
-        <h1 class="app-name">CollectPro</h1>
-        <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
-      </div>
-      
-      <!-- رسائل التنبيه -->
-      <div id="alert-container" class="alert-container"></div>
-      
-      <!-- نموذج تسجيل الدخول -->
-      <form id="login-form" class="login-form">
-        <div class="form-group">
-          <label for="email">البريد الإلكتروني</label>
-          <div class="input-container">
-            <i class="fas fa-envelope input-icon"></i>
-            <input type="email" id="email" name="email" placeholder="أدخل بريدك الإلكتروني" required />
-          </div>
-          <span class="error-message" id="email-error"></span>
-        </div>
-        
-        <div class="form-group">
-          <label for="password">كلمة المرور</label>
-          <div class="input-container">
-            <i class="fas fa-lock input-icon"></i>
-            <input type="password" id="password" name="password" placeholder="أدخل كلمة المرور" required />
-            <button type="button" id="toggle-password" class="toggle-password">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-          <span class="error-message" id="password-error"></span>
-        </div>
-        
-        <div class="form-options">
-          <div class="remember-me">
-            <input type="checkbox" id="remember" name="remember" />
-            <label for="remember">تذكرني</label>
-          </div>
-          <a href="#" class="forgot-password">نسيت كلمة المرور؟</a>
-        </div>
-        
-        <button type="submit" class="login-btn">
-          <span class="btn-text">تسجيل الدخول</span>
-          <i class="fas fa-spinner fa-spin spinner"></i>
-        </button>
-        
-        <div class="divider">
-          <span>أو</span>
-        </div>
-        
-        <button type="button" id="google-login" class="google-login-btn">
-          <i class="fab fa-google"></i>
-          <span class="button-text">تسجيل الدخول بحساب Google</span>
-          <div class="loading-spinner" style="display: none;">
-            <i class="fas fa-spinner fa-spin"></i>
-          </div>
-        </button>
-        
-        <div class="signup-link">
-          <p>ليس لديك حساب؟ <a href="#">إنشاء حساب جديد</a></p>
-        </div>
-      </form>
-    </div>
-  </div>
-  
-  <!-- نموذج استعادة كلمة المرور -->
-  <div id="forgot-password-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>استعادة كلمة المرور</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <form id="forgot-password-form">
-        <div class="form-group">
-          <label for="reset-email">البريد الإلكتروني</label>
-          <div class="input-container">
-            <i class="fas fa-envelope input-icon"></i>
-            <input type="email" id="reset-email" placeholder="أدخل بريدك الإلكتروني" required />
-          </div>
-          <span class="error-message" id="reset-email-error"></span>
-        </div>
-        <button type="submit" class="submit-btn">إرسال رابط الاستعادة</button>
-      </form>
-    </div>
-  </div>
-  
-  <!-- نموذج إنشاء حساب جديد -->
-  <div id="signup-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>إنشاء حساب جديد</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <form id="signup-form">
-        <div class="form-group">
-          <label for="signup-name">الاسم الكامل</label>
-          <div class="input-container">
-            <i class="fas fa-user input-icon"></i>
-            <input type="text" id="signup-name" placeholder="أدخل اسمك الكامل" required />
-          </div>
-          <span class="error-message" id="signup-name-error"></span>
-        </div>
-        
-        <div class="form-group">
-          <label for="signup-email">البريد الإلكتروني</label>
-          <div class="input-container">
-            <i class="fas fa-envelope input-icon"></i>
-            <input type="email" id="signup-email" placeholder="أدخل بريدك الإلكتروني" required />
-          </div>
-          <span class="error-message" id="signup-email-error"></span>
-        </div>
-        
-        <div class="form-group">
-          <label for="signup-password">كلمة المرور</label>
-          <div class="input-container">
-            <i class="fas fa-lock input-icon"></i>
-            <input type="password" id="signup-password" placeholder="أدخل كلمة المرور" required />
-            <button type="button" class="toggle-password">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-          <span class="error-message" id="signup-password-error"></span>
-          <div class="password-strength">
-            <div class="strength-meter">
-              <div class="strength-meter-fill"></div>
-            </div>
-            <span class="strength-text">قوة كلمة المرور</span>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="signup-confirm-password">تأكيد كلمة المرور</label>
-          <div class="input-container">
-            <i class="fas fa-lock input-icon"></i>
-            <input type="password" id="signup-confirm-password" placeholder="أعد إدخال كلمة المرور" required />
-            <button type="button" class="toggle-password">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-          <span class="error-message" id="signup-confirm-password-error"></span>
-        </div>
-        
-        <div class="form-group">
-          <label for="signup-phone">رقم الهاتف (اختياري)</label>
-          <div class="input-container">
-            <i class="fas fa-phone input-icon"></i>
-            <input type="tel" id="signup-phone" placeholder="أدخل رقم هاتفك" />
-          </div>
-        </div>
-        
-        <div class="form-group terms">
-          <input type="checkbox" id="accept-terms" required />
-          <label for="accept-terms">أوافق على <a href="#">الشروط والأحكام</a> و<a href="#">سياسة الخصوصية</a></label>
-          <span class="error-message" id="accept-terms-error"></span>
-        </div>
-        
-        <button type="submit" class="submit-btn">إنشاء حساب</button>
-      </form>
-    </div>
-  </div>
-  
-  <!-- نموذج التحقق بخطوتين -->
-  <div id="two-factor-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>التحقق بخطوتين</h2>
-        <button class="close-modal">&times;</button>
-      </div>
-      <p class="modal-description">لقد أرسلنا رمز التحقق إلى بريدك الإلكتروني. الرجاء إدخاله أدناه.</p>
-      <form id="two-factor-form">
-        <div class="form-group">
-          <label for="verification-code">رمز التحقق</label>
-          <div class="input-container">
-            <i class="fas fa-shield-alt input-icon"></i>
-            <input type="text" id="verification-code" placeholder="أدخل رمز التحقق" maxlength="6" required />
-          </div>
-          <span class="error-message" id="verification-code-error"></span>
-        </div>
-        
-        <div class="resend-code">
-          <p>لم تستلم الرمز؟ <a href="#" id="resend-code-link">إعادة إرسال</a></p>
-          <p id="resend-timer"></p>
-        </div>
-        
-        <button type="submit" class="submit-btn">تحقق</button>
-      </form>
-    </div>
-  </div>
-  
-  <!-- تحميل مكتبة Google Identity Services -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-  <!-- ملفات تحسين الأداء والـ SEO -->
-  <script src="performance-optimizer.js" defer></script>
-  <script src="seo-optimizer.js" defer></script>
-  <script src="google-auth-setup.js" defer></script>
-  <script src="clear-test-data.js" defer></script>
-
-  <!-- ملفات النظام الأساسية -->
-  <script src="env.js" type="module" defer></script>
-  <script src="config.js" defer></script>
-  <script src="supabase-loader.js" defer></script>
-  <script src="supabaseClient.js" defer></script>
-  <script src="auth.js" defer></script>
-  <script src="sidebar.js" defer></script>
-  <script src="login.js" defer></script>
-
-  <!-- Debug logging for logo images only -->
-  <script>
-    console.log('🔍 Logo Debug Info:');
-    console.log('Current URL:', window.location.href);
-
-    // Test image loading events
-    const logoImg = document.querySelector('.logo');
-    if (logoImg) {
-      console.log('✅ Logo image element found');
-      console.log('Logo src:', logoImg.src);
-
-      logoImg.addEventListener('load', () => {
-        console.log('✅ Logo loaded successfully - Dimensions:', logoImg.naturalWidth + 'x' + logoImg.naturalHeight);
-      });
-      logoImg.addEventListener('error', (e) => {
-        console.log('❌ Logo failed to load:', e);
-        console.log('Error details:', {
-          src: logoImg.src,
-          naturalWidth: logoImg.naturalWidth,
-          naturalHeight: logoImg.naturalHeight,
-          error: e
-        });
-      });
-
-      // Check if image is already loaded
-      if (logoImg.complete && logoImg.naturalWidth > 0) {
-        console.log('✅ Logo already loaded - Dimensions:', logoImg.naturalWidth + 'x' + logoImg.naturalHeight);
-      }
-    } else {
-      console.log('❌ Logo image element not found!');
-    }
-  </script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    // التحقق من وجود جلسة نشطة قبل تحميل صفحة تسجيل الدخول
-    window.addEventListener('load', async () => {
-      // مسح أي بيانات قديمة أو تالفة
-      if (typeof auth !== 'undefined') {
-        try {
-          // مسح أي بيانات جلسة قديمة أولاً
-          auth.clearUserSession();
-
-          // التحقق من وجود جلسة نشطة صالحة
-          const user = auth.checkUserSession();
-          if (user && user.email && user.id) {
-            // إذا كان هناك جلسة نشطة صالحة، قم بتوجيه المستخدم إلى صفحة إدخال البيانات
-            console.log('جلسة نشطة موجودة، إعادة توجيه إلى dashboard.html');
-            window.location.href = 'dashboard.html';
-            return;
-          }
-        } catch (error) {
-          console.warn('خطأ في فحص الجلسة:', error);
-        }
-      }
-
-      // مسح أي بيانات قديمة أخرى قد تسبب مشاكل
-      try {
-        // مسح بيانات التطبيق القديمة
-        localStorage.removeItem('clientData');
-        localStorage.removeItem('harvestData');
-        localStorage.removeItem('rowData');
-        localStorage.removeItem('masterLimit');
-        localStorage.removeItem('currentBalance');
-        localStorage.removeItem('archiveData');
-
-        // مسح أي بيانات تطبيق أخرى قد تكون موجودة
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('app_') || key.startsWith('temp_'))) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-
-        console.log('تم مسح البيانات المؤقتة');
-      } catch (error) {
-        console.warn('خطأ في مسح البيانات المؤقتة:', error);
-      }
-
-      // تسجيل Service Worker لدعم خصائص PWA
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker registered:', reg))
-          .catch(err => console.error('Service Worker registration failed:', err));
-      }
-    });
-  </script>
-</body>
-</html>
-
-
-
-

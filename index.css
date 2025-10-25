@@ -1,0 +1,398 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #007965;
+  --primary-light: #00a080;
+  --primary-dark: #006d56;
+  --secondary: #f39c12;
+  --light-bg: #f8f9fa;
+  --dark-bg: #121212;
+  --dark-text: #f1f1f1;
+  --border-radius: 16px;
+  --box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #333;
+  direction: rtl;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background decoration */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0, 121, 101, 0.05) 0%, rgba(0, 121, 101, 0) 70%);
+  z-index: -1;
+  animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+}
+
+.login-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  padding: 50px 40px;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: var(--transition);
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+}
+
+.login-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* === التعديلات الرئيسية هنا === */
+.logo-container {
+  margin-bottom: 40px; /* زيادة المسافة السفلية للحاوية بأكملها */
+  position: relative;
+}
+
+.logo {
+  height: 80px;
+  width: auto;
+  margin-bottom: 30px; /* مسافة أكبر تحت الشعار */
+  transition: var(--transition);
+  filter: drop-shadow(0 5px 10px rgba(0, 121, 101, 0.2));
+  display: block; /* لضمان أنه يأخذ سطرًا كاملاً */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+.app-name {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 15px; /* مسافة أكبر تحت اسم التطبيق */
+  letter-spacing: -0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+.app-name::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 10%;
+  width: 80%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  border-radius: 3px;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 16px;
+  margin: 0; /* لا حاجة لهامش علوي لأن العنصر الذي فوقه يتحكم في المسافة */
+  font-weight: 500;
+}
+/* === نهاية التعديلات === */
+
+.google-login-btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 35px;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 20px rgba(0, 121, 101, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.google-login-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.google-login-btn:hover::before {
+  left: 100%;
+}
+
+.google-login-btn:hover {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(0, 121, 101, 0.4);
+}
+
+.google-login-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(0, 121, 101, 0.3);
+}
+
+.google-login-btn i {
+  margin-left: 12px;
+  color: #ea4335;
+  font-size: 24px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.google-login-btn:hover i {
+  background: white;
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.privacy-policy {
+  margin-top: 25px;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+}
+
+.privacy-policy a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  transition: var(--transition);
+}
+
+.privacy-policy a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+
+.privacy-policy a:hover::after {
+  width: 100%;
+}
+
+.privacy-policy a:hover {
+  color: var(--primary-dark);
+}
+
+.footer {
+  padding: 25px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  position: relative;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ddd, transparent);
+}
+
+.footer strong {
+  color: var(--primary);
+  font-weight: 600;
+  position: relative;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 40px 30px;
+  }
+
+  .logo {
+    height: 70px;
+  }
+
+  .app-name {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .google-login-btn {
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 121, 101, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 121, 101, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 121, 101, 0); }
+}
+
+.loading .google-login-btn {
+   animation: pulse 1.5s infinite;
+}
+
+/* أيقونة الوضع الليلي في صفحة تسجيل الدخول */
+.dark-mode-toggle {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: transparent;
+  color: #66bb6a;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.dark-mode-toggle:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(102, 187, 106, 0.3));
+}
+
+/* الوضع الليلي للأيقونة في صفحة تسجيل الدخول */
+body.dark .dark-mode-toggle {
+  color: #ffeb3b;
+}
+
+body.dark .dark-mode-toggle:hover {
+  filter: drop-shadow(0 2px 4px rgba(255, 235, 59, 0.3));
+}
+
+/* الوضع الليلي المحسن لصفحة تسجيل الدخول */
+body.dark {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  color: #f1f1f1;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.dark .login-card {
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+  color: #f1f1f1;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 10px 25px rgba(0, 200, 150, 0.1);
+  border: 1px solid rgba(0, 200, 150, 0.2);
+}
+
+body.dark .login-card:hover {
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 15px 35px rgba(0, 200, 150, 0.15);
+  transform: translateY(-7px);
+}
+
+body.dark .login-card::before {
+  background: linear-gradient(90deg, rgba(0, 200, 150, 0.8) 0%, rgba(0, 150, 130, 0.9) 100%);
+}
+
+body.dark .app-name {
+  color: #00c896;
+  text-shadow: 0 2px 4px rgba(0, 200, 150, 0.3);
+}
+
+body.dark .subtitle {
+  color: #cccccc;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+body.dark .privacy-policy {
+  color: #aaaaaa;
+}
+
+body.dark .privacy-policy a {
+  color: #00c896;
+  text-shadow: 0 1px 2px rgba(0, 200, 150, 0.2);
+}
+
+body.dark .footer {
+  color: #999999;
+}
+
+body.dark .footer::before {
+  background: linear-gradient(90deg, transparent, #555, transparent);
+}
+
+body.dark .google-login-btn {
+  background: linear-gradient(135deg, rgba(0,200,150,0.9) 0%, rgba(0,160,133,0.95) 100%);
+  box-shadow: 0 8px 25px rgba(0, 200, 150, 0.4);
+  border: 1px solid rgba(0,200,150,0.5);
+}
+
+body.dark .google-login-btn:hover {
+  background: linear-gradient(135deg, rgba(0,160,133,0.95) 0%, rgba(0,200,150,0.9) 100%);
+  box-shadow: 0 12px 30px rgba(0, 200, 150, 0.5);
+  transform: translateY(-4px);
+}
