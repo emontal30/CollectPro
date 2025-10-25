@@ -5,10 +5,8 @@
       "runtime": "nodejs18.x"
     }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*\\.(html|css|js|png|ico|json|webmanifest|svg|md|sql|nix|map|txt))$", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [
      {
