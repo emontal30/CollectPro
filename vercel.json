@@ -4,10 +4,6 @@
     {
       "src": "pages/api/**/*.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "pages/index.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
