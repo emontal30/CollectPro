@@ -1,52 +1,0 @@
-export default function handler(req, res) {
-  res.setHeader('Content-Type', 'text/html');
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta name="theme-color" content="#ffffff"/>
-      <link rel="icon" type="image/x-icon" href="favicon.ico" />
-      <title>تسجيل الدخول - CollectPro</title>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <link rel="stylesheet" href="index.css" />
-    </head>
-    <body class="loaded">
-      <!-- حاوية التنبيهات -->
-      <div id="alert-container" class="alert-container"></div>
-
-      <div class="login-page">
-        <div class="login-container">
-          <div class="login-card">
-            <div class="logo-container">
-              <img src="logo-momkn.png" alt="شعار التطبيق" class="logo" />
-              <h1 class="app-name">CollectPro</h1>
-              <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
-            </div>
-
-            <button id="google-login-btn" class="google-login-btn">
-              <i class="fab fa-google"></i>
-              <span>تسجيل الدخول باستخدام Google</span>
-            </button>
-
-            <p class="privacy-policy">
-              بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
-            </p>
-          </div>
-        </div>
-      <div class="footer">
-        <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-        <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
-      </div>
-      </div>
-      
-      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-      <script src="supabase-client.js"></script>
-
-      <script src="index.js"></script>
-      <script src="script.js"></script>
-    </body>
-    </html>
-  `);
-}
