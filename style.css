@@ -1892,7 +1892,7 @@ body.dark tbody tr:nth-child(odd) {
     box-shadow: 0 2px 8px rgba(0, 200, 150, 0.2);
   }
 
-  /* تحسين الجدول للموبايل بشكل أفضل */
+  /* تحسين الجدول للموبايل بشكل أفضل - إصلاح التداخل */
   @media (max-width: 768px) {
     table {
       border-radius: 8px;
@@ -1903,6 +1903,9 @@ body.dark tbody tr:nth-child(odd) {
       display: block;
       white-space: nowrap;
       -webkit-overflow-scrolling: touch;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     th {
@@ -1914,12 +1917,16 @@ body.dark tbody tr:nth-child(odd) {
       font-size: 11px;
       padding: 8px 4px;
       font-weight: 600;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     /* تحسين التفاعل مع الجدول */
     tbody tr {
       cursor: pointer;
       transition: all 0.2s ease;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     tbody tr:active {
@@ -1930,19 +1937,22 @@ body.dark tbody tr:nth-child(odd) {
     /* تحسين عرض النص */
     td {
       font-size: 11px;
-      padding: 6px 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      padding: 8px 12px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
       min-height: 45px;
+      width: 100%;
+      box-sizing: border-box;
+      display: block;
     }
 
     /* تخصيص عمود المحل */
     td.shop {
-      max-width: 80px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      max-width: 100%;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
       font-size: 10px;
     }
 
@@ -1950,73 +1960,95 @@ body.dark tbody tr:nth-child(odd) {
     td.code {
       font-size: 10px;
       color: #666;
+      white-space: normal;
     }
 
     /* تخصيص عمود المبلغ */
     td.amount {
       font-weight: 600;
       color: var(--primary);
+      white-space: normal;
     }
 
     /* تخصيص عمود أخرى */
     td.extra {
       font-size: 10px;
       color: #777;
+      white-space: normal;
     }
 
     /* تخصيص عمود المحصل */
     td.collector {
       font-weight: 500;
+      white-space: normal;
     }
 
     /* تخصيص عمود الصافي */
     td.net {
       font-weight: 700;
       font-size: 12px;
+      white-space: normal;
     }
 
     /* تخصيص جدول التحصيلات */
     #harvestTable {
       font-size: 11px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     #harvestTable th {
       font-size: 10px;
       padding: 6px 3px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     #harvestTable td {
       font-size: 10px;
-      padding: 5px 3px;
+      padding: 8px 12px;
       min-height: 40px;
+      width: 100%;
+      box-sizing: border-box;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     #harvestTable .shop {
-      max-width: 75px;
+      max-width: 100%;
       font-size: 9px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     #harvestTable .code {
       font-size: 9px;
+      white-space: normal;
     }
 
     #harvestTable .amount {
       font-size: 11px;
       font-weight: 700;
+      white-space: normal;
     }
 
     #harvestTable .extra {
       font-size: 9px;
+      white-space: normal;
     }
 
     #harvestTable .collector {
       font-size: 10px;
       font-weight: 600;
+      white-space: normal;
     }
 
     #harvestTable .net {
       font-size: 12px;
       font-weight: 800;
+      white-space: normal;
     }
   }
 }
@@ -2063,7 +2095,7 @@ body.dark tbody tr:nth-child(odd) {
      outline: none !important;
    }
 
-   /* تحسين الجداول للشاشات الصغيرة جداً */
+   /* تحسين الجداول للشاشات الصغيرة جداً - إصلاح التداخل */
    @media (max-width: 480px) {
      table {
        font-size: 11px;
@@ -2074,161 +2106,184 @@ body.dark tbody tr:nth-child(odd) {
        -webkit-overflow-scrolling: touch;
        border-radius: 6px;
        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+       width: 100%;
+       max-width: 100%;
+       box-sizing: border-box;
      }
- 
+
      table thead {
        display: table-header-group;
      }
- 
+
      table tbody {
        display: table-row-group;
      }
- 
+
      th, td {
-       padding: 6px 3px;
+       padding: 8px 12px;
        min-height: 45px;
-       white-space: nowrap;
-       text-overflow: ellipsis;
-       max-width: 100px;
+       white-space: normal;
+       word-wrap: break-word;
+       overflow-wrap: break-word;
+       max-width: 100%;
        overflow: hidden;
        font-size: 10px;
+       width: 100%;
+       box-sizing: border-box;
+       display: block;
      }
- 
+
      th {
        font-size: 10px;
-       padding: 6px 3px;
+       padding: 8px 12px;
        font-weight: 700;
        background: linear-gradient(135deg, var(--primary), #005a4b);
+       width: 100%;
+       box-sizing: border-box;
+       display: block;
      }
- 
+
      /* إخفاء أعمدة غير ضرورية في الشاشات الصغيرة جداً */
      th.collector, td.collector {
        display: none;
      }
- 
+
      /* إخفاء عمود أخرى في الشاشات الصغيرة جداً */
      th.extra, td.extra {
        display: none;
      }
- 
+
      /* تقليل عرض الأعمدة في الشاشات الصغيرة جداً */
-     th.serial, td.serial { width: 35px; min-width: 35px; }
-     th.shop, td.shop { width: 70px; min-width: 70px; max-width: 70px; }
-     th.code, td.code { width: 55px; min-width: 55px; }
-     th.amount, td.amount { width: 75px; min-width: 75px; }
-     th.net, td.net { width: 65px; min-width: 65px; }
- 
+     th.serial, td.serial { width: 100%; min-width: 100%; }
+     th.shop, td.shop { width: 100%; min-width: 100%; max-width: 100%; }
+     th.code, td.code { width: 100%; min-width: 100%; }
+     th.amount, td.amount { width: 100%; min-width: 100%; }
+     th.net, td.net { width: 100%; min-width: 100%; }
+
      /* تخصيص عرض عمود التاريخ في الشاشات الصغيرة جداً */
      th:first-child, td:first-child {
-       width: 80px !important;
-       min-width: 80px !important;
+       width: 100% !important;
+       min-width: 100% !important;
        font-size: 9px;
-       padding: 4px 2px;
+       padding: 8px 12px;
      }
- 
+
      /* تخصيص عرض عمود الصافي في الشاشات الصغيرة جداً */
      th.net, td.net {
-       width: 65px !important;
-       min-width: 65px !important;
+       width: 100% !important;
+       min-width: 100% !important;
        font-size: 11px;
-       padding: 4px 2px;
+       padding: 8px 12px;
      }
- 
+
      /* تحسين عرض النص في الأعمدة */
      th, td {
-       white-space: nowrap;
-       overflow: hidden;
-       text-overflow: ellipsis;
+       white-space: normal;
+       word-wrap: break-word;
+       overflow-wrap: break-word;
        font-size: 10px;
+       width: 100%;
+       box-sizing: border-box;
      }
- 
+
      /* تخصيص عرض عمود المحل */
      th.shop, td.shop {
-       max-width: 70px;
-       white-space: nowrap;
-       overflow: hidden;
-       text-overflow: ellipsis;
+       max-width: 100%;
+       white-space: normal;
+       word-wrap: break-word;
+       overflow-wrap: break-word;
      }
- 
+
      /* تخصيص عرض عمود الكود */
      th.code, td.code {
-       width: 55px;
-       min-width: 55px;
+       width: 100%;
+       min-width: 100%;
      }
- 
+
      /* تخصيص عرض عمود المبلغ */
      th.amount, td.amount {
-       width: 75px;
-       min-width: 75px;
+       width: 100%;
+       min-width: 100%;
      }
- 
+
      /* تخصيص جدول التحصيلات للشاشات الصغيرة جداً */
      #harvestTable {
        font-size: 10px;
+       width: 100%;
+       box-sizing: border-box;
      }
- 
+
      #harvestTable th {
        font-size: 9px;
-       padding: 5px 2px;
+       padding: 8px 12px;
+       width: 100%;
+       box-sizing: border-box;
      }
- 
+
      #harvestTable td {
        font-size: 9px;
-       padding: 4px 2px;
+       padding: 8px 12px;
        min-height: 35px;
+       width: 100%;
+       box-sizing: border-box;
+       white-space: normal;
+       word-wrap: break-word;
+       overflow-wrap: break-word;
      }
- 
+
      #harvestTable .serial {
-       width: 30px;
-       min-width: 30px;
+       width: 100%;
+       min-width: 100%;
      }
- 
+
      #harvestTable .shop {
-       width: 65px;
-       min-width: 65px;
-       max-width: 65px;
+       width: 100%;
+       min-width: 100%;
+       max-width: 100%;
        font-size: 8px;
+       white-space: normal;
+       word-wrap: break-word;
+       overflow-wrap: break-word;
      }
- 
+
      #harvestTable .code {
-       width: 50px;
-       min-width: 50px;
+       width: 100%;
+       min-width: 100%;
        font-size: 8px;
+       white-space: normal;
      }
- 
+
      #harvestTable .amount {
-       width: 70px;
-       min-width: 70px;
+       width: 100%;
+       min-width: 100%;
        font-size: 10px;
        font-weight: 700;
+       white-space: normal;
      }
- 
+
      #harvestTable .net {
-       width: 60px;
-       min-width: 60px;
+       width: 100%;
+       min-width: 100%;
        font-size: 11px;
        font-weight: 800;
+       white-space: normal;
      }
    }
  
    /* تخصيص عمود التاريخ */
    th:first-child, td:first-child {
-     width: 100px !important;
-     min-width: 100px !important;
-     position: sticky;
-     left: 0;
+     width: 100% !important;
+     min-width: 100% !important;
+     position: relative;
      background: inherit;
-     z-index: 5;
-     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+     z-index: 1;
    }
- 
+
    /* تخصيص عمود الصافي */
    th.net, td.net {
-     position: sticky;
-     right: 0;
+     position: relative;
      background: inherit;
-     z-index: 5;
-     box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+     z-index: 1;
    }
 
    /* تحسين الأزرار للشاشات الصغيرة */
@@ -2795,7 +2850,7 @@ body.dark .alert i {
     display: block;
   }
 
-  /* تحسين عرض الجدول في المحمول */
+  /* تحسين عرض الجدول في المحمول - إصلاح التداخل */
   table {
     font-size: 12px;
     margin: 10px 0;
@@ -2804,8 +2859,12 @@ body.dark .alert i {
     display: block;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
+  /* الحفاظ على هيكل الجدول الأساسي */
   thead, tbody, tr, th, td {
     display: block;
   }
@@ -2822,30 +2881,39 @@ body.dark .alert i {
     border-radius: 8px;
     background: white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   td {
     border: none;
     border-bottom: 1px solid #eee;
     position: relative;
-    padding-left: 50%;
+    padding: 8px 12px 8px 50%;
     white-space: normal;
     text-align: left;
     min-height: 40px;
-    display: flex;
-    align-items: center;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   td:before {
     content: attr(data-label);
     position: absolute;
-    left: 6px;
-    width: 45%;
-    padding-right: 10px;
+    right: 12px;
+    top: 8px;
+    width: 40%;
+    padding-left: 10px;
     white-space: nowrap;
     font-weight: bold;
     color: var(--primary);
-    font-size: 12px;
+    font-size: 11px;
+    text-align: right;
+    direction: rtl;
   }
 
   /* تخصيص عرض البيانات */
@@ -2856,6 +2924,199 @@ body.dark .alert i {
   td:nth-child(5):before { content: "🔄 أخرى"; }
   td:nth-child(6):before { content: "💰 المحصل"; }
   td:nth-child(7):before { content: "⚖️ الصافي"; }
+
+  /* تحسين تنسيق البطاقات للموبايل */
+  .mobile-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,121,101,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mobile-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary), #005a4b);
+  }
+
+  .card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,121,101,0.1);
+  }
+
+  .card-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .card-label {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 12px;
+    min-width: 80px;
+  }
+
+  .card-value {
+    font-weight: 500;
+    color: #333;
+    font-size: 13px;
+    text-align: left;
+    flex: 1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .card-highlight {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .card-positive { color: #007bff; }
+  .card-negative { color: #dc3545; }
+  .card-zero { color: #28a745; }
+
+  /* تنسيق حاوية البطاقات */
+  .mobile-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px;
+    margin-top: 20px;
+  }
+
+  /* تنسيق البطاقات */
+  .mobile-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,121,101,0.1);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+
+  .mobile-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary), #005a4b);
+  }
+
+  /* تنسيق صفوف البطاقة */
+  .card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,121,101,0.1);
+    min-height: 32px;
+  }
+
+  .card-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .card-label {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 12px;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .card-value {
+    font-weight: 500;
+    color: #333;
+    font-size: 13px;
+    text-align: left;
+    flex: 1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-left: 8px;
+  }
+
+  .card-highlight {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .card-positive { color: #007bff; }
+  .card-negative { color: #dc3545; }
+  .card-zero { color: #28a745; }
+
+  /* تنسيق حقول الإدخال في البطاقات */
+  .card-input {
+    border: 1px solid rgba(0,121,101,0.3);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    text-align: center;
+    background: rgba(255,255,255,0.8);
+    color: #333;
+    width: 100px;
+    transition: all 0.3s ease;
+  }
+
+  .card-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2);
+    background: #ffffff;
+  }
+
+  /* الوضع الليلي للبطاقات */
+  body.dark .mobile-card {
+    background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+    border-color: rgba(0,200,150,0.2);
+    color: #e0e0e0;
+  }
+
+  body.dark .card-row {
+    border-bottom-color: rgba(0,200,150,0.2);
+  }
+
+  body.dark .card-label {
+    color: #00c896;
+  }
+
+  body.dark .card-value {
+    color: #e0e0e0;
+  }
+
+  body.dark .card-input {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(0,200,150,0.4);
+    color: #e0e0e0;
+  }
+
+  body.dark .card-input:focus {
+    background: rgba(255,255,255,0.2);
+    border-color: #00c896;
+  }
 
   /* إخفاء عمود أخرى في المحمول */
   td:nth-child(5) {
@@ -2869,18 +3130,23 @@ body.dark .alert i {
     border-radius: 6px;
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   #harvestTable td:before {
     content: attr(data-label);
     position: absolute;
-    left: 6px;
-    width: 40%;
-    padding-right: 10px;
+    right: 12px;
+    top: 8px;
+    width: 35%;
+    padding-left: 10px;
     white-space: nowrap;
     font-weight: bold;
     color: var(--primary);
-    font-size: 11px;
+    font-size: 10px;
+    text-align: right;
+    direction: rtl;
   }
 
   #harvestTable td:nth-child(1):before { content: "#️⃣ الرقم"; }

@@ -1479,6 +1479,141 @@ function parseNumber(x) {
     }
   }
 
+  /* ========== Mobile Card Conversion ========== */
+  function convertTableToCards() {
+    // التحقق من أننا في وضع الموبايل
+    if (window.innerWidth > 768) return;
+
+    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row =>
+      !row.id.includes('totalRow') && !row.id.includes('archiveTotalRow')
+    );
+
+    if (rows.length === 0) return;
+
+    // إنشاء حاوية البطاقات
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'mobile-cards-container';
+    cardsContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 10px;
+      margin-top: 20px;
+    `;
+
+    rows.forEach((row, index) => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 7) return;
+
+      const card = document.createElement('div');
+      card.className = 'mobile-card';
+
+      // استخراج البيانات من الخلايا
+      const serial = cells[0]?.textContent || '';
+      const shop = cells[1]?.textContent || '';
+      const code = cells[2]?.textContent || '';
+      const amount = cells[3]?.textContent || '';
+      const extraInput = cells[4]?.querySelector('input');
+      const collectorInput = cells[5]?.querySelector('input');
+      const netCell = cells[6];
+
+      const extra = extraInput?.value || '';
+      const collector = collectorInput?.value || '';
+      const net = netCell?.textContent || '';
+
+      // تحديد لون البطاقة حسب الصافي
+      let cardClass = '';
+      if (net.includes('↑')) cardClass = 'card-positive';
+      else if (net.includes('↓')) cardClass = 'card-negative';
+      else cardClass = 'card-zero';
+
+      card.innerHTML = `
+        <div class="card-row">
+          <span class="card-label">#️⃣ الرقم:</span>
+          <span class="card-value">${serial}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">🏪 المحل:</span>
+          <span class="card-value">${shop}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">🔢 الكود:</span>
+          <span class="card-value">${code}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">💸 المبلغ:</span>
+          <span class="card-value">${amount}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-label">🔄 أخرى:</span>
+          <input type="text" class="card-input" value="${extra}" placeholder="أدخل المبلغ" />
+        </div>
+        <div class="card-row">
+          <span class="card-label">💰 المحصل:</span>
+          <input type="text" class="card-input" value="${collector}" placeholder="أدخل المبلغ" />
+        </div>
+        <div class="card-row ${cardClass}">
+          <span class="card-label">⚖️ الصافي:</span>
+          <span class="card-value card-highlight">${net}</span>
+        </div>
+      `;
+
+      // إضافة مستمعي الأحداث للحقول
+      const inputs = card.querySelectorAll('.card-input');
+      inputs.forEach(input => {
+        input.addEventListener('input', () => {
+          // تحديث البيانات في الجدول الأصلي
+          const rowIndex = index;
+          const tableRows = tbody.querySelectorAll('tr');
+          if (tableRows[rowIndex]) {
+            const tableInputs = tableRows[rowIndex].querySelectorAll('input');
+            if (input.classList.contains('card-input')) {
+              const inputIndex = Array.from(inputs).indexOf(input);
+              if (tableInputs[inputIndex]) {
+                tableInputs[inputIndex].value = input.value;
+                // تشغيل حدث input للجدول
+                tableInputs[inputIndex].dispatchEvent(new Event('input'));
+              }
+            }
+          }
+        });
+      });
+
+      cardsContainer.appendChild(card);
+    });
+
+    // إخفاء الجدول وإظهار البطاقات
+    table.style.display = 'none';
+    table.parentNode.insertBefore(cardsContainer, table.nextSibling);
+  }
+
+  function convertCardsToTable() {
+    const cardsContainer = document.querySelector('.mobile-cards-container');
+    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
+
+    if (cardsContainer) {
+      cardsContainer.remove();
+    }
+
+    if (table) {
+      table.style.display = '';
+    }
+  }
+
+  function handleResponsiveLayout() {
+    if (window.innerWidth <= 768) {
+      convertTableToCards();
+    } else {
+      convertCardsToTable();
+    }
+  }
+
   /* ========== DOM Ready ========== */
   document.addEventListener("DOMContentLoaded", () => {
     // إضافة انتقال سلس للصفحة بدون التأثير على الشريط الجانبي
@@ -1490,6 +1625,10 @@ function parseNumber(x) {
 
     applyDarkModeFromStorage();
     populateUserData();
+
+    // تهيئة التخطيط المتجاوب
+    handleResponsiveLayout();
+    window.addEventListener('resize', handleResponsiveLayout);
 
     // تهيئة إعدادات الجدول
     initializeTableSettings();
