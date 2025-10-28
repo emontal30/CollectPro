@@ -1,4 +1,4 @@
-م<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -22,13 +22,13 @@
     </div>
   </div>
 
+  <!-- الخلفية الشفافة للشريط الجانبي -->
+  <div class="overlay" id="overlay"></div>
+
   <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="user-box">
-          <div class="user-avatar">
-            <span id="user-initial">A</span>
-          </div>
           <div class="user-meta">
             <span class="user-name" id="user-name">اسم المستخدم</span>
             <span class="user-email" id="user-email">user@example.com</span>
@@ -48,6 +48,13 @@
         </ul>
       </div>
       <div class="sidebar-footer">
+          <div class="subscription-info" id="subscription-info">
+            <div class="subscription-days-simple">
+              <i class="fas fa-clock"></i>
+              <span id="days-left">-</span>
+              <span> يوم متبقي</span>
+            </div>
+          </div>
           <button id="logout-btn" class="logout-btn">
               <i class="fas fa-sign-out-alt"></i>
               <span>تسجيل الخروج</span>
@@ -63,136 +70,131 @@
       <i class="fas fa-moon"></i>
     </button>
     <h1><i class="fas fa-cog"></i> لوحة تحكم الإدارة</h1>
-    <div class="header-actions">
-      <button id="export-data" title="تصدير البيانات" class="header-btn">
-        <i class="fas fa-download"></i>
-      </button>
-      <button id="settings" title="الإعدادات" class="header-btn">
-        <i class="fas fa-cogs"></i>
-      </button>
-    </div>
   </header>
 
   <main>
     <div class="admin-dashboard">
       <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-users"></i></div>
-          <div class="stat-content">
-            <h3>إجمالي المستخدمين</h3>
-            <p class="stat-value" id="total-users">0</p>
-            <div class="stat-trend positive">
-              <i class="fas fa-arrow-up"></i>
-              <span>+12%</span>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-clock"></i></div>
-          <div class="stat-content">
-            <h3>طلبات قيد المراجعة</h3>
-            <p class="stat-value" id="pending-requests">0</p>
-            <div class="stat-trend neutral">
-              <i class="fas fa-clock"></i>
-              <span>تحتاج مراجعة</span>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-          <div class="stat-content">
-            <h3>اشتراكات نشطة</h3>
-            <p class="stat-value" id="active-subscriptions">0</p>
-            <div class="stat-trend positive">
-              <i class="fas fa-arrow-up"></i>
-              <span>+8%</span>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-          <div class="stat-content">
-            <h3>إجمالي الإيرادات</h3>
-            <p class="stat-value" id="total-revenue">0 ج.م</p>
-            <div class="stat-trend neutral">
-              <i class="fas fa-chart-line"></i>
-              <span>هذا الشهر</span>
-            </div>
-          </div>
-        </div>
-      </div>
+         <div class="stat-card">
+           <div class="stat-icon"><i class="fas fa-users"></i></div>
+           <div class="stat-content">
+             <h3>إجمالي المستخدمين</h3>
+             <p class="stat-value" id="total-users">0</p>
+             <div class="stat-trend positive">
+               <i class="fas fa-arrow-up"></i>
+               <span>مستخدم نشط</span>
+             </div>
+           </div>
+         </div>
+         <div class="stat-card">
+           <div class="stat-icon"><i class="fas fa-clock"></i></div>
+           <div class="stat-content">
+             <h3>طلبات قيد المراجعة</h3>
+             <p class="stat-value" id="pending-requests">0</p>
+             <div class="stat-trend neutral">
+               <i class="fas fa-clock"></i>
+               <span>تحتاج مراجعة</span>
+             </div>
+           </div>
+         </div>
+         <div class="stat-card">
+           <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+           <div class="stat-content">
+             <h3>اشتراكات نشطة</h3>
+             <p class="stat-value" id="active-subscriptions">0</p>
+             <div class="stat-trend positive">
+               <i class="fas fa-arrow-up"></i>
+               <span>نشط الآن</span>
+             </div>
+           </div>
+         </div>
+         <div class="stat-card">
+           <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+           <div class="stat-content">
+             <h3>إجمالي الإيرادات</h3>
+             <p class="stat-value" id="total-revenue">0 ج.م</p>
+             <div class="stat-trend positive">
+               <i class="fas fa-chart-line"></i>
+               <span>من الاشتراكات النشطة</span>
+             </div>
+           </div>
+         </div>
+       </div>
 
-      <!-- مخطط بسيط للإحصائيات -->
+      <!-- مخطط تفاعلي للإحصائيات -->
       <div class="admin-section">
         <div class="section-header">
-          <h2><i class="fas fa-chart-bar"></i> نظرة عامة على الإحصائيات</h2>
+          <h2><i class="fas fa-chart-bar"></i> تحليل الإحصائيات التفاعلي</h2>
           <div class="chart-controls">
             <button class="chart-toggle active" data-chart="bars">
               <i class="fas fa-chart-bar"></i>
+              <span>أعمدة</span>
             </button>
             <button class="chart-toggle" data-chart="pie">
               <i class="fas fa-chart-pie"></i>
+              <span>دائري</span>
             </button>
             <button class="chart-toggle" data-chart="line">
               <i class="fas fa-chart-line"></i>
+              <span>خطي</span>
             </button>
           </div>
         </div>
         <div class="chart-container">
           <div class="simple-chart active" id="bars-chart">
-            <div class="chart-bar" data-value="85" data-label="الرضا العام">
-              <div class="bar-fill" style="height: 85%"></div>
-              <span class="bar-label">85%</span>
+            <div class="chart-bar" data-value="0" data-label="الرضا العام">
+              <div class="bar-fill" style="height: 0%"></div>
+              <span class="bar-label">0%</span>
             </div>
-            <div class="chart-bar" data-value="92" data-label="معدل النجاح">
-              <div class="bar-fill" style="height: 92%"></div>
-              <span class="bar-label">92%</span>
+            <div class="chart-bar" data-value="0" data-label="معدل النجاح">
+              <div class="bar-fill" style="height: 0%"></div>
+              <span class="bar-label">0%</span>
             </div>
-            <div class="chart-bar" data-value="78" data-label="النمو الشهري">
-              <div class="bar-fill" style="height: 78%"></div>
-              <span class="bar-label">78%</span>
+            <div class="chart-bar" data-value="0" data-label="النمو الشهري">
+              <div class="bar-fill" style="height: 0%"></div>
+              <span class="bar-label">0%</span>
             </div>
-            <div class="chart-bar" data-value="95" data-label="الأداء">
-              <div class="bar-fill" style="height: 95%"></div>
-              <span class="bar-label">95%</span>
+            <div class="chart-bar" data-value="0" data-label="الأداء">
+              <div class="bar-fill" style="height: 0%"></div>
+              <span class="bar-label">0%</span>
             </div>
           </div>
 
           <div class="pie-chart" id="pie-chart">
             <div class="pie-container">
-              <div class="pie-segment" style="--percentage: 85; --color: #007965;"></div>
-              <div class="pie-segment" style="--percentage: 92; --color: #00a085;"></div>
-              <div class="pie-segment" style="--percentage: 78; --color: #28a745;"></div>
-              <div class="pie-segment" style="--percentage: 95; --color: #f39c12;"></div>
+              <div class="pie-segment" style="--percentage: 0; --color: #007965;"></div>
+              <div class="pie-segment" style="--percentage: 0; --color: #00a085;"></div>
+              <div class="pie-segment" style="--percentage: 0; --color: #28a745;"></div>
+              <div class="pie-segment" style="--percentage: 0; --color: #f39c12;"></div>
             </div>
             <div class="pie-legend">
               <div class="legend-item">
                 <span class="legend-color" style="background: #007965;"></span>
-                <span>الرضا العام (85%)</span>
+                <span>نشط (0%)</span>
               </div>
               <div class="legend-item">
                 <span class="legend-color" style="background: #00a085;"></span>
-                <span>معدل النجاح (92%)</span>
+                <span>معلق (0%)</span>
               </div>
               <div class="legend-item">
                 <span class="legend-color" style="background: #28a745;"></span>
-                <span>النمو الشهري (78%)</span>
+                <span>ملغي (0%)</span>
               </div>
               <div class="legend-item">
                 <span class="legend-color" style="background: #f39c12;"></span>
-                <span>الأداء (95%)</span>
+                <span>منتهي (0%)</span>
               </div>
             </div>
           </div>
 
           <div class="line-chart" id="line-chart">
             <svg class="line-svg" viewBox="0 0 400 200">
-              <polyline class="line-path" points="50,150 125,120 200,160 275,80 350,60"/>
-              <circle class="line-point" cx="50" cy="150" r="4"/>
-              <circle class="line-point" cx="125" cy="120" r="4"/>
-              <circle class="line-point" cx="200" cy="160" r="4"/>
-              <circle class="line-point" cx="275" cy="80" r="4"/>
-              <circle class="line-point" cx="350" cy="60" r="4"/>
+              <polyline class="line-path" points="50,180 125,180 200,180 275,180 350,180"/>
+              <circle class="line-point" cx="50" cy="180" r="4"/>
+              <circle class="line-point" cx="125" cy="180" r="4"/>
+              <circle class="line-point" cx="200" cy="180" r="4"/>
+              <circle class="line-point" cx="275" cy="180" r="4"/>
+              <circle class="line-point" cx="350" cy="180" r="4"/>
             </svg>
             <div class="line-labels">
               <span>يناير</span>
@@ -201,6 +203,16 @@
               <span>أبريل</span>
               <span>مايو</span>
             </div>
+          </div>
+        </div>
+        <div class="chart-info">
+          <div class="info-item">
+            <i class="fas fa-info-circle"></i>
+            <span>البيانات تُحدث تلقائياً عند تحميل الصفحة</span>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-sync-alt"></i>
+            <span>اضغط على زر "تحديث" للحصول على أحدث البيانات</span>
           </div>
         </div>
       </div>
@@ -216,18 +228,27 @@
             </button>
           </div>
         </div>
+        <div class="table-header-info">
+          <div class="table-info">
+            <i class="fas fa-info-circle"></i>
+            <span>يمكنك تحديد عدة طلبات لتفعيلها أو إلغاؤها دفعة واحدة</span>
+          </div>
+          <div class="table-stats">
+            <span id="selected-count">0</span> محدد
+          </div>
+        </div>
         <div class="table-container">
-          <table id="pending-subscriptions-table">
+           <table id="pending-subscriptions-table">
             <thead>
               <tr>
-                <th><input type="checkbox" id="select-all" class="select-all-checkbox" /></th>
-                <th>معرف المستخدم</th>
-                <th>اسم المستخدم</th>
-                <th>البريد الإلكتروني</th>
-                <th>نوع الاشتراك</th>
-                <th>رقم العملية</th>
-                <th>تاريخ الطلب</th>
-                <th>الإجراءات</th>
+                <th><input type="checkbox" id="select-all" class="select-all-checkbox" title="تحديد الكل" /></th>
+                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
+                <th><i class="fas fa-user"></i> اسم المستخدم</th>
+                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
+                <th><i class="fas fa-crown"></i> نوع الاشتراك</th>
+                <th><i class="fas fa-hashtag"></i> رقم العملية</th>
+                <th><i class="fas fa-calendar-alt"></i> تاريخ الطلب</th>
+                <th><i class="fas fa-cogs"></i> الإجراءات</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -235,39 +256,58 @@
           <div id="no-pending-requests" class="no-data">
             <i class="fas fa-inbox"></i>
             <p>لا توجد طلبات اشتراك قيد المراجعة</p>
+            <small>ستظهر الطلبات الجديدة هنا تلقائياً</small>
           </div>
         </div>
       </div>
 
+
       <div class="admin-section">
         <div class="section-header">
-          <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
-          <div class="filter-container">
-            <select id="status-filter" class="filter-select">
-              <option value="all">جميع الحالات</option>
-              <option value="pending">قيد المراجعة</option>
-              <option value="active">نشط</option>
-              <option value="cancelled">ملغي</option>
-              <option value="expired">منتهي</option>
-            </select>
-            <button id="refresh-btn" class="btn-secondary">
-              <i class="fas fa-sync-alt"></i>تحديث
-            </button>
+           <div class="section-title-with-refresh">
+             <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
+             <button id="refresh-btn" class="btn-secondary small-refresh-btn">
+               <i class="fas fa-sync-alt"></i>
+             </button>
+           </div>
+           <div class="filter-container">
+             <div class="filter-group">
+               <label for="status-filter" class="filter-label">
+                 <i class="fas fa-filter"></i>
+                 <span>فلترة حسب الحالة</span>
+               </label>
+               <select id="status-filter" class="filter-select">
+                 <option value="all">جميع الحالات</option>
+                 <option value="pending">قيد المراجعة</option>
+                 <option value="active">نشط</option>
+                 <option value="cancelled">ملغي</option>
+                 <option value="expired">منتهي</option>
+               </select>
+             </div>
+           </div>
+         </div>
+        <div class="table-header-info">
+          <div class="table-info">
+            <i class="fas fa-chart-bar"></i>
+            <span>إدارة شاملة لجميع الاشتراكات في النظام</span>
+          </div>
+          <div class="table-stats">
+            <span id="total-subscriptions-count">0</span> اشتراك إجمالي
           </div>
         </div>
         <div class="table-container">
-          <table id="all-subscriptions-table">
+           <table id="all-subscriptions-table">
             <thead>
               <tr>
-                <th>معرف المستخدم</th>
-                <th>اسم المستخدم</th>
-                <th>البريد الإلكتروني</th>
-                <th>نوع الاشتراك</th>
-                <th>رقم العملية</th>
-                <th>تاريخ البدء</th>
-                <th>تاريخ الانتهاء</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
+                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
+                <th><i class="fas fa-user"></i> اسم المستخدم</th>
+                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
+                <th><i class="fas fa-crown"></i> نوع الاشتراك</th>
+                <th><i class="fas fa-hashtag"></i> رقم العملية</th>
+                <th><i class="fas fa-play-circle"></i> تاريخ البدء</th>
+                <th><i class="fas fa-stop-circle"></i> تاريخ الانتهاء</th>
+                <th><i class="fas fa-flag"></i> الحالة</th>
+                <th><i class="fas fa-cogs"></i> الإجراءات</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -275,26 +315,11 @@
           <div id="no-subscriptions" class="no-data">
             <i class="fas fa-inbox"></i>
             <p>لا توجد اشتراكات</p>
+            <small>سيتم عرض الاشتراكات هنا عند إنشائها</small>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- قسم مراجعة الاشتراكات -->
-    <section class="pending-subscriptions-section">
-      <h2>الاشتراكات قيد المراجعة</h2>
-      <div id="pending-subscriptions" class="subscriptions-grid">
-        <!-- سيتم إضافة بطاقات الاشتراكات هنا -->
-      </div>
-    </section>
-
-    <!-- قسم جميع الاشتراكات -->
-    <section class="all-subscriptions-section">
-      <h2>جميع الاشتراكات</h2>
-      <div id="all-subscriptions" class="subscriptions-grid">
-        <!-- سيتم إضافة بطاقات الاشتراكات هنا -->
-      </div>
-    </section>
   </main>
 
   <div id="alert-container" class="alert-container"></div>

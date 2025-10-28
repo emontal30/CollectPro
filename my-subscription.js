@@ -48,9 +48,6 @@ async function loadUserDataAndSubscription() {
     document.getElementById('user-name').textContent = user.user_metadata?.full_name || user.email;
     document.getElementById('user-email').textContent = user.email;
     document.getElementById('user-id').textContent = `ID: ${user.id.substring(0, 7)}`;
-    if (user.user_metadata?.full_name) {
-        document.getElementById('user-initial').textContent = user.user_metadata.full_name.charAt(0).toUpperCase();
-    }
 
     // Fetch the user's most recent subscription from the database
     const { data: subscription, error } = await supabase
@@ -108,13 +105,42 @@ function updateSubscriptionDisplay(subscription) {
     document.getElementById('end-date').textContent = subscription.end_date ? formatDate(subscription.end_date) : '-';
     document.getElementById('subscription-state').textContent = statusNames[status] || status;
 
+    // حساب الأيام المتبقية
+    const daysRemaining = subscription.end_date ? Math.ceil((new Date(subscription.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+    console.log('My-Subscription - End date:', subscription.end_date, 'Today:', new Date().toISOString(), 'Days remaining:', daysRemaining);
+    const daysRemainingEl = document.getElementById('days-remaining');
+    daysRemainingEl.textContent = daysRemaining > 0 ? `${daysRemaining} يوم` : 'انتهى';
+
+    // إضافة فئة حسب عدد الأيام المتبقية
+    daysRemainingEl.classList.remove('low-days', 'medium-days', 'high-days');
+    if (daysRemaining > 0) {
+      if (daysRemaining <= 7) {
+        daysRemainingEl.classList.add('low-days');
+      } else if (daysRemaining <= 30) {
+        daysRemainingEl.classList.add('medium-days');
+      } else {
+        daysRemainingEl.classList.add('high-days');
+      }
+    }
+
+    // تحديث الشريط الجانبي بالقيمة نفسها
+    const sidebarDaysLeftEl = document.getElementById('days-left');
+    if (sidebarDaysLeftEl) {
+        if (daysRemaining > 0) {
+            sidebarDaysLeftEl.textContent = daysRemaining.toString();
+        } else {
+            sidebarDaysLeftEl.textContent = 'انتهى';
+        }
+    }
+
     if (status === 'pending') {
       actionsContainer.innerHTML = `<div class="action-info"><i class="fas fa-clock"></i><p>طلبك قيد المراجعة. سيتم تفعيل اشتراكك خلال 24 ساعة.</p></div>`;
     } else if (status === 'active') {
       const daysLeft = subscription.end_date ? Math.ceil((new Date(subscription.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+      console.log('My-Subscription Actions - End date:', subscription.end_date, 'Today:', new Date().toISOString(), 'Days left:', daysLeft);
       if (daysLeft <= 7 && daysLeft > 0) {
         actionsContainer.innerHTML = `
-          <div class="action-warning"><i class="fas fa-exclamation-triangle"></i><p>اشتراكك ينتهي خلال ${daysLeft} أيام.</p></div>
+          <div class="action-warning"><i class="fas fa-exclamation-triangle"></i><p>تنبيه: اشتراكك ينتهي خلال ${daysLeft} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.</p></div>
           <button id="renew-btn" class="btn-primary"><i class="fas fa-sync-alt"></i> تجديد الاشتراك</button>`;
         document.getElementById('renew-btn').addEventListener('click', showRenewModal);
       } else if (daysLeft <= 0) {
@@ -161,7 +187,7 @@ async function loadSubscriptionHistory(userId) {
          const planName = sub.subscription_plans?.name_ar || sub.subscription_plans?.name || 'خطة غير معروفة';
          const statusText = statusNames[sub.status] || sub.status;
          const row = tbody.insertRow();
-         row.innerHTML = `<td>${planName}</td><td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}">${statusText}</span></td>`;
+         row.innerHTML = `<td>${planName}</td><td>${sub.start_date ? formatDate(sub.start_date) : '-'}</td><td>${sub.end_date ? formatDate(sub.end_date) : '-'}</td><td><span class="status-badge status-${sub.status}"></span></td>`;
        });
        noHistory.style.display = 'none';
        tbody.parentElement.style.display = 'table';

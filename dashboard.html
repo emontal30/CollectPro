@@ -23,13 +23,13 @@
     </div>
   </div>
 
+  <!-- الخلفية الشفافة للشريط الجانبي -->
+  <div class="overlay" id="overlay"></div>
+
   <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="user-box">
-          <div class="user-avatar">
-            <span id="user-initial">A</span>
-          </div>
           <div class="user-meta">
             <span class="user-name" id="user-name">اسم المستخدم</span>
             <span class="user-email" id="user-email">user@example.com</span>
@@ -49,6 +49,13 @@
         </ul>
       </div>
       <div class="sidebar-footer">
+          <div class="subscription-info" id="subscription-info">
+            <div class="subscription-days-simple">
+              <i class="fas fa-clock"></i>
+              <span id="days-left">-</span>
+              <span> يوم متبقي</span>
+            </div>
+          </div>
           <button id="logout-btn" class="logout-btn">
               <i class="fas fa-sign-out-alt"></i>
               <span>تسجيل الخروج</span>

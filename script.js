@@ -816,10 +816,21 @@ function parseNumber(x) {
     // إنشاء صف الإجمالي الجديد
     const trTotal = document.createElement("tr");
     trTotal.id = "totalRow";
-    trTotal.classList.add("total-row");
+    trTotal.classList.add("total-row", "summary-row");
     trTotal.style.fontWeight = "bold";
+
+    const page = window.location.pathname.split('/').pop().replace('.html', '');
+    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
+    let colspan = 0;
+    const firstThreeColumns = ['col-serial', 'col-shop', 'col-code'];
+    firstThreeColumns.forEach(colId => {
+        if(settings[colId] !== false) {
+            colspan++;
+        }
+    });
+
     trTotal.innerHTML = `
-      <td colspan="3">الإجمالي</td>
+      <td colspan="${colspan > 0 ? colspan : 1}">الإجمالي</td>
       <td>${formatNumber(totalAmount)}</td>
       <td>${formatNumber(totalExtra)}</td>
       <td>${formatNumber(totalCollector)}</td>
@@ -829,6 +840,7 @@ function parseNumber(x) {
 
     // تحديث ملخص البيانات
     updateSummaryFields(totalAmount, totalExtra, totalCollector);
+    loadTableSettingsOnPageLoad();
   }
 
   // دالة محسنة لتحديث حقول ملخص البيانات
@@ -1178,8 +1190,295 @@ function parseNumber(x) {
     if (userInitialEl) userInitialEl.textContent = displayName.charAt(0).toUpperCase();
     if (userEmailEl) userEmailEl.textContent = user.email;
     if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
+
+    // تحديث معلومات الاشتراك
+    updateSubscriptionInfo();
   }
   
+  // دالة لتحديث معلومات الاشتراك في الشريط الجانبي
+  async function updateSubscriptionInfo() {
+    const subscriptionInfoEl = document.getElementById('subscription-info');
+
+    // إظهار معلومات الاشتراك في جميع الصفحات
+    if (subscriptionInfoEl) {
+        subscriptionInfoEl.style.display = 'block';
+    }
+
+    try {
+        console.log('Updating subscription info for sidebar');
+
+        // جلب بيانات المستخدم
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            console.log('No user found for subscription info');
+            const daysLeftEl = document.getElementById('days-left');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+            return;
+        }
+
+        const { data: subscription, error } = await supabase
+            .from('subscriptions')
+            .select(`
+                end_date, 
+                status, 
+                start_date,
+                plan_name,
+                subscription_plans:plan_id (
+                    name,
+                    name_ar
+                )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        console.log('Subscription data:', subscription, 'Error:', error);
+
+        const daysLeftEl = document.getElementById('days-left');
+
+        if (error || !subscription) {
+            console.log('No active subscription found');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+            if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+            console.log('Subscription info displayed in sidebar');
+            return;
+        }
+
+        // إظهار معلومات الاشتراك فوراً
+        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+        if (subscription.end_date) {
+            const endDate = new Date(subscription.end_date);
+            const today = new Date();
+            const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+            console.log('Sidebar - End date:', subscription.end_date, 'Today:', today.toISOString(), 'Days left:', daysLeft);
+
+            if (daysLeftEl) {
+                daysLeftEl.textContent = daysLeft > 0 ? daysLeft.toString() : 'انتهى';
+            }
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = daysLeft > 0 ? 'subscription-days-simple' : 'subscription-days-simple expired';
+            }
+        } else {
+            if (daysLeftEl) {
+                daysLeftEl.textContent = '∞';
+            }
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+        }
+
+        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error updating subscription info:', error);
+        const daysLeftEl = document.getElementById('days-left');
+        if (daysLeftEl) daysLeftEl.textContent = '0';
+    }
+  }
+
+  /* ========== Table Column Settings ========== */
+  function initializeTableSettings() {
+    const tableSettingsBtn = document.getElementById('tableSettingsBtn');
+    const tableSettingsModal = document.getElementById('tableSettingsModal');
+    const closeModal = document.getElementById('closeModal');
+    const resetColumns = document.getElementById('resetColumns');
+    const applySettings = document.getElementById('applySettings');
+
+    if (!tableSettingsBtn || !tableSettingsModal) return;
+
+    // فتح النافذة المنبثقة
+    tableSettingsBtn.addEventListener('click', () => {
+      tableSettingsModal.style.display = 'flex';
+      loadColumnSettings();
+    });
+
+    // إغلاق النافذة
+    closeModal.addEventListener('click', () => {
+      tableSettingsModal.style.display = 'none';
+    });
+
+    // إغلاق النافذة عند النقر خارجها
+    tableSettingsModal.addEventListener('click', (e) => {
+      if (e.target === tableSettingsModal) {
+        tableSettingsModal.style.display = 'none';
+      }
+    });
+
+    // إعادة تعيين الأعمدة
+    resetColumns.addEventListener('click', () => {
+      const checkboxes = tableSettingsModal.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
+    });
+
+    // تطبيق الإعدادات
+    applySettings.addEventListener('click', () => {
+      applyColumnSettings();
+      tableSettingsModal.style.display = 'none';
+    });
+  }
+
+  function loadColumnSettings() {
+    const page = window.location.pathname.split('/').pop().replace('.html', '');
+    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
+
+    const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      const columnId = checkbox.id;
+      if (settings[columnId] !== undefined) {
+        checkbox.checked = settings[columnId];
+      } else {
+        // الافتراضي: جميع الأعمدة مرئية
+        checkbox.checked = true;
+      }
+    });
+  }
+
+  function applyColumnSettings() {
+    const page = window.location.pathname.split('/').pop().replace('.html', '');
+    const settings = {};
+    const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
+
+    checkboxes.forEach(checkbox => {
+      settings[checkbox.id] = checkbox.checked;
+    });
+
+    // حفظ الإعدادات في localStorage
+    localStorage.setItem(`tableSettings_${page}`, JSON.stringify(settings));
+
+    // تطبيق الإعدادات على الجدول
+    updateTableColumns(settings);
+  }
+
+  function updateTableColumns(settings) {
+    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
+    if (!table) return;
+
+    const headers = table.querySelectorAll('thead th');
+    const rows = table.querySelectorAll('tbody tr');
+    const totalRow = table.querySelector('#totalRow') || table.querySelector('#archiveTotalRow');
+
+    // قائمة الأعمدة حسب الصفحة
+    const page = window.location.pathname.split('/').pop().replace('.html', '');
+    let columnMap = {};
+
+    if (page === 'harvest') {
+      columnMap = {
+        'col-serial': 0,    // #
+        'col-shop': 1,      // المحل
+        'col-code': 2,      // الكود
+        'col-amount': 3,    // مبلغ التحويل
+        'col-extra': 4,     // أخرى
+        'col-collector': 5, // المحصّل
+        'col-net': 6        // الصافي
+      };
+    } else if (page === 'archive') {
+      columnMap = {
+        'col-date': 0,      // التاريخ
+        'col-shop': 1,      // المحل
+        'col-code': 2,      // الكود
+        'col-amount': 3,    // مبلغ التحويل
+        'col-extra': 4,     // أخرى
+        'col-collector': 5, // المحصّل
+        'col-net': 6        // الصافي
+      };
+    }
+
+    // إظهار/إخفاء الأعمدة
+    Object.keys(columnMap).forEach(columnId => {
+      const columnIndex = columnMap[columnId];
+      const isVisible = settings[columnId] !== false; // الافتراضي true
+
+      // تحديث رؤوس الأعمدة
+      if (headers[columnIndex]) {
+        headers[columnIndex].style.display = isVisible ? '' : 'none';
+      }
+
+      // تحديث خلايا البيانات
+      rows.forEach(row => {
+        if (row.id === 'totalRow' || row.id === 'archiveTotalRow') return;
+        const cells = row.querySelectorAll('td, th');
+        if (cells[columnIndex]) {
+          cells[columnIndex].style.display = isVisible ? '' : 'none';
+        }
+      });
+    });
+
+    if (totalRow) {
+      const totalCells = totalRow.querySelectorAll('td');
+      let visibleCells = 0;
+      Object.keys(columnMap).forEach(columnId => {
+        const columnIndex = columnMap[columnId];
+        const isVisible = settings[columnId] !== false;
+        
+        // This logic is a bit tricky because the total row has a different structure
+        // In harvest page, first cell has colspan=3
+        // Let's adjust the indices for the total row
+        let totalRowIndex = -1;
+        if (page === 'harvest') {
+            if (columnIndex >= 3) { // amount, extra, collector, net
+                totalRowIndex = columnIndex - 2; // 1, 2, 3, 4
+            }
+        } else if (page === 'archive') {
+            if (columnIndex >= 3) { // amount, extra, collector, net
+                totalRowIndex = columnIndex - 2; // 1, 2, 3, 4
+            }
+        }
+
+        if (totalRowIndex !== -1 && totalCells[totalRowIndex]) {
+            totalCells[totalRowIndex].style.display = isVisible ? '' : 'none';
+        }
+      });
+
+      const firstCell = totalCells[0];
+      if(firstCell){
+        let colspan = 0;
+        for(let i=0; i < 3; i++){
+            const columnId = Object.keys(columnMap).find(key => columnMap[key] === i);
+            if(settings[columnId] !== false){
+                colspan++;
+            }
+        }
+        firstCell.colSpan = colspan > 0 ? colspan : 1;
+      }
+    }
+  }
+
+  function loadTableSettingsOnPageLoad() {
+    const page = window.location.pathname.split('/').pop().replace('.html', '');
+    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
+
+    // إذا لم تكن هناك إعدادات محفوظة، استخدم الافتراضي (جميع الأعمدة مرئية)
+    if (Object.keys(settings).length === 0) {
+      const defaultSettings = {};
+      const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        defaultSettings[checkbox.id] = true;
+      });
+      updateTableColumns(defaultSettings);
+    } else {
+      updateTableColumns(settings);
+    }
+  }
+
   /* ========== DOM Ready ========== */
   document.addEventListener("DOMContentLoaded", () => {
     // إضافة انتقال سلس للصفحة بدون التأثير على الشريط الجانبي
@@ -1188,9 +1487,13 @@ function parseNumber(x) {
         document.body.classList.add("loaded");
       }, 100);
     }
-    
+
     applyDarkModeFromStorage();
     populateUserData();
+
+    // تهيئة إعدادات الجدول
+    initializeTableSettings();
+    loadTableSettingsOnPageLoad();
     
     const toggleDarkBtn = document.getElementById("toggleDark");
     if (toggleDarkBtn) {

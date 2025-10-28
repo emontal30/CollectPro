@@ -69,6 +69,23 @@ async function populateUserData() {
             return;
         }
 
+        // التحقق من وجود اشتراك للمستخدم
+        const { data: existingSubscription } = await supabase
+            .from('subscriptions')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .single();
+
+        // إذا لم يكن لدى المستخدم اشتراك، أنشئ اشتراك تجريبي
+        if (!existingSubscription) {
+            console.log('No subscription found for user, creating test subscription');
+            await createTestSubscription(user.id);
+        } else {
+            // تحديث معلومات الاشتراك الموجودة
+            await updateSubscriptionInfo();
+        }
+
         updateUserDisplay(user);
 
     } catch (error) {
@@ -87,9 +104,8 @@ async function populateUserData() {
     }
 }
 
-function updateUserDisplay(user) {
+async function updateUserDisplay(user) {
     const userNameEl = document.getElementById('user-name');
-    const userInitialEl = document.getElementById('user-initial');
     const userEmailEl = document.getElementById('user-email');
     const userIdEl = document.getElementById('user-id');
 
@@ -97,13 +113,227 @@ function updateUserDisplay(user) {
     const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'مستخدم';
 
     if (userNameEl) userNameEl.textContent = displayName;
-    if (userInitialEl) userInitialEl.textContent = displayName.charAt(0).toUpperCase();
     if (userEmailEl) userEmailEl.textContent = user.email;
     if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
+
+    // تحديث معلومات الاشتراك
+    await updateSubscriptionInfo();
+}
+
+// دالة لإنشاء اشتراك تجريبي للمستخدم الجديد
+async function createTestSubscription(userId) {
+    try {
+        console.log('Creating test subscription for user:', userId);
+
+        // إنشاء اشتراك تجريبي لمدة 30 يوم
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + 30);
+
+        const { data, error } = await supabase
+            .from('subscriptions')
+            .insert({
+                user_id: userId,
+                plan_id: null, // اشتراك تجريبي بدون خطة محددة
+                plan_name: 'فترة تجريبية',
+                plan_period: '30 يوم',
+                price: 0,
+                status: 'active',
+                start_date: startDate.toISOString(),
+                end_date: endDate.toISOString(),
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating test subscription:', error);
+        } else {
+            console.log('Test subscription created:', data);
+            // تحديث العرض بالبيانات الجديدة
+            await updateSubscriptionInfo();
+        }
+    } catch (error) {
+        console.error('Error in createTestSubscription:', error);
+    }
+}
+
+// دالة لتحديث معلومات الاشتراك في الشريط الجانبي
+async function updateSubscriptionInfo() {
+    const currentPage = window.location.pathname.split('/').pop();
+    const subscriptionInfoEl = document.getElementById('subscription-info');
+
+    // إظهار معلومات الاشتراك في جميع الصفحات
+    if (subscriptionInfoEl) {
+        subscriptionInfoEl.style.display = 'block';
+    }
+
+    try {
+        console.log('Updating subscription info for my-subscription.html');
+
+        // جلب بيانات المستخدم
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            console.log('No user found for subscription info');
+            const daysLeftEl = document.getElementById('days-left');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+            return;
+        }
+
+        const { data: subscription, error } = await supabase
+            .from('subscriptions')
+            .select(`
+                end_date, 
+                status, 
+                start_date,
+                plan_name,
+                subscription_plans:plan_id (
+                    name,
+                    name_ar
+                )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        console.log('Subscription data:', subscription, 'Error:', error);
+
+        const daysLeftEl = document.getElementById('days-left');
+
+        if (error || !subscription) {
+            console.log('No active subscription found');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+            if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+    
+            // حفظ القيمة في localStorage للمزامنة مع الصفحات الأخرى
+            if (daysLeftEl && daysLeftEl.textContent && daysLeftEl.textContent !== 'يرجى تسجيل الدخول' && daysLeftEl.textContent !== 'لا يوجد اشتراك نشط' && daysLeftEl.textContent !== 'خطأ في تحميل البيانات' && daysLeftEl.textContent !== '∞') {
+                localStorage.setItem('sidebarDaysLeft', daysLeftEl.textContent);
+            }
+            console.log('Subscription info displayed in sidebar');
+
+            // حفظ القيمة في localStorage للمزامنة مع الصفحات الأخرى
+            if (daysLeftEl && daysLeftEl.textContent && daysLeftEl.textContent !== 'يرجى تسجيل الدخول' && daysLeftEl.textContent !== 'لا يوجد اشتراك نشط' && daysLeftEl.textContent !== 'خطأ في تحميل البيانات' && daysLeftEl.textContent !== '∞') {
+                localStorage.setItem('sidebarDaysLeft', daysLeftEl.textContent);
+            }
+            return;
+        }
+
+        // إظهار معلومات الاشتراك فوراً
+        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+        if (subscription.end_date) {
+            const endDate = new Date(subscription.end_date);
+            const today = new Date();
+            const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+            console.log('Sidebar - End date:', subscription.end_date, 'Today:', today.toISOString(), 'Days left:', daysLeft);
+
+            let message = '';
+            let className = '';
+
+            if (subscription.status === 'active') {
+                if (daysLeft > 7) {
+                    message = `نشط | ${daysLeft} يوم`;
+                    className = 'active';
+                } else if (daysLeft > 0) {
+                    message = `ينتهي قريباً | ${daysLeft} يوم`;
+                    className = 'warning';
+                    // إظهار تنبيه
+                    showAlert(`تنبيه: اشتراكك ينتهي خلال ${daysLeft} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.`, 'warning');
+                } else {
+                    message = 'منتهي';
+                    className = 'expired';
+                    showAlert('انتهى اشتراكك! يرجى تجديد الاشتراك للاستمرار في استخدام الخدمة.', 'danger');
+                }
+            } else {
+                const statusMap = {
+                    'cancelled': 'ملغي',
+                    'paused': 'متوقف مؤقتاً',
+                    'expired': 'منتهي'
+                };
+                message = statusMap[subscription.status] || 'غير نشط';
+                className = 'expired';
+            }
+
+            if (daysLeftEl) {
+                daysLeftEl.textContent = daysLeft > 0 ? daysLeft.toString() : 'انتهى';
+            }
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = daysLeft > 0 ? 'subscription-days-simple' : 'subscription-days-simple expired';
+            }
+        } else {
+            if (daysLeftEl) {
+                daysLeftEl.textContent = '∞';
+            }
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+        }
+
+        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error updating subscription info:', error);
+        const daysLeftEl = document.getElementById('days-left');
+        if (daysLeftEl) daysLeftEl.textContent = 'خطأ في تحميل البيانات';
+    }
+}
+
+// دالة للتحقق من وجود اشتراك تجريبي للمستخدم
+async function checkForTestSubscription(userId) {
+    try {
+        console.log('Checking for test subscription for user:', userId);
+
+        // البحث عن اشتراك تجريبي (فترة تجريبية مدتها 30 يوم)
+        const { data: testSubscription, error } = await supabase
+            .from('subscriptions')
+            .select('id, end_date, status, created_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (testSubscription && testSubscription.end_date) {
+            console.log('Found test subscription:', testSubscription);
+            // تحديث العرض بالبيانات الفعلية
+            await updateSubscriptionInfo();
+        } else {
+            console.log('No test subscription found, showing default message');
+            const daysLeftEl = document.getElementById('days-left');
+            if (daysLeftEl) daysLeftEl.textContent = 'لا يوجد اشتراك نشط';
+        }
+    } catch (error) {
+        console.error('Error checking test subscription:', error);
+    }
 }
 
 // Add active class to current page link
 document.addEventListener('DOMContentLoaded', () => {
+    // تحميل القيمة المحفوظة من localStorage إذا كانت متوفرة
+    const savedDaysLeft = localStorage.getItem('sidebarDaysLeft');
+    if (savedDaysLeft) {
+        const daysLeftEl = document.getElementById('days-left');
+        if (daysLeftEl && daysLeftEl.textContent === '-') {
+            daysLeftEl.textContent = savedDaysLeft;
+        }
+    }
+
     populateUserData();
     const currentPage = window.location.pathname.split('/').pop();
     const navLinks = document.querySelectorAll('.sidebar .nav-links a');

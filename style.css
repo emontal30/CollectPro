@@ -240,9 +240,8 @@ textarea:focus {
 table {
    width: 100%;
    margin: 20px 0;
-   border-collapse: separate;
-   border-spacing: 0;
-   table-layout: fixed;
+   border-collapse: collapse;
+   table-layout: auto;
    text-align: center;
    background: linear-gradient(135deg, #ffffff, #f8f9fa);
    border-radius: var(--border-radius);
@@ -251,7 +250,7 @@ table {
    border: 2px solid var(--primary);
    position: relative;
    transition: var(--transition);
- }
+  }
 
 table:hover {
    box-shadow: 0 12px 35px rgba(0,0,0,0.2), 0 6px 15px rgba(0,0,0,0.12), 0 0 0 2px var(--primary);
@@ -296,9 +295,8 @@ tr:last-child td {
   border-bottom: none;
 }
 /* ضبط أعمدة الجدول مع استجابة تدريجية */
-th.serial, td.serial { width: 50px; min-width: 50px; }
+th.serial, td.serial { min-width: 50px; }
 th.shop, td.shop {
-    width: 120px;
     min-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -330,40 +328,39 @@ th.shop, td.shop {
     text-overflow: clip !important;
   }
 
-th.code, td.code { width: 100px; min-width: 100px; }
+th.code, td.code { min-width: 100px; }
 td.code {
   font-size: 0.9em;
   color: #888888;
   font-style: italic;
 }
-th.amount, td.amount { width: 120px; min-width: 120px; }
-th.extra, td.extra { width: 110px; min-width: 110px; }
-th.collector, td.collector { width: 110px; min-width: 110px; }
+th.amount, td.amount { min-width: 120px; }
+th.extra, td.extra { min-width: 110px; }
+th.collector, td.collector { min-width: 110px; }
 th.net, td.net {
-  width: 110px;
   min-width: 110px;
   font-weight: bold !important;
 }
 
 /* استجابة تدريجية لجميع الأعمدة */
 @media (max-width: 1400px) {
-  th.serial, td.serial { width: 45px; min-width: 45px; }
-  th.shop, td.shop { width: 110px; min-width: 110px; }
-  th.code, td.code { width: 95px; min-width: 95px; }
-  th.amount, td.amount { width: 115px; min-width: 115px; }
-  th.extra, td.extra { width: 105px; min-width: 105px; }
-  th.collector, td.collector { width: 105px; min-width: 105px; }
-  th.net, td.net { width: 105px; min-width: 105px; }
+  th.serial, td.serial { min-width: 45px; }
+  th.shop, td.shop { min-width: 110px; }
+  th.code, td.code { min-width: 95px; }
+  th.amount, td.amount { min-width: 115px; }
+  th.extra, td.extra { min-width: 105px; }
+  th.collector, td.collector { min-width: 105px; }
+  th.net, td.net { min-width: 105px; }
 }
 
 @media (max-width: 1200px) {
-  th.serial, td.serial { width: 40px; min-width: 40px; }
-  th.shop, td.shop { width: 100px; min-width: 100px; }
-  th.code, td.code { width: 90px; min-width: 90px; }
-  th.amount, td.amount { width: 110px; min-width: 110px; }
-  th.extra, td.extra { width: 100px; min-width: 100px; }
-  th.collector, td.collector { width: 100px; min-width: 100px; }
-  th.net, td.net { width: 100px; min-width: 100px; }
+  th.serial, td.serial { min-width: 40px; }
+  th.shop, td.shop { min-width: 100px; }
+  th.code, td.code { min-width: 90px; }
+  th.amount, td.amount { min-width: 110px; }
+  th.extra, td.extra { min-width: 100px; }
+  th.collector, td.collector { min-width: 100px; }
+  th.net, td.net { min-width: 100px; }
 }
 
 @media (max-width: 1024px) {
@@ -371,13 +368,13 @@ th.net, td.net {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  th.serial, td.serial { width: 35px; min-width: 35px; }
-  th.shop, td.shop { width: 90px; min-width: 90px; }
-  th.code, td.code { width: 80px; min-width: 80px; }
-  th.amount, td.amount { width: 100px; min-width: 100px; }
-  th.extra, td.extra { width: 90px; min-width: 90px; }
-  th.collector, td.collector { width: 90px; min-width: 90px; }
-  th.net, td.net { width: 90px; min-width: 90px; }
+  th.serial, td.serial { min-width: 35px; }
+  th.shop, td.shop { min-width: 90px; }
+  th.code, td.code { min-width: 80px; }
+  th.amount, td.amount { min-width: 100px; }
+  th.extra, td.extra { min-width: 90px; }
+  th.collector, td.collector { min-width: 90px; }
+  th.net, td.net { min-width: 90px; }
 }
 
 @media (max-width: 923px) {
@@ -404,13 +401,17 @@ th.net, td.net {
     min-width: 100%;
     box-sizing: border-box;
   }
-  th.serial, td.serial { width: 32px; min-width: 32px; }
-  th.shop, td.shop { width: 85px; min-width: 85px; }
-  th.code, td.code { width: 75px; min-width: 75px; }
-  th.amount, td.amount { width: 95px; min-width: 95px; }
-  th.extra, td.extra { width: 85px; min-width: 85px; }
-  th.collector, td.collector { width: 85px; min-width: 85px; }
-  th.net, td.net { width: 85px; min-width: 85px; }
+  /* إزالة display:block من tbody وthead لتجنب المشاكل */
+  tbody, thead {
+    display: table-row-group !important;
+  }
+  th.serial, td.serial { min-width: 32px; }
+  th.shop, td.shop { min-width: 85px; }
+  th.code, td.code { min-width: 75px; }
+  th.amount, td.amount { min-width: 95px; }
+  th.extra, td.extra { min-width: 85px; }
+  th.collector, td.collector { min-width: 85px; }
+  th.net, td.net { min-width: 85px; }
   th, td {
     padding: 12px 8px;
     min-height: 60px;
@@ -418,13 +419,13 @@ th.net, td.net {
 }
 
 @media (max-width: 780px) {
-  th.serial, td.serial { width: 28px; min-width: 28px; }
-  th.shop, td.shop { width: 75px; min-width: 75px; }
-  th.code, td.code { width: 65px; min-width: 65px; }
-  th.amount, td.amount { width: 85px; min-width: 85px; }
-  th.extra, td.extra { width: 75px; min-width: 75px; }
-  th.collector, td.collector { width: 75px; min-width: 75px; }
-  th.net, td.net { width: 75px; min-width: 75px; }
+  th.serial, td.serial { min-width: 28px; }
+  th.shop, td.shop { min-width: 75px; }
+  th.code, td.code { min-width: 65px; }
+  th.amount, td.amount { min-width: 85px; }
+  th.extra, td.extra { min-width: 75px; }
+  th.collector, td.collector { min-width: 75px; }
+  th.net, td.net { min-width: 75px; }
   th, td {
     padding: 10px 6px;
     min-height: 55px;
@@ -435,13 +436,13 @@ th.net, td.net {
   table {
     font-size: 10px;
   }
-  th.serial, td.serial { width: 20px; min-width: 20px; }
-  th.shop, td.shop { width: 60px; min-width: 60px; }
-  th.code, td.code { width: 50px; min-width: 50px; }
-  th.amount, td.amount { width: 70px; min-width: 70px; }
-  th.extra, td.extra { width: 60px; min-width: 60px; }
-  th.collector, td.collector { width: 60px; min-width: 60px; }
-  th.net, td.net { width: 60px; min-width: 60px; }
+  th.serial, td.serial { min-width: 20px; }
+  th.shop, td.shop { min-width: 60px; }
+  th.code, td.code { min-width: 50px; }
+  th.amount, td.amount { min-width: 70px; }
+  th.extra, td.extra { min-width: 60px; }
+  th.collector, td.collector { min-width: 60px; }
+  th.net, td.net { min-width: 60px; }
   th, td {
     padding: 6px 3px;
     min-height: 45px;
@@ -452,13 +453,13 @@ th.net, td.net {
   table {
     font-size: 11px;
   }
-  th.serial, td.serial { width: 25px; min-width: 25px; }
-  th.shop, td.shop { width: 70px; min-width: 70px; }
-  th.code, td.code { width: 60px; min-width: 60px; }
-  th.amount, td.amount { width: 80px; min-width: 80px; }
-  th.extra, td.extra { width: 70px; min-width: 70px; }
-  th.collector, td.collector { width: 70px; min-width: 70px; }
-  th.net, td.net { width: 70px; min-width: 70px; }
+  th.serial, td.serial { min-width: 25px; }
+  th.shop, td.shop { min-width: 70px; }
+  th.code, td.code { min-width: 60px; }
+  th.amount, td.amount { min-width: 80px; }
+  th.extra, td.extra { min-width: 70px; }
+  th.collector, td.collector { min-width: 70px; }
+  th.net, td.net { min-width: 70px; }
   th, td {
     padding: 8px 4px;
     min-height: 50px;
@@ -466,13 +467,13 @@ th.net, td.net {
 }
 
 @media (max-width: 768px) {
-  th.serial, td.serial { width: 30px; min-width: 30px; }
-  th.shop, td.shop { width: 80px; min-width: 80px; }
-  th.code, td.code { width: 70px; min-width: 70px; }
-  th.amount, td.amount { width: 90px; min-width: 90px; }
-  th.extra, td.extra { width: 80px; min-width: 80px; }
-  th.collector, td.collector { width: 80px; min-width: 80px; }
-  th.net, td.net { width: 80px; min-width: 80px; }
+  th.serial, td.serial { min-width: 30px; }
+  th.shop, td.shop { min-width: 80px; }
+  th.code, td.code { min-width: 70px; }
+  th.amount, td.amount { min-width: 90px; }
+  th.extra, td.extra { min-width: 80px; }
+  th.collector, td.collector { min-width: 80px; }
+  th.net, td.net { min-width: 80px; }
 }
 
 /* تنسيقات خاصة بعمود الصافي حسب قيمة الرقم */
@@ -519,6 +520,29 @@ table td {
   border-right: 1px solid rgba(0,121,101,0.4) !important;
 }
 
+/* نمط خاص لصف الإجمالي */
+.summary-row td {
+  font-size: 16px !important;
+  line-height: 1.4;
+  padding-block: 12px;
+  white-space: nowrap;
+  min-width: 100px;
+}
+.summary-row td .status-badge,
+.summary-row td .action-btn {
+  font-size: inherit;
+}
+@media (max-width: 768px) {
+  .summary-row td {
+    font-size: 15px !important;
+  }
+}
+
+/* تحسينات إضافية للاتساق */
+.summary-row td.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
 /* إزالة الحدود من الحواف الخارجية */
 table td:first-child,
 table th:first-child {
@@ -551,22 +575,24 @@ th.net {
 
 /* فاصل خاص بين مبلغ التحويل واخرى */
 th.extra {
-  border-left: 3px solid var(--primary) !important;
-  position: relative;
-}
+   border-left: 3px solid var(--primary) !important;
+   position: relative;
+ }
 th.status, td.status { width: 100px; }
 th {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-  font-size: 14px;
-  font-weight: 700;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-}
+   background: linear-gradient(135deg, var(--primary), #005a4b);
+   color: white;
+   font-size: 16px;
+   font-weight: 700;
+   position: sticky;
+   top: 0;
+   z-index: 10;
+   text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+   border-bottom: 1px solid rgba(255,255,255,0.15);
+   backdrop-filter: blur(10px);
+   line-height: 1.4;
+   padding: 18px 12px;
+ }
 th.shop {
   background: linear-gradient(135deg, var(--primary), #005a4b) !important;
   color: white !important;
@@ -1048,8 +1074,8 @@ td.amount {
 
 /* الاحتفاظ بالحدود في صف الإجمالي للفواصل الواضحة */
 
-#totalRow .numeric, #totalRow .amount, #totalRow .collector, #totalRow .net,
-.total-row .numeric, .total-row .amount, .total-row .collector, .total-row .net {
+#totalRow .numeric, #totalRow .amount, #totalRow .collector, #totalRow .net, #totalRow .extra,
+.total-row .numeric, .total-row .amount, .total-row .collector, .total-row .net, .total-row .extra {
   text-align: center !important;
   font-weight: 700 !important;
   font-size: 18px !important;
@@ -1160,7 +1186,8 @@ body.dark #totalRow td, body.dark .total-row td {
 
 #archiveSearch {
   flex: 1;
-  min-width: 250px;
+  min-width: 200px;
+  max-width: 300px;
 }
 
 #archiveSelect:focus, #archiveSearch:focus {
@@ -1611,6 +1638,39 @@ body.dark td.code {
   font-style: italic;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
+/* القواعد الأساسية لجدول التحصيلات */
+.collections-table {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.collections-table th, .collections-table td {
+  box-sizing: border-box;
+  padding: 8px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collections-table:not(.columns-hidden) th.serial, .collections-table:not(.columns-hidden) td.serial { width: 5%; }
+.collections-table:not(.columns-hidden) th.shop, .collections-table:not(.columns-hidden) td.shop { width: 20%; }
+.collections-table:not(.columns-hidden) th.code, .collections-table:not(.columns-hidden) td.code { width: 15%; }
+.collections-table:not(.columns-hidden) th.amount, .collections-table:not(.columns-hidden) td.amount { width: 15%; }
+.collections-table:not(.columns-hidden) th.extra, .collections-table:not(.columns-hidden) td.extra { width: 15%; }
+.collections-table:not(.columns-hidden) th.collector, .collections-table:not(.columns-hidden) td.collector { width: 15%; }
+.collections-table:not(.columns-hidden) th.net, .collections-table:not(.columns-hidden) td.net { width: 15%; }
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-wrap .collections-table {
+  min-width: 720px;
+}
+
+
 /* تحسين تجربة الجداول */
 tbody tr {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2282,6 +2342,7 @@ body.dark tbody tr:nth-child(odd) {
  
    #archiveSearch {
      min-width: auto;
+     max-width: 180px;
    }
 
    /* تحسين الفوتر للشاشات الصغيرة */
@@ -3234,6 +3295,299 @@ body.dark .alert i {
   -moz-user-select: none !important;
   -ms-user-select: none !important;
   pointer-events: auto !important;
+}
+
+/* تنسيقات زر إعداد الجدول */
+.table-controls {
+  display: inline-block;
+  margin-left: 15px;
+}
+
+.table-settings-btn {
+  background: linear-gradient(135deg, #17a2b8, #138496) !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 32px !important;
+  min-width: auto !important;
+}
+
+.table-settings-btn:hover {
+  background: linear-gradient(135deg, #138496, #17a2b8) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4) !important;
+}
+
+.table-settings-btn i {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* إزالة التجاوب مع الشاشات للأيقونة */
+.table-settings-btn i,
+.table-settings-btn i::before,
+.table-settings-btn i::after {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+}
+
+/* تنسيقات النافذة المنبثقة لإعداد الجدول */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transform: scale(0.8);
+  animation: modalScale 0.3s ease forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes modalScale {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(0,121,101,0.1);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,121,101,0.2);
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal:hover {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  margin-bottom: 25px;
+}
+
+.column-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.column-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.8));
+  border-radius: 10px;
+  border: 2px solid rgba(0,121,101,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.column-item:hover {
+  background: linear-gradient(135deg, rgba(0, 121, 101, 0.05), rgba(0, 121, 101, 0.02));
+  border-color: rgba(0,121,101,0.3);
+  transform: translateX(5px);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  width: 100%;
+}
+
+.checkbox-label input[type="checkbox"] {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0,121,101,0.3);
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding-top: 20px;
+  border-top: 2px solid rgba(0,121,101,0.1);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+  color: white !important;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, #5a6268, #6c757d) !important;
+}
+
+/* الوضع الليلي للنافذة المنبثقة */
+body.dark .modal {
+  background: rgba(0,0,0,0.8);
+}
+
+body.dark .modal-content {
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+  color: #e0e0e0;
+  border-color: rgba(255,255,255,0.1);
+}
+
+body.dark .modal-header h3 {
+  color: #00c896;
+}
+
+body.dark .column-item {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  border-color: rgba(0,200,150,0.2);
+}
+
+body.dark .column-item:hover {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.1), rgba(0, 200, 150, 0.05));
+  border-color: rgba(0,200,150,0.4);
+}
+
+body.dark .checkbox-label {
+  color: #e0e0e0;
+}
+
+body.dark .checkmark {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(0,200,150,0.4);
+}
+
+body.dark .checkbox-label input[type="checkbox"]:checked + .checkmark {
+  background: #00c896;
+  border-color: #00c896;
+}
+
+body.dark .close-modal:hover {
+  background: rgba(231, 76, 60, 0.2);
+}
+
+/* استجابة للشاشات الصغيرة */
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 20px;
+    max-width: 90%;
+    margin: 20px;
+  }
+
+  .modal-header h3 {
+    font-size: 1.3rem;
+  }
+
+  .column-item {
+    padding: 10px 12px;
+  }
+
+  .checkbox-label {
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
 }
 
 /* Custom styles for result cell */

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="sidebar.css" />
+    <link rel="stylesheet" href="counter-table.css" />
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         /* تخصيصات لصفحة عداد الأموال */
@@ -97,6 +98,8 @@
             padding: 16px 12px;
             text-align: center;
             font-weight: 700;
+            font-size: 1.4rem;
+            white-space: nowrap;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -426,6 +429,8 @@
             padding: 16px 12px;
             text-align: center;
             font-weight: 700;
+            font-size: 1.4rem;
+            white-space: nowrap;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -541,28 +546,19 @@
         }
 
         .sort-btn {
-            background: transparent;
+            background: none;
             border: none;
             color: white;
             font-size: 1.2rem;
             cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            margin-left: 8px;
-        }
-
-        .sort-btn:hover {
-            background: rgba(255,255,255,0.2);
-            transform: scale(1.1);
+            padding: 0;
+            margin: 0;
+            display: inline;
+            line-height: 1;
         }
 
         body.dark .sort-btn {
             color: #ffffff;
-        }
-
-        body.dark .sort-btn:hover {
-            background: rgba(255,255,255,0.2);
         }
 
         @keyframes pulse {
@@ -905,13 +901,13 @@
         </div>
     </div>
 
+    <!-- الخلفية الشفافة للشريط الجانبي -->
+    <div class="overlay" id="overlay"></div>
+
     <!-- 🎨 الشريط الجانبي -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="user-box">
-                <div class="user-avatar">
-                    <span id="user-initial">A</span>
-                </div>
                 <div class="user-meta">
                     <span class="user-name" id="user-name">اسم المستخدم</span>
                     <span class="user-email" id="user-email">user@example.com</span>
@@ -931,6 +927,13 @@
             </ul>
         </div>
         <div class="sidebar-footer">
+            <div class="subscription-info" id="subscription-info">
+              <div class="subscription-days-simple">
+                <i class="fas fa-clock"></i>
+                <span id="days-left">-</span>
+                <span> يوم متبقي</span>
+              </div>
+            </div>
             <button id="logout-btn" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>تسجيل الخروج</span>
@@ -953,53 +956,61 @@
             <div class="counters-wrapper">
                 <!-- Counter 1 -->
                 <div class="counter-card">
-                    <h2 class="counter-title">العداد الأول</h2>
-                    <table class="counter-table">
-                        <thead>
-                            <tr>
-                                <th><i class="fas fa-calculator"></i> الإجمالي</th>
-                                <th><i class="fas fa-hashtag"></i> العدد</th>
-                                <th><i class="fas fa-coins"></i> الفئة <button id="sortCategoriesBtn" class="sort-btn" title="ترتيب الفئات">⇵</button></th>
-                            </tr>
-                        </thead>
-                        <tbody id="counter1-body">
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="200">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="200" value="" min="0" placeholder="0"></td>
-                                <td>200 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="100">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="100" value="" min="0" placeholder="0"></td>
-                                <td>100 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="50">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="50" value="" min="0" placeholder="0"></td>
-                                <td>50 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="20">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="20" value="" min="0" placeholder="0"></td>
-                                <td>20 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="10">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="10" value="" min="0" placeholder="0"></td>
-                                <td>10 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="5">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="5" value="" min="0" placeholder="0"></td>
-                                <td>5 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="1" data-value="1">0</td>
-                                <td><input type="number" class="input-field" data-counter="1" data-value="1" value="" min="0" placeholder="0"></td>
-                                <td>1 جنيه</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h2 class="counter-title"><span>العداد الأول</span> <button id="sortCategoriesBtn" class="sort-btn" title="ترتيب الفئات">⇵</button></h2>
+                    <div class="cp-table">
+                        <div class="table-container">
+                            <table class="counter-table">
+                                <thead>
+                                    <tr>
+                                        <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
+                                        <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
+                                        <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="counter1-body">
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="200">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="200" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">200 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="100">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="100" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">100 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="50">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="50" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">50 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="20">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="20" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">20 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="10">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="10" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">10 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="5">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="5" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">5 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="1" data-value="1">0</td>
+                                        <td><input type="number" class="input-field" data-counter="1" data-value="1" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">1 جنيه</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="no-data" id="no-data-counter1">
+                            <i class="fas fa-inbox"></i>
+                            <p>لا توجد بيانات لعرضها</p>
+                        </div>
+                    </div>
                     <div class="counter-totals">
                         <div class="counter-total">
                             <div class="counter-total-label">إجمالي العداد الأول</div>
@@ -1014,53 +1025,61 @@
 
                 <!-- Counter 2 -->
                 <div class="counter-card">
-                    <h2 class="counter-title">العداد الثاني</h2>
-                    <table class="counter-table">
-                        <thead>
-                            <tr>
-                                <th><i class="fas fa-calculator"></i> الإجمالي</th>
-                                <th><i class="fas fa-hashtag"></i> العدد</th>
-                                <th><i class="fas fa-coins"></i> الفئة <button id="sortCategoriesBtn2" class="sort-btn" title="ترتيب الفئات">⇵</button></th>
-                            </tr>
-                        </thead>
-                        <tbody id="counter2-body">
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="200">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="200" value="" min="0" placeholder="0"></td>
-                                <td>200 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="100">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="100" value="" min="0" placeholder="0"></td>
-                                <td>100 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="50">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="50" value="" min="0" placeholder="0"></td>
-                                <td>50 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="20">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="20" value="" min="0" placeholder="0"></td>
-                                <td>20 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="10">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="10" value="" min="0" placeholder="0"></td>
-                                <td>10 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="5">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="5" value="" min="0" placeholder="0"></td>
-                                <td>5 جنيه</td>
-                            </tr>
-                            <tr>
-                                <td class="total-cell" data-counter="2" data-value="1">0</td>
-                                <td><input type="number" class="input-field" data-counter="2" data-value="1" value="" min="0" placeholder="0"></td>
-                                <td>1 جنيه</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h2 class="counter-title"><span>العداد الثاني</span> <button id="sortCategoriesBtn2" class="sort-btn" title="ترتيب الفئات">⇵</button></h2>
+                    <div class="cp-table">
+                        <div class="table-container">
+                            <table class="counter-table">
+                                <thead>
+                                    <tr>
+                                        <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
+                                        <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
+                                        <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="counter2-body">
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="200">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="200" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">200 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="100">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="100" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">100 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="50">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="50" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">50 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="20">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="20" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">20 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="10">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="10" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">10 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="5">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="5" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">5 جنيه</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="total-cell num" data-counter="2" data-value="1">0</td>
+                                        <td><input type="number" class="input-field" data-counter="2" data-value="1" value="" min="0" placeholder="0"></td>
+                                        <td class="ltr">1 جنيه</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="no-data" id="no-data-counter2">
+                            <i class="fas fa-inbox"></i>
+                            <p>لا توجد بيانات لعرضها</p>
+                        </div>
+                    </div>
                     <div class="counter-totals">
                         <div class="counter-total">
                             <div class="counter-total-label">إجمالي العداد الثاني</div>
@@ -1110,18 +1129,25 @@
                 <div class="categories-summary">
                     <h3 class="categories-title">ملخص الفئات</h3>
                     <div id="categories-container">
-                        <table class="categories-table" id="categories-table">
-                            <thead>
-                                <tr>
-                                    <th><i class="fas fa-calculator"></i> الإجمالي</th>
-                                    <th><i class="fas fa-hashtag"></i> العدد</th>
-                                    <th><i class="fas fa-coins"></i> الفئة</th>
-                                </tr>
-                            </thead>
-                            <tbody id="categories-body">
-                            </tbody>
-                        </table>
-                        <div class="empty-message" id="empty-message">لا توجد بيانات لعرضها</div>
+                        <div class="cp-table">
+                            <div class="table-container">
+                                <table class="categories-table" id="categories-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
+                                            <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
+                                            <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="categories-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="no-data" id="empty-message">
+                                <i class="fas fa-inbox"></i>
+                                <p>لا توجد بيانات لعرضها</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1133,7 +1159,7 @@
                 </button>
                 <button class="btn" onclick="exportData()">
                     <i class="fas fa-share-alt"></i>
-                    <span>تصدير البيانات</span>
+                    <span>تصدير ملخص الفئات</span>
                 </button>
             </div>
         </div>
@@ -1263,8 +1289,7 @@
         function updateCategoriesSummary() {
             const values = [200, 100, 50, 20, 10, 5, 1];
             const categoriesBody = document.getElementById('categories-body');
-            const emptyMessage = document.getElementById('empty-message');
-            const categoriesTable = document.getElementById('categories-table');
+            const categoriesContainer = document.getElementById('categories-container');
 
             // مسح الجدول
             categoriesBody.innerHTML = '';
@@ -1292,21 +1317,21 @@
                     hasData = true;
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td class="total-cell" data-value="${value}">${formatNumber(categoryTotal)}</td>
-                        <td>${formatNumber(totalQuantity)}</td>
-                        <td>${value} جنيه</td>
+                        <td class="total-cell num" data-value="${value}">${formatNumber(categoryTotal)}</td>
+                        <td class="num">${formatNumber(totalQuantity)}</td>
+                        <td class="ltr">${value} جنيه</td>
                     `;
                     categoriesBody.appendChild(row);
                 }
             });
 
-            // إظهار أو إخفاء الجدول والرسالة
-            if (hasData) {
-                categoriesTable.style.display = 'table';
-                emptyMessage.style.display = 'none';
-            } else {
-                categoriesTable.style.display = 'none';
-                emptyMessage.style.display = 'block';
+            // تحديث عرض الجدول المعزول
+            if (categoriesContainer) {
+                const cpTable = categoriesContainer.querySelector('.cp-table');
+                if (cpTable) {
+                    applyCellHelpers(cpTable);
+                    toggleNoData(cpTable);
+                }
             }
         }
 
@@ -1449,6 +1474,38 @@
             });
         }
 
+        // دوال مساعدة للجداول المعزولة
+        function toggleNoData(container) {
+            const table = container.querySelector('table');
+            const noData = container.querySelector('.no-data');
+            const tbody = table.querySelector('tbody');
+            const hasRows = tbody && tbody.rows.length > 0;
+
+            if (hasRows) {
+                table.style.display = 'table';
+                noData.style.display = 'none';
+            } else {
+                table.style.display = 'none';
+                noData.style.display = 'block';
+            }
+        }
+
+        function applyCellHelpers(container) {
+            // تطبيق أصناف مساعدة على الخلايا
+            const cells = container.querySelectorAll('td');
+            cells.forEach(cell => {
+                const text = cell.textContent.trim();
+                // إذا كان النص رقماً فقط
+                if (/^\d+(\.\d+)?$/.test(text.replace(/,/g, ''))) {
+                    cell.classList.add('num');
+                }
+                // إذا كان النص يحتوي على أرقام أو رموز
+                if (/[\d\$\€\£]/.test(text)) {
+                    cell.classList.add('ltr');
+                }
+            });
+        }
+
         // إضافة مستمعي الأحداث لجميع حقول الإدخال
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.input-field').forEach(input => {
@@ -1480,6 +1537,12 @@
                     e.preventDefault();
                     exportData();
                 }
+            });
+
+            // تهيئة الجداول المعزولة
+            document.querySelectorAll('.cp-table').forEach(container => {
+                applyCellHelpers(container);
+                toggleNoData(container);
             });
 
             // إخفاء جدول الفئات في البداية

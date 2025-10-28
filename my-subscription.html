@@ -25,13 +25,13 @@
     </div>
   </div>
 
+  <!-- الخلفية الشفافة للشريط الجانبي -->
+  <div class="overlay" id="overlay"></div>
+
   <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="user-box">
-        <div class="user-avatar">
-          <span id="user-initial">A</span>
-        </div>
         <div class="user-meta">
           <span class="user-name" id="user-name">اسم المستخدم</span>
           <span class="user-email" id="user-email">user@example.com</span>
@@ -51,6 +51,13 @@
       </ul>
     </div>
     <div class="sidebar-footer">
+      <div class="subscription-info" id="subscription-info">
+        <div class="subscription-days-simple">
+          <i class="fas fa-clock"></i>
+          <span id="days-left">-</span>
+          <span> يوم متبقي</span>
+        </div>
+      </div>
       <button id="logout-btn" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
         <span>تسجيل الخروج</span>
@@ -82,25 +89,29 @@
         <!-- بطاقة الاشتراك -->
         <div class="subscription-card">
           <div class="subscription-header">
-            <h2>حالة اشتراكك</h2>
+            <h2><i class="fas fa-shield-alt"></i> حالة اشتراكك</h2>
             <div id="subscription-status"></div>
           </div>
           <div id="subscription-details" class="subscription-details">
             <div class="detail-row">
-              <span class="detail-label">نوع الخطة:</span>
+              <span class="detail-label"><i class="fas fa-cube"></i> نوع الخطة:</span>
               <span class="detail-value" id="plan-type">-</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">تاريخ البدء:</span>
+              <span class="detail-label"><i class="fas fa-calendar-alt"></i> تاريخ البدء:</span>
               <span class="detail-value" id="start-date">-</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">تاريخ الانتهاء:</span>
+              <span class="detail-label"><i class="fas fa-calendar-check"></i> تاريخ الانتهاء:</span>
               <span class="detail-value" id="end-date">-</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">الحالة:</span>
-              <span class="detail-value" id="subscription-state">-</span>
+               <span class="detail-label"><i class="fas fa-info-circle"></i> الحالة:</span>
+               <span class="detail-value" id="subscription-state">-</span>
+            </div>
+            <div class="detail-row">
+               <span class="detail-label"><i class="fas fa-hourglass-half"></i> الأيام المتبقية:</span>
+               <span class="detail-value" id="days-remaining">-</span>
             </div>
           </div>
           <div id="subscription-actions" class="subscription-actions">
@@ -115,10 +126,10 @@
             <table id="history-table">
               <thead>
                 <tr>
-                  <th>نوع الخطة</th>
-                  <th>تاريخ البدء</th>
-                  <th>تاريخ الانتهاء</th>
-                  <th>الحالة</th>
+                  <th><i class="fas fa-cube"></i> نوع الخطة</th>
+                  <th><i class="fas fa-calendar-alt"></i> تاريخ البدء</th>
+                  <th><i class="fas fa-calendar-check"></i> تاريخ الانتهاء</th>
+                  <th><i class="fas fa-info-circle"></i> الحالة</th>
                 </tr>
               </thead>
               <tbody></tbody>

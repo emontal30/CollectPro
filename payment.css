@@ -654,3 +654,23 @@ body.dark .method-details p {
  body.dark .payment-option.active::after {
    background: var(--dark-mode-green);
  }
+
+/* تخصيص SweetAlert2 للدعم العربي */
+.swal-rtl {
+ direction: rtl;
+ text-align: right;
+}
+
+.swal-rtl .swal2-popup {
+ font-family: 'Cairo', sans-serif;
+}
+
+.swal-rtl .swal2-title {
+ font-size: 1.5rem;
+ font-weight: 600;
+}
+
+.swal-rtl .swal2-html-container {
+ font-size: 1rem;
+ line-height: 1.6;
+}

@@ -100,9 +100,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             document.querySelectorAll('.choose-plan-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const planId = btn.getAttribute('data-plan-id');
                     if (planId) {
+                        // التحقق من وجود طلب معلق للمستخدم
+                        try {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                                const { data: pendingSubscriptions, error } = await supabase
+                                    .from('subscriptions')
+                                    .select('id, status, created_at, plan_name')
+                                    .eq('user_id', user.id)
+                                    .eq('status', 'pending');
+
+                                if (pendingSubscriptions && pendingSubscriptions.length > 0 && !error) {
+                                    const latestPending = pendingSubscriptions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                                    const planName = latestPending.plan_name || 'خطة الاشتراك';
+                                    const requestDate = new Date(latestPending.created_at).toLocaleDateString('ar-EG');
+
+                                    const message = `عذراً، لديك طلب اشتراك قيد المراجعة حالياً. لا يمكنك تقديم طلب جديد حتى يتم الانتهاء من مراجعة الطلب الحالي.\n\n` +
+                                                   `تفاصيل الطلب الحالي:\n` +
+                                                   `• نوع الخطة: ${planName}`;
+
+                                    showAlert(message, 'warning');
+                                    return;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error checking pending subscriptions:', error);
+                        }
+
                         localStorage.setItem('selectedPlanId', planId);
                         window.location.href = 'payment.html';
                     }

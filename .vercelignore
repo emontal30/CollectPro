@@ -3,7 +3,6 @@
 backups/
 TODO.md
 backup-restore.js
-test-email.js
 *.local
 .env*
 node_modules/
