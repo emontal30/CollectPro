@@ -16,31 +16,32 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-   const selectedPlanId = localStorage.getItem('selectedPlanId');
+    const selectedPlanId = localStorage.getItem('selectedPlanId');
 
-   if (!selectedPlanId) {
-     showAlert('لم يتم اختيار خطة اشتراك. سيتم توجيهك لاختيار خطة.', 'danger');
-     setTimeout(() => { window.location.href = 'subscriptions.html'; }, 2500);
-     return;
-   }
-
-   const plan = await loadPlanDetails(selectedPlanId);
-   if (plan) {
-     const user = await loadUserData();
-     displayPlanDetails(plan);
-
-     if (window.populateUserData && user) {
-       await window.populateUserData();
-     }
-
-     setupPaymentMethodListeners();
-
-     const paymentForm = document.getElementById('payment-form');
-    if (paymentForm) {
-      paymentForm.addEventListener('submit', (e) => handlePaymentSubmit(e, plan));
+    if (!selectedPlanId) {
+      showAlert('لم يتم اختيار خطة اشتراك. سيتم توجيهك لاختيار خطة.', 'danger');
+      setTimeout(() => { window.location.href = 'subscriptions.html'; }, 2500);
+      return;
     }
-  }
-});
+
+    const plan = await loadPlanDetails(selectedPlanId);
+    if (plan) {
+      const user = await loadUserData();
+      displayPlanDetails(plan);
+
+      // استدعاء populateUserData من sidebar.js لضمان تحديث بيانات المستخدم
+      if (typeof populateUserData === 'function') {
+        await populateUserData();
+      }
+
+      setupPaymentMethodListeners();
+
+      const paymentForm = document.getElementById('payment-form');
+     if (paymentForm) {
+       paymentForm.addEventListener('submit', (e) => handlePaymentSubmit(e, plan));
+     }
+   }
+ });
 
 async function loadPlanDetails(planId) {
   try {
@@ -86,30 +87,31 @@ function displayPlanDetails(plan) {
 }
 
 async function loadUserData() {
-   try {
-     const { data: { user }, error } = await supabase.auth.getUser();
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-     if (error) throw error;
+      if (error) throw error;
 
-     if (user) {
-       const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'مستخدم';
-       document.getElementById('user-name-field').value = displayName;
-       document.getElementById('email').value = user.email || '';
-       document.getElementById('user-id').value = user.id.slice(-7);
+      if (user) {
+        const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'مستخدم';
+        document.getElementById('user-name-field').value = displayName;
+        document.getElementById('email').value = user.email || '';
+        // إصلاح: استخدام user.id الكامل بدلاً من slice(-7)
+        document.getElementById('user-id').value = user.id;
 
-       updateSidebarUserData(user);
-       return user;
-     } else {
-       showAlert('يجب تسجيل الدخول أولاً للمتابعة', 'danger');
-       setTimeout(() => { window.location.href = 'index.html'; }, 2500);
-       return null;
-     }
-   } catch (error) {
-     console.error('Error loading user data:', error);
-     showAlert('حدث خطأ أثناء تحميل بيانات المستخدم. يرجى تسجيل الدخول مرة أخرى.', 'danger');
-     return null;
-   }
-}
+        updateSidebarUserData(user);
+        return user;
+      } else {
+        showAlert('يجب تسجيل الدخول أولاً للمتابعة', 'danger');
+        setTimeout(() => { window.location.href = 'index.html'; }, 2500);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      showAlert('حدث خطأ أثناء تحميل بيانات المستخدم. يرجى تسجيل الدخول مرة أخرى.', 'danger');
+      return null;
+    }
+ }
 
 function updateSidebarUserData(user) {
   const userNameEl = document.getElementById('user-name');

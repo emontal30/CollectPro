@@ -114,7 +114,7 @@ async function updateUserDisplay(user) {
 
     if (userNameEl) userNameEl.textContent = displayName;
     if (userEmailEl) userEmailEl.textContent = user.email;
-    if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
+    if (userIdEl) userIdEl.textContent = `ID: ${user.id}`;
 
     // تحديث معلومات الاشتراك
     await updateSubscriptionInfo();
