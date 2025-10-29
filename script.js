@@ -1,3 +1,36 @@
+// إضافة logs للتحقق من عرض الموبايل
+console.log('=== تحليل عرض الموبايل ===');
+console.log('عرض الشاشة:', window.innerWidth);
+console.log('ارتفاع الشاشة:', window.innerHeight);
+console.log('نسبة البكسل:', window.devicePixelRatio);
+console.log('نوع الجهاز:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'موبايل' : 'ديسكتوب');
+console.log('وضع اللمس:', 'ontouchstart' in window ? 'يدعم اللمس' : 'لا يدعم اللمس');
+
+// تحقق من وجود مشاكل في الجداول
+function checkTableIssues() {
+    const tables = document.querySelectorAll('table');
+    tables.forEach((table, index) => {
+        const rect = table.getBoundingClientRect();
+        console.log(`جدول ${index + 1}:`, {
+            width: rect.width,
+            scrollWidth: table.scrollWidth,
+            clientWidth: table.clientWidth,
+            hasOverflow: table.scrollWidth > table.clientWidth,
+            parentWidth: table.parentElement ? table.parentElement.clientWidth : 'لا يوجد'
+        });
+    });
+}
+
+// تشغيل الفحص عند تحميل الصفحة
+window.addEventListener('load', () => {
+    setTimeout(checkTableIssues, 1000);
+});
+
+// تحقق من التجاوب عند تغيير حجم النافذة
+window.addEventListener('resize', () => {
+    console.log('تغيير حجم النافذة:', window.innerWidth + 'x' + window.innerHeight);
+    checkTableIssues();
+});
 // Global error handlers
 window.onerror = function(message, source, lineno, colno, error) {
   console.error("An unhandled error occurred:", {
@@ -1481,14 +1514,20 @@ function parseNumber(x) {
 
   /* ========== Mobile Card Conversion ========== */
   function convertTableToCards() {
-    // التحقق من أننا في وضع الموبايل
-    if (window.innerWidth > 768) return;
+    // التحقق من أننا في وضع الموبايل (نفس حجم CSS)
+    if (window.innerWidth > 480) return;
 
     const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
     if (!table) return;
 
     const tbody = table.querySelector('tbody');
     if (!tbody) return;
+
+    // إزالة البطاقات الموجودة إذا كانت هناك
+    const existingCards = document.querySelector('.mobile-cards-container');
+    if (existingCards) {
+      existingCards.remove();
+    }
 
     const rows = Array.from(tbody.querySelectorAll('tr')).filter(row =>
       !row.id.includes('totalRow') && !row.id.includes('archiveTotalRow')
@@ -1513,74 +1552,88 @@ function parseNumber(x) {
 
       const card = document.createElement('div');
       card.className = 'mobile-card';
+      card.setAttribute('data-row-index', index);
 
       // استخراج البيانات من الخلايا
-      const serial = cells[0]?.textContent || '';
-      const shop = cells[1]?.textContent || '';
-      const code = cells[2]?.textContent || '';
-      const amount = cells[3]?.textContent || '';
+      const serial = cells[0]?.textContent.trim() || '';
+      const shop = cells[1]?.textContent.trim() || '';
+      const code = cells[2]?.textContent.trim() || '';
+      const amount = cells[3]?.textContent.trim() || '';
       const extraInput = cells[4]?.querySelector('input');
       const collectorInput = cells[5]?.querySelector('input');
       const netCell = cells[6];
 
       const extra = extraInput?.value || '';
       const collector = collectorInput?.value || '';
-      const net = netCell?.textContent || '';
+      const net = netCell?.textContent.trim() || '';
 
       // تحديد لون البطاقة حسب الصافي
       let cardClass = '';
-      if (net.includes('↑')) cardClass = 'card-positive';
-      else if (net.includes('↓')) cardClass = 'card-negative';
+      if (net.includes('↑') || net.includes('fa-arrow-up')) cardClass = 'card-positive';
+      else if (net.includes('↓') || net.includes('fa-arrow-down')) cardClass = 'card-negative';
       else cardClass = 'card-zero';
 
       card.innerHTML = `
-        <div class="card-row">
-          <span class="card-label">#️⃣ الرقم:</span>
-          <span class="card-value">${serial}</span>
+        <div class="card-header">
+          <span class="card-serial">#${serial}</span>
+          <span class="card-shop">${shop}</span>
         </div>
-        <div class="card-row">
-          <span class="card-label">🏪 المحل:</span>
-          <span class="card-value">${shop}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-label">🔢 الكود:</span>
-          <span class="card-value">${code}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-label">💸 المبلغ:</span>
-          <span class="card-value">${amount}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-label">🔄 أخرى:</span>
-          <input type="text" class="card-input" value="${extra}" placeholder="أدخل المبلغ" />
-        </div>
-        <div class="card-row">
-          <span class="card-label">💰 المحصل:</span>
-          <input type="text" class="card-input" value="${collector}" placeholder="أدخل المبلغ" />
-        </div>
-        <div class="card-row ${cardClass}">
-          <span class="card-label">⚖️ الصافي:</span>
-          <span class="card-value card-highlight">${net}</span>
+        <div class="card-body">
+          <div class="card-row">
+            <span class="card-label">🔢 الكود:</span>
+            <span class="card-value">${code}</span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">💸 المبلغ:</span>
+            <span class="card-value">${amount}</span>
+          </div>
+          <div class="card-row">
+            <span class="card-label">🔄 أخرى:</span>
+            <input type="text" class="card-input extra-input" value="${extra}" placeholder="أدخل المبلغ" data-field="extra" />
+          </div>
+          <div class="card-row">
+            <span class="card-label">💰 المحصل:</span>
+            <input type="text" class="card-input collector-input" value="${collector}" placeholder="أدخل المبلغ" data-field="collector" />
+          </div>
+          <div class="card-row ${cardClass}">
+            <span class="card-label">⚖️ الصافي:</span>
+            <span class="card-value card-highlight">${net}</span>
+          </div>
         </div>
       `;
 
       // إضافة مستمعي الأحداث للحقول
       const inputs = card.querySelectorAll('.card-input');
       inputs.forEach(input => {
-        input.addEventListener('input', () => {
-          // تحديث البيانات في الجدول الأصلي
-          const rowIndex = index;
+        // تنسيق الأرقام للحقول
+        setupNumberInputFormatting(input);
+
+        input.addEventListener('input', function() {
+          const fieldType = this.getAttribute('data-field');
+          const rowIndex = parseInt(card.getAttribute('data-row-index'));
           const tableRows = tbody.querySelectorAll('tr');
+
           if (tableRows[rowIndex]) {
             const tableInputs = tableRows[rowIndex].querySelectorAll('input');
-            if (input.classList.contains('card-input')) {
-              const inputIndex = Array.from(inputs).indexOf(input);
-              if (tableInputs[inputIndex]) {
-                tableInputs[inputIndex].value = input.value;
-                // تشغيل حدث input للجدول
-                tableInputs[inputIndex].dispatchEvent(new Event('input'));
-              }
+            const inputIndex = fieldType === 'extra' ? 0 : 1; // extra is first input, collector is second
+
+            if (tableInputs[inputIndex]) {
+              tableInputs[inputIndex].value = this.value;
+              // تشغيل حدث input للجدول لتحديث الحسابات
+              tableInputs[inputIndex].dispatchEvent(new Event('input', { bubbles: true }));
             }
+          }
+
+          // تحديث عرض البطاقة
+          updateCardDisplay(card, tableRows[rowIndex]);
+        });
+
+        input.addEventListener('blur', function() {
+          // حفظ البيانات عند فقدان التركيز
+          try {
+            localStorage.setItem("rowData", tbodyToStorage());
+          } catch (e) {
+            console.error("Failed to save row data", e);
           }
         });
       });
@@ -1591,6 +1644,34 @@ function parseNumber(x) {
     // إخفاء الجدول وإظهار البطاقات
     table.style.display = 'none';
     table.parentNode.insertBefore(cardsContainer, table.nextSibling);
+
+    console.log(`تم تحويل ${rows.length} صف إلى بطاقات`);
+  }
+
+  function updateCardDisplay(card, tableRow) {
+    if (!card || !tableRow) return;
+
+    const netCell = tableRow.querySelector('.net');
+    if (netCell) {
+      const netText = netCell.textContent.trim();
+      const highlightElement = card.querySelector('.card-highlight');
+
+      if (highlightElement) {
+        highlightElement.textContent = netText;
+
+        // تحديث لون البطاقة
+        const cardRow = highlightElement.closest('.card-row');
+        cardRow.classList.remove('card-positive', 'card-negative', 'card-zero');
+
+        if (netText.includes('↑') || netText.includes('fa-arrow-up')) {
+          cardRow.classList.add('card-positive');
+        } else if (netText.includes('↓') || netText.includes('fa-arrow-down')) {
+          cardRow.classList.add('card-negative');
+        } else {
+          cardRow.classList.add('card-zero');
+        }
+      }
+    }
   }
 
   function convertCardsToTable() {
@@ -1607,7 +1688,7 @@ function parseNumber(x) {
   }
 
   function handleResponsiveLayout() {
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 480) {
       convertTableToCards();
     } else {
       convertCardsToTable();
