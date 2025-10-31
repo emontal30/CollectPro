@@ -47,7 +47,7 @@ async function loadUserDataAndSubscription() {
 
     document.getElementById('user-name').textContent = user.user_metadata?.full_name || user.email;
     document.getElementById('user-email').textContent = user.email;
-    document.getElementById('user-id').textContent = `ID: ${user.id.substring(0, 7)}`;
+    document.getElementById('user-id').textContent = `ID: ${user.id.slice(-7)}`;
 
     // Fetch the user's most recent subscription from the database
     const { data: subscription, error } = await supabase

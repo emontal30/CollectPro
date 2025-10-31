@@ -520,7 +520,7 @@ function createRowHtml(sub, isPending) {
     }
 
     const planName = sub.plan_name_ar || sub.plan_name || 'خطة غير معروفة';
-    const userIdShort = (sub.user_id || '').substring(0, 8) + '...';
+    const userIdShort = (sub.user_id || '').slice(-7);
     const transactionId = sub.transaction_id ? sub.transaction_id.substring(0, 10) + '...' : '-';
 
     let rowContent = `
@@ -1201,7 +1201,7 @@ async function showSubscriptionDetails(subscriptionId) {
       return item;
     }
 
-    content.appendChild(createDetailItem('معرف الاشتراك', subscription.id.substring(0, 12) + '...'));
+    content.appendChild(createDetailItem('معرف الاشتراك', subscription.id.slice(-7)));
     content.appendChild(createDetailItem('اسم المستخدم', subscription.users?.full_name || 'غير محدد'));
     content.appendChild(createDetailItem('البريد الإلكتروني', subscription.users?.email || 'غير محدد'));
     content.appendChild(createDetailItem('رقم الهاتف', subscription.users?.phone || 'غير محدد'));
