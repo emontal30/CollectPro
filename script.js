@@ -1,36 +1,3 @@
-// إضافة logs للتحقق من عرض الموبايل
-console.log('=== تحليل عرض الموبايل ===');
-console.log('عرض الشاشة:', window.innerWidth);
-console.log('ارتفاع الشاشة:', window.innerHeight);
-console.log('نسبة البكسل:', window.devicePixelRatio);
-console.log('نوع الجهاز:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'موبايل' : 'ديسكتوب');
-console.log('وضع اللمس:', 'ontouchstart' in window ? 'يدعم اللمس' : 'لا يدعم اللمس');
-
-// تحقق من وجود مشاكل في الجداول
-function checkTableIssues() {
-    const tables = document.querySelectorAll('table');
-    tables.forEach((table, index) => {
-        const rect = table.getBoundingClientRect();
-        console.log(`جدول ${index + 1}:`, {
-            width: rect.width,
-            scrollWidth: table.scrollWidth,
-            clientWidth: table.clientWidth,
-            hasOverflow: table.scrollWidth > table.clientWidth,
-            parentWidth: table.parentElement ? table.parentElement.clientWidth : 'لا يوجد'
-        });
-    });
-}
-
-// تشغيل الفحص عند تحميل الصفحة
-window.addEventListener('load', () => {
-    setTimeout(checkTableIssues, 1000);
-});
-
-// تحقق من التجاوب عند تغيير حجم النافذة
-window.addEventListener('resize', () => {
-    console.log('تغيير حجم النافذة:', window.innerWidth + 'x' + window.innerHeight);
-    checkTableIssues();
-});
 // Global error handlers
 window.onerror = function(message, source, lineno, colno, error) {
   console.error("An unhandled error occurred:", {
@@ -579,17 +546,36 @@ function parseNumber(x) {
   function setupNumberInputFormatting(input) {
     // تغيير نوع الحقل إلى نص للسماح بالفواصل
     input.type = 'text';
-    
+
     // تنسيق القيمة الأولية
     formatNumberInput(input);
-    
+
     // إضافة مستمعي الأحداث
     input.addEventListener('input', function() {
       formatNumberInput(this);
     });
-    
+
     input.addEventListener('blur', function() {
       formatNumberInput(this);
+    });
+
+    // منع كتابة الحروف والسماح بالأرقام والسالب فقط
+    input.addEventListener('keydown', function(e) {
+      // السماح بالأزرار الخاصة (backspace, delete, tab, escape, enter, arrows, home, end)
+      const specialKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+
+      // السماح بالسالب في بداية النص فقط
+      if (e.key === '-' && this.selectionStart === 0 && !this.value.includes('-')) {
+        return; // السماح بالسالب
+      }
+
+      // منع الحروف والرموز غير المسموحة
+      if (specialKeys.includes(e.key) || /^[0-9]$/.test(e.key)) {
+        return; // السماح بالمفتاح
+      }
+
+      // منع أي مفتاح آخر
+      e.preventDefault();
     });
   }
   /* ========== Table Functions ========== */
@@ -851,19 +837,8 @@ function parseNumber(x) {
     trTotal.id = "totalRow";
     trTotal.classList.add("total-row", "summary-row");
     trTotal.style.fontWeight = "bold";
-
-    const page = window.location.pathname.split('/').pop().replace('.html', '');
-    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
-    let colspan = 0;
-    const firstThreeColumns = ['col-serial', 'col-shop', 'col-code'];
-    firstThreeColumns.forEach(colId => {
-        if(settings[colId] !== false) {
-            colspan++;
-        }
-    });
-
     trTotal.innerHTML = `
-      <td colspan="${colspan > 0 ? colspan : 1}">الإجمالي</td>
+      <td colspan="3">الإجمالي</td>
       <td>${formatNumber(totalAmount)}</td>
       <td>${formatNumber(totalExtra)}</td>
       <td>${formatNumber(totalCollector)}</td>
@@ -873,7 +848,6 @@ function parseNumber(x) {
 
     // تحديث ملخص البيانات
     updateSummaryFields(totalAmount, totalExtra, totalCollector);
-    loadTableSettingsOnPageLoad();
   }
 
   // دالة محسنة لتحديث حقول ملخص البيانات
@@ -1222,7 +1196,7 @@ function parseNumber(x) {
     if (userNameEl) userNameEl.textContent = displayName;
     if (userInitialEl) userInitialEl.textContent = displayName.charAt(0).toUpperCase();
     if (userEmailEl) userEmailEl.textContent = user.email;
-    if (userIdEl) userIdEl.textContent = `ID: ${user.id}`;
+    if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
 
     // تحديث معلومات الاشتراك
     updateSubscriptionInfo();
@@ -1326,375 +1300,6 @@ function parseNumber(x) {
     }
   }
 
-  /* ========== Table Column Settings ========== */
-  function initializeTableSettings() {
-    const tableSettingsBtn = document.getElementById('tableSettingsBtn');
-    const tableSettingsModal = document.getElementById('tableSettingsModal');
-    const closeModal = document.getElementById('closeModal');
-    const resetColumns = document.getElementById('resetColumns');
-    const applySettings = document.getElementById('applySettings');
-
-    if (!tableSettingsBtn || !tableSettingsModal) return;
-
-    // فتح النافذة المنبثقة
-    tableSettingsBtn.addEventListener('click', () => {
-      tableSettingsModal.style.display = 'flex';
-      loadColumnSettings();
-    });
-
-    // إغلاق النافذة
-    closeModal.addEventListener('click', () => {
-      tableSettingsModal.style.display = 'none';
-    });
-
-    // إغلاق النافذة عند النقر خارجها
-    tableSettingsModal.addEventListener('click', (e) => {
-      if (e.target === tableSettingsModal) {
-        tableSettingsModal.style.display = 'none';
-      }
-    });
-
-    // إعادة تعيين الأعمدة
-    resetColumns.addEventListener('click', () => {
-      const checkboxes = tableSettingsModal.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-      });
-    });
-
-    // تطبيق الإعدادات
-    applySettings.addEventListener('click', () => {
-      applyColumnSettings();
-      tableSettingsModal.style.display = 'none';
-    });
-  }
-
-  function loadColumnSettings() {
-    const page = window.location.pathname.split('/').pop().replace('.html', '');
-    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
-
-    const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-      const columnId = checkbox.id;
-      if (settings[columnId] !== undefined) {
-        checkbox.checked = settings[columnId];
-      } else {
-        // الافتراضي: جميع الأعمدة مرئية
-        checkbox.checked = true;
-      }
-    });
-  }
-
-  function applyColumnSettings() {
-    const page = window.location.pathname.split('/').pop().replace('.html', '');
-    const settings = {};
-    const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
-
-    checkboxes.forEach(checkbox => {
-      settings[checkbox.id] = checkbox.checked;
-    });
-
-    // حفظ الإعدادات في localStorage
-    localStorage.setItem(`tableSettings_${page}`, JSON.stringify(settings));
-
-    // تطبيق الإعدادات على الجدول
-    updateTableColumns(settings);
-  }
-
-  function updateTableColumns(settings) {
-    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
-    if (!table) return;
-
-    const headers = table.querySelectorAll('thead th');
-    const rows = table.querySelectorAll('tbody tr');
-    const totalRow = table.querySelector('#totalRow') || table.querySelector('#archiveTotalRow');
-
-    // قائمة الأعمدة حسب الصفحة
-    const page = window.location.pathname.split('/').pop().replace('.html', '');
-    let columnMap = {};
-
-    if (page === 'harvest') {
-      columnMap = {
-        'col-serial': 0,    // #
-        'col-shop': 1,      // المحل
-        'col-code': 2,      // الكود
-        'col-amount': 3,    // مبلغ التحويل
-        'col-extra': 4,     // أخرى
-        'col-collector': 5, // المحصّل
-        'col-net': 6        // الصافي
-      };
-    } else if (page === 'archive') {
-      columnMap = {
-        'col-date': 0,      // التاريخ
-        'col-shop': 1,      // المحل
-        'col-code': 2,      // الكود
-        'col-amount': 3,    // مبلغ التحويل
-        'col-extra': 4,     // أخرى
-        'col-collector': 5, // المحصّل
-        'col-net': 6        // الصافي
-      };
-    }
-
-    // إظهار/إخفاء الأعمدة
-    Object.keys(columnMap).forEach(columnId => {
-      const columnIndex = columnMap[columnId];
-      const isVisible = settings[columnId] !== false; // الافتراضي true
-
-      // تحديث رؤوس الأعمدة
-      if (headers[columnIndex]) {
-        headers[columnIndex].style.display = isVisible ? '' : 'none';
-      }
-
-      // تحديث خلايا البيانات
-      rows.forEach(row => {
-        if (row.id === 'totalRow' || row.id === 'archiveTotalRow') return;
-        const cells = row.querySelectorAll('td, th');
-        if (cells[columnIndex]) {
-          cells[columnIndex].style.display = isVisible ? '' : 'none';
-        }
-      });
-    });
-
-    if (totalRow) {
-      const totalCells = totalRow.querySelectorAll('td');
-      let visibleCells = 0;
-      Object.keys(columnMap).forEach(columnId => {
-        const columnIndex = columnMap[columnId];
-        const isVisible = settings[columnId] !== false;
-        
-        // This logic is a bit tricky because the total row has a different structure
-        // In harvest page, first cell has colspan=3
-        // Let's adjust the indices for the total row
-        let totalRowIndex = -1;
-        if (page === 'harvest') {
-            if (columnIndex >= 3) { // amount, extra, collector, net
-                totalRowIndex = columnIndex - 2; // 1, 2, 3, 4
-            }
-        } else if (page === 'archive') {
-            if (columnIndex >= 3) { // amount, extra, collector, net
-                totalRowIndex = columnIndex - 2; // 1, 2, 3, 4
-            }
-        }
-
-        if (totalRowIndex !== -1 && totalCells[totalRowIndex]) {
-            totalCells[totalRowIndex].style.display = isVisible ? '' : 'none';
-        }
-      });
-
-      const firstCell = totalCells[0];
-      if(firstCell){
-        let colspan = 0;
-        for(let i=0; i < 3; i++){
-            const columnId = Object.keys(columnMap).find(key => columnMap[key] === i);
-            if(settings[columnId] !== false){
-                colspan++;
-            }
-        }
-        firstCell.colSpan = colspan > 0 ? colspan : 1;
-      }
-    }
-  }
-
-  function loadTableSettingsOnPageLoad() {
-    const page = window.location.pathname.split('/').pop().replace('.html', '');
-    const settings = JSON.parse(localStorage.getItem(`tableSettings_${page}`) || '{}');
-
-    // إذا لم تكن هناك إعدادات محفوظة، استخدم الافتراضي (جميع الأعمدة مرئية)
-    if (Object.keys(settings).length === 0) {
-      const defaultSettings = {};
-      const checkboxes = document.querySelectorAll('#tableSettingsModal input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        defaultSettings[checkbox.id] = true;
-      });
-      updateTableColumns(defaultSettings);
-    } else {
-      updateTableColumns(settings);
-    }
-  }
-
-  /* ========== Mobile Card Conversion ========== */
-  function convertTableToCards() {
-    // التحقق من أننا في وضع الموبايل (نفس حجم CSS)
-    if (window.innerWidth > 480) return;
-
-    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
-    if (!table) return;
-
-    const tbody = table.querySelector('tbody');
-    if (!tbody) return;
-
-    // إزالة البطاقات الموجودة إذا كانت هناك
-    const existingCards = document.querySelector('.mobile-cards-container');
-    if (existingCards) {
-      existingCards.remove();
-    }
-
-    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row =>
-      !row.id.includes('totalRow') && !row.id.includes('archiveTotalRow')
-    );
-
-    if (rows.length === 0) return;
-
-    // إنشاء حاوية البطاقات
-    const cardsContainer = document.createElement('div');
-    cardsContainer.className = 'mobile-cards-container';
-    cardsContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 10px;
-      margin-top: 20px;
-    `;
-
-    rows.forEach((row, index) => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length < 7) return;
-
-      const card = document.createElement('div');
-      card.className = 'mobile-card';
-      card.setAttribute('data-row-index', index);
-
-      // استخراج البيانات من الخلايا
-      const serial = cells[0]?.textContent.trim() || '';
-      const shop = cells[1]?.textContent.trim() || '';
-      const code = cells[2]?.textContent.trim() || '';
-      const amount = cells[3]?.textContent.trim() || '';
-      const extraInput = cells[4]?.querySelector('input');
-      const collectorInput = cells[5]?.querySelector('input');
-      const netCell = cells[6];
-
-      const extra = extraInput?.value || '';
-      const collector = collectorInput?.value || '';
-      const net = netCell?.textContent.trim() || '';
-
-      // تحديد لون البطاقة حسب الصافي
-      let cardClass = '';
-      if (net.includes('↑') || net.includes('fa-arrow-up')) cardClass = 'card-positive';
-      else if (net.includes('↓') || net.includes('fa-arrow-down')) cardClass = 'card-negative';
-      else cardClass = 'card-zero';
-
-      card.innerHTML = `
-        <div class="card-header">
-          <span class="card-serial">#${serial}</span>
-          <span class="card-shop">${shop}</span>
-        </div>
-        <div class="card-body">
-          <div class="card-row">
-            <span class="card-label">🔢 الكود:</span>
-            <span class="card-value">${code}</span>
-          </div>
-          <div class="card-row">
-            <span class="card-label">💸 المبلغ:</span>
-            <span class="card-value">${amount}</span>
-          </div>
-          <div class="card-row">
-            <span class="card-label">🔄 أخرى:</span>
-            <input type="text" class="card-input extra-input" value="${extra}" placeholder="أدخل المبلغ" data-field="extra" />
-          </div>
-          <div class="card-row">
-            <span class="card-label">💰 المحصل:</span>
-            <input type="text" class="card-input collector-input" value="${collector}" placeholder="أدخل المبلغ" data-field="collector" />
-          </div>
-          <div class="card-row ${cardClass}">
-            <span class="card-label">⚖️ الصافي:</span>
-            <span class="card-value card-highlight">${net}</span>
-          </div>
-        </div>
-      `;
-
-      // إضافة مستمعي الأحداث للحقول
-      const inputs = card.querySelectorAll('.card-input');
-      inputs.forEach(input => {
-        // تنسيق الأرقام للحقول
-        setupNumberInputFormatting(input);
-
-        input.addEventListener('input', function() {
-          const fieldType = this.getAttribute('data-field');
-          const rowIndex = parseInt(card.getAttribute('data-row-index'));
-          const tableRows = tbody.querySelectorAll('tr');
-
-          if (tableRows[rowIndex]) {
-            const tableInputs = tableRows[rowIndex].querySelectorAll('input');
-            const inputIndex = fieldType === 'extra' ? 0 : 1; // extra is first input, collector is second
-
-            if (tableInputs[inputIndex]) {
-              tableInputs[inputIndex].value = this.value;
-              // تشغيل حدث input للجدول لتحديث الحسابات
-              tableInputs[inputIndex].dispatchEvent(new Event('input', { bubbles: true }));
-            }
-          }
-
-          // تحديث عرض البطاقة
-          updateCardDisplay(card, tableRows[rowIndex]);
-        });
-
-        input.addEventListener('blur', function() {
-          // حفظ البيانات عند فقدان التركيز
-          try {
-            localStorage.setItem("rowData", tbodyToStorage());
-          } catch (e) {
-            console.error("Failed to save row data", e);
-          }
-        });
-      });
-
-      cardsContainer.appendChild(card);
-    });
-
-    // إخفاء الجدول وإظهار البطاقات
-    table.style.display = 'none';
-    table.parentNode.insertBefore(cardsContainer, table.nextSibling);
-
-    console.log(`تم تحويل ${rows.length} صف إلى بطاقات`);
-  }
-
-  function updateCardDisplay(card, tableRow) {
-    if (!card || !tableRow) return;
-
-    const netCell = tableRow.querySelector('.net');
-    if (netCell) {
-      const netText = netCell.textContent.trim();
-      const highlightElement = card.querySelector('.card-highlight');
-
-      if (highlightElement) {
-        highlightElement.textContent = netText;
-
-        // تحديث لون البطاقة
-        const cardRow = highlightElement.closest('.card-row');
-        cardRow.classList.remove('card-positive', 'card-negative', 'card-zero');
-
-        if (netText.includes('↑') || netText.includes('fa-arrow-up')) {
-          cardRow.classList.add('card-positive');
-        } else if (netText.includes('↓') || netText.includes('fa-arrow-down')) {
-          cardRow.classList.add('card-negative');
-        } else {
-          cardRow.classList.add('card-zero');
-        }
-      }
-    }
-  }
-
-  function convertCardsToTable() {
-    const cardsContainer = document.querySelector('.mobile-cards-container');
-    const table = document.querySelector('#harvestTable') || document.querySelector('#archiveTable');
-
-    if (cardsContainer) {
-      cardsContainer.remove();
-    }
-
-    if (table) {
-      table.style.display = '';
-    }
-  }
-
-  function handleResponsiveLayout() {
-    if (window.innerWidth <= 480) {
-      convertTableToCards();
-    } else {
-      convertCardsToTable();
-    }
-  }
-
   /* ========== DOM Ready ========== */
   document.addEventListener("DOMContentLoaded", () => {
     // إضافة انتقال سلس للصفحة بدون التأثير على الشريط الجانبي
@@ -1703,17 +1308,9 @@ function parseNumber(x) {
         document.body.classList.add("loaded");
       }, 100);
     }
-
+    
     applyDarkModeFromStorage();
     populateUserData();
-
-    // تهيئة التخطيط المتجاوب
-    handleResponsiveLayout();
-    window.addEventListener('resize', handleResponsiveLayout);
-
-    // تهيئة إعدادات الجدول
-    initializeTableSettings();
-    loadTableSettingsOnPageLoad();
     
     const toggleDarkBtn = document.getElementById("toggleDark");
     if (toggleDarkBtn) {

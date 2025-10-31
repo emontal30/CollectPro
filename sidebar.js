@@ -114,7 +114,7 @@ async function updateUserDisplay(user) {
 
     if (userNameEl) userNameEl.textContent = displayName;
     if (userEmailEl) userEmailEl.textContent = user.email;
-    if (userIdEl) userIdEl.textContent = `ID: ${user.id}`;
+    if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
 
     // تحديث معلومات الاشتراك
     await updateSubscriptionInfo();
@@ -324,7 +324,7 @@ async function checkForTestSubscription(userId) {
 }
 
 // Add active class to current page link
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // تحميل القيمة المحفوظة من localStorage إذا كانت متوفرة
     const savedDaysLeft = localStorage.getItem('sidebarDaysLeft');
     if (savedDaysLeft) {
@@ -334,7 +334,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    populateUserData();
+    await populateUserData();
+
+    // إخفاء رابط لوحة التحكم إلا للمدير
+    await checkAndHideAdminLink();
+
     const currentPage = window.location.pathname.split('/').pop();
     const navLinks = document.querySelectorAll('.sidebar .nav-links a');
 
@@ -376,3 +380,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// دالة للتحقق من صلاحية المدير وإخفاء رابط لوحة التحكم
+async function checkAndHideAdminLink() {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            // إذا لم يكن هناك مستخدم مسجل، إخفاء الرابط
+            const adminLink = document.getElementById('admin-link');
+            if (adminLink) {
+                adminLink.style.display = 'none';
+            }
+            return;
+        }
+
+        const adminEmails = ['emontal.33@gmail.com'];
+        const isAdmin = adminEmails.includes(user.email);
+
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            if (!isAdmin) {
+                adminLink.style.display = 'none';
+            } else {
+                adminLink.style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking admin access for sidebar:', error);
+        // في حالة الخطأ، إخفاء الرابط للأمان
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            adminLink.style.display = 'none';
+        }
+    }
+}

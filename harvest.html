@@ -82,12 +82,6 @@
       <span class="date-separator">|</span>
       <span class="date-label">التاريخ:</span>
       <span id="currentDate" class="date-value"></span>
-      <div class="table-controls">
-        <button id="tableSettingsBtn" class="btn table-settings-btn">
-          <i class="fas fa-cog"></i>
-          <span>إعداد الجدول</span>
-        </button>
-      </div>
     </div>
     <div class="table-wrap">
       <table id="harvestTable" class="collections-table">      <thead>
@@ -169,59 +163,6 @@
   <div class="footer">
     <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
     <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v1.0</p>
-  </div>
-
-  <!-- Modal لإعداد الجدول -->
-  <div id="tableSettingsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>إعداد أعمدة الجدول</h3>
-        <button class="close-modal" id="closeModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="column-settings">
-          <div class="column-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="col-serial" checked>
-              <span class="checkmark"></span>
-              #️⃣ الرقم التسلسلي
-            </label>
-          </div>
-          <div class="column-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="col-shop" checked>
-              <span class="checkmark"></span>
-              🏪 المحل
-            </label>
-          </div>
-          <div class="column-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="col-code" checked>
-              <span class="checkmark"></span>
-              🔢 الكود
-            </label>
-          </div>
-          <div class="column-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="col-amount" checked>
-              <span class="checkmark"></span>
-              💸 مبلغ التحويل
-            </label>
-          </div>
-          <div class="column-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="col-extra" checked>
-              <span class="checkmark"></span>
-              🔄 أخرى
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="resetColumns">إعادة تعيين</button>
-        <button class="btn" id="applySettings">تطبيق</button>
-      </div>
-    </div>
   </div>
 
   <!-- Scripts at the end for better performance -->
