@@ -17,6 +17,32 @@ window.addEventListener('unhandledrejection', function(event) {
   // Here you could send the error to a logging service
 });
 
+// Register Service Worker for PWA functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('📱 Service Worker registered successfully:', registration.scope);
+
+        // Handle updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available
+              console.log('📱 New version available. Please refresh to update.');
+              // You could show a notification to the user here
+            }
+          });
+        });
+      })
+      .catch((error) => {
+        console.error('📱 Service Worker registration failed:', error);
+      });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
 /* ========== Helpers ========== */
 function parseNumber(x) {
     if (x === null || x === undefined) return 0;
