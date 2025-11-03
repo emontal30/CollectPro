@@ -1,6 +1,6 @@
 {
   "name": "CollectPro",
-  "short_name": "Webapp manifest",
+  "short_name": "CollectPro",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
