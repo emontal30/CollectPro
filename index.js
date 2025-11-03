@@ -25,8 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
 
-  // إعداد رسالة تثبيت التطبيق
-  setupInstallPrompt();
 
   // onAuthStateChange هو المصدر الوحيد للحقيقة
   supabase.auth.onAuthStateChange((_event, session) => {
@@ -96,83 +94,3 @@ async function redirectUser(user) {
     }
 }
 
-/**
- * Sets up the install prompt for PWA installation.
- */
-function setupInstallPrompt() {
-  const installPrompt = document.getElementById('install-prompt');
-  const installBtn = document.getElementById('install-btn');
-  const dismissBtn = document.getElementById('dismiss-btn');
-
-  let deferredPrompt;
-
-  // التحقق من دعم PWA
-  if ('serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window) {
-    console.log('📱 PWA supported, setting up install prompt...');
-
-    // الاستماع لحدث beforeinstallprompt
-    window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('📱 beforeinstallprompt event fired');
-      e.preventDefault();
-      deferredPrompt = e;
-
-      // التحقق من عدم إخفاء الرسالة مسبقاً
-      const dismissed = localStorage.getItem('installPromptDismissed');
-      const installed = localStorage.getItem('appInstalled');
-
-      if (!dismissed && !installed) {
-        // التحقق من أن المستخدم على جهاز محمول أو سطح مكتب للاختبار
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isDesktop = !isMobile; // للاختبار على سطح المكتب
-
-        if (isMobile || isDesktop) { // إظهار على الموبايل والديسكتوب للاختبار
-          // تأخير إظهار الرسالة قليلاً لتحسين تجربة المستخدم
-          setTimeout(() => {
-            showInstallPrompt();
-          }, 1000); // تقليل التأخير للاختبار
-        }
-      }
-    });
-
-    // الاستماع لحدث appinstalled
-    window.addEventListener('appinstalled', () => {
-      console.log('📱 App installed successfully');
-      localStorage.setItem('appInstalled', 'true');
-      hideInstallPrompt();
-    });
-
-    // إعداد أزرار الرسالة
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('📱 Install prompt outcome:', outcome);
-        deferredPrompt = null;
-
-        if (outcome === 'accepted') {
-          localStorage.setItem('appInstalled', 'true');
-        }
-      }
-      hideInstallPrompt();
-    });
-
-    dismissBtn.addEventListener('click', () => {
-      console.log('📱 Install prompt dismissed');
-      localStorage.setItem('installPromptDismissed', 'true');
-      hideInstallPrompt();
-    });
-
-  } else {
-    console.log('📱 PWA not supported or not on mobile device');
-  }
-
-  function showInstallPrompt() {
-    installPrompt.classList.add('show');
-    console.log('📱 Showing install prompt');
-  }
-
-  function hideInstallPrompt() {
-    installPrompt.classList.remove('show');
-    console.log('📱 Hiding install prompt');
-  }
-}
