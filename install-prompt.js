@@ -27,8 +27,8 @@
   }
 
   // Check if PWA is supported and set up install prompt
-  if ('serviceWorker' in navigator && 'BeforeInstallPromptEvent' in window) {
-    console.log('📱 PWA supported, setting up install prompt...');
+  if ('serviceWorker' in navigator) {
+    console.log('📱 Service Worker supported, checking for PWA features...');
 
     // Listen for beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -40,11 +40,15 @@
       const dismissed = localStorage.getItem('installPromptDismissed');
       const installed = localStorage.getItem('appInstalled');
 
+      console.log('📱 Install prompt status - dismissed:', dismissed, 'installed:', installed);
+
       if (!dismissed && !installed) {
         // Show prompt after a short delay
         setTimeout(() => {
           showInstallPrompt();
-        }, 2000);
+        }, 3000); // Increased delay to ensure page is fully loaded
+      } else {
+        console.log('📱 Install prompt not shown - dismissed or already installed');
       }
     });
 
@@ -86,8 +90,36 @@
     });
 
   } else {
-    console.log('📱 PWA not supported');
+    console.log('📱 PWA not fully supported, but Service Worker available');
   }
+
+  // Alternative: Show install prompt based on user interaction for browsers that don't support beforeinstallprompt
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if we should show the prompt after some user interaction
+    let userInteracted = false;
+
+    // Listen for user interactions
+    ['click', 'touchstart', 'keydown'].forEach(event => {
+      document.addEventListener(event, () => {
+        userInteracted = true;
+      }, { once: true });
+    });
+
+    // Show prompt after user interaction if beforeinstallprompt didn't fire
+    setTimeout(() => {
+      if (userInteracted && !deferredPrompt) {
+        const dismissed = localStorage.getItem('installPromptDismissed');
+        const installed = localStorage.getItem('appInstalled');
+
+        if (!dismissed && !installed) {
+          console.log('📱 Showing install prompt after user interaction');
+          setTimeout(() => {
+            showInstallPrompt();
+          }, 1000);
+        }
+      }
+    }, 5000); // Wait 5 seconds for potential beforeinstallprompt event
+  });
 
   // Expose functions globally for debugging
   window.installPromptUtils = {
@@ -97,6 +129,16 @@
       localStorage.removeItem('installPromptDismissed');
       localStorage.removeItem('appInstalled');
       console.log('📱 Install prompt state reset');
+    },
+    debug: function() {
+      console.log('📱 Debug info:', {
+        deferredPrompt: !!deferredPrompt,
+        dismissed: localStorage.getItem('installPromptDismissed'),
+        installed: localStorage.getItem('appInstalled'),
+        serviceWorker: 'serviceWorker' in navigator,
+        beforeInstallPrompt: 'BeforeInstallPromptEvent' in window,
+        userAgent: navigator.userAgent
+      });
     }
   };
 
