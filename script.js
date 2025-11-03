@@ -1014,6 +1014,8 @@ function parseNumber(x) {
           row.style.backgroundColor = "";
         });
       });
+    });
+    });
     }
 
   }
