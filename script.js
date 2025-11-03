@@ -1152,35 +1152,35 @@ function parseNumber(x) {
   /* ========== Populate User Data ========== */
   async function populateUserData() {
     try {
-      // جلب بيانات المستخدم من Supabase مباشرة مثل صفحة اشتراكي
-      const { data: { user } } = await supabase.auth.getUser();
+      // التحقق من وجود Supabase client
+      if (!window.supabase) {
+        console.warn('Supabase client not found, skipping user data population');
+        return;
+      }
+
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        // إذا كان الخطأ هو عدم وجود جلسة مصادقة، هذا طبيعي للمستخدمين غير المسجلين
+        if (error.message.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
+          console.log('User not authenticated, this is normal for guest users');
+          return;
+        }
+        // للأخطاء الأخرى، سجلها لكن لا تتوقف
+        console.warn('Authentication check failed:', error.message);
+        return;
+      }
 
       if (!user) {
-        console.log('No user found, trying localStorage as fallback');
-        // الرجوع للبيانات المحفوظة محلياً إذا لم يكن المستخدم مسجل دخوله
-        const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
-        if (!userString) return;
-
-        const userData = JSON.parse(userString);
-        updateUserDisplay(userData);
+        console.log('No authenticated user found');
         return;
       }
 
       updateUserDisplay(user);
 
     } catch (error) {
-      console.error('Failed to get user data from Supabase, trying localStorage:', error);
-
-      // الرجوع للبيانات المحفوظة محلياً في حالة الخطأ
-      const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (!userString) return;
-
-      try {
-        const user = JSON.parse(userString);
-        updateUserDisplay(user);
-      } catch (fallbackError) {
-        console.error('Failed to parse user data from storage:', fallbackError);
-      }
+      // في حالة وجود خطأ غير متوقع، سجله ولكن لا تظهره للمستخدم
+      console.warn('Unexpected error in populateUserData:', error.message);
     }
   }
 
@@ -1212,12 +1212,13 @@ function parseNumber(x) {
     }
 
     try {
-        console.log('Updating subscription info for sidebar');
+        console.log('🔄 Updating subscription info for sidebar');
 
         // جلب بيانات المستخدم
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            console.log('No user found for subscription info');
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+            console.log('⚠️ Auth error in subscription info:', authError.message);
             const daysLeftEl = document.getElementById('days-left');
             if (daysLeftEl) daysLeftEl.textContent = '0';
 
@@ -1228,11 +1229,25 @@ function parseNumber(x) {
             return;
         }
 
+        if (!user) {
+            console.log('👤 No user found for subscription info');
+            const daysLeftEl = document.getElementById('days-left');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+            return;
+        }
+
+        console.log('📊 Fetching subscription data for user:', user.id);
+
         const { data: subscription, error } = await supabase
             .from('subscriptions')
             .select(`
-                end_date, 
-                status, 
+                end_date,
+                status,
                 start_date,
                 plan_name,
                 subscription_plans:plan_id (
@@ -1245,12 +1260,18 @@ function parseNumber(x) {
             .limit(1)
             .single();
 
-        console.log('Subscription data:', subscription, 'Error:', error);
+        console.log('📋 Raw subscription response - Data:', subscription, 'Error:', error);
 
         const daysLeftEl = document.getElementById('days-left');
 
-        if (error || !subscription) {
-            console.log('No active subscription found');
+        if (error) {
+            console.log('❌ Database error fetching subscription:', error.message, error.code);
+
+            // إذا كان الخطأ "PGRST116" يعني لا توجد نتائج، هذا طبيعي
+            if (error.code === 'PGRST116') {
+                console.log('ℹ️ No subscription found for user (this is normal for new users)');
+            }
+
             if (daysLeftEl) daysLeftEl.textContent = '0';
             if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
 
@@ -1258,9 +1279,29 @@ function parseNumber(x) {
             if (subscriptionDaysEl) {
                 subscriptionDaysEl.className = 'subscription-days-simple';
             }
-            console.log('Subscription info displayed in sidebar');
+            console.log('✅ Subscription info displayed in sidebar (no active subscription)');
             return;
         }
+
+        if (!subscription) {
+            console.log('⚠️ No subscription data returned');
+            if (daysLeftEl) daysLeftEl.textContent = '0';
+            if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple';
+            }
+            console.log('✅ Subscription info displayed in sidebar (null subscription)');
+            return;
+        }
+
+        console.log('📅 Processing subscription data:', {
+            end_date: subscription.end_date,
+            status: subscription.status,
+            plan_name: subscription.plan_name,
+            has_plan_details: !!subscription.subscription_plans
+        });
 
         // إظهار معلومات الاشتراك فوراً
         if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
@@ -1270,7 +1311,7 @@ function parseNumber(x) {
             const today = new Date();
             const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
 
-            console.log('Sidebar - End date:', subscription.end_date, 'Today:', today.toISOString(), 'Days left:', daysLeft);
+            console.log('📆 Calculated days left:', daysLeft, 'End date:', subscription.end_date);
 
             if (daysLeftEl) {
                 daysLeftEl.textContent = daysLeft > 0 ? daysLeft.toString() : 'انتهى';
@@ -1281,6 +1322,7 @@ function parseNumber(x) {
                 subscriptionDaysEl.className = daysLeft > 0 ? 'subscription-days-simple' : 'subscription-days-simple expired';
             }
         } else {
+            console.log('♾️ No end date found, setting unlimited');
             if (daysLeftEl) {
                 daysLeftEl.textContent = '∞';
             }
@@ -1291,10 +1333,16 @@ function parseNumber(x) {
             }
         }
 
-        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
+        console.log('✅ Subscription info successfully updated in sidebar');
 
     } catch (error) {
-        console.error('Error updating subscription info:', error);
+        console.error('❌ Unexpected error updating subscription info:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+
         const daysLeftEl = document.getElementById('days-left');
         if (daysLeftEl) daysLeftEl.textContent = '0';
     }

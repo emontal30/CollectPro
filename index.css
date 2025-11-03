@@ -397,20 +397,27 @@ body.dark .google-login-btn:hover {
   transform: translateY(-4px);
 }
 
-/* رسالة تثبيت التطبيق */
+/* رسالة تثبيت التطبيق - عائمة ومنبثقة */
 .install-prompt {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 20px;
   display: none;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   z-index: 10000;
-  animation: fadeIn 0.3s ease-out;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUpFromBottom 0.4s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 500px;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .install-prompt.show {
@@ -418,16 +425,10 @@ body.dark .google-login-btn:hover {
 }
 
 .install-prompt-content {
-  background: white;
-  border-radius: 20px;
-  padding: 30px;
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-  animation: slideUp 0.4s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
 }
 
 .install-prompt-content::before {
@@ -436,81 +437,88 @@ body.dark .google-login-btn:hover {
   top: 0;
   left: 0;
   right: 0;
-  height: 5px;
+  height: 4px;
   background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-radius: 16px 16px 0 0;
 }
 
 .install-icon {
-  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .install-icon img {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0, 121, 101, 0.3);
-  border: 3px solid var(--primary);
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+  border: 2px solid var(--primary);
+}
+
+.install-text {
+  flex: 1;
+  text-align: right;
 }
 
 .install-text h3 {
   color: var(--primary);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 15px;
-  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
 }
 
 .install-text p {
   color: #666;
-  font-size: 16px;
-  line-height: 1.6;
-  margin-bottom: 25px;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
 }
 
 .install-buttons {
   display: flex;
-  gap: 15px;
-  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .install-btn, .dismiss-btn {
-  padding: 12px 24px;
+  padding: 10px 16px;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 100px;
+  min-width: 80px;
 }
 
 .install-btn {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
-  box-shadow: 0 8px 20px rgba(0, 121, 101, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
 }
 
 .install-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(0, 121, 101, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 121, 101, 0.4);
 }
 
 .dismiss-btn {
-  background: #f8f9fa;
-  color: #666;
-  border: 2px solid #e9ecef;
+  background: transparent;
+  color: #999;
+  border: 1px solid #ddd;
 }
 
 .dismiss-btn:hover {
-  background: #e9ecef;
+  background: #f5f5f5;
+  color: #666;
   transform: translateY(-1px);
 }
 
 /* الوضع الليلي للرسالة المنبثقة */
-body.dark .install-prompt-content {
-  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
-  color: #f1f1f1;
-  border: 1px solid rgba(0, 200, 150, 0.2);
+body.dark .install-prompt {
+  background: rgba(30, 30, 30, 0.9);
+  border-color: rgba(0, 200, 150, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 body.dark .install-prompt-content::before {
@@ -526,13 +534,14 @@ body.dark .install-text p {
 }
 
 body.dark .dismiss-btn {
-  background: #333;
-  color: #cccccc;
+  background: transparent;
+  color: #999;
   border-color: #555;
 }
 
 body.dark .dismiss-btn:hover {
-  background: #444;
+  background: #333;
+  color: #cccccc;
 }
 
 /* الرسوم المتحركة */
@@ -541,44 +550,50 @@ body.dark .dismiss-btn:hover {
   to { opacity: 1; }
 }
 
-@keyframes slideUp {
+@keyframes slideUpFromBottom {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.95);
+    transform: translateX(-50%) translateY(100px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
 /* التصميم المتجاوب */
 @media (max-width: 480px) {
+  .install-prompt {
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    padding: 16px;
+  }
+
   .install-prompt-content {
-    padding: 25px 20px;
-    margin: 20px;
+    gap: 12px;
   }
 
   .install-icon img {
-    width: 70px;
-    height: 70px;
+    width: 45px;
+    height: 45px;
   }
 
   .install-text h3 {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .install-text p {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .install-buttons {
-    flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
   .install-btn, .dismiss-btn {
-    width: 100%;
-    padding: 14px;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-width: 70px;
   }
 }
