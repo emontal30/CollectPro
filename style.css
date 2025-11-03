@@ -31,6 +31,8 @@ body {
   display: flex;
   flex-direction: column;
   opacity: 0; /* للانتقال السلس بين الصفحات */
+  min-width: 1024px;
+  overflow-x: auto;
 }
 body.loaded {
   opacity: 1;
@@ -367,6 +369,7 @@ th.net, td.net {
 }
 
 @media (max-width: 1024px) {
+  /* Force desktop layout - no mobile responsive behavior */
   table {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -380,6 +383,7 @@ th.net, td.net {
   th.net, td.net { width: 90px; min-width: 90px; }
 }
 
+/* Force desktop layout - remove all mobile responsive table behavior */
 @media (max-width: 923px) {
   /* Use a wrapper to handle horizontal scrolling; keep table as table for proper layout */
   .table-responsive {
@@ -469,6 +473,7 @@ th.net, td.net {
   }
 }
 
+/* Force desktop layout - no mobile responsive behavior */
 @media (max-width: 768px) {
   th.serial, td.serial { width: 30px; min-width: 30px; }
   th.shop, td.shop { width: 80px; min-width: 80px; }
