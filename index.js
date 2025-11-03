@@ -121,14 +121,15 @@ function setupInstallPrompt() {
       const installed = localStorage.getItem('appInstalled');
 
       if (!dismissed && !installed) {
-        // التحقق من أن المستخدم على جهاز محمول
+        // التحقق من أن المستخدم على جهاز محمول أو سطح مكتب للاختبار
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isDesktop = !isMobile; // للاختبار على سطح المكتب
 
-        if (isMobile) {
+        if (isMobile || isDesktop) { // إظهار على الموبايل والديسكتوب للاختبار
           // تأخير إظهار الرسالة قليلاً لتحسين تجربة المستخدم
           setTimeout(() => {
             showInstallPrompt();
-          }, 2000);
+          }, 1000); // تقليل التأخير للاختبار
         }
       }
     });
