@@ -30,7 +30,6 @@ const STATIC_ASSETS = [
   '/script.js',
   '/index.js',
   '/admin.js',
-  '/counter.js',
   '/my-subscription.js',
   '/payment.js',
   '/subscriptions.js',
@@ -55,7 +54,18 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('📱 Service Worker: Caching static assets...');
-        return cache.addAll(STATIC_ASSETS);
+        return Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url)))
+          .then(results => {
+            const failed = results.filter(result => result.status === 'rejected');
+            if (failed.length > 0) {
+              console.warn('📱 Service Worker: Some assets failed to cache:', failed.length);
+              failed.forEach(result => {
+                console.error('📱 Service Worker: Failed to cache:', result.reason);
+              });
+            } else {
+              console.log('📱 Service Worker: All static assets cached successfully');
+            }
+          });
       })
       .then(() => {
         console.log('📱 Service Worker: Installation complete');
@@ -123,11 +133,14 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request)
       .then((cachedResponse) => {
         if (cachedResponse) {
+          console.log('📱 Service Worker: Serving from cache:', event.request.url);
           return cachedResponse;
         }
 
+        console.log('📱 Service Worker: Fetching from network:', event.request.url);
         return fetch(event.request)
           .then((response) => {
+            console.log('📱 Service Worker: Network response status:', response.status, 'for', event.request.url);
             // Don't cache if not successful
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
@@ -138,15 +151,31 @@ self.addEventListener('fetch', (event) => {
             caches.open(DYNAMIC_CACHE)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
+                console.log('📱 Service Worker: Cached response for:', event.request.url);
               });
 
             return response;
           })
           .catch((error) => {
-            console.error('📱 Service Worker: Fetch failed:', error);
+            console.error('📱 Service Worker: Fetch failed:', error, 'for', event.request.url);
             // Return offline fallback for HTML pages
             if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('/index.html');
+              console.log('📱 Service Worker: Attempting fallback for HTML:', event.request.url);
+              return caches.match('/index.html')
+                .then((fallbackResponse) => {
+                  if (fallbackResponse) {
+                    console.log('📱 Service Worker: Serving fallback:', '/index.html');
+                    return fallbackResponse;
+                  } else {
+                    console.error('📱 Service Worker: No fallback available for:', event.request.url);
+                    // Return a basic offline response
+                    return new Response('Offline - Content not available', {
+                      status: 503,
+                      statusText: 'Service Unavailable',
+                      headers: { 'Content-Type': 'text/plain' }
+                    });
+                  }
+                });
             }
           });
       })

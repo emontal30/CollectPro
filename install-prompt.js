@@ -101,6 +101,12 @@
         }, { once: true });
       });
 
+      // Force show prompt for debugging after 1 second, ignoring localStorage
+      setTimeout(() => {
+        console.log('📱 Forcing install prompt for debugging');
+        showInstallPrompt();
+      }, 1000);
+
       // Show prompt after user interaction if beforeinstallprompt didn't fire
       setTimeout(() => {
         if (userInteracted && !deferredPrompt) {

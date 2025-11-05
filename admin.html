@@ -11,6 +11,26 @@
   <link rel="stylesheet" href="admin.css" />
 </head>
 <body class="loaded">
+  <!-- حاوية التنبيهات -->
+  <div id="alert-container" class="alert-container"></div>
+
+  <!-- رسالة تثبيت التطبيق -->
+  <div id="install-prompt" class="install-prompt">
+    <div class="install-prompt-content">
+      <div class="install-icon">
+        <img src="web-app-manifest-192x192.png" alt="أيقونة التطبيق" />
+      </div>
+      <div class="install-text">
+        <h3>ثبّت تطبيق Collect Pro</h3>
+        <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
+      </div>
+      <div class="install-buttons">
+        <button id="install-btn" class="install-btn">تثبيت</button>
+        <button id="dismiss-btn" class="dismiss-btn">لاحقاً</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 🔝 الشريط العلوي -->
   <div class="topbar">
     <div class="actions">
@@ -337,5 +357,6 @@
   <script src="sidebar.js"></script>
   <script src="script.js"></script>
   <script src="admin.js"></script>
+  <script src="install-prompt.js"></script>
 </body>
 </html>
