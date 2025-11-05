@@ -204,6 +204,11 @@ async function updateSubscriptionInfo() {
 
         console.log('Subscription data:', subscription, 'Error:', error);
 
+        if (error) {
+            console.error('Supabase query error:', error);
+            return;
+        }
+
         const daysLeftEl = document.getElementById('days-left');
 
         if (error || !subscription) {
@@ -232,39 +237,12 @@ async function updateSubscriptionInfo() {
         // إظهار معلومات الاشتراك فوراً
         if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
 
-        if (subscription.end_date) {
+        if (subscription.end_date && subscription.status === 'active') {
             const endDate = new Date(subscription.end_date);
             const today = new Date();
             const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
 
             console.log('Sidebar - End date:', subscription.end_date, 'Today:', today.toISOString(), 'Days left:', daysLeft);
-
-            let message = '';
-            let className = '';
-
-            if (subscription.status === 'active') {
-                if (daysLeft > 7) {
-                    message = `نشط | ${daysLeft} يوم`;
-                    className = 'active';
-                } else if (daysLeft > 0) {
-                    message = `ينتهي قريباً | ${daysLeft} يوم`;
-                    className = 'warning';
-                    // إظهار تنبيه
-                    showAlert(`تنبيه: اشتراكك ينتهي خلال ${daysLeft} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.`, 'warning');
-                } else {
-                    message = 'منتهي';
-                    className = 'expired';
-                    showAlert('انتهى اشتراكك! يرجى تجديد الاشتراك للاستمرار في استخدام الخدمة.', 'danger');
-                }
-            } else {
-                const statusMap = {
-                    'cancelled': 'ملغي',
-                    'paused': 'متوقف مؤقتاً',
-                    'expired': 'منتهي'
-                };
-                message = statusMap[subscription.status] || 'غير نشط';
-                className = 'expired';
-            }
 
             if (daysLeftEl) {
                 daysLeftEl.textContent = daysLeft > 0 ? daysLeft.toString() : 'انتهى';
@@ -274,14 +252,34 @@ async function updateSubscriptionInfo() {
             if (subscriptionDaysEl) {
                 subscriptionDaysEl.className = daysLeft > 0 ? 'subscription-days-simple' : 'subscription-days-simple expired';
             }
-        } else {
+
+            // إظهار تنبيهات فقط للاشتراكات النشطة
+            if (daysLeft > 0 && daysLeft <= 7) {
+                showAlert(`تنبيه: اشتراكك ينتهي خلال ${daysLeft} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.`, 'warning');
+            } else if (daysLeft <= 0) {
+                showAlert('انتهى اشتراكك! يرجى تجديد الاشتراك للاستمرار في استخدام الخدمة.', 'danger');
+            }
+        } else if (subscription.status === 'pending') {
+            // معالجة حالة الاشتراك المعلق
             if (daysLeftEl) {
-                daysLeftEl.textContent = '∞';
+                daysLeftEl.textContent = 'معلق';
             }
 
             const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
             if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
+                subscriptionDaysEl.className = 'subscription-days-simple pending';
+            }
+
+            console.log('Subscription is pending - showing pending status');
+        } else {
+            // حالات أخرى (ملغي، متوقف، منتهي)
+            if (daysLeftEl) {
+                daysLeftEl.textContent = 'غير نشط';
+            }
+
+            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
+            if (subscriptionDaysEl) {
+                subscriptionDaysEl.className = 'subscription-days-simple expired';
             }
         }
 

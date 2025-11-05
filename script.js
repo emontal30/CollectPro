@@ -17,32 +17,6 @@ window.addEventListener('unhandledrejection', function(event) {
   // Here you could send the error to a logging service
 });
 
-// Register Service Worker for PWA functionality
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('📱 Service Worker registered successfully:', registration.scope);
-
-        // Handle updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available
-              console.log('📱 New version available. Please refresh to update.');
-              // You could show a notification to the user here
-            }
-          });
-        });
-      })
-      .catch((error) => {
-        console.error('📱 Service Worker registration failed:', error);
-      });
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
 /* ========== Helpers ========== */
 function parseNumber(x) {
     if (x === null || x === undefined) return 0;
@@ -261,6 +235,8 @@ function parseNumber(x) {
           console.error("Failed to save row data", e);
         }
       }
+      window.location.href = `${page}.html`;
+    } else {
       window.location.href = `${page}.html`;
     }
   }
@@ -572,36 +548,17 @@ function parseNumber(x) {
   function setupNumberInputFormatting(input) {
     // تغيير نوع الحقل إلى نص للسماح بالفواصل
     input.type = 'text';
-
+    
     // تنسيق القيمة الأولية
     formatNumberInput(input);
-
+    
     // إضافة مستمعي الأحداث
     input.addEventListener('input', function() {
       formatNumberInput(this);
     });
-
+    
     input.addEventListener('blur', function() {
       formatNumberInput(this);
-    });
-
-    // منع كتابة الحروف والسماح بالأرقام والسالب فقط
-    input.addEventListener('keydown', function(e) {
-      // السماح بالأزرار الخاصة (backspace, delete, tab, escape, enter, arrows, home, end)
-      const specialKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
-
-      // السماح بالسالب في بداية النص فقط
-      if (e.key === '-' && this.selectionStart === 0 && !this.value.includes('-')) {
-        return; // السماح بالسالب
-      }
-
-      // منع الحروف والرموز غير المسموحة
-      if (specialKeys.includes(e.key) || /^[0-9]$/.test(e.key)) {
-        return; // السماح بالمفتاح
-      }
-
-      // منع أي مفتاح آخر
-      e.preventDefault();
     });
   }
   /* ========== Table Functions ========== */
@@ -1014,8 +971,6 @@ function parseNumber(x) {
           row.style.backgroundColor = "";
         });
       });
-    });
-    });
     }
 
   }
@@ -1177,217 +1132,105 @@ function parseNumber(x) {
       });
     });
   }
-  /* ========== Populate User Data ========== */
-  async function populateUserData() {
-    try {
-      // التحقق من وجود Supabase client
-      if (!window.supabase) {
-        console.warn('Supabase client not found, skipping user data population');
-        return;
-      }
 
-      const { data: { user }, error } = await supabase.auth.getUser();
-
-      if (error) {
-        // إذا كان الخطأ هو عدم وجود جلسة مصادقة، هذا طبيعي للمستخدمين غير المسجلين
-        if (error.message.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
-          console.log('User not authenticated, this is normal for guest users');
-          return;
-        }
-        // للأخطاء الأخرى، سجلها لكن لا تتوقف
-        console.warn('Authentication check failed:', error.message);
-        return;
-      }
-
-      if (!user) {
-        console.log('No authenticated user found');
-        return;
-      }
-
-      updateUserDisplay(user);
-
-    } catch (error) {
-      // في حالة وجود خطأ غير متوقع، سجله ولكن لا تظهره للمستخدم
-      console.warn('Unexpected error in populateUserData:', error.message);
-    }
-  }
-
-  function updateUserDisplay(user) {
-    const userNameEl = document.getElementById('user-name');
-    const userInitialEl = document.getElementById('user-initial');
-    const userEmailEl = document.getElementById('user-email');
-    const userIdEl = document.getElementById('user-id');
-
-    // جلب اسم المستخدم من user_metadata أو البريد الإلكتروني كبديل
-    const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'مستخدم';
-
-    if (userNameEl) userNameEl.textContent = displayName;
-    if (userInitialEl) userInitialEl.textContent = displayName.charAt(0).toUpperCase();
-    if (userEmailEl) userEmailEl.textContent = user.email;
-    if (userIdEl) userIdEl.textContent = `ID: ${user.id.slice(-7)}`;
-
-    // تحديث معلومات الاشتراك
-    updateSubscriptionInfo();
-  }
-  
-  // دالة لتحديث معلومات الاشتراك في الشريط الجانبي
-  async function updateSubscriptionInfo() {
-    const subscriptionInfoEl = document.getElementById('subscription-info');
-
-    // إظهار معلومات الاشتراك في جميع الصفحات
-    if (subscriptionInfoEl) {
-        subscriptionInfoEl.style.display = 'block';
-    }
-
-    try {
-        console.log('🔄 Updating subscription info for sidebar');
-
-        // جلب بيانات المستخدم
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError) {
-            console.log('⚠️ Auth error in subscription info:', authError.message);
-            const daysLeftEl = document.getElementById('days-left');
-            if (daysLeftEl) daysLeftEl.textContent = '0';
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
-            }
-            return;
-        }
-
-        if (!user) {
-            console.log('👤 No user found for subscription info');
-            const daysLeftEl = document.getElementById('days-left');
-            if (daysLeftEl) daysLeftEl.textContent = '0';
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
-            }
-            return;
-        }
-
-        console.log('📊 Fetching subscription data for user:', user.id);
-
-        const { data: subscription, error } = await supabase
-            .from('subscriptions')
-            .select(`
-                end_date,
-                status,
-                start_date,
-                plan_name,
-                subscription_plans:plan_id (
-                    name,
-                    name_ar
-                )
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-        console.log('📋 Raw subscription response - Data:', subscription, 'Error:', error);
-
-        const daysLeftEl = document.getElementById('days-left');
-
-        if (error) {
-            console.log('❌ Database error fetching subscription:', error.message, error.code);
-
-            // إذا كان الخطأ "PGRST116" يعني لا توجد نتائج، هذا طبيعي
-            if (error.code === 'PGRST116') {
-                console.log('ℹ️ No subscription found for user (this is normal for new users)');
-            }
-
-            if (daysLeftEl) daysLeftEl.textContent = '0';
-            if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
-            }
-            console.log('✅ Subscription info displayed in sidebar (no active subscription)');
-            return;
-        }
-
-        if (!subscription) {
-            console.log('⚠️ No subscription data returned');
-            if (daysLeftEl) daysLeftEl.textContent = '0';
-            if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
-            }
-            console.log('✅ Subscription info displayed in sidebar (null subscription)');
-            return;
-        }
-
-        console.log('📅 Processing subscription data:', {
-            end_date: subscription.end_date,
-            status: subscription.status,
-            plan_name: subscription.plan_name,
-            has_plan_details: !!subscription.subscription_plans
-        });
-
-        // إظهار معلومات الاشتراك فوراً
-        if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
-
-        if (subscription.end_date) {
-            const endDate = new Date(subscription.end_date);
-            const today = new Date();
-            const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-
-            console.log('📆 Calculated days left:', daysLeft, 'End date:', subscription.end_date);
-
-            if (daysLeftEl) {
-                daysLeftEl.textContent = daysLeft > 0 ? daysLeft.toString() : 'انتهى';
-            }
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = daysLeft > 0 ? 'subscription-days-simple' : 'subscription-days-simple expired';
-            }
-        } else {
-            console.log('♾️ No end date found, setting unlimited');
-            if (daysLeftEl) {
-                daysLeftEl.textContent = '∞';
-            }
-
-            const subscriptionDaysEl = document.querySelector('.subscription-days-simple');
-            if (subscriptionDaysEl) {
-                subscriptionDaysEl.className = 'subscription-days-simple';
-            }
-        }
-
-        console.log('✅ Subscription info successfully updated in sidebar');
-
-    } catch (error) {
-        console.error('❌ Unexpected error updating subscription info:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        });
-
-        const daysLeftEl = document.getElementById('days-left');
-        if (daysLeftEl) daysLeftEl.textContent = '0';
-    }
-  }
 
   /* ========== DOM Ready ========== */
   document.addEventListener("DOMContentLoaded", () => {
+    console.log("DOM Content Loaded - Starting initialization");
+
     // إضافة انتقال سلس للصفحة بدون التأثير على الشريط الجانبي
     if (!document.body.classList.contains("loaded")) {
       setTimeout(() => {
         document.body.classList.add("loaded");
       }, 100);
     }
-    
+
     applyDarkModeFromStorage();
-    populateUserData();
-    
+
+    // التأكد من تهيئة أزرار صفحة الإدخال بشكل صحيح
+    if (window.location.pathname.includes('dashboard.html') || window.location.pathname.endsWith('/')) {
+      console.log("Dashboard page detected - initializing buttons");
+
+      // تأخير بسيط للتأكد من تحميل العناصر
+      setTimeout(() => {
+        // زر لصق البيانات
+        const pasteBtn = document.getElementById("pasteBtn");
+        const dataInput = document.getElementById("dataInput");
+
+        if (pasteBtn && dataInput) {
+          console.log("Initializing paste button");
+          pasteBtn.addEventListener("click", () => {
+            console.log("Paste button clicked");
+            pasteInto(dataInput);
+          });
+        } else {
+          console.error("pasteBtn or dataInput not found", { pasteBtn: !!pasteBtn, dataInput: !!dataInput });
+        }
+
+        // زر حفظ وانتقال
+        const saveGoBtn = document.getElementById("saveGoBtn");
+        if (saveGoBtn) {
+          console.log("Initializing save and go button");
+          saveGoBtn.addEventListener("click", () => {
+            console.log("Save and Go button clicked");
+            const data = dataInput.value.trim();
+            if (!data) {
+              showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
+              return;
+            }
+            if (!data.startsWith("المسلسل")) {
+              showModal("تأكيد", "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات?", () => {
+                localStorage.setItem("clientData", data);
+                navigateTo("harvest");
+              });
+              return;
+            }
+            localStorage.setItem("clientData", data);
+            navigateTo("harvest");
+          });
+        } else {
+          console.error("saveGoBtn not found");
+        }
+
+        // زر الذهاب للأرشيف
+        const goToArchiveBtn = document.getElementById("goToArchiveBtn");
+        if (goToArchiveBtn) {
+          console.log("Initializing go to archive button");
+          goToArchiveBtn.addEventListener("click", () => {
+            console.log("Go to Archive button clicked");
+            navigateTo("archive");
+          });
+        } else {
+          console.error("goToArchiveBtn not found");
+        }
+
+        // زر مسح البيانات
+        const clearBtn = document.getElementById("clearBtn");
+        if (clearBtn) {
+          console.log("Initializing clear button");
+          clearBtn.addEventListener("click", function() {
+            console.log("Clear button clicked");
+            if (dataInput) {
+              dataInput.value = "";
+              dataInput.focus();
+
+              // مسح البيانات من localStorage
+              localStorage.removeItem("clientData");
+              localStorage.removeItem("harvestData");
+
+              // إضافة علامة للدلالة على أن البيانات تم مسحها يدوياً
+              sessionStorage.setItem("dataCleared", "true");
+
+              console.log("تم مسح البيانات بنجاح");
+              showAlert("تم مسح البيانات بنجاح!", "success");
+            }
+          });
+        } else {
+          console.error("clearBtn not found");
+        }
+      }, 300);
+    }
+
     const toggleDarkBtn = document.getElementById("toggleDark");
     if (toggleDarkBtn) {
       toggleDarkBtn.addEventListener("click", () => {
@@ -1399,7 +1242,7 @@ function parseNumber(x) {
         toggleDarkBtn.textContent = isDark ? "☀️" : "🌙";
       });
     }
-    
+
     const todayEl = document.getElementById("currentDate");
     const dayEl = document.getElementById("currentDay");
     if (todayEl) {
@@ -1422,57 +1265,83 @@ function parseNumber(x) {
         dayEl.textContent = new Date().toLocaleDateString("ar", { weekday: 'long' });
       }
     }
-    
+
     setupAutoSave();
     setupNavigationArrows();
     enhanceTableExperience();
     setupSummaryNumberFormatting();
-    
+
     // Index page elements
     const dataInput = document.getElementById("dataInput");
+    console.log("Dashboard page loaded, dataInput found:", !!dataInput);
+
     if (dataInput) {
-      document.getElementById("pasteBtn")?.addEventListener("click", () => pasteInto(dataInput));
-      
-      document.getElementById("saveGoBtn")?.addEventListener("click", () => {
-        const data = dataInput.value.trim();
-        if (!data) {
-          showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
-          return;
-        }
-        if (!data.startsWith("المسلسل")) {
-          showModal("تأكيد", "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات?", () => {
-            localStorage.setItem("clientData", data);
-            navigateTo("harvest");
-          });
-          return;
-        }
-        localStorage.setItem("clientData", data);
-        navigateTo("harvest");
-      });
-      
-      document.getElementById("goToArchiveBtn")?.addEventListener("click", () => {
-        navigateTo("archive");
-      });
-      
+      console.log("Setting up dashboard buttons...");
+
+      const pasteBtn = document.getElementById("pasteBtn");
+      console.log("pasteBtn found:", !!pasteBtn);
+      if (pasteBtn) {
+        pasteBtn.addEventListener("click", () => {
+          console.log("Paste button clicked");
+          pasteInto(dataInput);
+        });
+      }
+
+      const saveGoBtn = document.getElementById("saveGoBtn");
+      console.log("saveGoBtn found:", !!saveGoBtn);
+      if (saveGoBtn) {
+        saveGoBtn.addEventListener("click", () => {
+          console.log("Save and Go button clicked");
+          const data = dataInput.value.trim();
+          if (!data) {
+            showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
+            return;
+          }
+          if (!data.startsWith("المسلسل")) {
+            showModal("تأكيد", "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات?", () => {
+              localStorage.setItem("clientData", data);
+              navigateTo("harvest");
+            });
+            return;
+          }
+          localStorage.setItem("clientData", data);
+          navigateTo("harvest");
+        });
+      }
+
+      const goToArchiveBtn = document.getElementById("goToArchiveBtn");
+      console.log("goToArchiveBtn found:", !!goToArchiveBtn);
+      if (goToArchiveBtn) {
+        goToArchiveBtn.addEventListener("click", () => {
+          console.log("Go to Archive button clicked");
+          navigateTo("archive");
+        });
+      }
+
       // إصلاح زر مسح البيانات
-      document.getElementById("clearBtn")?.addEventListener("click", function() {
-        const dataInput = document.getElementById("dataInput");
-        if (dataInput) {
-          dataInput.value = "";
-          dataInput.focus();
+      const clearBtn = document.getElementById("clearBtn");
+      console.log("clearBtn found:", !!clearBtn);
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function() {
+          console.log("Clear button clicked");
+          const dataInput = document.getElementById("dataInput");
+          if (dataInput) {
+            dataInput.value = "";
+            dataInput.focus();
 
-          // مسح البيانات من localStorage لمنع ظهورها عند إعادة التحميل
-          localStorage.removeItem("clientData");
-          localStorage.removeItem("harvestData");
+            // مسح البيانات من localStorage لمنع ظهورها عند إعادة التحميل
+            localStorage.removeItem("clientData");
+            localStorage.removeItem("harvestData");
 
-          // إضافة علامة للدلالة على أن البيانات تم مسحها يدوياً
-          sessionStorage.setItem("dataCleared", "true");
+            // إضافة علامة للدلالة على أن البيانات تم مسحها يدوياً
+            sessionStorage.setItem("dataCleared", "true");
 
-          console.log("تم مسح البيانات بنجاح");
-          showAlert("تم مسح البيانات بنجاح!", "success");
-        }
-      });
-      
+            console.log("تم مسح البيانات بنجاح");
+            showAlert("تم مسح البيانات بنجاح!", "success");
+          }
+        });
+      }
+
       const savedClient = localStorage.getItem("clientData");
       const dataCleared = sessionStorage.getItem("dataCleared");
 
