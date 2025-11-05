@@ -26,6 +26,7 @@
     }
   }
 
+
   // Check if PWA is supported and set up install prompt
   if ('serviceWorker' in navigator) {
     console.log('📱 Service Worker supported, checking for PWA features...');
@@ -43,10 +44,10 @@
       console.log('📱 Install prompt status - dismissed:', dismissed, 'installed:', installed);
 
       if (!dismissed && !installed) {
-        // Show prompt after a short delay
+        // Show prompt (top banner), but final decision also happens on DOMContentLoaded guard
         setTimeout(() => {
-          showInstallPrompt();
-        }, 3000); // Increased delay to ensure page is fully loaded
+          tryShowAccordingToGuards();
+        }, 1000);
       } else {
         console.log('📱 Install prompt not shown - dismissed or already installed');
       }
@@ -62,6 +63,40 @@
     // Set up all event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
       console.log('📱 DOMContentLoaded listener triggered for install prompt');
+
+      // Guards
+      const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+      const path = (location.pathname || '').toLowerCase();
+      const isAdminPage = path.endsWith('/admin.html') || path.endsWith('admin.html');
+      const dismissed = localStorage.getItem('installPromptDismissed');
+      const installed = localStorage.getItem('appInstalled');
+
+      // Inject banner if missing
+      if (!document.getElementById('install-prompt')) {
+        const container = document.createElement('div');
+        container.id = 'install-prompt';
+        container.className = 'install-prompt';
+        container.innerHTML = `
+          <div class="install-prompt-content">
+            <div class="install-icon">
+              <img src="web-app-manifest-192x192.png" alt="أيقونة التطبيق" />
+            </div>
+            <div class="install-text">
+              <h3>ثبّت تطبيق Collect Pro</h3>
+              <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
+            </div>
+            <div class="install-buttons">
+              <button id="install-btn" class="install-btn">تثبيت</button>
+              <button id="dismiss-btn" class="dismiss-btn">لاحقاً</button>
+            </div>
+          </div>`;
+        // Insert at top of body
+        if (document.body.firstChild) {
+          document.body.insertBefore(container, document.body.firstChild);
+        } else {
+          document.body.appendChild(container);
+        }
+      }
 
       // Set up button event listeners
       const installBtn = document.getElementById('install-btn');
@@ -91,41 +126,27 @@
         });
       }
 
-      // Set up user interaction listeners for alternative install prompt
-      let userInteracted = false;
-
-      // Listen for user interactions
-      ['click', 'touchstart', 'keydown'].forEach(event => {
-        document.addEventListener(event, () => {
-          userInteracted = true;
-        }, { once: true });
-      });
-
-      // Force show prompt for debugging after 1 second, ignoring localStorage
-      setTimeout(() => {
-        console.log('📱 Forcing install prompt for debugging');
-        showInstallPrompt();
-      }, 1000);
-
-      // Show prompt after user interaction if beforeinstallprompt didn't fire
-      setTimeout(() => {
-        if (userInteracted && !deferredPrompt) {
-          const dismissed = localStorage.getItem('installPromptDismissed');
-          const installed = localStorage.getItem('appInstalled');
-
-          if (!dismissed && !installed) {
-            console.log('📱 Showing install prompt after user interaction');
-            setTimeout(() => {
-              showInstallPrompt();
-            }, 1000);
-          }
+      // Decide initial visibility strictly by guards
+      function tryShowAccordingToGuards() {
+        const nowDismissed = localStorage.getItem('installPromptDismissed');
+        const nowInstalled = localStorage.getItem('appInstalled');
+        if (!isAdminPage && !isStandalone && !nowDismissed && !nowInstalled) {
+          showInstallPrompt();
+        } else {
+          hideInstallPrompt();
         }
-      }, 5000); // Wait 5 seconds for potential beforeinstallprompt event
+      }
+
+      window.tryShowAccordingToGuards = tryShowAccordingToGuards; // debug helper
+
+      // Show immediately according to guards (no auto-hide unless user acts)
+      tryShowAccordingToGuards();
     });
 
   } else {
     console.log('📱 PWA not fully supported, but Service Worker available');
   }
+
 
   // Expose functions globally for debugging
   window.installPromptUtils = {

@@ -400,24 +400,20 @@ body.dark .google-login-btn:hover {
 /* رسالة تثبيت التطبيق - عائمة ومنبثقة */
 .install-prompt {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
+  top: 0;
+  left: 0;
+  right: 0;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(15px);
-  border-radius: 16px;
+  border-radius: 0 0 16px 16px;
   padding: 20px;
   display: none;
   justify-content: space-between;
   align-items: center;
   z-index: 10000;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  animation: slideUpFromBottom 0.4s ease-out;
+  animation: slideDownFromTop 0.3s ease-out;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  max-width: 500px;
-  margin: 0 auto;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .install-prompt.show {
@@ -550,24 +546,25 @@ body.dark .dismiss-btn:hover {
   to { opacity: 1; }
 }
 
-@keyframes slideUpFromBottom {
+@keyframes slideDownFromTop {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(100px);
+    transform: translateY(-50px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }
 
 /* التصميم المتجاوب */
 @media (max-width: 480px) {
   .install-prompt {
-    bottom: 15px;
-    left: 15px;
-    right: 15px;
+    top: 0;
+    left: 0;
+    right: 0;
     padding: 16px;
+    border-radius: 0 0 12px 12px;
   }
 
   .install-prompt-content {

@@ -3356,6 +3356,102 @@ body.dark .result-cell.zero {
 
 
 /* تحسين تأثيرات التمرير في الوضع الليلي */
+/* ====== PWA Install Prompt (Global) ====== */
+.install-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(15px);
+  border-radius: 0 0 16px 16px;
+  padding: 20px;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10000;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideDownFromTop 0.3s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.install-prompt.show {
+  display: flex;
+}
+
+.install-prompt-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.install-prompt-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 0%, #00a080 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.install-icon { flex-shrink: 0; }
+.install-icon img {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+  border: 2px solid var(--primary);
+}
+
+.install-text { flex: 1; text-align: right; }
+.install-text h3 {
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.install-text p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.install-buttons { display: flex; gap: 10px; flex-shrink: 0; }
+.install-btn, .dismiss-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+}
+.install-btn {
+  background: linear-gradient(135deg, var(--primary) 0%, #00a080 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+}
+.install-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0, 121, 101, 0.4); }
+.dismiss-btn { background: transparent; color: #999; border: 1px solid #ddd; }
+.dismiss-btn:hover { background: #f5f5f5; color: #666; transform: translateY(-1px); }
+
+body.dark .install-prompt { background: rgba(30, 30, 30, 0.9); border-color: rgba(0, 200, 150, 0.3); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+body.dark .install-prompt-content::before { background: linear-gradient(90deg, rgba(0, 200, 150, 0.8) 0%, rgba(0, 150, 130, 0.9) 100%); }
+body.dark .install-text h3 { color: #00c896; }
+body.dark .install-text p { color: #cccccc; }
+body.dark .dismiss-btn { background: transparent; color: #999; border-color: #555; }
+body.dark .dismiss-btn:hover { background: #333; color: #cccccc; }
+
+@keyframes slideDownFromTop {
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 body.dark tbody tr:hover {
   background: linear-gradient(135deg, rgba(0, 200, 150, 0.15) 0%, rgba(0, 200, 150, 0.08) 100%);
   transform: translateY(-1px) scale(1.01);
