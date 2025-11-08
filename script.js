@@ -362,6 +362,32 @@ function parseNumber(x) {
             <td class="net numeric ${parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) > 0 ? 'positive' : (parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) < 0 ? 'negative' : 'zero')}">${formatNumber(parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)))}<i class="fas ${parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) > 0 ? 'fa-arrow-up' : (parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
           `;
         }
+  function injectMinusToggle(input) {
+    if (!input || input.dataset.minusBtn === '1') return;
+    input.dataset.minusBtn = '1';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '−';
+    btn.title = 'سالب';
+    btn.style.marginInlineStart = '6px';
+    btn.style.padding = '4px 8px';
+    btn.style.border = '1px solid #ddd';
+    btn.style.borderRadius = '6px';
+    btn.style.background = '#f7f7f7';
+    btn.style.cursor = 'pointer';
+    btn.style.lineHeight = '1';
+    btn.style.fontWeight = '700';
+    btn.addEventListener('click', () => {
+      const v = input.value || '';
+      const hasMinus = v.startsWith('-');
+      const raw = v.replace(/[^\d]/g, '');
+      input.value = (hasMinus ? '' : '-') + (raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
+    });
+    input.parentElement?.appendChild(btn);
+  }
 
         tbody.appendChild(tr);
       });
@@ -591,10 +617,12 @@ function parseNumber(x) {
     // إعداد تنسيق الأرقام لحقول المحصل وتحويل إضافي
     if (collector) {
       setupNumberInputFormatting(collector);
+      injectMinusToggle(collector);
     }
     
     if (extra) {
       setupNumberInputFormatting(extra);
+      injectMinusToggle(extra);
     }
     
     const transferAmount = parseNumber(
