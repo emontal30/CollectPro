@@ -3,9 +3,9 @@
  * Handles caching, offline functionality, and app updates
  */
 
-const CACHE_NAME = 'collectpro-v1.2.0';
-const STATIC_CACHE = 'collectpro-static-v1.2.0';
-const DYNAMIC_CACHE = 'collectpro-dynamic-v1.2.0';
+const CACHE_NAME = 'collectpro-v1.2.1';
+const STATIC_CACHE = 'collectpro-static-v1.2.1';
+const DYNAMIC_CACHE = 'collectpro-dynamic-v1.2.1';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
