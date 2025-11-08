@@ -546,13 +546,30 @@ function parseNumber(x) {
     }
   }
   function setupNumberInputFormatting(input) {
-    // تغيير نوع الحقل إلى نص للسماح بالفواصل
     input.type = 'text';
-    
-    // تنسيق القيمة الأولية
+    input.setAttribute('inputmode', 'decimal');
+    input.setAttribute('pattern', '^-?[0-9,]*$');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('dir', 'ltr');
+
     formatNumberInput(input);
-    
-    // إضافة مستمعي الأحداث
+
+    input.addEventListener('keydown', function(e) {
+      const ctrl = e.ctrlKey || e.metaKey;
+      const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Tab','Enter'];
+      if (ctrl || allowed.includes(e.key)) return;
+      if (e.key === '-') {
+        if (this.selectionStart !== 0 || this.value.includes('-')) e.preventDefault();
+        return;
+      }
+      if (e.key >= '0' && e.key <= '9') return;
+      if (e.key === ',') return;
+      e.preventDefault();
+    });
+
     input.addEventListener('input', function() {
       formatNumberInput(this);
     });
