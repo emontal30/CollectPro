@@ -1143,8 +1143,8 @@ function parseNumber(x) {
     trTotal.classList.add("total-row", "summary-row");
     trTotal.style.fontWeight = "bold";
     trTotal.innerHTML = `
-      <td class="serial">الإجمالي</td>
-      <td class="shop"></td>
+      <td class="serial"></td>
+      <td class="shop">الإجمالي</td>
       <td class="code"></td>
       <td class="amount">${formatNumber(totalAmount)}</td>
       <td class="extra">${formatNumber(totalExtra)}</td>
