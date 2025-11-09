@@ -117,7 +117,7 @@ body {
   font-family: 'Cairo', sans-serif;
   margin: 0;
   padding: 0;
-  background: var(--light-bg);
+  background: var(--light-bg); /* خلفية فاتحة */
   color: #333;
   transition: var(--transition);
   min-height: 100vh;
@@ -132,11 +132,63 @@ body.loaded {
 }
 header {
    text-align: center;
-   padding: 15px;
-   background: var(--primary);
+   padding: 12px 20px; /* padding مضغوط */
+   background: linear-gradient(135deg, var(--primary) 0%, #00695c 100%); /* تدرج احترافي */
    color: white;
    position: relative;
-   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+   box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* ظل أعمق */
+   margin-top: 90px; /* مسافة أكبر للـ topbar (80px + 10px فاصل) */
+   margin-bottom: 0;
+   border-bottom: 3px solid rgba(255,255,255,0.1); /* حد سفلي خفيف */
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* توزيع العناصر */
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.header-content h1 {
+  flex: 1;
+  text-align: center;
+}
+
+header .zoom-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+header .zoom-in-btn,
+header .zoom-out-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+header .zoom-in-btn:hover:not(:disabled),
+header .zoom-out-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+header .zoom-in-btn:disabled,
+header .zoom-out-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* أيقونة الوضع الليلي */
@@ -199,10 +251,17 @@ header {
   text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-h1 { 
+header h1 {
   margin: 0; 
-  font-size: 1.8rem;
+  font-size: 1.4rem; /* تصغير من 1.8rem */
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  letter-spacing: 0.5px;
 }
+
 main {
   flex: 1;
   padding: 20px;
@@ -210,6 +269,8 @@ main {
   margin: 0 auto;
   width: 100%;
   padding-bottom: 80px; /* إضافة مسافة للشريط السفلي */
+  background: var(--light-bg); /* خلفية بيضاء للمحتوى */
+  border-radius: 0; /* بدون حواف مستديرة */
 }
 
 /* تنسيق عرض التاريخ في صفحة التحصيلات */
