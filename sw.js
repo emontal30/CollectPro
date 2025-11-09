@@ -3,9 +3,9 @@
  * Handles caching, offline functionality, and app updates
  */
 
-const CACHE_NAME = 'collectpro-v1.2.1';
-const STATIC_CACHE = 'collectpro-static-v1.2.1';
-const DYNAMIC_CACHE = 'collectpro-dynamic-v1.2.1';
+const CACHE_NAME = 'collectpro-v1.2.7';
+const STATIC_CACHE = 'collectpro-static-v1.2.7';
+const DYNAMIC_CACHE = 'collectpro-dynamic-v1.2.7';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -128,58 +128,73 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, try cache first, then network
-  event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          console.log('📱 Service Worker: Serving from cache:', event.request.url);
-          return cachedResponse;
-        }
+  // Check if request is for dynamic files (JS, CSS, HTML)
+  const url = new URL(event.request.url);
+  const isDynamic = url.pathname.endsWith('.js') || 
+                    url.pathname.endsWith('.css') || 
+                    url.pathname.endsWith('.html') ||
+                    url.pathname === '/';
 
-        console.log('📱 Service Worker: Fetching from network:', event.request.url);
-        return fetch(event.request)
-          .then((response) => {
-            console.log('📱 Service Worker: Network response status:', response.status, 'for', event.request.url);
-            // Don't cache if not successful
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Cache the response
+  if (isDynamic) {
+    // Network First strategy for dynamic files - always try to get fresh version
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          console.log('📱 Service Worker: Fresh from network:', event.request.url);
+          // Cache the fresh response
+          if (response && response.status === 200) {
             const responseToCache = response.clone();
             caches.open(DYNAMIC_CACHE)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-                console.log('📱 Service Worker: Cached response for:', event.request.url);
-              });
+              .then((cache) => cache.put(event.request, responseToCache));
+          }
+          return response;
+        })
+        .catch(() => {
+          // If network fails, fallback to cache
+          console.log('📱 Service Worker: Network failed, using cache:', event.request.url);
+          return caches.match(event.request)
+            .then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // Return offline fallback for HTML pages
+              if (event.request.headers.get('accept').includes('text/html')) {
+                return caches.match('/index.html');
+              }
+            });
+        })
+    );
+  } else {
+    // Cache First strategy for static assets (images, fonts, etc.)
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('📱 Service Worker: Serving from cache:', event.request.url);
+            return cachedResponse;
+          }
 
-            return response;
-          })
-          .catch((error) => {
-            console.error('📱 Service Worker: Fetch failed:', error, 'for', event.request.url);
-            // Return offline fallback for HTML pages
-            if (event.request.headers.get('accept').includes('text/html')) {
-              console.log('📱 Service Worker: Attempting fallback for HTML:', event.request.url);
-              return caches.match('/index.html')
-                .then((fallbackResponse) => {
-                  if (fallbackResponse) {
-                    console.log('📱 Service Worker: Serving fallback:', '/index.html');
-                    return fallbackResponse;
-                  } else {
-                    console.error('📱 Service Worker: No fallback available for:', event.request.url);
-                    // Return a basic offline response
-                    return new Response('Offline - Content not available', {
-                      status: 503,
-                      statusText: 'Service Unavailable',
-                      headers: { 'Content-Type': 'text/plain' }
-                    });
-                  }
-                });
-            }
-          });
-      })
-  );
+          console.log('📱 Service Worker: Fetching from network:', event.request.url);
+          return fetch(event.request)
+            .then((response) => {
+              // Don't cache if not successful
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+
+              // Cache the response
+              const responseToCache = response.clone();
+              caches.open(DYNAMIC_CACHE)
+                .then((cache) => cache.put(event.request, responseToCache));
+
+              return response;
+            })
+            .catch((error) => {
+              console.error('📱 Service Worker: Fetch failed:', error);
+            });
+        })
+    );
+  }
 });
 
 // Handle messages from the main thread

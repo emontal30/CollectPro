@@ -17,6 +17,37 @@ window.addEventListener('unhandledrejection', function(event) {
   // Here you could send the error to a logging service
 });
 
+/* ========== Service Worker Auto-Update ========== */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(registration => {
+    // Check for updates every 60 seconds
+    setInterval(() => {
+      registration.update();
+    }, 60000);
+
+    // Listen for new service worker
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // New service worker available, skip waiting and reload
+          newWorker.postMessage({ type: 'SKIP_WAITING' });
+          window.location.reload();
+        }
+      });
+    });
+  });
+
+  // Reload page when new service worker takes control
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+}
+
 /* ========== Helpers ========== */
 function parseNumber(x) {
     if (x === null || x === undefined) return 0;
@@ -117,6 +148,33 @@ function parseNumber(x) {
       const manual = prompt("المتصفح منع الوصول للحافظة.\nألصق بياناتك هنا ثم اضغط موافق:");
       if (manual !== null) el.value = manual;
     }
+  }
+  /* ========== Minus Toggle Helper ========== */
+  function injectMinusToggle(input) {
+    if (!input || input.dataset.minusBtn === '1') return;
+    input.dataset.minusBtn = '1';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '−';
+    btn.title = 'سالب';
+    btn.style.marginInlineStart = '6px';
+    btn.style.padding = '4px 8px';
+    btn.style.border = '1px solid #ddd';
+    btn.style.borderRadius = '6px';
+    btn.style.background = '#f7f7f7';
+    btn.style.cursor = 'pointer';
+    btn.style.lineHeight = '1';
+    btn.style.fontWeight = '700';
+    btn.addEventListener('click', () => {
+      const v = input.value || '';
+      const hasMinus = v.startsWith('-');
+      const raw = v.replace(/[^\d]/g, '');
+      input.value = (hasMinus ? '' : '-') + (raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
+    });
+    if (input.parentElement) input.parentElement.appendChild(btn);
   }
   /* ========== Clear Functions ========== */
   function clearIndexFields() {
@@ -362,159 +420,6 @@ function parseNumber(x) {
             <td class="net numeric ${parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) > 0 ? 'positive' : (parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) < 0 ? 'negative' : 'zero')}">${formatNumber(parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)))}<i class="fas ${parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) > 0 ? 'fa-arrow-up' : (parseNumber(collector) - (parseNumber(extra) + parseNumber(amount)) < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
           `;
         }
-  /* ========== Table Column Settings (Show/Hide) ========== */
-  function applyColumnVisibility(table, settings, columns) {
-    if (!table) return;
-    columns.forEach(col => {
-      const hidden = settings[col.key] === false;
-      table.classList.toggle(`hide-col-${col.key}`, hidden);
-    });
-  }
-  // Ensure minus toggle helper is globally available before row listeners
-  function injectMinusToggle(input) {
-    if (!input || input.dataset.minusBtn === '1') return;
-    input.dataset.minusBtn = '1';
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = '−';
-    btn.title = 'سالب';
-    btn.style.marginInlineStart = '6px';
-    btn.style.padding = '4px 8px';
-    btn.style.border = '1px solid #ddd';
-    btn.style.borderRadius = '6px';
-    btn.style.background = '#f7f7f7';
-    btn.style.cursor = 'pointer';
-    btn.style.lineHeight = '1';
-    btn.style.fontWeight = '700';
-    btn.addEventListener('click', () => {
-      const v = input.value || '';
-      const hasMinus = v.startsWith('-');
-      const raw = v.replace(/[^\d]/g, '');
-      input.value = (hasMinus ? '' : '-') + (raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus();
-      try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
-    });
-    if (input.parentElement) input.parentElement.appendChild(btn);
-  }
-  function loadColumnSettings(storageKey, columns) {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return Object.fromEntries(columns.map(c => [c.key, true]));
-      const parsed = JSON.parse(raw);
-      const merged = {};
-      columns.forEach(c => {
-        merged[c.key] = typeof parsed[c.key] === 'boolean' ? parsed[c.key] : true;
-      });
-      return merged;
-    } catch(_) {
-      return Object.fromEntries(columns.map(c => [c.key, true]));
-    }
-  }
-  function saveColumnSettings(storageKey, settings) {
-    try { localStorage.setItem(storageKey, JSON.stringify(settings)); } catch(_) {}
-  }
-  function setupTableSettings(tableId, storageKey, columns) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const buttonsBar = document.querySelector('.buttons');
-    if (!buttonsBar) return;
-
-    // Create settings button
-    let btn = document.getElementById(`${tableId}-settings-btn`);
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.id = `${tableId}-settings-btn`;
-      btn.className = 'btn';
-      btn.innerHTML = '<i class="fas fa-sliders-h"></i><span> إعداد الجدول</span>';
-      buttonsBar.appendChild(btn);
-    }
-
-    // Modal
-    let modal = document.getElementById(`${tableId}-settings-modal`);
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = `${tableId}-settings-modal`;
-      modal.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:10000;';
-      modal.innerHTML = `
-        <div style="background:#fff; color:#000; min-width:280px; max-width:90vw; padding:16px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.2);">
-          <h3 style="margin:0 0 12px; font-size:18px;">إعداد الأعمدة</h3>
-          <div class="cols-wrap" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;"></div>
-          <div style="display:flex; gap:8px; justify-content:flex-end;">
-            <button class="btn-cancel" style="padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#f5f5f5; cursor:pointer;">إلغاء</button>
-            <button class="btn-save" style="padding:8px 12px; border-radius:8px; border:none; background:#007bff; color:#fff; cursor:pointer;">حفظ</button>
-          </div>
-        </div>`;
-      document.body.appendChild(modal);
-    }
-
-    const wrap = () => modal.querySelector('.cols-wrap');
-    const btnCancel = () => modal.querySelector('.btn-cancel');
-    const btnSave = () => modal.querySelector('.btn-save');
-
-    let settings = loadColumnSettings(storageKey, columns);
-    applyColumnVisibility(table, settings, columns);
-
-    function openModal() {
-      const container = wrap();
-      if (!container) return;
-      container.innerHTML = '';
-      columns.forEach(col => {
-        const id = `${storageKey}-${col.key}`;
-        const row = document.createElement('label');
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #eee;border-radius:8px;';
-        row.innerHTML = `
-          <input type="checkbox" id="${id}" ${settings[col.key] !== false ? 'checked' : ''} />
-          <span>${col.label}</span>
-        `;
-        container.appendChild(row);
-      });
-      modal.style.display = 'flex';
-    }
-    function closeModal() { modal.style.display = 'none'; }
-
-    btn.addEventListener('click', openModal);
-    btnCancel().addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-    btnSave().addEventListener('click', () => {
-      const container = wrap();
-      if (!container) return;
-      const newSettings = { ...settings };
-      columns.forEach(col => {
-        const id = `${storageKey}-${col.key}`;
-        const cb = container.querySelector(`#${id}`);
-        newSettings[col.key] = cb ? cb.checked : true;
-      });
-      settings = newSettings;
-      saveColumnSettings(storageKey, settings);
-      applyColumnVisibility(table, settings, columns);
-      closeModal();
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const harvestTable = document.getElementById('harvestTable');
-    if (harvestTable) {
-      setupTableSettings('harvestTable', 'harvestTableCols', [
-        { key: 'serial', label: '#️⃣' },
-        { key: 'shop', label: '🏪 المحل' },
-        { key: 'code', label: '🔢 الكود' },
-        { key: 'amount', label: '💸 مبلغ التحويل' },
-        { key: 'extra', label: '🔄 اخرى' },
-      ]);
-    }
-    const archiveTable = document.getElementById('archiveTable');
-    if (archiveTable) {
-      setupTableSettings('archiveTable', 'archiveTableCols', [
-        { key: 'shop', label: '🏪 المحل' },
-        { key: 'code', label: '🔢 الكود' },
-        { key: 'amount', label: '💸 مبلغ التحويل' },
-        { key: 'extra', label: '🔄 اخرى' },
-      ]);
-    }
-  });
-
         tbody.appendChild(tr);
       });
 
@@ -650,6 +555,170 @@ function parseNumber(x) {
 
     return true;
   }
+  /* ========== Table Column Settings (Show/Hide) ========== */
+  function applyColumnVisibility(table, settings, columns) {
+    if (!table) return;
+    columns.forEach(col => {
+      const hidden = settings[col.key] === false;
+      table.classList.toggle(`hide-col-${col.key}`, hidden);
+    });
+  }
+  function loadColumnSettings(storageKey, columns) {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return Object.fromEntries(columns.map(c => [c.key, true]));
+      const parsed = JSON.parse(raw);
+      const merged = {};
+      columns.forEach(c => {
+        merged[c.key] = typeof parsed[c.key] === 'boolean' ? parsed[c.key] : true;
+      });
+      return merged;
+    } catch(_) {
+      return Object.fromEntries(columns.map(c => [c.key, true]));
+    }
+  }
+  function saveColumnSettings(storageKey, settings) {
+    try { localStorage.setItem(storageKey, JSON.stringify(settings)); } catch(_) {}
+  }
+  function setupTableSettings(tableId, storageKey, columns) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+      console.log(`setupTableSettings: Table ${tableId} not found`);
+      return;
+    }
+
+    console.log(`setupTableSettings: Setting up for ${tableId}`);
+
+    // Create container above table if not exists
+    let tableContainer = table.closest('.table-wrap');
+    if (!tableContainer) {
+      tableContainer = table.parentElement;
+    }
+
+    // Create settings button container
+    let btnContainer = document.getElementById(`${tableId}-settings-container`);
+    if (!btnContainer) {
+      btnContainer = document.createElement('div');
+      btnContainer.id = `${tableId}-settings-container`;
+      btnContainer.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:12px;';
+      tableContainer.insertBefore(btnContainer, table);
+    }
+
+    // Create settings button
+    let btn = document.getElementById(`${tableId}-settings-btn`);
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = `${tableId}-settings-btn`;
+      btn.className = 'table-settings-btn';
+      btn.innerHTML = '<i class="fas fa-cog"></i><span> إعداد الأعمدة</span>';
+      btnContainer.appendChild(btn);
+    }
+
+    // Modal
+    let modal = document.getElementById(`${tableId}-settings-modal`);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = `${tableId}-settings-modal`;
+      modal.className = 'table-settings-modal';
+      modal.innerHTML = `
+        <div class="table-settings-modal-content">
+          <div class="modal-header">
+            <h3><i class="fas fa-cog"></i> إعداد الأعمدة</h3>
+            <div class="header-actions">
+              <button class="btn-select-all" title="تحديد الكل">
+                <i class="fas fa-check-double"></i>
+                <span>تحديد الكل</span>
+              </button>
+              <button class="modal-close-btn" aria-label="إغلاق">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          <div class="cols-wrap"></div>
+          <div class="modal-footer">
+            <button class="btn-cancel">
+              <i class="fas fa-times"></i>
+              <span>إلغاء</span>
+            </button>
+            <button class="btn-save">
+              <i class="fas fa-check"></i>
+              <span>حفظ</span>
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+
+    const wrap = () => modal.querySelector('.cols-wrap');
+    const btnCancel = () => modal.querySelector('.btn-cancel');
+    const btnSave = () => modal.querySelector('.btn-save');
+
+    let settings = loadColumnSettings(storageKey, columns);
+    applyColumnVisibility(table, settings, columns);
+
+    function openModal() {
+      const container = wrap();
+      if (!container) return;
+      container.innerHTML = '';
+      columns.forEach(col => {
+        const id = `${storageKey}-${col.key}`;
+        const row = document.createElement('label');
+        row.className = 'column-option';
+        row.innerHTML = `
+          <input type="checkbox" id="${id}" ${settings[col.key] !== false ? 'checked' : ''} />
+          <span>${col.label}</span>
+        `;
+        container.appendChild(row);
+      });
+      modal.classList.add('show');
+    }
+    function closeModal() { 
+      modal.classList.remove('show');
+    }
+
+    btn.addEventListener('click', openModal);
+    btnCancel().addEventListener('click', closeModal);
+    modal.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    
+    // Select All button functionality
+    const btnSelectAll = modal.querySelector('.btn-select-all');
+    if (btnSelectAll) {
+      btnSelectAll.addEventListener('click', () => {
+        const container = wrap();
+        if (!container) return;
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        // Toggle all checkboxes
+        checkboxes.forEach(cb => {
+          cb.checked = !allChecked;
+        });
+        
+        // Update button text and icon
+        if (allChecked) {
+          btnSelectAll.innerHTML = '<i class="fas fa-check-double"></i><span>تحديد الكل</span>';
+        } else {
+          btnSelectAll.innerHTML = '<i class="fas fa-times-circle"></i><span>إلغاء الكل</span>';
+        }
+      });
+    }
+    btnSave().addEventListener('click', () => {
+      const container = wrap();
+      if (!container) return;
+      const newSettings = { ...settings };
+      columns.forEach(col => {
+        const id = `${storageKey}-${col.key}`;
+        const cb = container.querySelector(`#${id}`);
+        newSettings[col.key] = cb ? cb.checked : true;
+      });
+      settings = newSettings;
+      saveColumnSettings(storageKey, settings);
+      applyColumnVisibility(table, settings, columns);
+      closeModal();
+    });
+  }
+
   /* ========== Number Input Formatting ========== */
   function formatNumberInput(input) {
     // حفظ موضع المؤشر الحالي
@@ -992,10 +1061,12 @@ function parseNumber(x) {
     trTotal.classList.add("total-row", "summary-row");
     trTotal.style.fontWeight = "bold";
     trTotal.innerHTML = `
-      <td colspan="3">الإجمالي</td>
-      <td>${formatNumber(totalAmount)}</td>
-      <td>${formatNumber(totalExtra)}</td>
-      <td>${formatNumber(totalCollector)}</td>
+      <td class="serial">الإجمالي</td>
+      <td class="shop"></td>
+      <td class="code"></td>
+      <td class="amount">${formatNumber(totalAmount)}</td>
+      <td class="extra">${formatNumber(totalExtra)}</td>
+      <td class="collector">${formatNumber(totalCollector)}</td>
       <td class="net numeric ${totalNet > 0 ? 'positive' : (totalNet < 0 ? 'negative' : 'zero')}">${formatNumber(totalNet)}<i class="fas ${totalNet > 0 ? 'fa-arrow-up' : (totalNet < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
     `;
     tbody.appendChild(trTotal);
@@ -1772,4 +1843,23 @@ function parseNumber(x) {
         }
       }
     });
+
+    // Setup table column settings for harvest and archive pages
+    if (document.getElementById('harvestTable')) {
+      setupTableSettings('harvestTable', 'harvestTableCols', [
+        { key: 'serial', label: '#️⃣' },
+        { key: 'shop', label: '🏪 المحل' },
+        { key: 'code', label: '🔢 الكود' },
+        { key: 'amount', label: '💸 مبلغ التحويل' },
+        { key: 'extra', label: '🔄 اخرى' },
+      ]);
+    }
+    if (document.getElementById('archiveTable')) {
+      setupTableSettings('archiveTable', 'archiveTableCols', [
+        { key: 'shop', label: '🏪 المحل' },
+        { key: 'code', label: '🔢 الكود' },
+        { key: 'amount', label: '💸 مبلغ التحويل' },
+        { key: 'extra', label: '🔄 اخرى' },
+      ]);
+    }
   });
