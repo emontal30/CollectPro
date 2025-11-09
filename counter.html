@@ -885,24 +885,170 @@
             }
         }
     </style>
-</head>
-<body class="loaded">
-    <!-- حاوية التنبيهات -->
-    <div id="alert-container" class="alert-container"></div>
 
-    <!-- 🔝 الشريط العلوي -->
-    <div class="topbar">
-        <div class="actions">
-            <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
-        </div>
-        <div class="logo">
-            <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
-            <p class="app-name">CollectPro</p>
-        </div>
-    </div>
+            body.dark .summary-label {
+                color: #cccccc;
+            }
 
-    <!-- الخلفية الشفافة للشريط الجانبي -->
-    <div class="overlay" id="overlay"></div>
+            body.dark .categories-table {
+                background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+                color: var(--dark-text);
+                box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 4px 16px rgba(0,200,150,0.1);
+                border: 2px solid rgba(0,200,150,0.3);
+                border-radius: 12px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            body.dark .categories-table:hover {
+                box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 6px 20px rgba(0,200,150,0.2), 0 0 0 2px rgba(0,200,150,0.4);
+                border-color: rgba(0,200,150,0.5);
+                transform: translateY(-2px);
+            }
+
+            body.dark .categories-table thead th {
+                background: linear-gradient(135deg, rgba(0,200,150,0.8) 0%, rgba(0,150,130,0.9) 100%);
+                color: #ffffff;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                border-bottom: 2px solid rgba(0,200,150,0.8);
+            }
+
+            body.dark .categories-table tbody tr {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                cursor: pointer;
+            }
+
+            body.dark .categories-table tbody tr:hover {
+                background: linear-gradient(135deg, rgba(0, 200, 150, 0.25), rgba(0, 200, 150, 0.1));
+                box-shadow: 0 4px 15px rgba(0, 200, 150, 0.3);
+                border-radius: 8px;
+            }
+
+            body.dark .categories-table tbody tr:nth-child(even) {
+                background: rgba(255, 255, 255, 0.03);
+            }
+
+            body.dark .categories-table tbody tr:nth-child(odd) {
+                background: rgba(255, 255, 255, 0.06);
+            }
+
+            body.dark .categories-table tbody td {
+                color: #e0e0e0;
+                border-bottom: 1px solid rgba(0,200,150,0.6);
+                border-right: 1px solid rgba(0,200,150,0.6);
+                transition: all 0.3s ease;
+            }
+
+            body.dark .categories-table tbody td:first-child {
+                background: linear-gradient(135deg, rgba(0,200,150,0.1), rgba(0,200,150,0.05));
+                color: #00c896;
+                border-left: none !important;
+            }
+
+            body.dark .categories-table tbody td:last-child {
+                background: linear-gradient(135deg, rgba(0,200,150,0.15), rgba(0,200,150,0.08));
+                color: #00c896;
+                border-right: none !important;
+            }
+
+            body.dark .categories-table tbody tr:last-child td {
+                border-bottom: none !important;
+            }
+
+            body.dark .counter-header p {
+                color: #cccccc;
+            }
+
+            body.dark .empty-message {
+                color: #cccccc;
+            }
+
+            /* استجابة للشاشات الصغيرة */
+            @media (max-width: 768px) {
+                .counter-header h1 {
+                    font-size: 2rem;
+                }
+
+                .counter-table {
+                    font-size: 13px;
+                    border-radius: 8px;
+                    margin: 10px 0;
+                }
+
+                .counter-table th, .counter-table td {
+                    padding: 10px 6px;
+                    min-height: 55px;
+                }
+
+                .counter-table td:nth-child(2) {
+                    padding: 8px 4px;
+                }
+
+                .counter-table td:nth-child(2) .input-field {
+                    width: 100%;
+                    max-width: 120px;
+                    font-size: 14px;
+                    padding: 6px 8px;
+                }
+
+                .categories-table {
+                    font-size: 13px;
+                    border-radius: 8px;
+                    margin: 10px 0;
+                }
+
+                .categories-table th, .categories-table td {
+                    padding: 10px 6px;
+                    min-height: 55px;
+                }
+
+                .input-field {
+                    width: 140px;
+                }
+
+                .counter-totals {
+                    grid-template-columns: 1fr;
+                }
+
+                .counters-wrapper {
+                    grid-template-columns: 1fr;
+                }
+
+                .summary-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                }
+
+                .action-buttons {
+                    flex-direction: column;
+                    align-items: center;
+                }
+            }
+        </style>
+    </head>
+    <body class="loaded">
+        <!-- حاوية التنبيهات -->
+        <div id="alert-container" class="alert-container"></div>
+
+        <!-- 🔝 الشريط العلوي -->
+        <div class="topbar">
+            <div class="actions">
+                <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-out-btn" id="zoom-out-btn" title="تصغير النص">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="zoom-in-btn" id="zoom-in-btn" title="تكبير النص">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
+            <div class="logo">
+                <img src="logo-momkn.png" alt="شعار ممكن" class="logo-img" />
+                <p class="app-name">CollectPro</p>
+            </div>
+        </div>
+
+        <!-- الخلفية الشفافة للشريط الجانبي -->
+        <div class="overlay" id="overlay"></div>
 
     <!-- 🎨 الشريط الجانبي -->
     <div class="sidebar" id="sidebar">

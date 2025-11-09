@@ -140,7 +140,7 @@ function parseNumber(x) {
   }
   /* ========== Zoom/Font Size Control ========== */
   function applyZoomFromStorage() {
-    const zoomLevel = localStorage.getItem("zoomLevel") || "normal";
+    const zoomLevel = localStorage.getItem("zoomLevel") || "ultra";
     document.body.classList.remove("zoom-small", "zoom-normal", "zoom-large", "zoom-xlarge", "zoom-xxlarge", "zoom-ultra", "zoom-mega");
     document.body.classList.add(`zoom-${zoomLevel}`);
     updateZoomButtons(zoomLevel);
