@@ -276,6 +276,18 @@ body::before {
 @media (max-width: 480px) {
   .login-card {
     padding: 40px 30px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .login-container {
+    padding: 0;
   }
 
   .logo {
