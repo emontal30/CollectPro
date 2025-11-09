@@ -4,13 +4,13 @@
   top: 0;
   right: 0;
   width: 100%;
-  height: 65px; /* تقليل الارتفاع للموبايل */
+  height: 100px; /* ارتفاع مناسب لاحتواء الزر 80px + padding */
   background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 15px;
+  padding: 10px 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   z-index: 1002;
   direction: ltr;
@@ -28,18 +28,18 @@
 }
 
 .topbar .logo .logo-img {
-    height: 42px; /* حجم مناسب للموبايل */
+    height: 84px; /* ضعف الحجم السابق (42px × 2) */
     width: auto;
     flex-shrink: 0;
 }
 
 .topbar .logo .app-name {
-    font-size: 20px; /* حجم مناسب للموبايل */
+    font-size: 40px; /* ضعف الحجم السابق (20px × 2) */
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
 }
 
 .topbar .actions {
@@ -50,18 +50,19 @@
 }
 
 .topbar .toggle-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   color: #fff;
-  font-size: 20px;
-  border-radius: 4px;
-  width: 40px;
-  height: 40px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 40px; /* ضعف الحجم السابق (20px × 2) */
+  width: 80px; /* ضعف الحجم السابق (40px × 2) */
+  height: 80px; /* ضعف الحجم السابق (40px × 2) */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: 0.3s;
 }
 
 .topbar .toggle-btn:hover {
@@ -83,20 +84,20 @@
 /* 🎨 الشريط الجانبي */
 .sidebar {
   position: fixed;
-  top: 65px; /* يبدأ من أسفل topbar الجديد */
+  top: 100px; /* يبدأ من أسفل topbar الجديد */
   right: -280px;
   width: 280px;
-  height: calc(100vh - 65px); /* خصم ارتفاع topbar */
+  height: calc(100vh - 100px); /* خصم ارتفاع topbar */
   background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
   color: #fff;
   display: flex;
   flex-direction: column;
-  padding-top: 15px; /* تقليل المسافة العلوية */
-  transition: right 0.3s ease, transform 0.3s ease; /* أسرع للموبايل */
+  padding-top: 15px;
+  transition: right 0.3s ease, transform 0.3s ease;
   z-index: 1003;
   transform: translateX(0);
   backdrop-filter: blur(10px);
-  overflow-y: auto; /* للتمرير في الموبايل */
+  overflow-y: auto;
 }
 
 .sidebar.active {
@@ -312,7 +313,7 @@ main {
 }
 
 header {
-    margin-top: 40px; /* تقليل الفاصل للهيدر درجة */
+    margin-top: 100px; /* توسيع المسافة العلوية للهيدر أكبر */
 }
 
 /* Responsive */

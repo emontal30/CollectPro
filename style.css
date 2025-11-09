@@ -132,13 +132,13 @@ body.loaded {
 }
 header {
    text-align: center;
-   padding: 10px 15px; /* padding أصغر للموبايل */
+   padding: 10px 15px;
    background: linear-gradient(135deg, var(--primary) 0%, #00695c 100%);
    color: white;
    position: relative;
    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-   margin-top: 70px; /* مسافة للـ topbar الجديد (65px + 5px فاصل) */
-   margin-bottom: 0;
+   margin-top: 150px; /* مسافة كبيرة للـ topbar (100px + 50px فاصل) */
+   margin-bottom: 120px; /* توسيع المسافة أكبر بين الهيدر وعنوان الصفحة */
    border-bottom: 3px solid rgba(255,255,255,0.1);
 }
 
