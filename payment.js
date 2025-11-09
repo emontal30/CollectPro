@@ -95,7 +95,7 @@ async function loadUserData() {
        const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'مستخدم';
        document.getElementById('user-name-field').value = displayName;
        document.getElementById('email').value = user.email || '';
-       document.getElementById('user-id').value = user.id.slice(-7);
+       document.getElementById('user-id-field').value = user.id.slice(-7);
 
        updateSidebarUserData(user);
        return user;
