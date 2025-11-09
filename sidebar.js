@@ -365,15 +365,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showAlert('خطأ فادح: لم يتم تهيئة Supabase!', 'danger');
                     return;
                 }
+
+                // محاولة تسجيل الخروج من Supabase
                 const { error } = await supabase.auth.signOut();
+
+                // حتى لو فشل تسجيل الخروج من Supabase، نقوم بتنظيف البيانات المحلية
                 if (error) {
-                    showAlert('فشل تسجيل الخروج: ' + error.message, 'danger');
-                    return;
+                    console.warn('Supabase logout failed, but proceeding with local cleanup:', error.message);
                 }
+
+                // تنظيف البيانات المحلية
+                localStorage.clear();
+                sessionStorage.clear();
+
+                // إعادة توجيه إلى صفحة تسجيل الدخول
                 window.location.href = 'index.html';
+
+                showAlert('تم تسجيل الخروج بنجاح!', 'success');
+
             } catch (err) {
-                showAlert('حدث خطأ أثناء تسجيل الخروج.', 'danger');
                 console.error('Logout error:', err);
+
+                // حتى في حالة الخطأ، نقوم بتنظيف البيانات المحلية وإعادة التوجيه
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+
+                showAlert('تم تسجيل الخروج مع تنظيف البيانات المحلية.', 'info');
             }
         });
     }
