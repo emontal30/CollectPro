@@ -87,7 +87,7 @@
    top: 250px; /* يبدأ من أسفل الهيدر مباشرة (100px topbar + 150px margin-top header) */
    right: -280px;
    width: 280px;
-   height: calc(100vh - 250px); /* خصم ارتفاع topbar + header */
+   height: calc(100vh - 250px - 80px); /* خصم ارتفاع topbar + header + footer */
    background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
    color: #fff;
    display: flex;
@@ -326,7 +326,7 @@ header {
     width: 250px;
     right: -260px;
     top: 210px; /* ابدأ من أسفل الهيدر مباشرة */
-    height: calc(100vh - 210px); /* خصم ارتفاع الشريط العلوي + header */
+    height: calc(100vh - 210px - 80px); /* خصم ارتفاع الشريط العلوي + header + footer */
     padding-top: 15px; /* إعادة المسافة العلوية لإظهار المحتوى */
   }
 
@@ -340,7 +340,7 @@ header {
       width: 260px;
       right: -270px;
       top: 210px; /* ابدأ من أسفل الهيدر مباشرة */
-      height: calc(100vh - 210px); /* خصم ارتفاع الشريط العلوي + header */
+      height: calc(100vh - 210px - 80px); /* خصم ارتفاع الشريط العلوي + header + footer */
       padding-top: 15px; /* إعادة المسافة العلوية لإظهار المحتوى */
     }
 
