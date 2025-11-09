@@ -4190,6 +4190,116 @@ body.zoom-xxlarge .calc-field {
   font-weight: 800;
 }
 
+/* Zoom Levels - Ultra (Giant) */
+body.zoom-ultra {
+  font-size: 24px;
+}
+
+body.zoom-ultra table {
+  font-size: 23px;
+}
+
+body.zoom-ultra th,
+body.zoom-ultra td {
+  padding: 22px 20px;
+}
+
+body.zoom-ultra h1 {
+  font-size: 44px;
+  font-weight: 900;
+}
+
+body.zoom-ultra h2 {
+  font-size: 40px;
+  font-weight: 800;
+}
+
+body.zoom-ultra h3 {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+body.zoom-ultra .btn,
+body.zoom-ultra button {
+  font-size: 23px;
+  padding: 18px 32px;
+}
+
+body.zoom-ultra input[type="text"],
+body.zoom-ultra input[type="number"] {
+  font-size: 23px;
+  padding: 18px;
+}
+
+body.zoom-ultra .numeric {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+body.zoom-ultra .summary-grid label {
+  font-size: 24px;
+}
+
+body.zoom-ultra .calc-field {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* Zoom Levels - Mega (Massive) */
+body.zoom-mega {
+  font-size: 26px;
+}
+
+body.zoom-mega table {
+  font-size: 25px;
+}
+
+body.zoom-mega th,
+body.zoom-mega td {
+  padding: 24px 22px;
+}
+
+body.zoom-mega h1 {
+  font-size: 48px;
+  font-weight: 900;
+}
+
+body.zoom-mega h2 {
+  font-size: 44px;
+  font-weight: 800;
+}
+
+body.zoom-mega h3 {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+body.zoom-mega .btn,
+body.zoom-mega button {
+  font-size: 25px;
+  padding: 20px 36px;
+}
+
+body.zoom-mega input[type="text"],
+body.zoom-mega input[type="number"] {
+  font-size: 25px;
+  padding: 20px;
+}
+
+body.zoom-mega .numeric {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+body.zoom-mega .summary-grid label {
+  font-size: 26px;
+}
+
+body.zoom-mega .calc-field {
+  font-size: 30px;
+  font-weight: 900;
+}
+
 /* Smooth transitions for zoom changes */
 body {
   transition: font-size 0.3s ease;

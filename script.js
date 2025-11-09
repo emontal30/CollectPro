@@ -141,7 +141,7 @@ function parseNumber(x) {
   /* ========== Zoom/Font Size Control ========== */
   function applyZoomFromStorage() {
     const zoomLevel = localStorage.getItem("zoomLevel") || "normal";
-    document.body.classList.remove("zoom-small", "zoom-normal", "zoom-large", "zoom-xlarge", "zoom-xxlarge");
+    document.body.classList.remove("zoom-small", "zoom-normal", "zoom-large", "zoom-xlarge", "zoom-xxlarge", "zoom-ultra", "zoom-mega");
     document.body.classList.add(`zoom-${zoomLevel}`);
     updateZoomButtons(zoomLevel);
   }
@@ -151,8 +151,8 @@ function parseNumber(x) {
     const zoomOutBtn = document.getElementById("zoom-out-btn");
     
     if (zoomInBtn) {
-      zoomInBtn.disabled = (level === "xxlarge");
-      zoomInBtn.style.opacity = (level === "xxlarge") ? "0.5" : "1";
+      zoomInBtn.disabled = (level === "mega");
+      zoomInBtn.style.opacity = (level === "mega") ? "0.5" : "1";
     }
     
     if (zoomOutBtn) {
@@ -168,7 +168,9 @@ function parseNumber(x) {
       normal: "large", 
       large: "xlarge",
       xlarge: "xxlarge",
-      xxlarge: "xxlarge" 
+      xxlarge: "ultra",
+      ultra: "mega",
+      mega: "mega"
     };
     const nextZoom = zoomUp[currentZoom];
     
@@ -180,7 +182,9 @@ function parseNumber(x) {
         normal: "حجم متوسط 📄",
         large: "حجم كبير 📺",
         xlarge: "حجم كبير جداً 🖥️",
-        xxlarge: "حجم ضخم 🎯"
+        xxlarge: "حجم ضخم 🎯",
+        ultra: "حجم عملاق 🏢",
+        mega: "حجم هائل 🌟"
       };
       
       showAlert(messages[nextZoom], "success");
@@ -190,6 +194,8 @@ function parseNumber(x) {
   function zoomOut() {
     const currentZoom = localStorage.getItem("zoomLevel") || "normal";
     const zoomDown = { 
+      mega: "ultra",
+      ultra: "xxlarge",
       xxlarge: "xlarge",
       xlarge: "large",
       large: "normal", 
@@ -206,7 +212,9 @@ function parseNumber(x) {
         small: "حجم صغير 📱",
         normal: "حجم متوسط 📄",
         large: "حجم كبير 📺",
-        xlarge: "حجم كبير جداً 🖥️"
+        xlarge: "حجم كبير جداً 🖥️",
+        xxlarge: "حجم ضخم 🎯",
+        ultra: "حجم عملاق 🏢"
       };
       
       showAlert(messages[nextZoom], "info");
