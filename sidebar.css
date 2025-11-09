@@ -4,17 +4,17 @@
   top: 0;
   right: 0;
   width: 100%;
-  height: 80px;
+  height: 65px; /* تقليل الارتفاع للموبايل */
   background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 15px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   z-index: 1002;
-  direction: ltr; /* To keep actions on the right and logo on the left */
-  flex-direction: row-reverse; /* Switch positions of actions and logo */
+  direction: ltr;
+  flex-direction: row-reverse;
 }
 
 .topbar .logo {
@@ -28,18 +28,18 @@
 }
 
 .topbar .logo .logo-img {
-    height: 50px; /* تكبير من 40px إلى 50px */
+    height: 42px; /* حجم مناسب للموبايل */
     width: auto;
-    flex-shrink: 0; /* منع تقلص الصورة */
+    flex-shrink: 0;
 }
 
 .topbar .logo .app-name {
-    font-size: 24px; /* تكبير من 18px إلى 24px */
-    font-weight: 700; /* زيادة سمك الخط */
-    white-space: nowrap; /* منع كسر النص */
+    font-size: 20px; /* حجم مناسب للموبايل */
+    font-weight: 700;
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* إضافة ... إذا كان النص طويلاً */
-    letter-spacing: 0.5px; /* مسافة بين الحروف */
+    text-overflow: ellipsis;
+    letter-spacing: 0.3px;
 }
 
 .topbar .actions {
@@ -83,19 +83,20 @@
 /* 🎨 الشريط الجانبي */
 .sidebar {
   position: fixed;
-  top: 60px; /* ابدأ من أسفل الشريط العلوي */
-  right: -280px; /* Start off-screen */
+  top: 65px; /* يبدأ من أسفل topbar الجديد */
+  right: -280px;
   width: 280px;
-  height: calc(100vh - 60px); /* خصم ارتفاع الشريط العلوي */
+  height: calc(100vh - 65px); /* خصم ارتفاع topbar */
   background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
   color: #fff;
   display: flex;
   flex-direction: column;
-  padding-top: 25px;
-  transition: right 0.4s ease, transform 0.4s ease;
-  z-index: 1003; /* Higher than topbar and overlay */
+  padding-top: 15px; /* تقليل المسافة العلوية */
+  transition: right 0.3s ease, transform 0.3s ease; /* أسرع للموبايل */
+  z-index: 1003;
   transform: translateX(0);
   backdrop-filter: blur(10px);
+  overflow-y: auto; /* للتمرير في الموبايل */
 }
 
 .sidebar.active {
