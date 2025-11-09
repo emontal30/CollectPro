@@ -3878,12 +3878,10 @@ body.dark .table-settings-modal .btn-save:hover {
 
 /* ====== Zoom/Font Size Control ====== */
 .zoom-controls {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .zoom-in-btn,
@@ -3962,34 +3960,117 @@ body.dark .zoom-out-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, rgba(255, 165, 0, 0.6), rgba(255, 140, 0, 0.7));
 }
 
-/* Zoom Levels - Small (Default) */
-body.zoom-small {
-  font-size: 14px;
+/* ====== نظام التكبير/التصغير الجديد - 9 مستويات ====== */
+
+/* المستوى -4: صغير جداً جداً */
+body.zoom-xs {
+  font-size: 12px;
 }
 
-body.zoom-small table {
-  font-size: 13px;
+body.zoom-xs table {
+  font-size: 11px;
 }
 
-body.zoom-small h1 {
-  font-size: 24px;
-}
-
-body.zoom-small h2 {
+body.zoom-xs h1 {
   font-size: 20px;
 }
 
-body.zoom-small h3 {
+body.zoom-xs h2 {
   font-size: 18px;
 }
 
-body.zoom-small .btn,
-body.zoom-small button {
+body.zoom-xs h3 {
+  font-size: 16px;
+}
+
+body.zoom-xs .btn,
+body.zoom-xs button {
+  font-size: 11px;
+  padding: 6px 12px;
+}
+
+/* المستوى -3: صغير جداً */
+body.zoom-sm {
+  font-size: 13px;
+}
+
+body.zoom-sm table {
+  font-size: 12px;
+}
+
+body.zoom-sm h1 {
+  font-size: 22px;
+}
+
+body.zoom-sm h2 {
+  font-size: 19px;
+}
+
+body.zoom-sm h3 {
+  font-size: 17px;
+}
+
+body.zoom-sm .btn,
+body.zoom-sm button {
+  font-size: 12px;
+  padding: 7px 14px;
+}
+
+/* المستوى -2: صغير */
+body.zoom-md {
+  font-size: 14px;
+}
+
+body.zoom-md table {
+  font-size: 13px;
+}
+
+body.zoom-md h1 {
+  font-size: 24px;
+}
+
+body.zoom-md h2 {
+  font-size: 20px;
+}
+
+body.zoom-md h3 {
+  font-size: 18px;
+}
+
+body.zoom-md .btn,
+body.zoom-md button {
   font-size: 13px;
   padding: 8px 16px;
 }
 
-/* Zoom Levels - Normal (Medium) */
+/* المستوى -1: صغير قليلاً */
+body.zoom-base {
+  font-size: 15px;
+}
+
+body.zoom-base table {
+  font-size: 14px;
+}
+
+body.zoom-base h1 {
+  font-size: 26px;
+}
+
+body.zoom-base h2 {
+  font-size: 22px;
+}
+
+body.zoom-base h3 {
+  font-size: 19px;
+}
+
+body.zoom-base .btn,
+body.zoom-base button {
+  font-size: 14px;
+  padding: 9px 17px;
+}
+
+/* المستوى 0: عادي (افتراضي) */
 body.zoom-normal {
   font-size: 16px;
 }
@@ -4027,277 +4108,222 @@ body.zoom-normal input[type="number"] {
   padding: 10px;
 }
 
-/* Zoom Levels - Large */
-body.zoom-large {
+/* المستوى +1: كبير قليلاً */
+body.zoom-lg {
   font-size: 18px;
 }
 
-body.zoom-large table {
+body.zoom-lg table {
   font-size: 17px;
 }
 
-body.zoom-large th,
-body.zoom-large td {
+body.zoom-lg th,
+body.zoom-lg td {
   padding: 16px 14px;
 }
 
-body.zoom-large h1 {
+body.zoom-lg h1 {
   font-size: 32px;
   font-weight: 800;
 }
 
-body.zoom-large h2 {
+body.zoom-lg h2 {
   font-size: 28px;
   font-weight: 700;
 }
 
-body.zoom-large h3 {
+body.zoom-lg h3 {
   font-size: 24px;
 }
 
-body.zoom-large .btn,
-body.zoom-large button {
+body.zoom-lg .btn,
+body.zoom-lg button {
   font-size: 17px;
   padding: 12px 22px;
 }
 
-body.zoom-large input[type="text"],
-body.zoom-large input[type="number"] {
+body.zoom-lg input[type="text"],
+body.zoom-lg input[type="number"] {
   font-size: 17px;
   padding: 12px;
 }
 
-body.zoom-large .numeric {
+body.zoom-lg .numeric {
   font-size: 19px;
   font-weight: 700;
 }
 
-body.zoom-large .summary-grid label {
+body.zoom-lg .summary-grid label {
   font-size: 18px;
 }
 
-body.zoom-large .calc-field {
+body.zoom-lg .calc-field {
   font-size: 20px;
   font-weight: 700;
 }
 
-/* Zoom Levels - X-Large */
-body.zoom-xlarge {
+/* المستوى +2: كبير */
+body.zoom-xl {
   font-size: 20px;
 }
 
-body.zoom-xlarge table {
+body.zoom-xl table {
   font-size: 19px;
 }
 
-body.zoom-xlarge th,
-body.zoom-xlarge td {
+body.zoom-xl th,
+body.zoom-xl td {
   padding: 18px 16px;
 }
 
-body.zoom-xlarge h1 {
+body.zoom-xl h1 {
   font-size: 36px;
   font-weight: 800;
 }
 
-body.zoom-xlarge h2 {
+body.zoom-xl h2 {
   font-size: 32px;
   font-weight: 700;
 }
 
-body.zoom-xlarge h3 {
+body.zoom-xl h3 {
   font-size: 28px;
 }
 
-body.zoom-xlarge .btn,
-body.zoom-xlarge button {
+body.zoom-xl .btn,
+body.zoom-xl button {
   font-size: 19px;
   padding: 14px 24px;
 }
 
-body.zoom-xlarge input[type="text"],
-body.zoom-xlarge input[type="number"] {
+body.zoom-xl input[type="text"],
+body.zoom-xl input[type="number"] {
   font-size: 19px;
   padding: 14px;
 }
 
-body.zoom-xlarge .numeric {
+body.zoom-xl .numeric {
   font-size: 21px;
   font-weight: 700;
 }
 
-body.zoom-xlarge .summary-grid label {
+body.zoom-xl .summary-grid label {
   font-size: 20px;
 }
 
-body.zoom-xlarge .calc-field {
+body.zoom-xl .calc-field {
   font-size: 22px;
   font-weight: 700;
 }
 
-/* Zoom Levels - XX-Large */
-body.zoom-xxlarge {
+/* المستوى +3: كبير جداً */
+body.zoom-2xl {
   font-size: 22px;
 }
 
-body.zoom-xxlarge table {
+body.zoom-2xl table {
   font-size: 21px;
 }
 
-body.zoom-xxlarge th,
-body.zoom-xxlarge td {
+body.zoom-2xl th,
+body.zoom-2xl td {
   padding: 20px 18px;
 }
 
-body.zoom-xxlarge h1 {
+body.zoom-2xl h1 {
   font-size: 40px;
   font-weight: 900;
 }
 
-body.zoom-xxlarge h2 {
+body.zoom-2xl h2 {
   font-size: 36px;
   font-weight: 800;
 }
 
-body.zoom-xxlarge h3 {
+body.zoom-2xl h3 {
   font-size: 32px;
   font-weight: 700;
 }
 
-body.zoom-xxlarge .btn,
-body.zoom-xxlarge button {
+body.zoom-2xl .btn,
+body.zoom-2xl button {
   font-size: 21px;
   padding: 16px 28px;
 }
 
-body.zoom-xxlarge input[type="text"],
-body.zoom-xxlarge input[type="number"] {
+body.zoom-2xl input[type="text"],
+body.zoom-2xl input[type="number"] {
   font-size: 21px;
   padding: 16px;
 }
 
-body.zoom-xxlarge .numeric {
+body.zoom-2xl .numeric {
   font-size: 24px;
   font-weight: 800;
 }
 
-body.zoom-xxlarge .summary-grid label {
+body.zoom-2xl .summary-grid label {
   font-size: 22px;
 }
 
-body.zoom-xxlarge .calc-field {
+body.zoom-2xl .calc-field {
   font-size: 26px;
   font-weight: 800;
 }
 
-/* Zoom Levels - Ultra (Giant) */
-body.zoom-ultra {
+/* المستوى +4: كبير جداً جداً */
+body.zoom-3xl {
   font-size: 24px;
 }
 
-body.zoom-ultra table {
+body.zoom-3xl table {
   font-size: 23px;
 }
 
-body.zoom-ultra th,
-body.zoom-ultra td {
+body.zoom-3xl th,
+body.zoom-3xl td {
   padding: 22px 20px;
 }
 
-body.zoom-ultra h1 {
+body.zoom-3xl h1 {
   font-size: 44px;
   font-weight: 900;
 }
 
-body.zoom-ultra h2 {
+body.zoom-3xl h2 {
   font-size: 40px;
   font-weight: 800;
 }
 
-body.zoom-ultra h3 {
+body.zoom-3xl h3 {
   font-size: 36px;
   font-weight: 700;
 }
 
-body.zoom-ultra .btn,
-body.zoom-ultra button {
+body.zoom-3xl .btn,
+body.zoom-3xl button {
   font-size: 23px;
   padding: 18px 32px;
 }
 
-body.zoom-ultra input[type="text"],
-body.zoom-ultra input[type="number"] {
+body.zoom-3xl input[type="text"],
+body.zoom-3xl input[type="number"] {
   font-size: 23px;
   padding: 18px;
 }
 
-body.zoom-ultra .numeric {
+body.zoom-3xl .numeric {
   font-size: 26px;
   font-weight: 800;
 }
 
-body.zoom-ultra .summary-grid label {
+body.zoom-3xl .summary-grid label {
   font-size: 24px;
 }
 
-body.zoom-ultra .calc-field {
+body.zoom-3xl .calc-field {
   font-size: 28px;
   font-weight: 800;
-}
-
-/* Zoom Levels - Mega (Massive) */
-body.zoom-mega {
-  font-size: 26px;
-}
-
-body.zoom-mega table {
-  font-size: 25px;
-}
-
-body.zoom-mega th,
-body.zoom-mega td {
-  padding: 24px 22px;
-}
-
-body.zoom-mega h1 {
-  font-size: 48px;
-  font-weight: 900;
-}
-
-body.zoom-mega h2 {
-  font-size: 44px;
-  font-weight: 800;
-}
-
-body.zoom-mega h3 {
-  font-size: 40px;
-  font-weight: 700;
-}
-
-body.zoom-mega .btn,
-body.zoom-mega button {
-  font-size: 25px;
-  padding: 20px 36px;
-}
-
-body.zoom-mega input[type="text"],
-body.zoom-mega input[type="number"] {
-  font-size: 25px;
-  padding: 20px;
-}
-
-body.zoom-mega .numeric {
-  font-size: 28px;
-  font-weight: 900;
-}
-
-body.zoom-mega .summary-grid label {
-  font-size: 26px;
-}
-
-body.zoom-mega .calc-field {
-  font-size: 30px;
-  font-weight: 900;
 }
 
 /* Smooth transitions for zoom changes */

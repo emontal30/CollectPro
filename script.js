@@ -139,9 +139,31 @@ function parseNumber(x) {
     document.body.classList.toggle("dark", isDarkMode);
   }
   /* ========== Zoom/Font Size Control ========== */
+  function migrateOldZoomLevel(oldLevel) {
+    // تحويل المستويات القديمة إلى الجديدة
+    const migration = {
+      "small": "md",
+      "normal": "normal",
+      "large": "lg",
+      "xlarge": "xl",
+      "xxlarge": "2xl",
+      "ultra": "3xl",
+      "mega": "3xl"
+    };
+    return migration[oldLevel] || oldLevel;
+  }
+
   function applyZoomFromStorage() {
-    const zoomLevel = localStorage.getItem("zoomLevel") || "ultra";
-    document.body.classList.remove("zoom-small", "zoom-normal", "zoom-large", "zoom-xlarge", "zoom-xxlarge", "zoom-ultra", "zoom-mega");
+    let zoomLevel = localStorage.getItem("zoomLevel") || "normal";
+    
+    // تحويل المستويات القديمة
+    const newLevel = migrateOldZoomLevel(zoomLevel);
+    if (newLevel !== zoomLevel) {
+      localStorage.setItem("zoomLevel", newLevel);
+      zoomLevel = newLevel;
+    }
+    
+    document.body.classList.remove("zoom-xs", "zoom-sm", "zoom-md", "zoom-base", "zoom-normal", "zoom-lg", "zoom-xl", "zoom-2xl", "zoom-3xl");
     document.body.classList.add(`zoom-${zoomLevel}`);
     updateZoomButtons(zoomLevel);
   }
@@ -151,26 +173,28 @@ function parseNumber(x) {
     const zoomOutBtn = document.getElementById("zoom-out-btn");
     
     if (zoomInBtn) {
-      zoomInBtn.disabled = (level === "mega");
-      zoomInBtn.style.opacity = (level === "mega") ? "0.5" : "1";
+      zoomInBtn.disabled = (level === "3xl");
+      zoomInBtn.style.opacity = (level === "3xl") ? "0.5" : "1";
     }
     
     if (zoomOutBtn) {
-      zoomOutBtn.disabled = (level === "small");
-      zoomOutBtn.style.opacity = (level === "small") ? "0.5" : "1";
+      zoomOutBtn.disabled = (level === "xs");
+      zoomOutBtn.style.opacity = (level === "xs") ? "0.5" : "1";
     }
   }
   
   function zoomIn() {
     const currentZoom = localStorage.getItem("zoomLevel") || "normal";
     const zoomUp = { 
-      small: "normal", 
-      normal: "large", 
-      large: "xlarge",
-      xlarge: "xxlarge",
-      xxlarge: "ultra",
-      ultra: "mega",
-      mega: "mega"
+      xs: "sm",
+      sm: "md",
+      md: "base",
+      base: "normal",
+      normal: "lg", 
+      lg: "xl",
+      xl: "2xl",
+      "2xl": "3xl",
+      "3xl": "3xl"
     };
     const nextZoom = zoomUp[currentZoom];
     
@@ -179,28 +203,33 @@ function parseNumber(x) {
       applyZoomFromStorage();
       
       const messages = {
-        normal: "حجم متوسط 📄",
-        large: "حجم كبير 📺",
-        xlarge: "حجم كبير جداً 🖥️",
-        xxlarge: "حجم ضخم 🎯",
-        ultra: "حجم عملاق 🏢",
-        mega: "حجم هائل 🌟"
+        xs: "صغير جداً -4 📱",
+        sm: "صغير جداً -3 📱",
+        md: "صغير -2 📱",
+        base: "صغير -1 📱",
+        normal: "عادي (افتراضي) 📄",
+        lg: "كبير +1 📺",
+        xl: "كبير +2 🖥️",
+        "2xl": "كبير +3 🎯",
+        "3xl": "كبير +4 🌟"
       };
       
-      showAlert(messages[nextZoom], "success");
+      showAlert(messages[nextZoom] || `حجم ${nextZoom}`, "success");
     }
   }
   
   function zoomOut() {
     const currentZoom = localStorage.getItem("zoomLevel") || "normal";
     const zoomDown = { 
-      mega: "ultra",
-      ultra: "xxlarge",
-      xxlarge: "xlarge",
-      xlarge: "large",
-      large: "normal", 
-      normal: "small", 
-      small: "small" 
+      "3xl": "2xl",
+      "2xl": "xl",
+      xl: "lg",
+      lg: "normal",
+      normal: "base", 
+      base: "md",
+      md: "sm",
+      sm: "xs",
+      xs: "xs"
     };
     const nextZoom = zoomDown[currentZoom];
     
@@ -209,15 +238,18 @@ function parseNumber(x) {
       applyZoomFromStorage();
       
       const messages = {
-        small: "حجم صغير 📱",
-        normal: "حجم متوسط 📄",
-        large: "حجم كبير 📺",
-        xlarge: "حجم كبير جداً 🖥️",
-        xxlarge: "حجم ضخم 🎯",
-        ultra: "حجم عملاق 🏢"
+        xs: "صغير جداً -4 📱",
+        sm: "صغير جداً -3 📱",
+        md: "صغير -2 📱",
+        base: "صغير -1 📱",
+        normal: "عادي (افتراضي) 📄",
+        lg: "كبير +1 📺",
+        xl: "كبير +2 🖥️",
+        "2xl": "كبير +3 🎯",
+        "3xl": "كبير +4 🌟"
       };
       
-      showAlert(messages[nextZoom], "info");
+      showAlert(messages[nextZoom] || `حجم ${nextZoom}`, "info");
     }
   }
   /* ========== Clipboard ========== */
