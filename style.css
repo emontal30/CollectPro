@@ -3875,3 +3875,333 @@ body.dark .table-settings-modal .btn-save {
 body.dark .table-settings-modal .btn-save:hover {
   background: linear-gradient(135deg, rgba(255, 165, 0, 0.8), rgba(255, 140, 0, 0.9));
 }
+
+/* ====== Zoom/Font Size Control ====== */
+.zoom-controls {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.zoom-in-btn,
+.zoom-out-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.zoom-in-btn:hover:not(:disabled),
+.zoom-out-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.zoom-in-btn:active:not(:disabled),
+.zoom-out-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.zoom-in-btn:disabled,
+.zoom-out-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.zoom-in-btn i,
+.zoom-out-btn i {
+  font-size: 18px;
+}
+
+.zoom-in-btn {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.3), rgba(0, 150, 130, 0.4));
+}
+
+.zoom-in-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.5), rgba(0, 150, 130, 0.6));
+}
+
+.zoom-out-btn {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.3), rgba(255, 140, 0, 0.4));
+}
+
+.zoom-out-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.5), rgba(255, 140, 0, 0.6));
+}
+
+/* Dark mode styles for zoom buttons */
+body.dark .zoom-in-btn {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.4), rgba(0, 150, 130, 0.5));
+  border-color: rgba(0, 200, 150, 0.5);
+}
+
+body.dark .zoom-in-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.6), rgba(0, 150, 130, 0.7));
+}
+
+body.dark .zoom-out-btn {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.4), rgba(255, 140, 0, 0.5));
+  border-color: rgba(255, 165, 0, 0.5);
+}
+
+body.dark .zoom-out-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.6), rgba(255, 140, 0, 0.7));
+}
+
+/* Zoom Levels - Small (Default) */
+body.zoom-small {
+  font-size: 14px;
+}
+
+body.zoom-small table {
+  font-size: 13px;
+}
+
+body.zoom-small h1 {
+  font-size: 24px;
+}
+
+body.zoom-small h2 {
+  font-size: 20px;
+}
+
+body.zoom-small h3 {
+  font-size: 18px;
+}
+
+body.zoom-small .btn,
+body.zoom-small button {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+/* Zoom Levels - Normal (Medium) */
+body.zoom-normal {
+  font-size: 16px;
+}
+
+body.zoom-normal table {
+  font-size: 15px;
+}
+
+body.zoom-normal th,
+body.zoom-normal td {
+  padding: 14px 12px;
+}
+
+body.zoom-normal h1 {
+  font-size: 28px;
+}
+
+body.zoom-normal h2 {
+  font-size: 24px;
+}
+
+body.zoom-normal h3 {
+  font-size: 20px;
+}
+
+body.zoom-normal .btn,
+body.zoom-normal button {
+  font-size: 15px;
+  padding: 10px 18px;
+}
+
+body.zoom-normal input[type="text"],
+body.zoom-normal input[type="number"] {
+  font-size: 15px;
+  padding: 10px;
+}
+
+/* Zoom Levels - Large */
+body.zoom-large {
+  font-size: 18px;
+}
+
+body.zoom-large table {
+  font-size: 17px;
+}
+
+body.zoom-large th,
+body.zoom-large td {
+  padding: 16px 14px;
+}
+
+body.zoom-large h1 {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+body.zoom-large h2 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+body.zoom-large h3 {
+  font-size: 24px;
+}
+
+body.zoom-large .btn,
+body.zoom-large button {
+  font-size: 17px;
+  padding: 12px 22px;
+}
+
+body.zoom-large input[type="text"],
+body.zoom-large input[type="number"] {
+  font-size: 17px;
+  padding: 12px;
+}
+
+body.zoom-large .numeric {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+body.zoom-large .summary-grid label {
+  font-size: 18px;
+}
+
+body.zoom-large .calc-field {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Zoom Levels - X-Large */
+body.zoom-xlarge {
+  font-size: 20px;
+}
+
+body.zoom-xlarge table {
+  font-size: 19px;
+}
+
+body.zoom-xlarge th,
+body.zoom-xlarge td {
+  padding: 18px 16px;
+}
+
+body.zoom-xlarge h1 {
+  font-size: 36px;
+  font-weight: 800;
+}
+
+body.zoom-xlarge h2 {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+body.zoom-xlarge h3 {
+  font-size: 28px;
+}
+
+body.zoom-xlarge .btn,
+body.zoom-xlarge button {
+  font-size: 19px;
+  padding: 14px 24px;
+}
+
+body.zoom-xlarge input[type="text"],
+body.zoom-xlarge input[type="number"] {
+  font-size: 19px;
+  padding: 14px;
+}
+
+body.zoom-xlarge .numeric {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+body.zoom-xlarge .summary-grid label {
+  font-size: 20px;
+}
+
+body.zoom-xlarge .calc-field {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Zoom Levels - XX-Large */
+body.zoom-xxlarge {
+  font-size: 22px;
+}
+
+body.zoom-xxlarge table {
+  font-size: 21px;
+}
+
+body.zoom-xxlarge th,
+body.zoom-xxlarge td {
+  padding: 20px 18px;
+}
+
+body.zoom-xxlarge h1 {
+  font-size: 40px;
+  font-weight: 900;
+}
+
+body.zoom-xxlarge h2 {
+  font-size: 36px;
+  font-weight: 800;
+}
+
+body.zoom-xxlarge h3 {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+body.zoom-xxlarge .btn,
+body.zoom-xxlarge button {
+  font-size: 21px;
+  padding: 16px 28px;
+}
+
+body.zoom-xxlarge input[type="text"],
+body.zoom-xxlarge input[type="number"] {
+  font-size: 21px;
+  padding: 16px;
+}
+
+body.zoom-xxlarge .numeric {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+body.zoom-xxlarge .summary-grid label {
+  font-size: 22px;
+}
+
+body.zoom-xxlarge .calc-field {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+/* Smooth transitions for zoom changes */
+body {
+  transition: font-size 0.3s ease;
+}
+
+table,
+th,
+td,
+h1,
+h2,
+h3,
+button,
+input {
+  transition: font-size 0.3s ease, padding 0.3s ease;
+}

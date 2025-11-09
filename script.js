@@ -138,6 +138,80 @@ function parseNumber(x) {
     const isDarkMode = localStorage.getItem("darkMode") === "on";
     document.body.classList.toggle("dark", isDarkMode);
   }
+  /* ========== Zoom/Font Size Control ========== */
+  function applyZoomFromStorage() {
+    const zoomLevel = localStorage.getItem("zoomLevel") || "normal";
+    document.body.classList.remove("zoom-small", "zoom-normal", "zoom-large", "zoom-xlarge", "zoom-xxlarge");
+    document.body.classList.add(`zoom-${zoomLevel}`);
+    updateZoomButtons(zoomLevel);
+  }
+  
+  function updateZoomButtons(level) {
+    const zoomInBtn = document.getElementById("zoom-in-btn");
+    const zoomOutBtn = document.getElementById("zoom-out-btn");
+    
+    if (zoomInBtn) {
+      zoomInBtn.disabled = (level === "xxlarge");
+      zoomInBtn.style.opacity = (level === "xxlarge") ? "0.5" : "1";
+    }
+    
+    if (zoomOutBtn) {
+      zoomOutBtn.disabled = (level === "small");
+      zoomOutBtn.style.opacity = (level === "small") ? "0.5" : "1";
+    }
+  }
+  
+  function zoomIn() {
+    const currentZoom = localStorage.getItem("zoomLevel") || "normal";
+    const zoomUp = { 
+      small: "normal", 
+      normal: "large", 
+      large: "xlarge",
+      xlarge: "xxlarge",
+      xxlarge: "xxlarge" 
+    };
+    const nextZoom = zoomUp[currentZoom];
+    
+    if (nextZoom !== currentZoom) {
+      localStorage.setItem("zoomLevel", nextZoom);
+      applyZoomFromStorage();
+      
+      const messages = {
+        normal: "حجم متوسط 📄",
+        large: "حجم كبير 📺",
+        xlarge: "حجم كبير جداً 🖥️",
+        xxlarge: "حجم ضخم 🎯"
+      };
+      
+      showAlert(messages[nextZoom], "success");
+    }
+  }
+  
+  function zoomOut() {
+    const currentZoom = localStorage.getItem("zoomLevel") || "normal";
+    const zoomDown = { 
+      xxlarge: "xlarge",
+      xlarge: "large",
+      large: "normal", 
+      normal: "small", 
+      small: "small" 
+    };
+    const nextZoom = zoomDown[currentZoom];
+    
+    if (nextZoom !== currentZoom) {
+      localStorage.setItem("zoomLevel", nextZoom);
+      applyZoomFromStorage();
+      
+      const messages = {
+        small: "حجم صغير 📱",
+        normal: "حجم متوسط 📄",
+        large: "حجم كبير 📺",
+        xlarge: "حجم كبير جداً 🖥️"
+      };
+      
+      showAlert(messages[nextZoom], "info");
+    }
+  }
   /* ========== Clipboard ========== */
   async function pasteInto(el) {
     if (!el) return;
@@ -1388,6 +1462,19 @@ function parseNumber(x) {
     }
 
     applyDarkModeFromStorage();
+    applyZoomFromStorage();
+    
+    // Zoom buttons functionality
+    const zoomInBtn = document.getElementById("zoom-in-btn");
+    const zoomOutBtn = document.getElementById("zoom-out-btn");
+    
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener("click", zoomIn);
+    }
+    
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener("click", zoomOut);
+    }
 
     // التأكد من تهيئة أزرار صفحة الإدخال بشكل صحيح
     if (window.location.pathname.includes('dashboard.html') || window.location.pathname.endsWith('/')) {
