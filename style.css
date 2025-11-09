@@ -15,6 +15,36 @@
   --border-radius: 10px;
   --transition: all 0.3s ease;
 }
+
+/* ====== Table Column Visibility Controls ====== */
+/* Harvest table column indices: 1 serial, 2 shop, 3 code, 4 amount, 5 extra, 6 collector, 7 net */
+#harvestTable.hide-col-serial th.serial,
+#harvestTable.hide-col-serial td.serial { display: none; }
+
+#harvestTable.hide-col-shop th.shop,
+#harvestTable.hide-col-shop td.shop { display: none; }
+
+#harvestTable.hide-col-code th.code,
+#harvestTable.hide-col-code td.code { display: none; }
+
+#harvestTable.hide-col-amount th.amount,
+#harvestTable.hide-col-amount td.amount { display: none; }
+
+#harvestTable.hide-col-extra th.extra,
+#harvestTable.hide-col-extra tbody td:nth-child(5) { display: none; }
+
+/* Archive table column indices: 1 date, 2 shop, 3 code, 4 amount, 5 extra, 6 collector, 7 net */
+#archiveTable.hide-col-shop thead th:nth-child(2),
+#archiveTable.hide-col-shop tbody td:nth-child(2) { display: none; }
+
+#archiveTable.hide-col-code thead th:nth-child(3),
+#archiveTable.hide-col-code tbody td:nth-child(3) { display: none; }
+
+#archiveTable.hide-col-amount thead th:nth-child(4),
+#archiveTable.hide-col-amount tbody td:nth-child(4) { display: none; }
+
+#archiveTable.hide-col-extra thead th:nth-child(5),
+#archiveTable.hide-col-extra tbody td:nth-child(5) { display: none; }
 * {
   box-sizing: border-box;
   margin: 0;
