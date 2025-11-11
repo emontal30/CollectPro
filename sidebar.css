@@ -12,7 +12,7 @@
   justify-content: space-between;
   padding: 10px 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  z-index: 1002;
+  z-index: 1010; /* أعلى z-index للشريط العلوي */
   direction: ltr;
   flex-direction: row-reverse;
 }
@@ -50,10 +50,10 @@
 }
 
 .topbar .toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  border: none;
   color: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 40px; /* ضعف الحجم السابق (20px × 2) */
@@ -66,7 +66,7 @@
 }
 
 .topbar .toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .topbar .user-icon {
@@ -83,21 +83,21 @@
 
 /* 🎨 الشريط الجانبي */
 .sidebar {
-   position: fixed;
-   top: 250px; /* يبدأ من أسفل الهيدر مباشرة (100px topbar + 150px margin-top header) */
-   right: -280px;
-   width: 280px;
-   height: calc(100vh - 250px - 80px); /* خصم ارتفاع topbar + header + footer */
-   background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
-   color: #fff;
-   display: flex;
-   flex-direction: column;
-   padding-top: 15px; /* إعادة المسافة العلوية لإظهار المحتوى */
-   transition: right 0.3s ease, transform 0.3s ease;
-   z-index: 1002; /* أقل من الهيدر ليظهر تحته */
-   transform: translateX(0);
-   backdrop-filter: blur(10px);
-   overflow-y: auto;
+    position: fixed;
+    top: 100px; /* يبدأ من أسفل الشريط العلوي مباشرة */
+    right: -280px;
+    width: 280px;
+    height: calc(100vh - 100px - 80px); /* خصم ارتفاع topbar + footer */
+    background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+    transition: right 0.3s ease, transform 0.3s ease;
+    z-index: 1009; /* أقل من الشريط العلوي */
+    transform: translateX(0);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
 }
 
 .sidebar.active {
@@ -298,11 +298,12 @@
   right: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   opacity: 0;
   visibility: hidden;
-  transition: 0.4s ease;
-  z-index: 1001;
+  transition: 0.3s ease;
+  z-index: 1008; /* أقل من الشريط الجانبي */
+  backdrop-filter: blur(2px);
 }
 
 .overlay.active {
@@ -312,36 +313,147 @@
 
 /* 🧩 المحتوى */
 main {
-  margin-top: 120px; /* تقليل الفاصل درجة */
-  transition: margin-right 0.4s ease;
+  margin-top: 120px;
+  transition: margin-right 0.3s ease;
+  padding: 20px;
 }
 
 header {
-    margin-top: 100px; /* توسيع المسافة العلوية للهيدر أكبر */
+    margin-top: 100px;
+    padding: 20px;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
   .sidebar {
-    width: 250px;
-    right: -260px;
-    top: 210px; /* ابدأ من أسفل الهيدر مباشرة */
-    height: calc(100vh - 210px - 80px); /* خصم ارتفاع الشريط العلوي + header + footer */
-    padding-top: 15px; /* إعادة المسافة العلوية لإظهار المحتوى */
+    width: 280px;
+    right: -290px;
+    top: 100px; /* ابدأ من أسفل الشريط العلوي مباشرة */
+    height: calc(100vh - 100px - 80px); /* خصم ارتفاع الشريط العلوي + footer */
+    padding-top: 20px;
+    border-radius: 0 20px 20px 0;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
   }
 
   .sidebar.active {
     right: 0;
   }
+
+  main {
+    margin-top: 120px;
+    margin-right: 0;
+    transition: margin-right 0.3s ease;
+  }
+
+  header {
+    margin-top: 100px;
+  }
 }
 
 @media (max-width: 768px) {
     .sidebar {
-      width: 260px;
-      right: -270px;
-      top: 210px; /* ابدأ من أسفل الهيدر مباشرة */
-      height: calc(100vh - 210px - 80px); /* خصم ارتفاع الشريط العلوي + header + footer */
-      padding-top: 15px; /* إعادة المسافة العلوية لإظهار المحتوى */
+      width: 280px;
+      right: -290px;
+      top: 60px; /* ابدأ من أسفل الشريط العلوي المصغر */
+      height: calc(100vh - 60px - 80px); /* خصم ارتفاع الشريط العلوي المصغر + footer */
+      padding-top: 20px;
+      border-radius: 0 15px 15px 0;
+      box-shadow: -3px 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .sidebar .user-avatar {
+      width: 45px;
+      height: 45px;
+      font-size: 20px;
+    }
+
+    .sidebar .user-box {
+      gap: 15px;
+      padding: 15px;
+      margin: 0 15px 20px 15px;
+      border-radius: 12px;
+    }
+
+    .sidebar .user-meta .user-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .sidebar .user-meta .user-email {
+      font-size: 13px;
+    }
+
+    .sidebar .user-meta .user-id {
+      font-size: 11px;
+    }
+
+    .sidebar .nav-links a {
+      padding: 18px 15px;
+      margin: 5px 15px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    .sidebar .logout-btn {
+      margin: 0 15px 10px 15px;
+      width: calc(100% - 30px);
+      padding: 12px 15px;
+      font-size: 14px;
+      min-height: 45px;
+      border-radius: 10px;
+    }
+
+    .topbar .logo {
+      display: flex;
+      gap: 6px;
+    }
+
+    .topbar .logo .logo-img {
+      height: 36px;
+    }
+
+    .topbar .logo .app-name {
+      font-size: 16px;
+      display: block;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .topbar {
+      padding: 0 12px;
+      height: 60px;
+    }
+
+    .topbar .actions {
+      gap: 8px;
+    }
+
+    main {
+      margin-top: 80px;
+      padding: 15px;
+    }
+
+    header {
+      margin-top: 60px;
+      padding: 15px;
+    }
+  }
+
+@media (max-width: 480px) {
+    .sidebar {
+      width: 100vw; /* استخدام عرض الشاشة الكامل */
+      right: -100vw;
+      top: 50px; /* ابدأ من أسفل الشريط العلوي المصغر جداً */
+      height: calc(100vh - 50px - 80px); /* خصم ارتفاع الشريط العلوي المصغر جداً + footer */
+      padding-top: 15px;
+      border-radius: 0;
+      box-shadow: -2px 0 15px rgba(0, 0, 0, 0.25);
+    }
+
+    .sidebar.active {
+      right: 0;
     }
 
     .sidebar .user-avatar {
@@ -353,11 +465,13 @@ header {
     .sidebar .user-box {
       gap: 12px;
       padding: 12px;
-      margin: 0 12px 20px 12px;
+      margin: 0 12px 15px 12px;
+      border-radius: 10px;
     }
 
     .sidebar .user-meta .user-name {
       font-size: 15px;
+      font-weight: 600;
     }
 
     .sidebar .user-meta .user-email {
@@ -372,110 +486,50 @@ header {
       padding: 16px 12px;
       margin: 4px 12px;
       font-size: 15px;
+      border-radius: 10px;
     }
 
     .sidebar .logout-btn {
-      margin: 0 12px 8px 12px; /* إزالة الهامش العلوي وتقليل السفلي */
+      margin: 0 12px 8px 12px;
       width: calc(100% - 24px);
-      padding: 6px 12px;
+      padding: 10px 12px;
       font-size: 13px;
-      min-height: 35px;
-    }
-
-    .topbar .logo {
-      display: flex; /* إظهار اللوجو في الموبايل */
-      gap: 8px; /* تقليل المسافة */
+      min-height: 40px;
+      border-radius: 8px;
     }
 
     .topbar .logo .logo-img {
-      height: 32px; /* تقليل حجم الصورة */
+      height: 28px;
     }
 
     .topbar .logo .app-name {
-      font-size: 14px; /* تقليل حجم النص أكثر */
-      display: block; /* إظهار النص */
-      max-width: 80px; /* تحديد عرض أقصى */
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font-size: 14px;
+      max-width: 70px;
     }
 
     .topbar {
-      padding: 0 15px;
-      height: 55px; /* تقليل ارتفاع الشريط العلوي قليلاً */
+      height: 50px;
+      padding: 0 10px;
     }
 
     .topbar .actions {
-      gap: 10px;
-    }
-  }
-
-@media (max-width: 480px) {
-    .sidebar {
-      width: 240px;
-      right: -250px;
-    }
-
-    .sidebar .user-avatar {
-      width: 35px;
-      height: 35px;
-      font-size: 16px;
-    }
-
-    .sidebar .user-box {
-      gap: 10px;
-      padding: 10px;
-      margin: 0 10px 15px 10px;
-    }
-
-    .sidebar .user-meta .user-name {
-      font-size: 14px;
-    }
-
-    .sidebar .user-meta .user-email {
-      font-size: 11px;
-    }
-
-    .sidebar .user-meta .user-id {
-      font-size: 9px;
-    }
-
-    .sidebar .nav-links a {
-      padding: 14px 10px;
-      margin: 3px 10px;
-      font-size: 14px;
-    }
-
-    .sidebar .logout-btn {
-      margin: 0 10px 6px 10px; /* إزالة الهامش العلوي وتقليل السفلي */
-      width: calc(100% - 20px);
-      padding: 8px 10px;
-      font-size: 12px;
-      min-height: 32px;
-    }
-
-    .topbar .logo .logo-img {
-      height: 24px; /* تقليل حجم الصورة أكثر */
-    }
-
-    .topbar .logo .app-name {
-      font-size: 12px; /* تقليل حجم النص أكثر */
-      max-width: 60px; /* تقليل العرض الأقصى */
-    }
-
-    .topbar {
-      height: 48px; /* تقليل ارتفاع الشريط العلوي أكثر */
-      padding: 0 8px; /* تقليل الحشو أكثر */
-    }
-
-    .topbar .actions {
-      gap: 6px; /* تقليل المسافة بين الأزرار أكثر */
+      gap: 8px;
     }
 
     .topbar .toggle-btn {
-      width: 32px;
-      height: 32px;
-      font-size: 16px;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+    }
+
+    main {
+      margin-top: 70px;
+      padding: 10px;
+    }
+
+    header {
+      margin-top: 50px;
+      padding: 10px;
     }
   }
 
