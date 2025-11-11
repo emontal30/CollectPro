@@ -839,39 +839,36 @@ function parseNumber(x) {
     const cursorPosition = input.selectionStart;
     const originalValue = input.value;
 
-    // 1. تذكر إذا كان سالبًا
+    // 1. تذكر إذا كان سالبًا (لكن لن نسمح بالسالب في عمود المحصل)
     const isNegative = originalValue.startsWith('-');
-    
+
     // 2. إزالة أي فواصل أو أحرف غير رقمية
     let value = originalValue.replace(/[^\d]/g, '');
-    
+
     // إذا كانت القيمة فارغة، تعامل معها
     if (value === '') {
-      input.value = isNegative ? '-' : '';
-      if (isNegative) {
-        try { input.setSelectionRange(1, 1); } catch(e) {}
-      }
+      input.value = '';
       return;
     }
-    
+
     // تنسيق الرقم مع الفواصل
     const formatted = formatNumber(value);
-    
-    // 3. تحديث قيمة الحقل مع إعادة علامة السالب
-    const finalValue = isNegative ? '-' + formatted : formatted;
-    
+
+    // 3. تحديث قيمة الحقل (بدون السالب لعمود المحصل)
+    const finalValue = formatted;
+
     // لا تقم بتحديث إذا لم تتغير القيمة لتجنب مشاكل المؤشر
     if (input.value === finalValue) {
         return;
     }
-    
+
     input.value = finalValue;
-    
+
     // استعادة موضع المؤشر (محاولة مبسطة)
     const diff = finalValue.length - originalValue.length;
     // تأكد من أن موضع المؤشر الجديد صالح
     const newCursorPosition = Math.max(0, Math.min(finalValue.length, cursorPosition + diff));
-    
+
     try {
       // وضع المؤشر في مكان آمن
       input.setSelectionRange(newCursorPosition, newCursorPosition);
@@ -896,8 +893,9 @@ function parseNumber(x) {
       const ctrl = e.ctrlKey || e.metaKey;
       const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Tab','Enter'];
       if (ctrl || allowed.includes(e.key)) return;
+      // منع إدخال السالب في عمود المحصل
       if (e.key === '-') {
-        if (this.selectionStart !== 0 || this.value.includes('-')) e.preventDefault();
+        e.preventDefault();
         return;
       }
       if (e.key >= '0' && e.key <= '9') return;
@@ -908,7 +906,7 @@ function parseNumber(x) {
     input.addEventListener('input', function() {
       formatNumberInput(this);
     });
-    
+
     input.addEventListener('blur', function() {
       formatNumberInput(this);
     });
@@ -926,7 +924,6 @@ function parseNumber(x) {
     // إعداد تنسيق الأرقام لحقول المحصل وتحويل إضافي
     if (collector) {
       setupNumberInputFormatting(collector);
-      injectMinusToggle(collector);
     }
     
     if (extra) {
