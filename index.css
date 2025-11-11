@@ -73,26 +73,24 @@ body::before {
 }
 
 .login-card {
-  background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-  padding: 50px 40px;
-  width: 100%;
-  max-width: 400px;
-  height: auto;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  transform: translateY(0);
-  transition: var(--transition);
-  border: 2px solid transparent;
-  background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
+   background: white;
+   border-radius: var(--border-radius, 16px);
+   box-shadow: var(--box-shadow, 0 15px 35px rgba(0, 0, 0, 0.1));
+   padding: 50px 40px;
+   width: 90%;
+   max-width: 450px;
+   height: auto;
+   text-align: center;
+   position: relative;
+   overflow: hidden;
+   transform: translateY(0);
+   transition: var(--transition);
+   border: 1px solid rgba(0,0,0,0.05);
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   align-items: center;
+ }
 
 /* إزالة الخطوط الخضراء لأن الكارد يأخذ كامل الشاشة */
 
@@ -301,11 +299,10 @@ body::before {
 
   .login-card {
     padding: 40px 30px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius, 16px);
     height: auto;
-    box-shadow: var(--box-shadow);
-    margin: 0;
-    max-width: 100%;
+    width: 90%;
+    max-width: 450px;
   }
 
   .logo {
@@ -333,11 +330,9 @@ body::before {
 
   .login-card {
     padding: 30px 20px;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius, 16px);
     height: auto;
-    box-shadow: var(--box-shadow);
-    margin: 0;
-    max-width: 100%;
+    width: 90%;
   }
 
   .logo {
