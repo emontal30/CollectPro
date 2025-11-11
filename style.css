@@ -886,9 +886,9 @@ footer strong {
 #harvestTable input.extra,
 #harvestTable input.collector {
   width: 90%;
-  height: 35px;
+  height: 40px;
   text-align: center;
-  font-size: 14px;
+  font-size: 18px;
   border: 1px solid transparent;
   border-radius: 6px;
   transition: var(--transition);
