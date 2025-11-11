@@ -126,6 +126,7 @@ body {
   opacity: 0; /* للانتقال السلس بين الصفحات */
   min-width: 1024px;
   overflow-x: auto;
+  font-size: 22px; /* تعيين المستوى الافتراضي إلى zoom-2xl */
 }
 body.loaded {
   opacity: 1;
@@ -4030,30 +4031,138 @@ body.dark .zoom-out-btn:hover:not(:disabled) {
 
 /* ====== نظام التكبير/التصغير الجديد - 9 مستويات ====== */
 
-/* المستوى -4: صغير جداً جداً */
-body.zoom-xs {
+/* المستوى -8: صغير جداً جداً جداً جداً */
+body.zoom-8xs {
+  font-size: 6px;
+}
+
+body.zoom-8xs table {
+  font-size: 5px;
+}
+
+body.zoom-8xs h1 {
+  font-size: 10px;
+}
+
+body.zoom-8xs h2 {
+  font-size: 8px;
+}
+
+body.zoom-8xs h3 {
+  font-size: 6px;
+}
+
+body.zoom-8xs .btn,
+body.zoom-8xs button {
+  font-size: 5px;
+  padding: 2px 4px;
+}
+
+/* المستوى -7: صغير جداً جداً جداً */
+body.zoom-7xs {
+  font-size: 8px;
+}
+
+body.zoom-7xs table {
+  font-size: 7px;
+}
+
+body.zoom-7xs h1 {
   font-size: 12px;
 }
 
-body.zoom-xs table {
+body.zoom-7xs h2 {
+  font-size: 10px;
+}
+
+body.zoom-7xs h3 {
+  font-size: 8px;
+}
+
+body.zoom-7xs .btn,
+body.zoom-7xs button {
+  font-size: 7px;
+  padding: 3px 6px;
+}
+
+/* المستوى -6: صغير جداً جداً جداً */
+body.zoom-6xs {
+  font-size: 10px;
+}
+
+body.zoom-6xs table {
+  font-size: 9px;
+}
+
+body.zoom-6xs h1 {
+  font-size: 14px;
+}
+
+body.zoom-6xs h2 {
+  font-size: 12px;
+}
+
+body.zoom-6xs h3 {
+  font-size: 10px;
+}
+
+body.zoom-6xs .btn,
+body.zoom-6xs button {
+  font-size: 9px;
+  padding: 4px 8px;
+}
+
+/* المستوى -5: صغير جداً جداً */
+body.zoom-5xs {
+  font-size: 12px;
+}
+
+body.zoom-5xs table {
   font-size: 11px;
 }
 
-body.zoom-xs h1 {
-  font-size: 20px;
+body.zoom-5xs h1 {
+  font-size: 16px;
 }
 
-body.zoom-xs h2 {
+body.zoom-5xs h2 {
+  font-size: 14px;
+}
+
+body.zoom-5xs h3 {
+  font-size: 12px;
+}
+
+body.zoom-5xs .btn,
+body.zoom-5xs button {
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+/* المستوى -4: صغير جداً جداً */
+body.zoom-xs {
+  font-size: 14px;
+}
+
+body.zoom-xs table {
+  font-size: 13px;
+}
+
+body.zoom-xs h1 {
   font-size: 18px;
 }
 
-body.zoom-xs h3 {
+body.zoom-xs h2 {
   font-size: 16px;
+}
+
+body.zoom-xs h3 {
+  font-size: 14px;
 }
 
 body.zoom-xs .btn,
 body.zoom-xs button {
-  font-size: 11px;
+  font-size: 13px;
   padding: 6px 12px;
 }
 
@@ -4391,6 +4500,171 @@ body.zoom-3xl .summary-grid label {
 
 body.zoom-3xl .calc-field {
   font-size: 28px;
+  font-weight: 800;
+}
+
+/* المستوى +5: كبير جداً جداً جداً */
+body.zoom-4xl {
+  font-size: 26px;
+}
+
+body.zoom-4xl table {
+  font-size: 25px;
+}
+
+body.zoom-4xl th,
+body.zoom-4xl td {
+  padding: 24px 22px;
+}
+
+body.zoom-4xl h1 {
+  font-size: 48px;
+  font-weight: 900;
+}
+
+body.zoom-4xl h2 {
+  font-size: 44px;
+  font-weight: 800;
+}
+
+body.zoom-4xl h3 {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+body.zoom-4xl .btn,
+body.zoom-4xl button {
+  font-size: 25px;
+  padding: 20px 36px;
+}
+
+body.zoom-4xl input[type="text"],
+body.zoom-4xl input[type="number"] {
+  font-size: 25px;
+  padding: 20px;
+}
+
+body.zoom-4xl .numeric {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+body.zoom-4xl .summary-grid label {
+  font-size: 26px;
+}
+
+body.zoom-4xl .calc-field {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+/* المستوى +6: كبير جداً جداً جداً جداً */
+body.zoom-5xl {
+  font-size: 28px;
+}
+
+body.zoom-5xl table {
+  font-size: 27px;
+}
+
+body.zoom-5xl th,
+body.zoom-5xl td {
+  padding: 26px 24px;
+}
+
+body.zoom-5xl h1 {
+  font-size: 52px;
+  font-weight: 900;
+}
+
+body.zoom-5xl h2 {
+  font-size: 48px;
+  font-weight: 800;
+}
+
+body.zoom-5xl h3 {
+  font-size: 44px;
+  font-weight: 700;
+}
+
+body.zoom-5xl .btn,
+body.zoom-5xl button {
+  font-size: 27px;
+  padding: 22px 40px;
+}
+
+body.zoom-5xl input[type="text"],
+body.zoom-5xl input[type="number"] {
+  font-size: 27px;
+  padding: 22px;
+}
+
+body.zoom-5xl .numeric {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+body.zoom-5xl .summary-grid label {
+  font-size: 28px;
+}
+
+body.zoom-5xl .calc-field {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+/* المستوى +7: كبير جداً جداً جداً جداً جداً */
+body.zoom-6xl {
+  font-size: 30px;
+}
+
+body.zoom-6xl table {
+  font-size: 29px;
+}
+
+body.zoom-6xl th,
+body.zoom-6xl td {
+  padding: 28px 26px;
+}
+
+body.zoom-6xl h1 {
+  font-size: 56px;
+  font-weight: 900;
+}
+
+body.zoom-6xl h2 {
+  font-size: 52px;
+  font-weight: 800;
+}
+
+body.zoom-6xl h3 {
+  font-size: 48px;
+  font-weight: 700;
+}
+
+body.zoom-6xl .btn,
+body.zoom-6xl button {
+  font-size: 29px;
+  padding: 24px 44px;
+}
+
+body.zoom-6xl input[type="text"],
+body.zoom-6xl input[type="number"] {
+  font-size: 29px;
+  padding: 24px;
+}
+
+body.zoom-6xl .numeric {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+body.zoom-6xl .summary-grid label {
+  font-size: 30px;
+}
+
+body.zoom-6xl .calc-field {
+  font-size: 34px;
   font-weight: 800;
 }
 
