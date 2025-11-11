@@ -271,7 +271,16 @@ body::before {
 }
 
 .footer {
-  display: none; /* إخفاء الفوتر القديم */
+  display: block; /* إظهار الفوتر كعنصر عادي */
+  text-align: center;
+  padding: 20px;
+  margin-top: 30px;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
 }
 
 .footer::before {

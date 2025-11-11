@@ -276,7 +276,7 @@ main {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  padding-bottom: 80px; /* إضافة مسافة للشريط السفلي */
+  padding-bottom: 20px; /* (تم التغيير من 80px) */
   background: var(--light-bg); /* خلفية بيضاء للمحتوى */
   border-radius: 0; /* بدون حواف مستديرة */
 }
@@ -853,18 +853,20 @@ button:active {
 .footer {
   text-align: center;
   padding: 20px;
-  margin-top: auto;
+  margin-top: 30px; /* (تم التغيير من auto لضمان فاصل) */
   background: var(--primary);
   color: white;
   font-size: 14px;
   border-top-left-radius: 15px;
   border-top-right-radius: 15px;
   box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  /* تم إلغاء الأسطر التالية لإصلاح مشكلة التداخل:
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  */
 }
 footer strong { 
   color: var(--secondary); 
