@@ -883,12 +883,13 @@ footer strong {
   color: #2c3e50; 
   font-weight: bold; 
 }
+#harvestTable input.amount,
 #harvestTable input.extra,
 #harvestTable input.collector {
   width: 90%;
   height: 40px;
   text-align: center;
-  font-size: 18px;
+  font-size: 16px;
   border: 1px solid transparent;
   border-radius: 6px;
   transition: var(--transition);
