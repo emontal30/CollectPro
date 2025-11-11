@@ -410,8 +410,14 @@ async function checkAndHideAdminLink() {
             return;
         }
 
-        const adminEmails = ['emontal.33@gmail.com'];
-        const isAdmin = adminEmails.includes(user.email);
+        // التحقق من وجود المدير في قاعدة البيانات
+        const { data: adminUser, error } = await supabase
+            .from('admins')
+            .select('id, email')
+            .eq('email', user.email)
+            .single();
+
+        const isAdmin = adminUser && !error;
 
         const adminLink = document.getElementById('admin-link');
         if (adminLink) {
