@@ -884,12 +884,24 @@ footer strong {
   font-weight: bold; 
 }
 #harvestTable input.amount,
-#harvestTable input.extra,
+#harvestTable input.extra {
+  width: 90%;
+  height: 40px;
+  text-align: center;
+  font-size: 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: var(--transition);
+  background: transparent;
+  color: inherit;
+}
+
 #harvestTable input.collector {
   width: 90%;
   height: 40px;
   text-align: center;
   font-size: 16px;
+  font-weight: bold;
   border: 1px solid transparent;
   border-radius: 6px;
   transition: var(--transition);
@@ -910,9 +922,6 @@ body.dark #harvestTable input.collector {
   background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(0,200,150,0.3);
   color: #e0e0e0;
-}
-#harvestTable input.collector {
-  font-weight: bold;
 }
 #harvestTable input:focus {
   outline: none;
