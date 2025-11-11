@@ -150,7 +150,7 @@ header {
   gap: 10px; /* تقليل المسافة للموبايل */
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 80px; /* إضافة padding لليسار لتجنب تداخل مع أزرار التكبير */
+  padding: 0 80px 0 60px; /* تعديل padding للتوافق مع زر الوضع الليلي */
 }
 
 .header-content h1 {
@@ -202,7 +202,7 @@ header .zoom-out-btn:disabled {
 #toggleDark {
   position: absolute;
   top: 15px;
-  left: 15px;
+  right: 15px;
   background: transparent;
   color: #66bb6a; /* لون أخضر فاتح أفتح من الهيدر */
   border: none;
