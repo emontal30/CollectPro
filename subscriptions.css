@@ -230,10 +230,12 @@
   transform: rotate(180deg);
 }
 
-/* الوضع الليلي */
+/* الوضع الليلي المحسن */
 body.dark .plan-card {
-  background: var(--dark-bg);
-  color: var(--dark-text);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  color: #e8e8e8;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  border: 1px solid rgba(0,200,150,0.1);
 }
 
 body.dark .plan-header {

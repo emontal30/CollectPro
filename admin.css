@@ -607,9 +607,10 @@ tr:last-child td:last-child {
   color: #333;
 }
 
-/* الوضع الليلي */
+/* الوضع الليلي المحسن */
 body.dark .admin-dashboard {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #0f0f0f 70%, #0a0a0a 100%);
+  color: #e8e8e8;
 }
 
 body.dark .stat-card {
@@ -1854,7 +1855,7 @@ header h1 i {
 #toggleDark {
   position: absolute;
   top: 15px;
-  left: 15px;
+  right: 15px;
   background: transparent;
   color: #66bb6a;
   border: none;

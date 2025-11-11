@@ -411,8 +411,8 @@ body.dark .dark-mode-toggle:hover {
 
 /* الوضع الليلي المحسن لصفحة تسجيل الدخول */
 body.dark {
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
-  color: #f1f1f1;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #0f0f0f 70%, #0a0a0a 100%);
+  color: #e8e8e8;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

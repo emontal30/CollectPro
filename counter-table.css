@@ -423,15 +423,16 @@
   min-width: 120px;
 }
 
-/* الوضع الليلي */
+/* الوضع الليلي المحسن */
 body.dark .cp-table .table-container {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0,200,150,0.1);
 }
 
 body.dark .cp-table table {
-  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
-  color: var(--dark-text);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 4px 16px rgba(0,200,150,0.1);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  color: #e8e8e8;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,200,150,0.1);
   border: 2px solid rgba(0,200,150,0.3);
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
