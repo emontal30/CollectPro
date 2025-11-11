@@ -146,11 +146,11 @@ header {
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 10px; /* تقليل المسافة للموبايل */
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 10px;
+  padding: 0 80px; /* إضافة padding لليسار لتجنب تداخل مع أزرار التكبير */
 }
 
 .header-content h1 {
@@ -163,6 +163,10 @@ header .zoom-controls {
   display: flex;
   gap: 6px;
   align-items: center;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 1000;
 }
 
 header .zoom-in-btn,
