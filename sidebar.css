@@ -87,7 +87,7 @@
     top: 100px; /* يبدأ من أسفل الشريط العلوي مباشرة */
     right: -280px;
     width: 280px;
-    height: calc(100vh - 100px - 80px); /* خصم ارتفاع topbar + footer */
+    height: calc(100vh - 100px); /* امتداد إلى أسفل الصفحة بالكامل */
     background: linear-gradient(135deg, var(--primary), #005a4b, #003d33);
     color: #fff;
     display: flex;
@@ -322,6 +322,7 @@ main {
 header {
     margin-top: 100px;
     padding: 20px;
+    margin-bottom: 30px; /* تقليل المساحة الفارغة */
 }
 
 /* Responsive */
@@ -330,7 +331,7 @@ header {
     width: 280px;
     right: -290px;
     top: 100px; /* ابدأ من أسفل الشريط العلوي مباشرة */
-    height: calc(100vh - 100px - 80px); /* خصم ارتفاع الشريط العلوي + footer */
+    height: calc(100vh - 100px); /* امتداد إلى أسفل الصفحة بالكامل */
     padding-top: 20px;
     border-radius: 0 20px 20px 0;
     box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
@@ -349,6 +350,7 @@ header {
 
   header {
     margin-top: 100px;
+    margin-bottom: 30px; /* تقليل المساحة الفارغة */
   }
 }
 
@@ -357,7 +359,7 @@ header {
       width: 280px;
       right: -290px;
       top: 60px; /* ابدأ من أسفل الشريط العلوي المصغر */
-      height: calc(100vh - 60px - 80px); /* خصم ارتفاع الشريط العلوي المصغر + footer */
+      height: calc(100vh - 60px); /* امتداد إلى أسفل الصفحة بالكامل */
       padding-top: 20px;
       border-radius: 0 15px 15px 0;
       box-shadow: -3px 0 20px rgba(0, 0, 0, 0.2);
@@ -441,6 +443,7 @@ header {
     header {
       margin-top: 60px;
       padding: 15px;
+      margin-bottom: 30px; /* تقليل المساحة الفارغة */
     }
   }
 
@@ -449,7 +452,7 @@ header {
       width: 100vw; /* استخدام عرض الشاشة الكامل */
       right: -100vw;
       top: 50px; /* ابدأ من أسفل الشريط العلوي المصغر جداً */
-      height: calc(100vh - 50px - 80px); /* خصم ارتفاع الشريط العلوي المصغر جداً + footer */
+      height: calc(100vh - 50px); /* امتداد إلى أسفل الصفحة بالكامل */
       padding-top: 15px;
       border-radius: 0;
       box-shadow: -2px 0 15px rgba(0, 0, 0, 0.25);
@@ -534,6 +537,7 @@ header {
     header {
       margin-top: 50px;
       padding: 10px;
+      margin-bottom: 30px; /* تقليل المساحة الفارغة */
     }
   }
 

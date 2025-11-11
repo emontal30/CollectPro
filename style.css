@@ -138,8 +138,8 @@ header {
     color: white;
     position: relative;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    margin-top: 150px; /* مسافة كبيرة للـ topbar (100px + 50px فاصل) */
-    margin-bottom: 120px; /* توسيع المسافة أكبر بين الهيدر وعنوان الصفحة */
+    margin-top: 150px; /* هذا الفراغ بين الشريط العلوي والعنوان */
+    margin-bottom: 30px; /* (تم التغيير من 120px لتقليل الفراغ) */
     border-bottom: 3px solid rgba(255,255,255,0.1);
     z-index: 1; /* الهيدر هو جزء من محتوى الصفحة وليس طبقة UI عليا */
 }
