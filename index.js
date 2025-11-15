@@ -52,11 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // onAuthStateChange هو المصدر الوحيد للحقيقة
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.auth.onAuthStateChange(async (_event, session) => {
     // يتم استدعاء هذا عند التحميل الأولي وعندما تتغير حالة المصادقة.
     if (session) {
       // المستخدم مسجل دخوله.
-      console.log('✅ Active session found, redirecting...');
+      console.log('✅ Active session found, syncing profile...');
+      await syncUserProfile(session.user);
+      console.log('✅ Profile synced, redirecting...');
       redirectUser(session.user);
     } else {
       // المستخدم غير مسجل دخوله.
@@ -89,6 +91,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+/**
+ * Redirects the user based on their role.
+ * @param {Object} user The Supabase user object.
+ */
+/**
+ * Syncs the user profile to public.users table if not exists.
+ * @param {Object} user The Supabase user object.
+ */
+async function syncUserProfile(user) {
+  try {
+    const { data, error } = await supabase.from('users').select('id').eq('id', user.id).single();
+
+    if (error && error.code === 'PGRST116') {
+      // User not found, insert new record
+      const full_name = user.user_metadata?.full_name || user.email;
+      const { error: insertError } = await supabase.from('users').insert({
+        id: user.id,
+        full_name: full_name,
+        email: user.email
+      });
+
+      if (insertError) {
+        console.error('❌ Error inserting user profile:', insertError);
+      } else {
+        console.log('✅ User profile synced successfully');
+      }
+    } else if (data) {
+      console.log('✅ User profile already exists');
+    } else {
+      console.error('❌ Error checking user profile:', error);
+    }
+  } catch (err) {
+    console.error('❌ Sync user profile error:', err);
+  }
+}
 
 /**
  * Redirects the user based on their role.
