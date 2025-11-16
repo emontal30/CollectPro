@@ -209,6 +209,8 @@ BEGIN
         CREATE TABLE public.archive_data (
             id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
             user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+            -- JSON blob for any raw archived payload (optional)
+            data JSONB,
             archive_date DATE NOT NULL,
             shop TEXT NOT NULL,
             code TEXT,
@@ -216,11 +218,15 @@ BEGIN
             extra DECIMAL(10,2) DEFAULT 0,
             collector DECIMAL(10,2) DEFAULT 0,
             net DECIMAL(10,2) GENERATED ALWAYS AS (collector - (extra + amount)) STORED,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
     ELSE
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'archive_data' AND column_name = 'user_id' AND table_schema = 'public') THEN
             ALTER TABLE public.archive_data ADD COLUMN user_id UUID REFERENCES public.users(id) ON DELETE CASCADE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'archive_data' AND column_name = 'data' AND table_schema = 'public') THEN
+            ALTER TABLE public.archive_data ADD COLUMN data JSONB;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'archive_data' AND column_name = 'archive_date' AND table_schema = 'public') THEN
             ALTER TABLE public.archive_data ADD COLUMN archive_date DATE NOT NULL;
@@ -242,6 +248,9 @@ BEGIN
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'archive_data' AND column_name = 'created_at' AND table_schema = 'public') THEN
             ALTER TABLE public.archive_data ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'archive_data' AND column_name = 'updated_at' AND table_schema = 'public') THEN
+            ALTER TABLE public.archive_data ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
         END IF;
     END IF;
 END $$;

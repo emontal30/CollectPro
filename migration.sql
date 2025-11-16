@@ -40,4 +40,19 @@ BEGIN
         ALTER TABLE public.archive_data DROP COLUMN "date";
         RAISE NOTICE 'Dropped old "date" column after migrating data';
     END IF;
+
+    -- Ensure archive_data.data column is nullable and has a safe default
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'archive_data'
+        AND column_name = 'data'
+        AND table_schema = 'public'
+    ) THEN
+        -- Set a default empty JSON object if not already set
+        ALTER TABLE public.archive_data
+            ALTER COLUMN data DROP NOT NULL,
+            ALTER COLUMN data SET DEFAULT '{}'::jsonb;
+
+        RAISE NOTICE 'Updated archive_data.data column to be nullable with default {}';
+    END IF;
 END $$;
