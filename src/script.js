@@ -1285,7 +1285,7 @@ async function checkDatabaseConnection() {
             .from('archive_data')
             .select('*')
             .eq('user_id', user.id)
-            .eq('data', dateStr)
+            .eq('archive_date', dateStr)
             .order('shop', { ascending: true });
 
           if (error) {
@@ -1471,7 +1471,7 @@ async function checkDatabaseConnection() {
             .select('*')
             .eq('user_id', user.id)
             .or(`shop.ilike.%${query}%,code.ilike.%${query}%`)
-            .order('data', { ascending: false });
+            .order('archive_date', { ascending: false });
 
           if (error) {
             console.error('خطأ في البحث في قاعدة البيانات:', error);
@@ -1484,7 +1484,7 @@ async function checkDatabaseConnection() {
               const tr = document.createElement("tr");
               const netValue = item.collector - (item.extra + item.amount);
               tr.innerHTML = `
-                <td>${item.data}</td>
+                <td>${item.archive_date}</td>
                 <td class="shop">${item.shop}</td>
                 <td>${item.code}</td>
                 <td>${formatNumber(item.amount || 0)}</td>
@@ -1990,7 +1990,7 @@ async function checkDatabaseConnection() {
             // تحضير البيانات لقاعدة البيانات (بدون المسلسل)
             supabaseData.push({
               user_id: user.id,
-              data: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+              archive_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
               shop: cells[1] || "",
               code: cells[2] || "",
               amount: amount,
@@ -2019,7 +2019,7 @@ async function checkDatabaseConnection() {
                 .from('archive_data')
                 .delete()
                 .eq('user_id', user.id)
-                .eq('data', new Date().toISOString().split('T')[0]);
+                .eq('archive_date', new Date().toISOString().split('T')[0]);
 
               // ثم إدراج البيانات الجديدة
               const { data, error } = await supabase
@@ -2091,13 +2091,13 @@ async function checkDatabaseConnection() {
           try {
             const { data, error } = await supabase
               .from('archive_data')
-              .select('data')
+              .select('archive_date')
               .eq('user_id', user.id);
 
             if (error) {
               console.error('خطأ في جلب التواريخ من قاعدة البيانات:', error);
             } else {
-              dbDates = data ? data.map(item => item.data) : [];
+              dbDates = data ? data.map(item => item.archive_date) : [];
             }
           } catch (err) {
             console.error('خطأ في الاتصال بقاعدة البيانات:', err);
@@ -2202,7 +2202,7 @@ async function checkDatabaseConnection() {
                   .from('archive_data')
                   .select('id')
                   .eq('user_id', user.id)
-                  .eq('data', dateStr)
+                  .eq('archive_date', dateStr)
                   .limit(1);
 
                 console.log('Existing data check:', { existingData, checkError });
@@ -2219,7 +2219,7 @@ async function checkDatabaseConnection() {
                     .from('archive_data')
                     .delete()
                     .eq('user_id', user.id)
-                    .eq('data', dateStr);
+                    .eq('archive_date', dateStr);
 
                   console.log('Delete result:', { data, error });
 
