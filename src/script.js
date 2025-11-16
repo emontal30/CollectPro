@@ -62,6 +62,23 @@ function isOnline() {
   return navigator.onLine;
 }
 
+// تحويل تاريخ من DD/MM/YYYY إلى YYYY-MM-DD لاستخدامه مع حقول DATE في قاعدة البيانات
+function toIsoDate(dateStr) {
+  if (!dateStr) return dateStr;
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      if (year && month && day) {
+        const mm = month.padStart(2, "0");
+        const dd = day.padStart(2, "0");
+        return `${year}-${mm}-${dd}`;
+      }
+    }
+  }
+  return dateStr;
+}
+
 // دالة للتحقق من إمكانية الوصول لقاعدة البيانات
 async function checkDatabaseConnection() {
   if (!isOnline()) return false;
@@ -76,13 +93,16 @@ async function checkDatabaseConnection() {
     return false;
   }
 }
-  function formatNumber(n) {
+
+// دالة للتحويل إلى تنسيق الأرقام المحلي
+function formatNumber(n) {
     const num = parseNumber(n);
     return num.toLocaleString("en-US", { 
       minimumFractionDigits: 0,
       maximumFractionDigits: 0 
     });
   }
+
   function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -94,6 +114,7 @@ async function checkDatabaseConnection() {
       timeout = setTimeout(later, wait);
     };
   }
+
   /* ========== Custom Modal ========== */
   function showModal(title, message, onConfirm, onCancel) {
     const existingModal = document.querySelector('.modal');
@@ -132,6 +153,7 @@ async function checkDatabaseConnection() {
       }
     };
   }
+
   /* ========== Alert System ========== */
   function showAlert(message, type = 'info') {
     const alertContainer = document.getElementById('alert-container');
@@ -153,11 +175,13 @@ async function checkDatabaseConnection() {
       setTimeout(() => alert.remove(), 500);
     }, 5000);
   }
+
   /* ========== Dark Mode ========== */
   function applyDarkModeFromStorage() {
     const isDarkMode = localStorage.getItem("darkMode") === "on";
     document.body.classList.toggle("dark", isDarkMode);
   }
+
   /* ========== Zoom/Font Size Control ========== */
   function migrateOldZoomLevel(oldLevel) {
     // تحويل المستويات القديمة إلى الجديدة
@@ -272,6 +296,7 @@ async function checkDatabaseConnection() {
       showAlert(messages[nextZoom] || `حجم ${nextZoom}`, "info");
     }
   }
+
   /* ========== Clipboard ========== */
   async function pasteInto(el) {
     if (!el) return;
@@ -283,6 +308,7 @@ async function checkDatabaseConnection() {
       if (manual !== null) el.value = manual;
     }
   }
+
   /* ========== Minus Toggle Helper ========== */
   function injectMinusToggle(input) {
     if (!input || input.dataset.minusBtn === '1') return;
@@ -310,6 +336,11 @@ async function checkDatabaseConnection() {
     });
     if (input.parentElement) input.parentElement.appendChild(btn);
   }
+
+  function ensureExtraMinusButtons() {
+    document.querySelectorAll('#harvestTable .extra').forEach(injectMinusToggle);
+  }
+
   /* ========== Clear Functions ========== */
   function clearIndexFields() {
     const dataInput = document.getElementById("dataInput");
@@ -323,6 +354,7 @@ async function checkDatabaseConnection() {
       showAlert("تم تفريغ حقل إدخال البيانات!", "success");
     }
   }
+
   // ======== تعديل رئيسي: دالة مسح حقول التحصيل ========
   function clearHarvestFields() {
     showModal(
@@ -354,32 +386,64 @@ async function checkDatabaseConnection() {
       }
     );
   }
+
   /* ========== دالة جديدة للتحقق من وجود بيانات في صفحة التحصيل ========== */
   function hasHarvestData() {
     const tbody = document.querySelector("#harvestTable tbody");
     if (!tbody) return false;
-    
+
     const rows = Array.from(tbody.querySelectorAll("tr"));
-    
-    // التحقق من وجود أكثر من صف واحد (الصف الفارغ)
+
+    // إذا كان لا يوجد إلا صف واحد (مثلاً صف فارغ)، اعتبره بدون بيانات
     if (rows.length <= 1) return false;
-    
-    // التحقق من وجود بيانات في أي صف
+
+    let totalExtra = 0;
+    let totalCollector = 0;
+
     for (const row of rows) {
       if (row.id === "totalRow") continue;
-      
-      const shop = row.querySelector(".shop")?.innerText.trim();
-      const code = row.querySelector(".code")?.innerText.trim();
-      const extra = row.querySelector(".extra")?.value;
-      const collector = row.querySelector(".collector")?.value;
-      
-      if (shop || code || extra || collector) {
-        return true;
-      }
+
+      const extraVal = parseNumber(row.querySelector(".extra")?.value || 0);
+      const collectorVal = parseNumber(row.querySelector(".collector")?.value || 0);
+
+      totalExtra += extraVal;
+      totalCollector += collectorVal;
     }
-    
-    return false;
+
+    // عرض رسالة التأكيد فقط إذا كان مجموع عمود "أخرى" أو "المحصّل" أكبر من صفر
+    return totalExtra > 0 || totalCollector > 0;
   }
+
+  /* ========== دالة جديدة للتحقق من وجود بيانات محفوظة لجدول التحصيل في التخزين ========== */
+  function hasStoredHarvestData() {
+    try {
+      const saved = localStorage.getItem("rowData");
+      if (!saved) return false;
+
+      let totalExtra = 0;
+      let totalCollector = 0;
+
+      const lines = saved.split("\n");
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        const parts = line.split("\t");
+        if (parts.length < 6) continue;
+
+        const extra = parseNumber(parts[4] || "0");
+        const collector = parseNumber(parts[5] || "0");
+
+        totalExtra += extra;
+        totalCollector += collector;
+      }
+
+      return totalExtra > 0 || totalCollector > 0;
+    } catch (e) {
+      console.error("Failed to check stored harvest data", e);
+      return false;
+    }
+  }
+
   /* ========== دالة جديدة لمسح بيانات صفحة التحصيل مع الحفاظ على ليميت الماستر ========== */
   function clearHarvestTable() {
     const mlEl = document.getElementById("masterLimit");
@@ -400,6 +464,7 @@ async function checkDatabaseConnection() {
       if (mlEl) mlEl.value = mlVal;
     }
   }
+
   /* ========== Navigation ========== */
   // ======== تعديل رئيسي: دالة التنقل بين الصفحات ========
   function navigateTo(page) {
@@ -438,6 +503,46 @@ async function checkDatabaseConnection() {
       window.location.href = `${page}.html`;
     }
   }
+
+  function handleSaveAndGo(dataInput) {
+    const data = dataInput.value.trim();
+    if (!data) {
+      showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
+      return;
+    }
+
+    function proceed() {
+      localStorage.setItem("clientData", data);
+      navigateTo("harvest");
+    }
+
+    function checkExistingAndProceed() {
+      if (hasStoredHarvestData()) {
+        showModal(
+          "تنبيه",
+          "يوجد بيانات في صفحة التحصيلات. إذا واصلت سيتم استبدالها بالبيانات الجديدة.<br><span class=\"modal-note\">ملاحظة: يُفضل أرشفة صفحة التحصيلات قبل الاستبدال إن كانت تحتوي على بيانات مهمة.</span><br><br>هل تريد الاستمرار على أي حال؟",
+          () => {
+            proceed();
+          }
+        );
+      } else {
+        proceed();
+      }
+    }
+
+    if (!data.startsWith("المسلسل")) {
+      showModal(
+        "تأكيد",
+        "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات؟",
+        () => {
+          checkExistingAndProceed();
+        }
+      );
+    } else {
+      checkExistingAndProceed();
+    }
+  }
+
   /* ========== Navigation Arrows ========== */
   function setupNavigationArrows() {
     // إزالة وظائف أزرار التنقل السفلي
@@ -451,6 +556,7 @@ async function checkDatabaseConnection() {
       nextBtn.remove();
     }
   }
+
   /* ========== Storage Functions ========== */
   function tbodyToStorage() {
     const tbody = document.querySelector("#harvestTable tbody");
@@ -473,6 +579,7 @@ async function checkDatabaseConnection() {
       })
       .join("\n");
   }
+
   // ======== تعديل رئيسي: دالة تحميل البيانات من التخزين ========
   function loadRowsFromStorage() {
     // أولاً: تحقق من البيانات الجديدة (harvestData)
@@ -538,7 +645,7 @@ async function checkDatabaseConnection() {
 
         // تطبيق نوع الصف الصحيح
         if (rowType === 'E') {
-          tr.classList.add('editable-row');
+          tr.classList.add('editable-row'); // إضافة فئة للتمييز
           tr.innerHTML = `
             <td class="serial">${i + 1}</td>
             <td contenteditable="true" class="shop editable">${shop}</td>
@@ -633,6 +740,7 @@ async function checkDatabaseConnection() {
     
     return false;
   }
+
   /* ========== دالة جديدة لتحميل بيانات الحصاد من التخزين ========== */
   function loadHarvestDataFromStorage(harvestData, tbody) {
     tbody.innerHTML = "";
@@ -695,6 +803,7 @@ async function checkDatabaseConnection() {
 
     return true;
   }
+
   /* ========== Table Column Settings (Show/Hide) ========== */
   function applyColumnVisibility(table, settings, columns) {
     if (!table) return;
@@ -703,6 +812,7 @@ async function checkDatabaseConnection() {
       table.classList.toggle(`hide-col-${col.key}`, hidden);
     });
   }
+
   function loadColumnSettings(storageKey, columns) {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -717,9 +827,11 @@ async function checkDatabaseConnection() {
       return Object.fromEntries(columns.map(c => [c.key, true]));
     }
   }
+
   function saveColumnSettings(storageKey, settings) {
     try { localStorage.setItem(storageKey, JSON.stringify(settings)); } catch(_) {}
   }
+
   function setupTableSettings(tableId, storageKey, columns) {
     const table = document.getElementById(tableId);
     if (!table) {
@@ -865,53 +977,57 @@ async function checkDatabaseConnection() {
     const cursorPosition = input.selectionStart;
     const originalValue = input.value;
 
-    // 1. تذكر إذا كان سالبًا (لكن لن نسمح بالسالب في عمود المحصل)
-    const isNegative = originalValue.startsWith('-');
+    // هل هذا الحقل يسمح بالسالب؟
+    const allowNegative = input.dataset.allowNegative === '1';
+    const isNegative = allowNegative && originalValue.trim().startsWith('-');
 
-    // 2. إزالة أي فواصل أو أحرف غير رقمية
+    // إزالة أي فواصل أو أحرف غير رقمية مع الإبقاء على السالب منطقياً فقط
     let value = originalValue.replace(/[^\d]/g, '');
 
-    // إذا كانت القيمة فارغة، تعامل معها
+    // إذا كانت القيمة فارغة
     if (value === '') {
-      input.value = '';
+      // إذا المستخدم ضغط فقط "-" في حقل يسمح بالسالب، اتركها
+      input.value = isNegative ? '-' : '';
       return;
     }
 
     // تنسيق الرقم مع الفواصل
     const formatted = formatNumber(value);
 
-    // 3. تحديث قيمة الحقل (بدون السالب لعمود المحصل)
-    const finalValue = formatted;
+    // إعادة بناء القيمة النهائية مع السالب إذا كان مسموحًا وموجودًا
+    const finalValue = (allowNegative && isNegative) ? ('-' + formatted) : formatted;
 
     // لا تقم بتحديث إذا لم تتغير القيمة لتجنب مشاكل المؤشر
     if (input.value === finalValue) {
-        return;
+      return;
     }
 
     input.value = finalValue;
 
     // استعادة موضع المؤشر (محاولة مبسطة)
     const diff = finalValue.length - originalValue.length;
-    // تأكد من أن موضع المؤشر الجديد صالح
     const newCursorPosition = Math.max(0, Math.min(finalValue.length, cursorPosition + diff));
 
     try {
-      // وضع المؤشر في مكان آمن
       input.setSelectionRange(newCursorPosition, newCursorPosition);
-    } catch(e) {
-      // تجاهل الأخطاء ووضع المؤشر في النهاية
-      try { input.setSelectionRange(finalValue.length, finalValue.length); } catch(e) {}
+    } catch (e) {
+      try { input.setSelectionRange(finalValue.length, finalValue.length); } catch (_) {}
     }
   }
+
   function setupNumberInputFormatting(input, allowNegative = false) {
     input.type = 'text';
     input.setAttribute('inputmode', 'decimal');
     input.setAttribute('pattern', allowNegative ? '^-?[0-9,]*$' : '^[0-9,]*$');
+
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('autocorrect', 'off');
     input.setAttribute('autocapitalize', 'off');
     input.setAttribute('spellcheck', 'false');
     input.setAttribute('dir', 'ltr');
+
+    // تخزين سماحية السالب على مستوى الحقل لاستخدامها في formatNumberInput
+    input.dataset.allowNegative = allowNegative ? '1' : '0';
 
     formatNumberInput(input);
 
@@ -938,6 +1054,7 @@ async function checkDatabaseConnection() {
       formatNumberInput(this);
     });
   }
+
   /* ========== Table Functions ========== */
   function attachRowListeners(row) {
     if (!row || row.dataset.attached === "1") return;
@@ -1080,6 +1197,7 @@ async function checkDatabaseConnection() {
       }
     }
   }
+
   function addEmptyRow() {
     const tbody = document.querySelector("#harvestTable tbody");
     if (!tbody) return;
@@ -1104,6 +1222,7 @@ async function checkDatabaseConnection() {
     
     attachRowListeners(tr);
   }
+
   function ensureAddRowIfLast(row) {
     const tbody = row.parentElement;
     if (!tbody) return;
@@ -1124,7 +1243,7 @@ async function checkDatabaseConnection() {
       }
     }
   }
-  
+
   function addFinalEmptyRowIfNeeded() {
     const tbody = document.querySelector("#harvestTable tbody");
     if (!tbody) return;
@@ -1148,6 +1267,7 @@ async function checkDatabaseConnection() {
       addEmptyRow();
     }
   }
+
   function updateTotals() {
     updateTotalsImmediate();
   }
@@ -1281,11 +1401,12 @@ async function checkDatabaseConnection() {
       const isDbConnected = await checkDatabaseConnection();
       if (isDbConnected) {
         try {
+          const isoDate = toIsoDate(dateStr);
           const { data, error } = await supabase
             .from('archive_data')
             .select('*')
             .eq('user_id', user.id)
-            .eq('archive_date', dateStr)
+            .eq('archive_date', isoDate)
             .order('shop', { ascending: true });
 
           if (error) {
@@ -1328,7 +1449,7 @@ async function checkDatabaseConnection() {
       const tr = document.createElement("tr");
       const netValue = parseNumber(parts[5] || 0);
       tr.innerHTML = `
-        <td>${dateStr}</td>
+        <td style="white-space: nowrap;">${dateStr}</td>
         <td class="shop">${parts[0] || ""}</td>
         <td>${parts[1] || ""}</td>
         <td>${formatNumber(parts[2] || 0)}</td>
@@ -1407,6 +1528,7 @@ async function checkDatabaseConnection() {
       });
     }
   }
+
   async function searchArchive(query) {
     const archiveTable = document.querySelector("#archiveTable tbody");
 
@@ -1443,7 +1565,7 @@ async function checkDatabaseConnection() {
           const tr = document.createElement("tr");
           const netValue = parseNumber(parts[5] || 0);
           tr.innerHTML = `
-            <td>${date}</td>
+            <td style="white-space: nowrap;">${date}</td>
             <td class="shop">${shop}</td>
             <td>${code}</td>
             <td>${formatNumber(parts[2] || 0)}</td>
@@ -1484,7 +1606,7 @@ async function checkDatabaseConnection() {
               const tr = document.createElement("tr");
               const netValue = item.collector - (item.extra + item.amount);
               tr.innerHTML = `
-                <td>${item.archive_date}</td>
+                <td style="white-space: nowrap;">${item.archive_date}</td>
                 <td class="shop">${item.shop}</td>
                 <td>${item.code}</td>
                 <td>${formatNumber(item.amount || 0)}</td>
@@ -1675,26 +1797,14 @@ async function checkDatabaseConnection() {
 
         // زر حفظ وانتقال
         const saveGoBtn = document.getElementById("saveGoBtn");
-        if (saveGoBtn) {
+        if (saveGoBtn && dataInput && !saveGoBtn.dataset.saveGoInit) {
           console.log("Initializing save and go button");
+          saveGoBtn.dataset.saveGoInit = "1";
           saveGoBtn.addEventListener("click", () => {
             console.log("Save and Go button clicked");
-            const data = dataInput.value.trim();
-            if (!data) {
-              showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
-              return;
-            }
-            if (!data.startsWith("المسلسل")) {
-              showModal("تأكيد", "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات?", () => {
-                localStorage.setItem("clientData", data);
-                navigateTo("harvest");
-              });
-              return;
-            }
-            localStorage.setItem("clientData", data);
-            navigateTo("harvest");
+            handleSaveAndGo(dataInput);
           });
-        } else {
+        } else if (!saveGoBtn) {
           console.error("saveGoBtn not found");
         }
 
@@ -1795,23 +1905,11 @@ async function checkDatabaseConnection() {
 
       const saveGoBtn = document.getElementById("saveGoBtn");
       console.log("saveGoBtn found:", !!saveGoBtn);
-      if (saveGoBtn) {
+      if (saveGoBtn && !saveGoBtn.dataset.saveGoInit) {
+        saveGoBtn.dataset.saveGoInit = "1";
         saveGoBtn.addEventListener("click", () => {
           console.log("Save and Go button clicked");
-          const data = dataInput.value.trim();
-          if (!data) {
-            showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
-            return;
-          }
-          if (!data.startsWith("المسلسل")) {
-            showModal("تأكيد", "البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات?", () => {
-              localStorage.setItem("clientData", data);
-              navigateTo("harvest");
-            });
-            return;
-          }
-          localStorage.setItem("clientData", data);
-          navigateTo("harvest");
+          handleSaveAndGo(dataInput);
         });
       }
 
@@ -1965,85 +2063,104 @@ async function checkDatabaseConnection() {
             return;
           }
 
-          const archiveData = [];
-          const supabaseData = [];
+          async function performArchive() {
+            const archiveData = [];
+            const supabaseData = [];
 
-          rows.forEach((r) => {
-            if (r.id === "totalRow") return;
+            rows.forEach((r) => {
+              if (r.id === "totalRow") return;
 
-            const cells = Array.from(r.children).map((td) => {
-              const inp = td.querySelector("input");
-              return inp ? inp.value : td.innerText;
+              const cells = Array.from(r.children).map((td) => {
+                const inp = td.querySelector("input");
+                return inp ? inp.value : td.innerText;
+              });
+
+              // إضافة قيمة الصافي المحسوبة
+              const amount = parseNumber(cells[3]);
+              const extra = parseNumber(cells[4]);
+              const collector = parseNumber(cells[5]);
+              const net = collector - (extra + amount);
+              cells.push(net.toString());
+
+              // استثناء عمود المسلسل (الخلية الأولى) من البيانات المحفوظة محلياً
+              const archiveCells = cells.slice(1); // إزالة الخلية الأولى (المسلسل)
+              archiveData.push(archiveCells.join("\t"));
+
+              // تحضير البيانات لقاعدة البيانات (بدون المسلسل)
+              supabaseData.push({
+                user_id: user.id,
+                archive_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                shop: cells[1] || "",
+                code: cells[2] || "",
+                amount: amount,
+                extra: extra,
+                collector: collector
+              });
             });
 
-            // إضافة قيمة الصافي المحسوبة
-            const amount = parseNumber(cells[3]);
-            const extra = parseNumber(cells[4]);
-            const collector = parseNumber(cells[5]);
-            const net = collector - (extra + amount);
-            cells.push(net.toString());
-
-            // استثناء عمود المسلسل (الخلية الأولى) من البيانات المحفوظة محلياً
-            const archiveCells = cells.slice(1); // إزالة الخلية الأولى (المسلسل)
-            archiveData.push(archiveCells.join("\t"));
-
-            // تحضير البيانات لقاعدة البيانات (بدون المسلسل)
-            supabaseData.push({
-              user_id: user.id,
-              archive_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-              shop: cells[1] || "",
-              code: cells[2] || "",
-              amount: amount,
-              extra: extra,
-              collector: collector
+            const today = new Date().toLocaleDateString("en-GB", {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
             });
-          });
 
-          const today = new Date().toLocaleDateString("en-GB", {
+            // حفظ محلياً أولاً
+            const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+            archive[today] = archiveData.join("\n");
+            localStorage.setItem("archiveData", JSON.stringify(archive));
+
+            // حفظ في قاعدة البيانات إذا كان الاتصال متاحاً
+            const isDbConnected = await checkDatabaseConnection();
+            if (isDbConnected) {
+              try {
+                // حذف البيانات القديمة لنفس التاريخ أولاً (للاستبدال)
+                await supabase
+                  .from('archive_data')
+                  .delete()
+                  .eq('user_id', user.id)
+                  .eq('archive_date', new Date().toISOString().split('T')[0]);
+
+                // ثم إدراج البيانات الجديدة
+                const { data, error } = await supabase
+                  .from('archive_data')
+                  .insert(supabaseData);
+
+                if (error) {
+                  console.error('خطأ في حفظ الأرشيف:', error);
+                  console.error('Error details:', {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code
+                  });
+                  showAlert(`⚠️ تم الحفظ محلياً فقط. خطأ في قاعدة البيانات: ${error.message}`, "warning");
+                } else {
+                  showAlert("✅ تم أرشفة بيانات اليوم بالكامل محلياً وعلى قاعدة البيانات .", "success");
+                }
+              } catch (err) {
+                console.error('خطأ في الاتصال بقاعدة البيانات:', err);
+                showAlert("⚠️ تم الحفظ محلياً فقط. تحقق من الاتصال بالإنترنت.", "warning");
+              }
+            } else {
+              showAlert("📱 تم الحفظ محلياً فقط. سيتم مزامنة البيانات مع قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
+            }
+          }
+
+          const todayKey = new Date().toLocaleDateString("en-GB", {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
           });
+          const existingArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
 
-          // حفظ محلياً أولاً
-          const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
-          archive[today] = archiveData.join("\n");
-          localStorage.setItem("archiveData", JSON.stringify(archive));
-
-          // حفظ في قاعدة البيانات إذا كان الاتصال متاحاً
-          const isDbConnected = await checkDatabaseConnection();
-          if (isDbConnected) {
-            try {
-              // حذف البيانات القديمة لنفس التاريخ أولاً (للاستبدال)
-              await supabase
-                .from('archive_data')
-                .delete()
-                .eq('user_id', user.id)
-                .eq('archive_date', new Date().toISOString().split('T')[0]);
-
-              // ثم إدراج البيانات الجديدة
-              const { data, error } = await supabase
-                .from('archive_data')
-                .insert(supabaseData);
-
-              if (error) {
-                console.error('خطأ في حفظ الأرشيف:', error);
-                console.error('Error details:', {
-                  message: error.message,
-                  details: error.details,
-                  hint: error.hint,
-                  code: error.code
-                });
-                showAlert(`⚠️ تم الحفظ محلياً فقط. خطأ في قاعدة البيانات: ${error.message}`, "warning");
-              } else {
-                showAlert("✅ تم أرشفة بيانات اليوم بالكامل محلياً وقاعدة البيانات (تم الاستبدال إذا كانت موجودة مسبقاً)!", "success");
-              }
-            } catch (err) {
-              console.error('خطأ في الاتصال بقاعدة البيانات:', err);
-              showAlert("⚠️ تم الحفظ محلياً فقط. تحقق من الاتصال بالإنترنت.", "warning");
-            }
+          if (existingArchive[todayKey]) {
+            showModal(
+              "تأكيد الاستبدال",
+              `يوجد أرشيف سابق ليوم ${todayKey}. هل تريد استبداله بالبيانات الحالية؟`,
+              () => { performArchive(); }
+            );
           } else {
-            showAlert("📱 تم الحفظ محلياً فقط. سيتم مزامنة البيانات مع قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
+            await performArchive();
           }
         });
       }
@@ -2059,18 +2176,12 @@ async function checkDatabaseConnection() {
       document.getElementById("goToInputBtn")?.addEventListener("click", () => {
         navigateTo("dashboard");
       });
-      
       document.getElementById("masterLimit")?.addEventListener("input", (e) => {
         localStorage.setItem("masterLimit", e.target.value || "0");
         updateTotalsImmediate();
       });
-
-      document.getElementById("currentBalance")?.addEventListener("input", () => {
-        updateTotalsImmediate();
-      });
-      addFinalEmptyRowIfNeeded();
     }
-    
+
     // Archive page elements
     const archiveSelect = document.getElementById("archiveSelect");
     if (archiveSelect) {
@@ -2090,9 +2201,10 @@ async function checkDatabaseConnection() {
         if (isDbConnected) {
           try {
             const { data, error } = await supabase
-              .from('archive_data')
+              .from('archive_dates')
               .select('archive_date')
-              .eq('user_id', user.id);
+              .eq('user_id', user.id)
+              .order('archive_date', { ascending: true });
 
             if (error) {
               console.error('خطأ في جلب التواريخ من قاعدة البيانات:', error);
@@ -2165,7 +2277,7 @@ async function checkDatabaseConnection() {
           loadArchive(lastDate);
         }, 100);
       } else if (lastSearch) {
-        searchInput.value = lastSearch;
+        if (searchInput) searchInput.value = lastSearch;
         searchArchive(lastSearch);
       }
       
@@ -2197,12 +2309,13 @@ async function checkDatabaseConnection() {
               const isDbConnected = await checkDatabaseConnection();
               if (isDbConnected) {
                 // أولاً، تحقق من وجود البيانات
-                console.log('Checking data before delete:', { user_id: user.id, data: dateStr });
+                const isoDate = toIsoDate(dateStr);
+                console.log('Checking data before delete:', { user_id: user.id, dateStr, isoDate });
                 const { data: existingData, error: checkError } = await supabase
                   .from('archive_data')
                   .select('id')
                   .eq('user_id', user.id)
-                  .eq('archive_date', dateStr)
+                  .eq('archive_date', isoDate)
                   .limit(1);
 
                 console.log('Existing data check:', { existingData, checkError });
@@ -2214,12 +2327,12 @@ async function checkDatabaseConnection() {
                   console.log('لا توجد بيانات في قاعدة البيانات لحذفها');
                   showAlert("ℹ️ البيانات غير موجودة في قاعدة البيانات، تم الحذف من التخزين المحلي فقط.", "info");
                 } else {
-                  console.log('Deleting from database:', { user_id: user.id, data: dateStr });
+                  console.log('Deleting from database:', { user_id: user.id, dateStr, isoDate });
                   const { data, error } = await supabase
                     .from('archive_data')
                     .delete()
                     .eq('user_id', user.id)
-                    .eq('archive_date', dateStr);
+                    .eq('archive_date', isoDate);
 
                   console.log('Delete result:', { data, error });
 

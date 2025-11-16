@@ -509,6 +509,16 @@ th.net, td.net {
   font-weight: bold !important;
 }
 
+/* عرض التاريخ كاملًا في أول عمود من جدول الأرشيف */
+#archiveTable th:first-child,
+#archiveTable td:first-child {
+  white-space: nowrap !important;
+  overflow: hidden !important;       /* لا نسمح للنص بالخروج خارج العمود */
+  text-overflow: clip !important;    /* بدون علامات ... على التاريخ */
+  width: 110px !important;          /* عرض أكبر من الافتراضي ليستوعب التاريخ كاملًا */
+  min-width: 110px !important;
+}
+
 /* استجابة تدريجية لجميع الأعمدة */
 @media (max-width: 1400px) {
   th.serial, td.serial { width: 45px; min-width: 45px; }
@@ -1419,6 +1429,19 @@ body.dark #totalRow td, body.dark .total-row td {
 .modal p {
   margin: 15px 0;
   line-height: 1.6;
+}
+
+/* ملاحظة داخل النافذة المنبثقة (لون وتحذير مختلف) */
+.modal-note {
+  display: block;
+  margin-top: 8px;
+  color: #e67e22;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+body.dark .modal-note {
+  color: #ffb74d;
 }
 .modal-buttons {
   display: flex;
