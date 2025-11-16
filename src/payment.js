@@ -237,6 +237,18 @@ async function handlePaymentSubmit(e, plan) {
       }
     }
 
+    // Step 2.5: حذف أي طلبات اشتراك معلقة سابقة لنفس المستخدم لمنع التكرار
+    const { error: pendingDeleteError } = await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+
+    if (pendingDeleteError) {
+      console.error('Error cleaning pending subscriptions:', pendingDeleteError);
+      // لا نوقف العملية، نكمل إدخال الاشتراك الجديد
+    }
+
     // Step 3: Insert the subscription
     const { error: subscriptionError } = await supabase
       .from('subscriptions')

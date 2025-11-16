@@ -336,6 +336,9 @@ ALTER TABLE public.archive_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 
+-- Enable RLS on admins table (policies dropped below)
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+
 -- Drop existing policies
 DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
@@ -344,8 +347,10 @@ DROP POLICY IF EXISTS "Admins can view all users" ON public.users;
 DROP POLICY IF EXISTS "Users can view own subscriptions" ON public.subscriptions;
 DROP POLICY IF EXISTS "Users can insert own subscriptions" ON public.subscriptions;
 DROP POLICY IF EXISTS "Users can update own subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS "Users can delete own subscriptions" ON public.subscriptions;
 DROP POLICY IF EXISTS "Admins can view all subscriptions" ON public.subscriptions;
 DROP POLICY IF EXISTS "Admins can update all subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS "Admins can delete all subscriptions" ON public.subscriptions;
 
 DROP POLICY IF EXISTS "Users can view own archive dates" ON public.archive_dates;
 DROP POLICY IF EXISTS "Users can insert own archive dates" ON public.archive_dates;
@@ -362,6 +367,9 @@ DROP POLICY IF EXISTS "Admins can read statistics" ON public.statistics;
 
 DROP POLICY IF EXISTS "Anyone can view active plans" ON public.subscription_plans;
 DROP POLICY IF EXISTS "Admins can manage plans" ON public.subscription_plans;
+
+DROP POLICY IF EXISTS "Admins can view their own data" ON public.admins;
+DROP POLICY IF EXISTS "Service role can manage admins" ON public.admins;
 
 -- RLS Policies for users
 CREATE POLICY "Users can view own profile" ON public.users 
@@ -389,12 +397,20 @@ CREATE POLICY "Users can update own subscriptions" ON public.subscriptions
     FOR UPDATE 
     USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can delete own subscriptions" ON public.subscriptions 
+    FOR DELETE 
+    USING (auth.uid() = user_id);
+
 CREATE POLICY "Admins can view all subscriptions" ON public.subscriptions 
     FOR SELECT 
     USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 CREATE POLICY "Admins can update all subscriptions" ON public.subscriptions 
     FOR UPDATE 
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+
+CREATE POLICY "Admins can delete all subscriptions" ON public.subscriptions 
+    FOR DELETE 
     USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 -- RLS Policies for archive_dates
@@ -669,9 +685,6 @@ GRANT SELECT ON public.admin_subscriptions_view TO service_role;
 -- =====================================================
 -- ADMINS TABLE POLICIES
 -- =====================================================
-
--- Enable RLS on admins table
-ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
 -- Policy for admins to read their own data
 CREATE POLICY "Admins can view their own data" ON public.admins

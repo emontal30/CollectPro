@@ -69,22 +69,20 @@ async function populateUserData() {
             return;
         }
 
-        // التحقق من وجود اشتراك للمستخدم
-        const { data: existingSubscription } = await supabase
+        // التحقق من وجود اشتراك للمستخدم (لأغراض السجل فقط)
+        const { data: existingSubscription, error: subError } = await supabase
             .from('subscriptions')
             .select('id')
             .eq('user_id', user.id)
             .limit(1)
-            .single();
+            .maybeSingle();
 
-        // إذا لم يكن لدى المستخدم اشتراك، أنشئ اشتراك تجريبي
-        if (!existingSubscription) {
-            console.log('No subscription found for user, creating test subscription');
-            await createTestSubscription(user.id);
-        } else {
-            // تحديث معلومات الاشتراك الموجودة
-            await updateSubscriptionInfo();
+        if (subError && subError.code !== 'PGRST116') {
+            console.error('Failed to check existing subscription:', subError);
         }
+
+        // لم نعد ننشئ اشتراكاً تجريبياً تلقائياً؛ فقط نحدّث معلومات الاشتراك الحالية أو نعرض عدم وجود اشتراك
+        await updateSubscriptionInfo();
 
         updateUserDisplay(user);
 

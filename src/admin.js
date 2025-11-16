@@ -353,8 +353,10 @@ async function loadPendingSubscriptions() {
         const formattedData = pendingData.map(sub => ({
             id: sub.id,
             user_id: sub.user_id,
-            user_name: sub.users ? (sub.users.full_name || sub.users.email) : '',
-            email: sub.users ? sub.users.email : '',
+            user_name: sub.users
+                ? (sub.users.full_name || sub.users.email || (sub.user_id || '').slice(0, 8))
+                : ((sub.user_id || '').slice(0, 8)),
+            email: sub.users && sub.users.email ? sub.users.email : '',
             plan_id: sub.plan_id,
             plan_name: sub?.subscription_plans?.name || '',
             plan_name_ar: sub?.subscription_plans?.name_ar || '',
@@ -438,8 +440,10 @@ async function loadAllSubscriptions() {
         const formattedData = viewData.map(sub => ({
             id: sub.id || '',
             user_id: sub.user_id || '',
-            user_name: sub.users ? (sub.users.full_name || sub.users.email || 'مستخدم غير معروف') : 'مستخدم غير معروف',
-            email: sub.users ? sub.users.email : 'غير متوفر',
+            user_name: sub.users
+                ? (sub.users.full_name || sub.users.email || (sub.user_id || '').slice(0, 8))
+                : ((sub.user_id || '').slice(0, 8)),
+            email: sub.users && sub.users.email ? sub.users.email : '',
             plan_id: sub.plan_id || '',
             plan_name: sub?.subscription_plans?.name || 'خطة غير معروفة',
             plan_name_ar: sub?.subscription_plans?.name_ar || 'خطة غير معروفة',
@@ -525,8 +529,8 @@ function createRowHtml(sub, isPending) {
 
     let rowContent = `
       <td class="col-id ellipsis" title="${sub.user_id || ''}">${userIdShort}</td>
-        <td class="ellipsis" title="${sub.user_name || ''}">${sub.user_name || 'غير محدد'}</td>
-        <td class="col-email ellipsis" title="${sub.email || ''}"><a href="mailto:${sub.email || ''}" class="email-link">${sub.email || 'غير متوفر'}</a></td>
+        <td class="ellipsis" title="${sub.user_name || ''}">${sub.user_name || ''}</td>
+        <td class="col-email ellipsis" title="${sub.email || ''}"><a href="mailto:${sub.email || ''}" class="email-link">${sub.email || ''}</a></td>
         <td class="ellipsis" title="${planName}">${planName}</td>
         <td class="num ltr ellipsis" title="${sub.transaction_id || ''}">${transactionId}</td>
         ${isPending ? `<td class="ellipsis">${formatDate(sub.created_at)}</td>` : `<td class="ellipsis">${formatDate(sub.start_date)}</td><td class="ellipsis">${formatDate(sub.end_date)}</td><td>${statusBadge}</td>`}
@@ -717,14 +721,23 @@ async function activateSubscription(subscriptionId) {
 
 async function cancelSubscription(subscriptionId) {
     try {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('subscriptions')
             .delete()
-            .eq('id', subscriptionId);
+            .eq('id', subscriptionId)
+            .select('id')
+            .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+            logDatabaseError('cancelSubscription', error, { subscriptionId });
+            throw error;
+        }
 
-        showAlert('🗑️ تم رفض وحذف طلب الاشتراك', 'success');
+        if (!data) {
+            showAlert('⚠️ لم يتم العثور على الاشتراك لرفضه أو لا تملك صلاحية الحذف.', 'warning');
+        } else {
+            showAlert('🗑️ تم رفض وحذف طلب الاشتراك', 'success');
+        }
 
         await Promise.all([
             loadDashboardStats(),
@@ -746,17 +759,23 @@ async function deleteSubscription(subscriptionId) {
             throw new Error('معرف الاشتراك مطلوب');
         }
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('subscriptions')
             .delete()
-            .eq('id', subscriptionId);
+            .eq('id', subscriptionId)
+            .select('id')
+            .maybeSingle();
 
         if (error) {
             logDatabaseError('deleteSubscription', error, { subscriptionId });
             throw error;
         }
 
-        showAlert('🗑️ تم حذف الاشتراك نهائياً', 'success');
+        if (!data) {
+            showAlert('⚠️ لم يتم العثور على الاشتراك لحذفه أو لا تملك صلاحية الحذف.', 'warning');
+        } else {
+            showAlert('🗑️ تم حذف الاشتراك نهائياً', 'success');
+        }
 
         await Promise.all([
             loadDashboardStats(),
@@ -772,17 +791,26 @@ async function deleteSubscription(subscriptionId) {
 
 async function deactivateSubscription(subscriptionId) {
     try {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('subscriptions')
             .update({
                 status: 'cancelled',
                 end_date: new Date().toISOString()
             })
-            .eq('id', subscriptionId);
+            .eq('id', subscriptionId)
+            .select('id')
+            .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+            logDatabaseError('deactivateSubscription', error, { subscriptionId });
+            throw error;
+        }
 
-        showAlert('🚫 تم إلغاء تفعيل الاشتراك', 'success');
+        if (!data) {
+            showAlert('⚠️ لم يتم العثور على الاشتراك لإلغاء تفعيله أو لا تملك صلاحية التعديل.', 'warning');
+        } else {
+            showAlert('🚫 تم إلغاء تفعيل الاشتراك', 'success');
+        }
 
         await Promise.all([
             loadDashboardStats(),
