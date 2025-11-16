@@ -19,7 +19,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(registration => {
+  navigator.serviceWorker.register('/src/sw.js').then(registration => {
     // Check for updates every 60 seconds
     setInterval(() => {
       registration.update();
@@ -56,6 +56,26 @@ function parseNumber(x) {
     const n = Number(s);
     return isNaN(n) ? 0 : n;
   }
+
+// دالة للتحقق من الاتصال بالإنترنت
+function isOnline() {
+  return navigator.onLine;
+}
+
+// دالة للتحقق من إمكانية الوصول لقاعدة البيانات
+async function checkDatabaseConnection() {
+  if (!isOnline()) return false;
+
+  try {
+    // محاولة استعلام بسيط للتحقق من الاتصال
+    const { data, error } = await supabase.from('users').select('id').limit(1);
+    console.log('Database connection test:', { data, error });
+    return !error;
+  } catch (err) {
+    console.error('Database connection error:', err);
+    return false;
+  }
+}
   function formatNumber(n) {
     const num = parseNumber(n);
     return num.toLocaleString("en-US", { 
@@ -306,26 +326,29 @@ function parseNumber(x) {
   // ======== تعديل رئيسي: دالة مسح حقول التحصيل ========
   function clearHarvestFields() {
     showModal(
-      "تحذير", 
+      "تحذير",
       "سيتم تفريغ جميع حقول التحصيلات! البيانات غير المحفوظة ستفقد.\n\nهل أنت متأكد أنك تريد المتابعة؟",
       () => {
         const mlEl = document.getElementById("masterLimit");
         const mlVal = mlEl ? mlEl.value : (localStorage.getItem("masterLimit") || "");
-        
+
         const tbody = document.querySelector("#harvestTable tbody");
         if (tbody) {
           tbody.innerHTML = "";
           addEmptyRow();
         }
-        
+
         // تعديل هام: مسح كل البيانات المؤقتة
         localStorage.removeItem("rowData");
         localStorage.removeItem("harvestData");
         localStorage.removeItem("clientData"); // مسح بيانات الإدخال القديمة
-        
-        if (mlVal !== "") localStorage.setItem("masterLimit", mlVal);
-        if (mlEl) mlEl.value = mlVal;
-        
+
+        // الحفاظ على قيمة masterLimit دائماً
+        if (mlVal !== "") {
+          localStorage.setItem("masterLimit", mlVal);
+          if (mlEl) mlEl.value = mlVal;
+        }
+
         updateTotals();
         showAlert("تم تفريغ حقول التحصيلات بنجاح!", "success");
       }
@@ -361,18 +384,21 @@ function parseNumber(x) {
   function clearHarvestTable() {
     const mlEl = document.getElementById("masterLimit");
     const mlVal = mlEl ? mlEl.value : (localStorage.getItem("masterLimit") || "");
-    
+
     const tbody = document.querySelector("#harvestTable tbody");
     if (tbody) {
       tbody.innerHTML = "";
       addEmptyRow();
       updateTotals();
     }
-    
+
     localStorage.removeItem("rowData");
-    
-    if (mlVal !== "") localStorage.setItem("masterLimit", mlVal);
-    if (mlEl) mlEl.value = mlVal;
+
+    // الحفاظ على قيمة masterLimit دائماً
+    if (mlVal !== "") {
+      localStorage.setItem("masterLimit", mlVal);
+      if (mlEl) mlEl.value = mlVal;
+    }
   }
   /* ========== Navigation ========== */
   // ======== تعديل رئيسي: دالة التنقل بين الصفحات ========
@@ -877,10 +903,10 @@ function parseNumber(x) {
       try { input.setSelectionRange(finalValue.length, finalValue.length); } catch(e) {}
     }
   }
-  function setupNumberInputFormatting(input) {
+  function setupNumberInputFormatting(input, allowNegative = false) {
     input.type = 'text';
     input.setAttribute('inputmode', 'decimal');
-    input.setAttribute('pattern', '^-?[0-9,]*$');
+    input.setAttribute('pattern', allowNegative ? '^-?[0-9,]*$' : '^[0-9,]*$');
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('autocorrect', 'off');
     input.setAttribute('autocapitalize', 'off');
@@ -893,13 +919,14 @@ function parseNumber(x) {
       const ctrl = e.ctrlKey || e.metaKey;
       const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Tab','Enter'];
       if (ctrl || allowed.includes(e.key)) return;
-      // منع إدخال السالب في عمود المحصل
-      if (e.key === '-') {
+      // منع إدخال السالب إلا إذا كان مسموحاً
+      if (e.key === '-' && !allowNegative) {
         e.preventDefault();
         return;
       }
       if (e.key >= '0' && e.key <= '9') return;
       if (e.key === ',') return;
+      if (e.key === '-' && allowNegative) return;
       e.preventDefault();
     });
 
@@ -923,11 +950,11 @@ function parseNumber(x) {
     
     // إعداد تنسيق الأرقام لحقول المحصل وتحويل إضافي
     if (collector) {
-      setupNumberInputFormatting(collector);
+      setupNumberInputFormatting(collector, false); // لا يسمح بالسالب في عمود المحصل
     }
-    
+
     if (extra) {
-      setupNumberInputFormatting(extra);
+      setupNumberInputFormatting(extra, true); // يسمح بالسالب في عمود أخرى
       injectMinusToggle(extra);
     }
     
@@ -1223,7 +1250,7 @@ function parseNumber(x) {
     }
   }
 
-  function loadArchive(dateStr) {
+  async function loadArchive(dateStr) {
     const archiveTable = document.querySelector("#archiveTable tbody");
     const searchInput = document.getElementById("archiveSearch");
 
@@ -1232,34 +1259,88 @@ function parseNumber(x) {
     archiveTable.innerHTML = "";
     if (!dateStr) return;
 
-    const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
-    const data = archive[dateStr];
+    // الحصول على المستخدم الحالي
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showAlert("❌ يجب تسجيل الدخول أولاً!", "danger");
+      return;
+    }
 
-    if (!data) return;
-
-    const rows = data.split("\n");
+    let rows = [];
     let totalAmount = 0, totalExtra = 0, totalCollector = 0, totalNet = 0;
 
-    rows.forEach(rowStr => {
+    // محاولة جلب البيانات من التخزين المحلي أولاً
+    const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+    const localData = localArchive[dateStr];
+
+    if (localData) {
+      // استخدام البيانات المحلية إذا وجدت (بدون عمود المسلسل)
+      rows = localData.split("\n").filter(row => row.trim());
+    } else {
+      // جلب البيانات من قاعدة البيانات إذا لم توجد محلياً
+      const isDbConnected = await checkDatabaseConnection();
+      if (isDbConnected) {
+        try {
+          const { data, error } = await supabase
+            .from('archive_data')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('data', dateStr)
+            .order('shop', { ascending: true });
+
+          if (error) {
+            console.error('خطأ في جلب البيانات من قاعدة البيانات:', error);
+            showAlert("❌ فشل في جلب البيانات من قاعدة البيانات", "danger");
+            return;
+          }
+
+          if (data && data.length > 0) {
+            // تحويل البيانات من قاعدة البيانات إلى التنسيق المحلي (بدون المسلسل)
+            rows = data.map(item => {
+              const net = item.collector - (item.extra + item.amount);
+              return [item.shop, item.code, item.amount, item.extra, item.collector, net].join("\t");
+            });
+
+            // حفظ البيانات محلياً للاستخدام المستقبلي
+            const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+            archive[dateStr] = rows.join("\n");
+            localStorage.setItem("archiveData", JSON.stringify(archive));
+          } else {
+            showAlert("ℹ️ لا توجد بيانات لهذا التاريخ", "info");
+            return;
+          }
+        } catch (err) {
+          console.error('خطأ في الاتصال بقاعدة البيانات:', err);
+          showAlert("⚠️ فشل في الاتصال بقاعدة البيانات. تحقق من الاتصال بالإنترنت.", "warning");
+          return;
+        }
+      } else {
+        showAlert("📱 لا توجد بيانات محلية لهذا التاريخ والاتصال بالإنترنت غير متاح", "warning");
+        return;
+      }
+    }
+
+    // عرض البيانات
+    rows.forEach((rowStr, index) => {
       if (!rowStr.trim()) return;
 
       const parts = rowStr.split("\t");
       const tr = document.createElement("tr");
-      const netValue = parseNumber(parts[6] || 0);
+      const netValue = parseNumber(parts[5] || 0);
       tr.innerHTML = `
         <td>${dateStr}</td>
-        <td class="shop">${parts[1] || ""}</td>
-        <td>${parts[2] || ""}</td>
+        <td class="shop">${parts[0] || ""}</td>
+        <td>${parts[1] || ""}</td>
+        <td>${formatNumber(parts[2] || 0)}</td>
         <td>${formatNumber(parts[3] || 0)}</td>
         <td>${formatNumber(parts[4] || 0)}</td>
-        <td>${formatNumber(parts[5] || 0)}</td>
         <td class="net numeric ${netValue > 0 ? 'positive' : (netValue < 0 ? 'negative' : 'zero')}">${formatNumber(netValue)}<i class="fas ${netValue > 0 ? 'fa-arrow-up' : (netValue < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
       `;
       archiveTable.appendChild(tr);
 
-      totalAmount += parseNumber(parts[3]);
-      totalExtra += parseNumber(parts[4]);
-      totalCollector += parseNumber(parts[5]);
+      totalAmount += parseNumber(parts[2]);
+      totalExtra += parseNumber(parts[3]);
+      totalCollector += parseNumber(parts[4]);
       totalNet += netValue;
     });
 
@@ -1325,9 +1406,8 @@ function parseNumber(x) {
         });
       });
     }
-
   }
-  function searchArchive(query) {
+  async function searchArchive(query) {
     const archiveTable = document.querySelector("#archiveTable tbody");
 
     if (!archiveTable) return;
@@ -1335,40 +1415,99 @@ function parseNumber(x) {
     archiveTable.innerHTML = "";
     if (!query) return;
 
-    const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+    // الحصول على المستخدم الحالي
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showAlert("❌ يجب تسجيل الدخول أولاً!", "danger");
+      return;
+    }
+
     let totalAmount = 0, totalExtra = 0, totalCollector = 0, totalNet = 0;
 
-    Object.keys(archive).forEach(date => {
-      const rows = archive[date].split("\n");
+    // البحث في البيانات المحلية أولاً
+    const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+    let foundLocalResults = false;
+
+    Object.keys(localArchive).forEach(date => {
+      const rows = localArchive[date].split("\n");
 
       rows.forEach(rowStr => {
         if (!rowStr.trim()) return;
 
         const parts = rowStr.split("\t");
-        const shop = parts[1] || "";
-        const code = parts[2] || "";
+        const shop = parts[0] || "";
+        const code = parts[1] || "";
 
         if (shop.includes(query) || code.includes(query)) {
+          foundLocalResults = true;
           const tr = document.createElement("tr");
-          const netValue = parseNumber(parts[6] || 0);
+          const netValue = parseNumber(parts[5] || 0);
           tr.innerHTML = `
             <td>${date}</td>
             <td class="shop">${shop}</td>
             <td>${code}</td>
+            <td>${formatNumber(parts[2] || 0)}</td>
             <td>${formatNumber(parts[3] || 0)}</td>
             <td>${formatNumber(parts[4] || 0)}</td>
-            <td>${formatNumber(parts[5] || 0)}</td>
             <td class="net numeric ${netValue > 0 ? 'positive' : (netValue < 0 ? 'negative' : 'zero')}">${formatNumber(netValue)}<i class="fas ${netValue > 0 ? 'fa-arrow-up' : (netValue < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
           `;
           archiveTable.appendChild(tr);
 
-          totalAmount += parseNumber(parts[3]);
-          totalExtra += parseNumber(parts[4]);
-          totalCollector += parseNumber(parts[5]);
+          totalAmount += parseNumber(parts[2]);
+          totalExtra += parseNumber(parts[3]);
+          totalCollector += parseNumber(parts[4]);
           totalNet += netValue;
         }
       });
     });
+
+    // إذا لم نجد نتائج محلية، نبحث في قاعدة البيانات
+    if (!foundLocalResults) {
+      const isDbConnected = await checkDatabaseConnection();
+      if (isDbConnected) {
+        try {
+          const { data, error } = await supabase
+            .from('archive_data')
+            .select('*')
+            .eq('user_id', user.id)
+            .or(`shop.ilike.%${query}%,code.ilike.%${query}%`)
+            .order('data', { ascending: false });
+
+          if (error) {
+            console.error('خطأ في البحث في قاعدة البيانات:', error);
+            showAlert("❌ فشل في البحث في قاعدة البيانات", "danger");
+            return;
+          }
+
+          if (data && data.length > 0) {
+            data.forEach(item => {
+              const tr = document.createElement("tr");
+              const netValue = item.collector - (item.extra + item.amount);
+              tr.innerHTML = `
+                <td>${item.data}</td>
+                <td class="shop">${item.shop}</td>
+                <td>${item.code}</td>
+                <td>${formatNumber(item.amount || 0)}</td>
+                <td>${formatNumber(item.extra || 0)}</td>
+                <td>${formatNumber(item.collector || 0)}</td>
+                <td class="net numeric ${netValue > 0 ? 'positive' : (netValue < 0 ? 'negative' : 'zero')}">${formatNumber(netValue)}<i class="fas ${netValue > 0 ? 'fa-arrow-up' : (netValue < 0 ? 'fa-arrow-down' : 'fa-check')}" style="margin-right: 4px; font-size: 0.8em;"></i></td>
+              `;
+              archiveTable.appendChild(tr);
+
+              totalAmount += parseNumber(item.amount);
+              totalExtra += parseNumber(item.extra);
+              totalCollector += parseNumber(item.collector);
+              totalNet += netValue;
+            });
+          }
+        } catch (err) {
+          console.error('خطأ في الاتصال بقاعدة البيانات:', err);
+          showAlert("⚠️ فشل في البحث في قاعدة البيانات. تحقق من الاتصال بالإنترنت.", "warning");
+        }
+      } else {
+        showAlert("📱 البحث المحلي لم يعطِ نتائج والإنترنت غير متاح", "warning");
+      }
+    }
 
     if (archiveTable.children.length > 0) {
       const trTotal = document.createElement("tr");
@@ -1418,8 +1557,9 @@ function parseNumber(x) {
       });
 
       archiveTable.appendChild(trTotal);
+    } else {
+      showAlert("ℹ️ لا توجد نتائج للبحث", "info");
     }
-
   }
   /* ========== Auto-save Setup ========== */
   function setupAutoSave() {
@@ -1459,13 +1599,13 @@ function parseNumber(x) {
   function setupSummaryNumberFormatting() {
     const masterLimit = document.getElementById("masterLimit");
     const currentBalance = document.getElementById("currentBalance");
-    
+
     if (masterLimit) {
-      setupNumberInputFormatting(masterLimit);
+      setupNumberInputFormatting(masterLimit, true); // يسمح بالسالب في ليميت الماستر
     }
-    
+
     if (currentBalance) {
-      setupNumberInputFormatting(currentBalance);
+      setupNumberInputFormatting(currentBalance, true); // يسمح بالسالب في الرصيد الحالي
     }
   }
   /* ========== Enhance User Experience ========== */
@@ -1514,7 +1654,7 @@ function parseNumber(x) {
     }
 
     // التأكد من تهيئة أزرار صفحة الإدخال بشكل صحيح
-    if (window.location.pathname.includes('dashboard.html') || window.location.pathname.endsWith('/')) {
+    if (window.location.pathname.includes('dashboard') || window.location.pathname.endsWith('/') || window.location.pathname.endsWith('index.html')) {
       console.log("Dashboard page detected - initializing buttons");
 
       // تأخير بسيط للتأكد من تحميل العناصر
@@ -1725,6 +1865,7 @@ function parseNumber(x) {
     // Harvest page elements
     const harvestTable = document.getElementById("harvestTable");
     if (harvestTable) {
+      // تحميل قيمة masterLimit المحفوظة (تبقى دائماً حتى يغيرها المستخدم يدوياً)
       const savedML = localStorage.getItem("masterLimit");
       if (savedML && document.getElementById("masterLimit")) {
         document.getElementById("masterLimit").value = savedML;
@@ -1808,16 +1949,25 @@ function parseNumber(x) {
       
       const archiveTodayBtn = document.getElementById("archiveTodayBtn");
       if (archiveTodayBtn) {
-        archiveTodayBtn.addEventListener("click", () => {
+        archiveTodayBtn.addEventListener("click", async () => {
           const tbody = harvestTable.querySelector("tbody");
           const rows = Array.from(tbody.querySelectorAll("tr"));
-          
+
           if (rows.length <= 1) {
             showModal("تنبيه", "لا توجد بيانات لأرشفتها!");
             return;
           }
-          
+
+          // الحصول على المستخدم الحالي
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            showAlert("❌ يجب تسجيل الدخول أولاً!", "danger");
+            return;
+          }
+
           const archiveData = [];
+          const supabaseData = [];
+
           rows.forEach((r) => {
             if (r.id === "totalRow") return;
 
@@ -1833,19 +1983,68 @@ function parseNumber(x) {
             const net = collector - (extra + amount);
             cells.push(net.toString());
 
-            archiveData.push(cells.join("\t"));
+            // استثناء عمود المسلسل (الخلية الأولى) من البيانات المحفوظة محلياً
+            const archiveCells = cells.slice(1); // إزالة الخلية الأولى (المسلسل)
+            archiveData.push(archiveCells.join("\t"));
+
+            // تحضير البيانات لقاعدة البيانات (بدون المسلسل)
+            supabaseData.push({
+              user_id: user.id,
+              data: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+              shop: cells[1] || "",
+              code: cells[2] || "",
+              amount: amount,
+              extra: extra,
+              collector: collector
+            });
           });
-          
+
           const today = new Date().toLocaleDateString("en-GB", {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
           });
+
+          // حفظ محلياً أولاً
           const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
           archive[today] = archiveData.join("\n");
           localStorage.setItem("archiveData", JSON.stringify(archive));
-          
-          showAlert("✅ تم أرشفة بيانات اليوم بالكامل!", "success");
+
+          // حفظ في قاعدة البيانات إذا كان الاتصال متاحاً
+          const isDbConnected = await checkDatabaseConnection();
+          if (isDbConnected) {
+            try {
+              // حذف البيانات القديمة لنفس التاريخ أولاً (للاستبدال)
+              await supabase
+                .from('archive_data')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('data', new Date().toISOString().split('T')[0]);
+
+              // ثم إدراج البيانات الجديدة
+              const { data, error } = await supabase
+                .from('archive_data')
+                .insert(supabaseData);
+
+              if (error) {
+                console.error('خطأ في حفظ الأرشيف:', error);
+                console.error('Error details:', {
+                  message: error.message,
+                  details: error.details,
+                  hint: error.hint,
+                  code: error.code
+                });
+                showAlert(`⚠️ تم الحفظ محلياً فقط. خطأ في قاعدة البيانات: ${error.message}`, "warning");
+              } else {
+                showAlert("✅ تم أرشفة بيانات اليوم بالكامل محلياً وقاعدة البيانات (تم الاستبدال إذا كانت موجودة مسبقاً)!", "success");
+              }
+            } catch (err) {
+              console.error('خطأ في الاتصال بقاعدة البيانات:', err);
+              showAlert("⚠️ تم الحفظ محلياً فقط. تحقق من الاتصال بالإنترنت.", "warning");
+            }
+          } else {
+            showAlert("📱 تم الحفظ محلياً فقط. سيتم مزامنة البيانات مع قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
+          }
         });
       }
       
@@ -1875,14 +2074,62 @@ function parseNumber(x) {
     // Archive page elements
     const archiveSelect = document.getElementById("archiveSelect");
     if (archiveSelect) {
-      const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+      // دالة لتحميل التواريخ المتاحة
+      async function loadAvailableDates() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      Object.keys(archive).sort().forEach(dateStr => {
-        const opt = document.createElement("option");
-        opt.value = dateStr;
-        opt.textContent = dateStr;
-        archiveSelect.appendChild(opt);
-      });
+        // جمع التواريخ من التخزين المحلي
+        const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+        const localDates = Object.keys(localArchive);
+
+        // جلب التواريخ من قاعدة البيانات إذا كان الاتصال متاحاً
+        const isDbConnected = await checkDatabaseConnection();
+        let dbDates = [];
+
+        if (isDbConnected) {
+          try {
+            const { data, error } = await supabase
+              .from('archive_data')
+              .select('data')
+              .eq('user_id', user.id);
+
+            if (error) {
+              console.error('خطأ في جلب التواريخ من قاعدة البيانات:', error);
+            } else {
+              dbDates = data ? data.map(item => item.data) : [];
+            }
+          } catch (err) {
+            console.error('خطأ في الاتصال بقاعدة البيانات:', err);
+          }
+        }
+
+        // دمج التواريخ من المصدرين وإزالة التكرار
+        const allDates = [...new Set([...localDates, ...dbDates])].sort();
+
+        // مسح الخيارات الحالية
+        archiveSelect.innerHTML = '<option value="">اختر تاريخ</option>';
+
+        // إضافة التواريخ
+        allDates.forEach(dateStr => {
+          const opt = document.createElement("option");
+          opt.value = dateStr;
+          opt.textContent = dateStr;
+          archiveSelect.appendChild(opt);
+        });
+
+        // إذا لم يكن هناك تواريخ من قاعدة البيانات، أضف ملاحظة
+        if (dbDates.length === 0 && !isDbConnected && localDates.length > 0) {
+          const offlineNote = document.createElement("small");
+          offlineNote.textContent = " (محلي فقط - غير متصل بالإنترنت)";
+          offlineNote.style.color = "#888";
+          offlineNote.style.fontSize = "0.8em";
+          archiveSelect.parentNode.appendChild(offlineNote);
+        }
+      }
+
+      // تحميل التواريخ عند تحميل الصفحة
+      loadAvailableDates();
 
       archiveSelect.addEventListener("change", () => {
         const searchInput = document.getElementById("archiveSearch");
@@ -1911,30 +2158,100 @@ function parseNumber(x) {
       const lastDate = localStorage.getItem("lastArchiveDate");
       const lastSearch = localStorage.getItem("lastArchiveSearch");
 
-      if (lastDate && archive[lastDate]) {
-        archiveSelect.value = lastDate;
-        loadArchive(lastDate);
+      if (lastDate) {
+        // انتظار تحميل التواريخ ثم تحديد التاريخ المحفوظ
+        setTimeout(() => {
+          archiveSelect.value = lastDate;
+          loadArchive(lastDate);
+        }, 100);
       } else if (lastSearch) {
         searchInput.value = lastSearch;
         searchArchive(lastSearch);
       }
       
-      document.getElementById("deleteArchiveBtn")?.addEventListener("click", () => {
+      document.getElementById("deleteArchiveBtn")?.addEventListener("click", async () => {
         const dateStr = archiveSelect.value;
         if (!dateStr) {
           showModal("تنبيه", "اختر تاريخًا أولاً!");
           return;
         }
-        
+
+        // الحصول على المستخدم الحالي
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          showModal("خطأ", "يجب تسجيل الدخول أولاً!");
+          return;
+        }
+
         showModal(
-          "تأكيد الحذف", 
-          `هل أنت متأكد أنك عايز تحذف أرشيف يوم ${dateStr}؟`,
-          () => {
-            delete archive[dateStr];
-            localStorage.setItem("archiveData", JSON.stringify(archive));
-            archiveSelect.querySelector(`option[value="${dateStr}"]`)?.remove();
-            archiveSelect.value = "";
-            document.querySelector("#archiveTable tbody").innerHTML = "";
+          "تأكيد الحذف",
+          `هل أنت متأكد أنك عايز تحذف أرشيف يوم ${dateStr}؟ سيتم حذف البيانات من التخزين المحلي وقاعدة البيانات.`,
+          async () => {
+            try {
+              // حذف من التخزين المحلي
+              const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+              delete archive[dateStr];
+              localStorage.setItem("archiveData", JSON.stringify(archive));
+
+              // حذف من قاعدة البيانات إذا كان الاتصال متاحاً
+              const isDbConnected = await checkDatabaseConnection();
+              if (isDbConnected) {
+                // أولاً، تحقق من وجود البيانات
+                console.log('Checking data before delete:', { user_id: user.id, data: dateStr });
+                const { data: existingData, error: checkError } = await supabase
+                  .from('archive_data')
+                  .select('id')
+                  .eq('user_id', user.id)
+                  .eq('data', dateStr)
+                  .limit(1);
+
+                console.log('Existing data check:', { existingData, checkError });
+
+                if (checkError) {
+                  console.error('خطأ في التحقق من البيانات:', checkError);
+                  showAlert("⚠️ فشل في التحقق من البيانات في قاعدة البيانات.", "warning");
+                } else if (!existingData || existingData.length === 0) {
+                  console.log('لا توجد بيانات في قاعدة البيانات لحذفها');
+                  showAlert("ℹ️ البيانات غير موجودة في قاعدة البيانات، تم الحذف من التخزين المحلي فقط.", "info");
+                } else {
+                  console.log('Deleting from database:', { user_id: user.id, data: dateStr });
+                  const { data, error } = await supabase
+                    .from('archive_data')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .eq('data', dateStr);
+
+                  console.log('Delete result:', { data, error });
+
+                  if (error) {
+                    console.error('خطأ في حذف البيانات من قاعدة البيانات:', error);
+                    console.error('Error details:', {
+                      message: error.message,
+                      details: error.details,
+                      hint: error.hint,
+                      code: error.code
+                    });
+                    showAlert(`⚠️ تم الحذف من التخزين المحلي فقط. فشل في حذف من قاعدة البيانات: ${error.message}`, "warning");
+                  } else {
+                    showAlert("✅ تم حذف الأرشيف بنجاح من التخزين المحلي وقاعدة البيانات!", "success");
+                  }
+                }
+              } else {
+                showAlert("📱 تم الحذف من التخزين المحلي فقط. سيتم حذف من قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
+              }
+
+              // تحديث واجهة المستخدم
+              archiveSelect.querySelector(`option[value="${dateStr}"]`)?.remove();
+              archiveSelect.value = "";
+              document.querySelector("#archiveTable tbody").innerHTML = "";
+
+              // إعادة تحميل التواريخ المتاحة
+              loadAvailableDates();
+
+            } catch (err) {
+              console.error('خطأ في عملية الحذف:', err);
+              showAlert("❌ فشل في حذف الأرشيف", "danger");
+            }
           }
         );
       });

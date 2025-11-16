@@ -39,6 +39,23 @@ BEGIN
     END IF;
 END $$;
 
+-- Admins table for admin access control
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admins' AND table_schema = 'public') THEN
+        CREATE TABLE public.admins (
+            id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            full_name TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        -- Insert default admin
+        INSERT INTO public.admins (email, full_name) VALUES ('emontal.33@gmail.com', 'أيمن حافظ');
+    END IF;
+END $$;
+
 -- Subscription plans table
 DO $$
 BEGIN
@@ -639,6 +656,25 @@ LEFT JOIN public.subscription_plans sp ON sp.id = s.plan_id;
 -- Grant permissions on the view
 GRANT SELECT ON public.admin_subscriptions_view TO authenticated;
 GRANT SELECT ON public.admin_subscriptions_view TO service_role;
+
+-- =====================================================
+-- ADMINS TABLE POLICIES
+-- =====================================================
+
+-- Enable RLS on admins table
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+
+-- Policy for admins to read their own data
+CREATE POLICY "Admins can view their own data" ON public.admins
+    FOR SELECT USING (auth.email() = email);
+
+-- Policy for service role to manage admins
+CREATE POLICY "Service role can manage admins" ON public.admins
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- Grant permissions
+GRANT SELECT ON public.admins TO authenticated;
+GRANT ALL ON public.admins TO service_role;
 
 -- =====================================================
 -- INDEXES

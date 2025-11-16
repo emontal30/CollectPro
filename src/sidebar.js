@@ -130,21 +130,30 @@ async function createTestSubscription(userId) {
         const endDate = new Date();
         endDate.setDate(startDate.getDate() + 30);
 
+        // أولاً، جلب أول خطة متاحة لاستخدامها كخطة تجريبية
+        const { data: firstPlan } = await supabase
+            .from('subscription_plans')
+            .select('id, name')
+            .limit(1)
+            .single();
+
+        const planId = firstPlan ? firstPlan.id : null;
+
         const { data, error } = await supabase
             .from('subscriptions')
             .insert({
-                user_id: userId,
-                plan_id: null, // اشتراك تجريبي بدون خطة محددة
-                plan_name: 'فترة تجريبية',
-                plan_period: '30 يوم',
-                price: 0,
-                status: 'active',
-                start_date: startDate.toISOString(),
-                end_date: endDate.toISOString(),
-                created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
+                 user_id: userId,
+                 plan_id: planId, // استخدام أول خطة متاحة
+                 plan_name: 'فترة تجريبية',
+                 plan_period: '30 يوم',
+                 price: 0,
+                 status: 'active',
+                 start_date: startDate.toISOString(),
+                 end_date: endDate.toISOString(),
+                 created_at: new Date().toISOString()
+             })
+             .select()
+             .single();
 
         if (error) {
             console.error('Error creating test subscription:', error);
@@ -188,11 +197,12 @@ async function updateSubscriptionInfo() {
         const { data: subscription, error } = await supabase
             .from('subscriptions')
             .select(`
-                end_date, 
-                status, 
+                end_date,
+                status,
                 start_date,
                 plan_name,
-                subscription_plans:plan_id (
+                plan_id,
+                subscription_plans!inner (
                     name,
                     name_ar
                 )

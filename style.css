@@ -1188,6 +1188,7 @@ td.amount {
   font-weight: 700;
   background: linear-gradient(135deg, #f8f9fa, #e9ecef);
   border-color: rgba(0, 121, 101, 0.3);
+  text-align: center;
 }
 .bold-input:focus {
   border-color: var(--primary);

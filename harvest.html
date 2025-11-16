@@ -124,7 +124,7 @@
             <i class="fas fa-wallet field-icon"></i>
             <strong>رصيد الماستر الحالي:</strong>
           </div>
-          <input type="text" id="currentBalance" />
+          <input type="text" id="currentBalance" class="bold-input" />
         </label>
         <label class="reset-amount-field">
           <div class="field-header">
@@ -178,9 +178,9 @@
 
   <!-- Scripts at the end for better performance -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js?v=9664f44"></script>
-  <script src="sidebar.js?v=9664f44"></script>
-  <script src="script.js?v=9664f44"></script>
-  <script src="install-prompt.js?v=9664f44"></script>
+  <script type="module" src="/src/supabase-client.js"></script>
+  <script type="module" src="/src/sidebar.js"></script>
+  <script type="module" src="/src/script.js"></script>
+  <script type="module" src="/src/install-prompt.js"></script>
 </body>
 </html>
