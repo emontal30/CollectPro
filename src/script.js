@@ -2266,6 +2266,10 @@ async function searchArchive(query) {
           if (!tbody) return;
 
           tbody.innerHTML = "";
+          let totalAmount = 0;
+          let totalExtra = 0;
+          let totalCollector = 0;
+          let totalNet = 0;
 
           // محاولة قراءة من التخزين المحلي أولاً
           const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
@@ -2293,6 +2297,10 @@ async function searchArchive(query) {
                 <td class="net numeric ${netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'zero')}">${formatNumber(netVal)}</td>
               `;
               tbody.appendChild(tr);
+              totalAmount += amountVal;
+              totalExtra += extraVal;
+              totalCollector += collectorVal;
+              totalNet += netVal;
             });
           } else {
             // إذا لم تكن البيانات موجودة محلياً، حاول جلبها من قاعدة البيانات
@@ -2332,11 +2340,31 @@ async function searchArchive(query) {
                   <td class="net numeric ${netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'zero')}">${formatNumber(netVal)}</td>
                 `;
                 tbody.appendChild(tr);
+                totalAmount += amountVal;
+                totalExtra += extraVal;
+                totalCollector += collectorVal;
+                totalNet += netVal;
               });
 
             } else {
               showAlert("ℹ️ لا توجد بيانات أرشيف لهذا اليوم", "info");
             }
+          }
+
+          if (tbody.children.length > 0) {
+            const trTotal = document.createElement("tr");
+            trTotal.id = "archiveTotalRow";
+            trTotal.classList.add("total-row");
+            trTotal.innerHTML = `
+              <td class="date">—</td>
+              <td class="shop" style="font-weight:700">الإجمالي</td>
+              <td class="code"></td>
+              <td class="amount">${formatNumber(totalAmount)}</td>
+              <td class="extra">${formatNumber(totalExtra)}</td>
+              <td class="collector">${formatNumber(totalCollector)}</td>
+              <td class="net-total" style="font-weight: 700; font-size: 18px;">${formatNumber(totalNet)}</td>
+            `;
+            tbody.appendChild(trTotal);
           }
         });
 
@@ -2407,6 +2435,22 @@ async function searchArchive(query) {
                 }
               }
             );
+          });
+        }
+
+        const archiveSearch = document.getElementById("archiveSearch");
+        if (archiveSearch) {
+          archiveSearch.addEventListener("input", (e) => {
+            const query = e.target.value.trim();
+            if (query === "") {
+              // If search is cleared, load the selected date's data
+              const selectedDate = archiveSelect.value;
+              if (selectedDate) {
+                archiveSelect.dispatchEvent(new Event('change'));
+              }
+            } else {
+              searchArchive(query);
+            }
           });
         }
 
