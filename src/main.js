@@ -50,6 +50,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
 
+  // محاولة جلب الجلسة الحالية فورًا عند فتح التطبيق (مثل فتح اختصار PWA من الشاشة الرئيسية)
+  (async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('❌ Error getting current session:', error);
+      } else if (session) {
+        console.log('✅ Active session found via getSession, syncing profile and redirecting...');
+        await syncUserProfile(session.user);
+        redirectUser(session.user);
+        return; // لا نحتاج لإظهار زر الدخول في هذه الحالة
+      } else {
+        console.log('No active session from getSession, waiting for onAuthStateChange...');
+      }
+    } catch (err) {
+      console.error('❌ getSession threw an error:', err);
+    }
+  })();
+
+  // ضمان عدم بقاء الزر مخفيًا في حال لم يصل أي حدث من Supabase (حماية من التوقف على شاشة البداية)
+  setTimeout(() => {
+    if (googleLoginBtn && googleLoginBtn.style.display === 'none') {
+      console.warn('Auth state did not respond in time. Showing login button fallback.');
+      googleLoginBtn.style.display = 'flex';
+    }
+  }, 4000);
 
   // onAuthStateChange هو المصدر الوحيد للحقيقة
   supabase.auth.onAuthStateChange(async (_event, session) => {

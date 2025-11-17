@@ -2184,68 +2184,13 @@ function formatNumber(n) {
         localStorage.setItem("masterLimit", e.target.value || "0");
         updateTotalsImmediate();
       });
-    }
-
-    // Archive page elements
-    const archiveSelect = document.getElementById("archiveSelect");
-    if (archiveSelect) {
-      // دالة لتحميل التواريخ المتاحة
-      async function loadAvailableDates() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // جمع التواريخ من التخزين المحلي
-        const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
-        const localDates = Object.keys(localArchive);
-
-        // جلب التواريخ من قاعدة البيانات إذا كان الاتصال متاحاً
-        const isDbConnected = await checkDatabaseConnection();
-        let dbDates = [];
-
-        if (isDbConnected) {
-          try {
-            const { data, error } = await supabase
-              .from('archive_dates')
-              .select('archive_date')
-              .eq('user_id', user.id)
-              .order('archive_date', { ascending: true });
-
-            if (error) {
-              console.error('خطأ في جلب التواريخ من قاعدة البيانات:', error);
-            } else {
-              dbDates = data ? data.map(item => item.archive_date) : [];
-            }
-          } catch (err) {
-            console.error('خطأ في الاتصال بقاعدة البيانات:', err);
-          }
-        }
-
-        // دمج التواريخ من المصدرين وإزالة التكرار
-        const allDates = [...new Set([...localDates, ...dbDates])].sort();
-
-        // مسح الخيارات الحالية
-        archiveSelect.innerHTML = '<option value="">اختر تاريخ</option>';
-
-        // إضافة التواريخ
-        allDates.forEach(dateStr => {
-          const opt = document.createElement("option");
-          opt.value = dateStr;
-          opt.textContent = dateStr;
-          archiveSelect.appendChild(opt);
-        });
-
-        // إذا لم يكن هناك تواريخ من قاعدة البيانات، أضف ملاحظة
-        if (dbDates.length === 0 && !isDbConnected && localDates.length > 0) {
-          const offlineNote = document.createElement("small");
-          offlineNote.textContent = " (محلي فقط - غير متصل بالإنترنت)";
-          offlineNote.style.color = "#888";
-          offlineNote.style.fontSize = "0.8em";
-          archiveSelect.parentNode.appendChild(offlineNote);
-        }
-      }
+      document.getElementById("currentBalance")?.addEventListener("input", (e) => {
+        localStorage.setItem("currentBalance", e.target.value || "0");
+        updateTotalsImmediate();
+      });
 
       // تحميل التواريخ عند تحميل الصفحة
-      loadAvailableDates();
+      // loadAvailableDates(); // تم تعطيل هذا لأنه يسبب خطأ
 
       archiveSelect.addEventListener("change", () => {
         const searchInput = document.getElementById("archiveSearch");
