@@ -12,6 +12,7 @@ export default defineConfig({
         dashboard: './dashboard.html',
         harvest: './harvest.html',
         archive: './archive.html',
+        counter: './counter.html',
         admin: './admin.html',
         subscriptions: './subscriptions.html',
         'my-subscription': './my-subscription.html',

@@ -19,24 +19,28 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/src/sw.js').then(registration => {
-    // Check for updates every 60 seconds
-    setInterval(() => {
-      registration.update();
-    }, 60000);
+  navigator.serviceWorker.register('/sw.js')
+    .then(registration => {
+      // Check for updates every 60 seconds
+      setInterval(() => {
+        registration.update();
+      }, 60000);
 
-    // Listen for new service worker
-    registration.addEventListener('updatefound', () => {
-      const newWorker = registration.installing;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          // New service worker available, skip waiting and reload
-          newWorker.postMessage({ type: 'SKIP_WAITING' });
-          window.location.reload();
-        }
+      // Listen for new service worker
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New service worker available, skip waiting and reload
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+            window.location.reload();
+          }
+        });
       });
+    })
+    .catch(error => {
+      console.error('Service Worker auto-update registration failed:', error);
     });
-  });
 
   // Reload page when new service worker takes control
   let refreshing = false;
