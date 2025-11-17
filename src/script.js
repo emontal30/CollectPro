@@ -2239,6 +2239,13 @@ async function searchArchive(query) {
         });
       }
 
+      const goToInputBtn = document.getElementById("goToInputBtn");
+      if (goToInputBtn) {
+        goToInputBtn.addEventListener("click", () => {
+          navigateTo("dashboard");
+        });
+      }
+
       const goToArchiveBtn = document.getElementById("goToArchiveBtn");
       if (goToArchiveBtn) {
         goToArchiveBtn.addEventListener("click", () => {
