@@ -1,3 +1,5 @@
+// Script loading check
+console.log("CollectPro script.js loaded successfully");
 // Global error handlers
 window.onerror = function(message, source, lineno, colno, error) {
   console.error("An unhandled error occurred:", {
@@ -19,7 +21,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  navigator.serviceWorker.register('/src/sw.js')
     .then(registration => {
       // Check for updates every 60 seconds
       setInterval(() => {
@@ -1339,6 +1341,26 @@ function formatNumber(n) {
 
   // دالة محسنة لتحديث حقول ملخص البيانات
   function updateSummaryFields(totalAmount, totalExtra, totalCollector) {
+    // إذا لم يتم تمرير المعلمات، احسبها من الجدول
+    if (totalAmount === undefined || totalExtra === undefined || totalCollector === undefined) {
+      const tbody = document.querySelector("#harvestTable tbody");
+      if (tbody) {
+        totalAmount = 0, totalExtra = 0, totalCollector = 0;
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        rows.forEach((row) => {
+          if (row.id === "totalRow") return;
+          const amount = parseNumber(row.querySelector(".amount")?.getAttribute("data-amount") ?? row.querySelector(".amount")?.innerText);
+          const extra = parseNumber(row.querySelector(".extra")?.value || 0);
+          const collector = parseNumber(row.querySelector(".collector")?.value || 0);
+          totalAmount += amount;
+          totalExtra += extra;
+          totalCollector += collector;
+        });
+      } else {
+        totalAmount = 0, totalExtra = 0, totalCollector = 0;
+      }
+    }
+
     const masterLimit = parseNumber(document.getElementById("masterLimit")?.value || 0);
     const currentBalance = parseNumber(document.getElementById("currentBalance")?.value || 0);
     const resetAmount = currentBalance - masterLimit;
@@ -1533,7 +1555,7 @@ function formatNumber(n) {
     }
   }
 
-  async function searchArchive(query) {
+async function searchArchive(query) {
     const archiveTable = document.querySelector("#archiveTable tbody");
 
     if (!archiveTable) return;
@@ -1687,6 +1709,44 @@ function formatNumber(n) {
       showAlert("ℹ️ لا توجد نتائج للبحث", "info");
     }
   }
+  /* ========== Load Available Dates for Archive ========== */
+  async function loadAvailableDates() {
+    const archiveSelect = document.getElementById("archiveSelect");
+    if (!archiveSelect) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showModal("خطأ", "يجب تسجيل الدخول أولاً!");
+      return;
+    }
+
+    // جمع التواريخ من التخزين المحلي
+    const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+    const localDates = Object.keys(localArchive);
+
+    // جلب التواريخ من قاعدة البيانات إذا كان الاتصال متاحاً
+    const isDbConnected = await checkDatabaseConnection();
+    let dbDates = [];
+
+    if (isDbConnected) {
+      const { data, error } = await supabase
+        .from('archive_dates')
+        .select('archive_date')
+        .eq('user_id', user.id)
+        .order('archive_date', { ascending: true });
+      if (!error) dbDates = data ? data.map(item => item.archive_date) : [];
+    }
+
+    const allDates = [...new Set([...localDates, ...dbDates])].sort();
+    archiveSelect.innerHTML = '<option value="">اختر تاريخ</option>';
+    allDates.forEach(dateStr => {
+      const opt = document.createElement("option");
+      opt.value = dateStr;
+      opt.textContent = dateStr;
+      archiveSelect.appendChild(opt);
+    });
+  }
+
   /* ========== Auto-save Setup ========== */
   function setupAutoSave() {
     const dataInput = document.getElementById("dataInput");
@@ -1890,6 +1950,16 @@ function formatNumber(n) {
     setupNavigationArrows();
     enhanceTableExperience();
     setupSummaryNumberFormatting();
+
+    // إضافة مستمعي الأحداث لتحديث ملخص البيانات عند تغيير masterLimit أو currentBalance
+    const masterLimitEl = document.getElementById("masterLimit");
+    const currentBalanceEl = document.getElementById("currentBalance");
+    if (masterLimitEl) {
+      masterLimitEl.addEventListener('input', () => updateSummaryFields());
+    }
+    if (currentBalanceEl) {
+      currentBalanceEl.addEventListener('input', () => updateSummaryFields());
+    }
 
     // Index page elements
     const dataInput = document.getElementById("dataInput");
@@ -2164,163 +2234,184 @@ function formatNumber(n) {
               () => { performArchive(); }
             );
           } else {
-            await performArchive();
+            performArchive();
           }
         });
       }
-      
-      // Archive button in harvest page
+
       const goToArchiveBtn = document.getElementById("goToArchiveBtn");
       if (goToArchiveBtn) {
         goToArchiveBtn.addEventListener("click", () => {
           navigateTo("archive");
         });
       }
-      
-      document.getElementById("goToInputBtn")?.addEventListener("click", () => {
-        navigateTo("dashboard");
-      });
-      document.getElementById("masterLimit")?.addEventListener("input", (e) => {
-        localStorage.setItem("masterLimit", e.target.value || "0");
-        updateTotalsImmediate();
-      });
-      document.getElementById("currentBalance")?.addEventListener("input", (e) => {
-        localStorage.setItem("currentBalance", e.target.value || "0");
-        updateTotalsImmediate();
-      });
+    }
 
-      // تحميل التواريخ عند تحميل الصفحة
-      // loadAvailableDates(); // تم تعطيل هذا لأنه يسبب خطأ
+    // Archive page elements
+    if (document.getElementById('archiveTable')) {
+      const archiveSelect = document.getElementById("archiveSelect");
+      if (archiveSelect) {
+        archiveSelect.addEventListener("change", async () => {
+          const dateStr = archiveSelect.value;
+          if (!dateStr) return;
 
-      archiveSelect.addEventListener("change", () => {
-        const searchInput = document.getElementById("archiveSearch");
-        if (searchInput) searchInput.value = "";
-        localStorage.setItem("lastArchiveDate", archiveSelect.value);
-        localStorage.removeItem("lastArchiveSearch");
-        loadArchive(archiveSelect.value);
-      });
+          const tbody = document.querySelector("#archiveTable tbody");
+          if (!tbody) return;
 
-      const searchInput = document.getElementById("archiveSearch");
-      if (searchInput) {
-        searchInput.addEventListener("input", (e) => {
-          if (e.target.value.trim()) {
-            archiveSelect.value = "";
-            localStorage.setItem("lastArchiveSearch", e.target.value.trim());
-            localStorage.removeItem("lastArchiveDate");
-            searchArchive(e.target.value.trim());
+          tbody.innerHTML = "";
+
+          // محاولة قراءة من التخزين المحلي أولاً
+          const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+          const localData = localArchive[dateStr];
+
+          if (localData) {
+            const rows = localData.split("\n");
+            rows.forEach((row) => {
+              if (!row.trim()) return;
+              const parts = row.split("\t");
+              const amountVal = parseNumber(parts[2]);
+              const extraVal = parseNumber(parts[3]);
+              const collectorVal = parseNumber(parts[4]);
+              const netVal = parts[5] !== undefined
+                ? parseNumber(parts[5])
+                : collectorVal - (extraVal + amountVal);
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td class="date">${dateStr}</td>
+                <td class="shop">${parts[0] || ""}</td>
+                <td class="code">${parts[1] || ""}</td>
+                <td class="amount">${formatNumber(amountVal)}</td>
+                <td class="extra">${formatNumber(extraVal)}</td>
+                <td class="collector">${formatNumber(collectorVal)}</td>
+                <td class="net numeric ${netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'zero')}">${formatNumber(netVal)}</td>
+              `;
+              tbody.appendChild(tr);
+            });
           } else {
-            localStorage.removeItem("lastArchiveSearch");
-            loadArchive(archiveSelect.value);
-          }
-        });
-      }
+            // إذا لم تكن البيانات موجودة محلياً، حاول جلبها من قاعدة البيانات
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+              showModal("خطأ", "يجب تسجيل الدخول أولاً!");
+              return;
+            }
 
-      // استرجاع آخر حالة محفوظة عند تحميل الصفحة
-      const lastDate = localStorage.getItem("lastArchiveDate");
-      const lastSearch = localStorage.getItem("lastArchiveSearch");
+            const isoDate = toIsoDate(dateStr);
+            const { data, error } = await supabase
+              .from('archive_data')
+              .select('shop, code, amount, extra, collector')
+              .eq('user_id', user.id)
+              .eq('archive_date', isoDate);
 
-      if (lastDate) {
-        // انتظار تحميل التواريخ ثم تحديد التاريخ المحفوظ
-        setTimeout(() => {
-          archiveSelect.value = lastDate;
-          loadArchive(lastDate);
-        }, 100);
-      } else if (lastSearch) {
-        if (searchInput) searchInput.value = lastSearch;
-        searchArchive(lastSearch);
-      }
-      
-      document.getElementById("deleteArchiveBtn")?.addEventListener("click", async () => {
-        const dateStr = archiveSelect.value;
-        if (!dateStr) {
-          showModal("تنبيه", "اختر تاريخًا أولاً!");
-          return;
-        }
+            if (error) {
+              console.error('خطأ في جلب بيانات الأرشيف:', error);
+              showAlert("❌ فشل في جلب بيانات الأرشيف", "danger");
+              return;
+            }
 
-        // الحصول على المستخدم الحالي
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          showModal("خطأ", "يجب تسجيل الدخول أولاً!");
-          return;
-        }
+            if (data && data.length > 0) {
+              data.forEach(row => {
+                const amountVal = parseNumber(row.amount || 0);
+                const extraVal = parseNumber(row.extra || 0);
+                const collectorVal = parseNumber(row.collector || 0);
+                const netVal = collectorVal - (extraVal + amountVal);
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                  <td class="date">${dateStr}</td>
+                  <td class="shop">${row.shop || ""}</td>
+                  <td class="code">${row.code || ""}</td>
+                  <td class="amount">${formatNumber(amountVal)}</td>
+                  <td class="extra">${formatNumber(extraVal)}</td>
+                  <td class="collector">${formatNumber(collectorVal)}</td>
+                  <td class="net numeric ${netVal > 0 ? 'positive' : (netVal < 0 ? 'negative' : 'zero')}">${formatNumber(netVal)}</td>
+                `;
+                tbody.appendChild(tr);
+              });
 
-        showModal(
-          "تأكيد الحذف",
-          `هل أنت متأكد أنك عايز تحذف أرشيف يوم ${dateStr}؟ سيتم حذف البيانات من التخزين المحلي وقاعدة البيانات.`,
-          async () => {
-            try {
-              // حذف من التخزين المحلي
-              const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
-              delete archive[dateStr];
-              localStorage.setItem("archiveData", JSON.stringify(archive));
-
-              // حذف من قاعدة البيانات إذا كان الاتصال متاحاً
-              const isDbConnected = await checkDatabaseConnection();
-              if (isDbConnected) {
-                // أولاً، تحقق من وجود البيانات
-                const isoDate = toIsoDate(dateStr);
-                console.log('Checking data before delete:', { user_id: user.id, dateStr, isoDate });
-                const { data: existingData, error: checkError } = await supabase
-                  .from('archive_data')
-                  .select('id')
-                  .eq('user_id', user.id)
-                  .eq('archive_date', isoDate)
-                  .limit(1);
-
-                console.log('Existing data check:', { existingData, checkError });
-
-                if (checkError) {
-                  console.error('خطأ في التحقق من البيانات:', checkError);
-                  showAlert("⚠️ فشل في التحقق من البيانات في قاعدة البيانات.", "warning");
-                } else if (!existingData || existingData.length === 0) {
-                  console.log('لا توجد بيانات في قاعدة البيانات لحذفها');
-                  showAlert("ℹ️ البيانات غير موجودة في قاعدة البيانات، تم الحذف من التخزين المحلي فقط.", "info");
-                } else {
-                  console.log('Deleting from database:', { user_id: user.id, dateStr, isoDate });
-                  const { data, error } = await supabase
-                    .from('archive_data')
-                    .delete()
-                    .eq('user_id', user.id)
-                    .eq('archive_date', isoDate);
-
-                  console.log('Delete result:', { data, error });
-
-                  if (error) {
-                    console.error('خطأ في حذف البيانات من قاعدة البيانات:', error);
-                    console.error('Error details:', {
-                      message: error.message,
-                      details: error.details,
-                      hint: error.hint,
-                      code: error.code
-                    });
-                    showAlert(`⚠️ تم الحذف من التخزين المحلي فقط. فشل في حذف من قاعدة البيانات: ${error.message}`, "warning");
-                  } else {
-                    showAlert("✅ تم حذف الأرشيف بنجاح من التخزين المحلي وقاعدة البيانات!", "success");
-                  }
-                }
-              } else {
-                showAlert("📱 تم الحذف من التخزين المحلي فقط. سيتم حذف من قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
-              }
-
-              // تحديث واجهة المستخدم
-              archiveSelect.querySelector(`option[value="${dateStr}"]`)?.remove();
-              archiveSelect.value = "";
-              document.querySelector("#archiveTable tbody").innerHTML = "";
-
-              // إعادة تحميل التواريخ المتاحة
-              loadAvailableDates();
-
-            } catch (err) {
-              console.error('خطأ في عملية الحذف:', err);
-              showAlert("❌ فشل في حذف الأرشيف", "danger");
+            } else {
+              showAlert("ℹ️ لا توجد بيانات أرشيف لهذا اليوم", "info");
             }
           }
-        );
-      });
-      
-      document.getElementById("backToHarvestBtn")?.addEventListener("click", () => {
-        navigateTo("harvest");
-      });
+        });
+
+        const deleteArchiveBtn = document.getElementById("deleteArchiveBtn");
+        if (deleteArchiveBtn) {
+          deleteArchiveBtn.addEventListener("click", async () => {
+            const dateStr = archiveSelect.value;
+            if (!dateStr) {
+              showModal("تنبيه", "من فضلك اختر تاريخًا للحذف.");
+              return;
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+              showModal("خطأ", "يجب تسجيل الدخول أولاً!");
+              return;
+            }
+
+            showModal(
+              "تأكيد الحذف",
+              `هل أنت متأكد أنك عايز تحذف أرشيف يوم ${dateStr}؟ سيتم حذف البيانات من التخزين المحلي وقاعدة البيانات.`,
+              async () => {
+                try {
+                  // حذف من التخزين المحلي
+                  const archive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+                  delete archive[dateStr];
+                  localStorage.setItem("archiveData", JSON.stringify(archive));
+
+                  // حذف من قاعدة البيانات إذا كان الاتصال متاحاً
+                  const isDbConnected = await checkDatabaseConnection();
+                  if (isDbConnected) {
+                    const isoDate = toIsoDate(dateStr);
+                    console.log('Deleting from database:', { user_id: user.id, dateStr, isoDate });
+                    const { error } = await supabase
+                      .from('archive_data')
+                      .delete()
+                      .eq('user_id', user.id)
+                      .eq('archive_date', isoDate);
+
+                    if (error) {
+                      console.error('خطأ في حذف البيانات من قاعدة البيانات:', error);
+                      console.error('Error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code
+                      });
+                      showAlert(`⚠️ تم الحذف من التخزين المحلي فقط. فشل في حذف من قاعدة البيانات: ${error.message}`, "warning");
+                    } else {
+                      showAlert("✅ تم حذف الأرشيف بنجاح من التخزين المحلي وقاعدة البيانات!", "success");
+                    }
+                  } else {
+                    showAlert("📱 تم الحذف من التخزين المحلي فقط. سيتم حذف من قاعدة البيانات عند عودة الاتصال بالإنترنت.", "info");
+                  }
+
+                  // تحديث واجهة المستخدم
+                  archiveSelect.querySelector(`option[value="${dateStr}"]`)?.remove();
+                  archiveSelect.value = "";
+                  const tbody = document.querySelector("#archiveTable tbody");
+                  if (tbody) tbody.innerHTML = "";
+
+                  // إعادة تحميل التواريخ المتاحة
+                  loadAvailableDates();
+
+                } catch (err) {
+                  console.error('خطأ في عملية الحذف:', err);
+                  showAlert("❌ فشل في حذف الأرشيف", "danger");
+                }
+              }
+            );
+          });
+        }
+
+        document.getElementById("backToHarvestBtn")?.addEventListener("click", () => {
+          navigateTo("harvest");
+        });
+
+        // تحميل التواريخ عند فتح صفحة الأرشيف
+        loadAvailableDates();
+      } else {
+        console.log("Archive select element not found");
+      }
     }
 
     // Sidebar listeners
