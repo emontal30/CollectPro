@@ -281,6 +281,12 @@ main {
   border-radius: 0; /* بدون حواف مستديرة */
 }
 
+body.dark main {
+  background: radial-gradient(circle at top, rgba(0, 200, 150, 0.08), rgba(10, 10, 10, 0.98));
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+}
+
 /* تنسيق عرض التاريخ في صفحة التحصيلات */
 .date-display {
   display: flex;

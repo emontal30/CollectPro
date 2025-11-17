@@ -203,8 +203,11 @@ function formatNumber(n) {
     return migration[oldLevel] || oldLevel;
   }
 
+  const ZOOM_ORDER = ["md", "base", "normal", "lg", "xl", "2xl", "3xl", "4xl", "5xl"];
+
   function applyZoomFromStorage() {
-    let zoomLevel = localStorage.getItem("zoomLevel") || "normal";
+    // اجعل "كبير +2" (xl) هو المقاس الافتراضي الجديد إذا لم يُحفظ أي اختيار سابق
+    let zoomLevel = localStorage.getItem("zoomLevel") || "xl";
     
     // تحويل المستويات القديمة
     const newLevel = migrateOldZoomLevel(zoomLevel);
@@ -212,8 +215,30 @@ function formatNumber(n) {
       localStorage.setItem("zoomLevel", newLevel);
       zoomLevel = newLevel;
     }
+
+    // التأكد من أن المستوى ضمن السلم الجديد (4 أصغر و4 أكبر حول xl)
+    if (!ZOOM_ORDER.includes(zoomLevel)) {
+      zoomLevel = "xl";
+      localStorage.setItem("zoomLevel", zoomLevel);
+    }
     
-    document.body.classList.remove("zoom-xs", "zoom-sm", "zoom-md", "zoom-base", "zoom-normal", "zoom-lg", "zoom-xl", "zoom-2xl", "zoom-3xl");
+    document.body.classList.remove(
+      "zoom-7xs",
+      "zoom-6xs",
+      "zoom-5xs",
+      "zoom-xs",
+      "zoom-sm",
+      "zoom-md",
+      "zoom-base",
+      "zoom-normal",
+      "zoom-lg",
+      "zoom-xl",
+      "zoom-2xl",
+      "zoom-3xl",
+      "zoom-4xl",
+      "zoom-5xl",
+      "zoom-6xl"
+    );
     document.body.classList.add(`zoom-${zoomLevel}`);
     updateZoomButtons(zoomLevel);
   }
@@ -221,47 +246,44 @@ function formatNumber(n) {
   function updateZoomButtons(level) {
     const zoomInBtn = document.getElementById("zoom-in-btn");
     const zoomOutBtn = document.getElementById("zoom-out-btn");
+
+    const minLevel = ZOOM_ORDER[0];
+    const maxLevel = ZOOM_ORDER[ZOOM_ORDER.length - 1];
     
     if (zoomInBtn) {
-      zoomInBtn.disabled = (level === "3xl");
-      zoomInBtn.style.opacity = (level === "3xl") ? "0.5" : "1";
+      zoomInBtn.disabled = (level === maxLevel);
+      zoomInBtn.style.opacity = (level === maxLevel) ? "0.5" : "1";
     }
     
     if (zoomOutBtn) {
-      zoomOutBtn.disabled = (level === "xs");
-      zoomOutBtn.style.opacity = (level === "xs") ? "0.5" : "1";
+      zoomOutBtn.disabled = (level === minLevel);
+      zoomOutBtn.style.opacity = (level === minLevel) ? "0.5" : "1";
     }
   }
   
   function zoomIn() {
-    const currentZoom = localStorage.getItem("zoomLevel") || "normal";
-    const zoomUp = { 
-      xs: "sm",
-      sm: "md",
-      md: "base",
-      base: "normal",
-      normal: "lg", 
-      lg: "xl",
-      xl: "2xl",
-      "2xl": "3xl",
-      "3xl": "3xl"
-    };
-    const nextZoom = zoomUp[currentZoom];
+    const currentZoom = localStorage.getItem("zoomLevel") || "xl";
+
+    const currentIndex = ZOOM_ORDER.includes(currentZoom)
+      ? ZOOM_ORDER.indexOf(currentZoom)
+      : ZOOM_ORDER.indexOf("xl");
+    const nextIndex = Math.min(currentIndex + 1, ZOOM_ORDER.length - 1);
+    const nextZoom = ZOOM_ORDER[nextIndex];
     
     if (nextZoom !== currentZoom) {
       localStorage.setItem("zoomLevel", nextZoom);
       applyZoomFromStorage();
       
       const messages = {
-        xs: "صغير جداً -4 📱",
-        sm: "صغير جداً -3 📱",
-        md: "صغير -2 📱",
-        base: "صغير -1 📱",
-        normal: "عادي (افتراضي) 📄",
-        lg: "كبير +1 📺",
-        xl: "كبير +2 🖥️",
-        "2xl": "كبير +3 🎯",
-        "3xl": "كبير +4 🌟"
+        md: "صغير جداً -4 ",
+        base: "صغير جداً -3 ",
+        normal: "صغير -2 ",
+        lg: "صغير -1 ",
+        xl: "الافتراضي",
+        "2xl": "كبير 1",
+        "3xl": "كبير 2",
+        "4xl": "كبير 3",
+        "5xl": "كبير 4"
       };
       
       showAlert(messages[nextZoom] || `حجم ${nextZoom}`, "success");
@@ -269,34 +291,28 @@ function formatNumber(n) {
   }
   
   function zoomOut() {
-    const currentZoom = localStorage.getItem("zoomLevel") || "normal";
-    const zoomDown = { 
-      "3xl": "2xl",
-      "2xl": "xl",
-      xl: "lg",
-      lg: "normal",
-      normal: "base", 
-      base: "md",
-      md: "sm",
-      sm: "xs",
-      xs: "xs"
-    };
-    const nextZoom = zoomDown[currentZoom];
+    const currentZoom = localStorage.getItem("zoomLevel") || "xl";
+
+    const currentIndex = ZOOM_ORDER.includes(currentZoom)
+      ? ZOOM_ORDER.indexOf(currentZoom)
+      : ZOOM_ORDER.indexOf("xl");
+    const nextIndex = Math.max(currentIndex - 1, 0);
+    const nextZoom = ZOOM_ORDER[nextIndex];
     
     if (nextZoom !== currentZoom) {
       localStorage.setItem("zoomLevel", nextZoom);
       applyZoomFromStorage();
       
       const messages = {
-        xs: "صغير جداً -4 📱",
-        sm: "صغير جداً -3 📱",
-        md: "صغير -2 📱",
-        base: "صغير -1 📱",
-        normal: "عادي (افتراضي) 📄",
-        lg: "كبير +1 📺",
-        xl: "كبير +2 🖥️",
-        "2xl": "كبير +3 🎯",
-        "3xl": "كبير +4 🌟"
+        md: "صغير جداً -4 ",
+        base: "صغير جداً -3 ",
+        normal: "صغير -2 ",
+        lg: "صغير -1 ",
+        xl: "الافتراضي",
+        "2xl": "كبير 1",
+        "3xl": "كبير 2",
+        "4xl": "كبير 3",
+        "5xl": "كبير 4"
       };
       
       showAlert(messages[nextZoom] || `حجم ${nextZoom}`, "info");
