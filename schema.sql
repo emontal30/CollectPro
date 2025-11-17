@@ -382,7 +382,12 @@ CREATE POLICY "Users can update own profile" ON public.users
 
 CREATE POLICY "Admins can view all users" ON public.users 
     FOR SELECT 
-    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+    USING (
+        (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+        OR EXISTS (
+            SELECT 1 FROM public.admins a WHERE a.email = auth.email()
+        )
+    );
 
 -- RLS Policies for subscriptions
 CREATE POLICY "Users can view own subscriptions" ON public.subscriptions 

@@ -200,7 +200,7 @@ async function updateSubscriptionInfo() {
                 start_date,
                 plan_name,
                 plan_id,
-                subscription_plans!inner (
+                subscription_plans (
                     name,
                     name_ar
                 )
@@ -208,18 +208,18 @@ async function updateSubscriptionInfo() {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         console.log('Subscription data:', subscription, 'Error:', error);
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
             console.error('Supabase query error:', error);
             return;
         }
 
         const daysLeftEl = document.getElementById('days-left');
 
-        if (error || !subscription) {
+        if (!subscription) {
             console.log('No active subscription found');
             if (daysLeftEl) daysLeftEl.textContent = '0';
             if (subscriptionInfoEl) subscriptionInfoEl.style.display = 'block';
