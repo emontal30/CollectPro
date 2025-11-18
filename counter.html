@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1024">
     <title>عداد الأموال - CollectPro</title>
     <meta name="theme-color" content="#ffffff"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -867,11 +867,6 @@
 
         /* استجابة للشاشات الصغيرة */
         @media (max-width: 768px) {
-            /* إلغاء min-width:1024px الخاصة بـ style.css في هذه الصفحة فقط على الموبايل */
-            body {
-                min-width: 0;
-            }
-
             .counter-header h1 {
                 font-size: 2rem;
             }
@@ -925,7 +920,7 @@
         }
 
         .counter-container {
-            max-width: 520px;
+            max-width: 100%;
             margin: 0 auto 24px;
             padding: 12px 8px 24px;
         }
