@@ -266,8 +266,49 @@
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* الصف العلوي في ملخص الإجمالي (3 مربعات جنبًا إلى جنب في صف واحد دائمًا) */
+        .summary-grid-top {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+        }
+
+        /* تصغير حجم النص في قيم إجمالي العدادين وإجمالي الفكة داخل الصف العلوي فقط */
+        .summary-grid-top .summary-value {
+            font-size: 1.2rem;
+        }
+
+        /* صفوف منفصلة تحت الشبكة العلوية */
+        .summary-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .summary-row-grand .summary-item,
+        .summary-row-status .summary-item {
+            width: 100%;
+        }
+
+        .summary-row-middle .summary-item {
+            flex: 1;
+        }
+
+        /* تصغير حجم الأرقام في إجمالي التصفيرة وإجمالي المحصل */
+        .summary-row-middle .summary-value {
+            font-size: 1.2rem;
+        }
+
+        .summary-divider {
+            margin: 8px 0;
+            height: 1px;
+            background-color: #e5e7eb;
+            border-radius: 999px;
         }
 
         .summary-item {
@@ -388,14 +429,14 @@
         }
 
         .categories-summary {
-            margin-top: 30px;
+            margin-top: 16px;
         }
 
         .categories-title {
             text-align: center;
             color: #333;
             font-size: 1.3rem;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             padding: 10px;
             background: linear-gradient(45deg, var(--primary), #005a4b);
             border-radius: 10px;
@@ -404,7 +445,7 @@
 
         .categories-table {
             width: 100%;
-            margin: 20px 0;
+            margin: 0;
             border-collapse: separate;
             border-spacing: 0;
             table-layout: fixed;
@@ -871,19 +912,493 @@
                 grid-template-columns: 1fr;
             }
 
-            .counters-wrapper {
-                grid-template-columns: 1fr;
-            }
-
-            .summary-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
         }
+
+        /* ===== تصميم خاص لصفحة عداد الأموال (مطابق للصور) - الوضع النهاري ===== */
+        body.loaded {
+            background-color: #f3f9ff;
+        }
+
+        .counter-container {
+            max-width: 520px;
+            margin: 0 auto 24px;
+            padding: 12px 8px 24px;
+        }
+
+        .counters-wrapper {
+            gap: 24px;
+        }
+
+        .counter-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 0; /* إزالة الفراغ أسفل شريط الإجمالي */
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+            border: 1px solid #e2e8f0;
+        }
+
+        .counter-title {
+            background-color: #00a89f;
+            border-radius: 12px 12px 0 0; /* حواف دائرية من الأعلى فقط */
+            padding: 10px 14px;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* إزالة أى فراغ بين العنوان وهيدر الجدول وبين آخر صف وشريط الإجمالي */
+        .cp-table {
+            margin: 0;
+        }
+
+        .cp-table .table-container {
+            margin: 0;
+            padding: 0;
+            border-radius: 0;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+
+        .cp-table table.counter-table,
+        .cp-table table.categories-table {
+            background-color: #ffffff;
+            box-shadow: none;
+            border: none;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .counter-table thead th,
+        .categories-table thead th {
+            background-color: #00a89f;
+            font-size: 0.85rem;
+            border: none;
+            text-shadow: none;
+        }
+
+        .counter-table tbody tr,
+        .categories-table tbody tr {
+            background-color: #ffffff;
+        }
+
+        .counter-table tbody tr:nth-child(even),
+        .categories-table tbody tr:nth-child(even) {
+            background-color: #f4f7fb;
+        }
+
+        .counter-table tbody td,
+        .categories-table tbody td {
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            color: #111827;
+            font-size: 0.9rem;
+        }
+
+        /* تكبير نص خلايا عمود الإجمالي في الجداول عن باقي الأعمدة بدرجة واحدة */
+        .counter-table tbody td:first-child,
+        .categories-table tbody td:first-child {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* إزالة أى حواف دائرية عن الجدول بالكامل (هيدر وخلايا وصفوف) */
+        .cp-table table,
+        .cp-table th,
+        .cp-table td,
+        .cp-table tr {
+            border-radius: 0 !important;
+        }
+
+        /* فاصل عمودي بين عمود العدد وعمود الفئة (سُمك 1px مثل الفاصل بين الإجمالي والعدد) */
+        .counter-table tbody td:nth-child(2),
+        .categories-table tbody td:nth-child(2) {
+            border-left: none;
+            position: relative;
+        }
+
+        .counter-table tbody td:nth-child(2)::after,
+        .categories-table tbody td:nth-child(2)::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 1px;
+            background-color: #e2e8f0;
+        }
+
+        /* تمديد الفاصل إلى عناوين الأعمدة (بين الإجمالي/العدد وببين العدد/الفئة) */
+        .counter-table thead th:nth-child(1),
+        .categories-table thead th:nth-child(1),
+        .counter-table thead th:nth-child(2),
+        .categories-table thead th:nth-child(2) {
+            position: relative;
+        }
+
+        .counter-table thead th:nth-child(1)::after,
+        .categories-table thead th:nth-child(1)::after,
+        .counter-table thead th:nth-child(2)::after,
+        .categories-table thead th:nth-child(2)::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 1px;
+            background-color: rgba(255,255,255,0.4);
+        }
+
+        /* جعل عمود الفئة خلية عادية بدون خلفية بيضاوية مع إزالة البوردر الخارجي فقط */
+        .counter-table tbody td:last-child,
+        .categories-table tbody td:last-child {
+            background: transparent;
+            border-radius: 0;
+            border-right: none;
+        }
+
+        .input-field {
+            width: 100%;
+            max-width: none;
+            height: 36px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        .counter-totals {
+            margin-top: 0;
+            padding: 14px 16px;
+            min-height: 52px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9fafb;
+            border-radius: 0;
+            border-top: 2px solid rgba(0, 121, 101, 0.3); /* فاصل مميز بين الجدول والإجمالي */
+        }
+
+        /* بوردر خاص لشريط إجمالي ملخص الفئات أسفل جدول ملخص الفئات */
+        .categories-totals {
+            margin-top: 0;
+            border-top: 2px solid rgba(0, 121, 101, 0.3); /* نفس الفاصل مثل العدادات */
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-left: 1px solid #e2e8f0;
+            border-radius: 0 0 12px 12px;
+            background-color: #f9fafb;
+        }
+
+        .counter-total {
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .counter-total-label {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .counter-total-value {
+            color: #0f172a;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: none;
+            -webkit-text-fill-color: inherit;
+        }
+
+        /* إبراز إجمالي العداد الأول والثاني وتلوين إجمالي الفكة بالرمادي */
+        #total1,
+        #total2 {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        #small-count1,
+        #small-count2 {
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .summary-section {
+            margin-top: 16px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+            border: 1px solid #e2e8f0;
+        }
+
+        .summary-title,
+        .categories-title {
+            background-color: #00a89f;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .summary-item {
+            background-color: #ffffff;
+            border-color: #e2e8f0;
+        }
+
+        .summary-label {
+            color: #6b7280;
+        }
+
+        .summary-value {
+            color: #0f172a;
+            background: none;
+            -webkit-text-fill-color: inherit;
+        }
+
+        .currency-label {
+            color: inherit;
+            font-weight: 600;
+        }
+
+        .no-data {
+            background-color: #ffffff;
+            border: none;
+            box-shadow: none;
+        }
+
+        .no-data p {
+            color: #9ca3af;
+        }
+
+        /* تلوين الفئات حسب الصور (من 200 حتى 1 جنيه) */
+        #counter1-body tr:nth-child(1) td:last-child,
+        #counter2-body tr:nth-child(1) td:last-child {
+            color: #e91e63;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(2) td:last-child,
+        #counter2-body tr:nth-child(2) td:last-child {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(3) td:last-child,
+        #counter2-body tr:nth-child(3) td:last-child {
+            color: #a855f7;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(4) td:last-child,
+        #counter2-body tr:nth-child(4) td:last-child {
+            color: #f97316;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(5) td:last-child,
+        #counter2-body tr:nth-child(5) td:last-child {
+            color: #22c55e;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(6) td:last-child,
+        #counter2-body tr:nth-child(6) td:last-child {
+            color: #3b82f6;
+            font-weight: 700;
+        }
+
+        #counter1-body tr:nth-child(7) td:last-child,
+        #counter2-body tr:nth-child(7) td:last-child {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        /* ===== الوضع الليلي الخاص بصفحة عداد الأموال ===== */
+        body.dark.loaded {
+            background-color: #020617;
+        }
+
+        body.dark .counter-card {
+            background-color: #020617;
+            border-color: #1f2937;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+            border-radius: 0;
+        }
+
+        body.dark .counter-title {
+            background-color: #00a89f;
+        }
+
+        body.dark .cp-table .table-container {
+            background-color: #020617;
+            border-radius: 0;
+            border: 1px solid #1f2937;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+            overflow: hidden;
+        }
+
+        body.dark .cp-table table.counter-table,
+        body.dark .cp-table table.categories-table {
+            background-color: #020617;
+            border: none;
+            box-shadow: none;
+            border-radius: 0;
+        }
+
+        body.dark .counter-table thead th,
+        body.dark .categories-table thead th {
+            background-color: #00a89f;
+            border: none;
+            text-shadow: none;
+        }
+
+        body.dark .counter-table tbody tr,
+        body.dark .categories-table tbody tr {
+            background-color: #020617;
+        }
+
+        body.dark .counter-table tbody tr:nth-child(even),
+        body.dark .categories-table tbody tr:nth-child(even) {
+            background-color: #020c1b;
+        }
+
+        body.dark .counter-table tbody td,
+        body.dark .categories-table tbody td {
+            border-bottom: 1px solid #1f2937;
+            border-right: 1px solid #1f2937;
+            color: #e5e7eb;
+        }
+
+        /* فاصل عمودي بين عمود العدد وعمود الفئة في الوضع الليلي (نفس السمك لكن بلون داكن) */
+        body.dark .counter-table tbody td:nth-child(2),
+        body.dark .categories-table tbody td:nth-child(2) {
+            border-left: none;
+            position: relative;
+        }
+
+        body.dark .counter-table tbody td:nth-child(2)::after,
+        body.dark .categories-table tbody td:nth-child(2)::after {
+            background-color: #1f2937;
+        }
+
+        /* عمود الفئة في الوضع الليلي بدون خلفية بيضاوية مع إزالة البوردر الخارجي فقط */
+        body.dark .counter-table tbody td:last-child,
+        body.dark .categories-table tbody td:last-child {
+            background: transparent;
+            border-radius: 0;
+            border-right: none;
+        }
+
+        body.dark .input-field {
+            background-color: #020c1b;
+            border-color: #1f2937;
+            color: #f9fafb;
+        }
+
+        body.dark .input-field:focus {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 1px #22c55e;
+        }
+
+        body.dark .counter-totals {
+            margin-top: 0;
+            padding: 14px 16px;
+            min-height: 52px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #020617;
+            border-radius: 0;
+            border-top: 1px solid rgba(148, 163, 184, 0.9) !important; /* فاصل أوضح في الوضع الليلي */
+        }
+
+        body.dark .categories-totals {
+            margin-top: 0;
+            border-top: 1px solid rgba(148, 163, 184, 0.9) !important; /* نفس الفاصل الواضح في ملخص الفئات */
+            border-right: 1px solid #1f2937;
+            border-bottom: 1px solid #1f2937;
+            border-left: 1px solid #1f2937;
+            border-radius: 0 0 12px 12px;
+            background-color: #020617;
+        }
+
+        body.dark .counter-total {
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        body.dark .counter-total-label {
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        body.dark .counter-total-value {
+            color: #f9fafb;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        body.dark #total1,
+        body.dark #total2 {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        body.dark #small-count1,
+        body.dark #small-count2 {
+            color: #9ca3af;
+            font-weight: 600;
+        }
+
+        body.dark .summary-section {
+            background-color: #020617;
+            border-color: #1f2937;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+        }
+
+        body.dark .summary-title,
+        body.dark .categories-title {
+            background-color: #00a89f;
+        }
+
+        body.dark .summary-item {
+            background-color: #020617;
+            border-color: #1f2937;
+        }
+
+        body.dark .summary-label {
+            color: #9ca3af;
+        }
+
+        body.dark .summary-value {
+            color: #f9fafb;
+            background: none;
+            -webkit-text-fill-color: inherit;
+        }
+
+        body.dark .no-data {
+            background-color: #020617;
+            border: none;
+            box-shadow: none;
+        }
+
+        body.dark .no-data p {
+            color: #9ca3af;
+        }
+
+        body.dark .categories-table {
+            border: none;
+        }
+
+        body.dark .categories-title {
+            background-color: #00a89f;
+        }
+
     </style>
     </head>
     <body class="loaded">
@@ -1028,12 +1543,17 @@
                             <div class="counter-total-value" id="total1">0 <span class="currency-label">EG</span></div>
                         </div>
                         <div class="counter-total">
-                            <div class="counter-total-label">إجمالي الفئات الصغيرة (1،5،10،20)</div>
+                            <div class="counter-total-label">اجمالى الفكه :</div>
                             <div class="counter-total-value" id="small-count1">0 <span class="currency-label">EG</span></div>
                         </div>
                     </div>
                 </div>
+            </div> <!-- /counters-wrapper (Counter 1) -->
+            </div> <!-- /counter-container (Counter 1) -->
 
+            <!-- حاوية منفصلة للعداد الثاني -->
+            <div class="counter-container second-counter-container">
+            <div class="counters-wrapper">
                 <!-- Counter 2 -->
                 <div class="counter-card">
                     <h2 class="counter-title"><span>العداد الثاني</span> <button id="sortCategoriesBtn2" class="sort-btn" title="ترتيب الفئات">⇵</button></h2>
@@ -1097,16 +1617,19 @@
                             <div class="counter-total-value" id="total2">0 <span class="currency-label">EG</span></div>
                         </div>
                         <div class="counter-total">
-                            <div class="counter-total-label">إجمالي الفئات الصغيرة (1،5،10،20)</div>
+                            <div class="counter-total-label">اجمالى الفكه :</div>
                             <div class="counter-total-value" id="small-count2">0 <span class="currency-label">EG</span></div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> <!-- /counters-wrapper (Counter 2) -->
 
+            <!-- قسم ملخص إجمالي -->
             <div class="summary-section">
                 <h2 class="summary-title">ملخص إجمالي</h2>
-                <div class="summary-grid">
+
+                <!-- الصف العلوي: إجمالي العداد الأول، إجمالي العداد الثاني، إجمالي الفئات الصغيرة -->
+                <div class="summary-grid summary-grid-top">
                     <div class="summary-item">
                         <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الأول</div>
                         <div class="summary-value" id="summary-total1">0 <span class="currency-label">EG</span></div>
@@ -1115,28 +1638,46 @@
                         <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الثاني</div>
                         <div class="summary-value" id="summary-total2">0 <span class="currency-label">EG</span></div>
                     </div>
+                    <div class="summary-item summary-item-small">
+                        <div class="summary-label"><i class="fas fa-coins"></i> اجمالى الفكه </div>
+                        <div class="summary-value" id="total-small-count">0</div>
+                    </div>
+                </div>
+
+                <!-- المجموع الكلي في صف مستقل بعرض كامل -->
+                <div class="summary-row summary-row-grand">
                     <div class="summary-item summary-item-total">
                         <div class="summary-label"><i class="fas fa-plus-circle"></i> المجموع الكلي</div>
                         <div class="summary-value" id="grand-total">0 <span class="currency-label">EG</span></div>
                     </div>
+                </div>
+
+                <!-- فاصل خفيف تحت المجموع الكلي -->
+                <div class="summary-divider"></div>
+
+                <!-- صف متوسط: مبلغ التصفيرة + إجمالي المحصل -->
+                <div class="summary-row summary-row-middle">
                     <div class="summary-item summary-item-clearance">
                         <div class="summary-label"><i class="fas fa-money-bill-wave"></i> مبلغ التصفيرة</div>
                         <div class="summary-value" id="clearance-amount">0 <span class="currency-label">EG</span></div>
-                    </div>
-                    <div class="summary-item summary-item-small">
-                        <div class="summary-label"><i class="fas fa-coins"></i> إجمالي الفئات الصغيرة</div>
-                        <div class="summary-value" id="total-small-count">0</div>
                     </div>
                     <div class="summary-item summary-item-collected">
                         <div class="summary-label"><i class="fas fa-hand-holding-usd"></i> إجمالي المحصل</div>
                         <div class="summary-value" id="total-collected-summary">0 <span class="currency-label">EG</span></div>
                     </div>
+                </div>
+
+                <!-- صف الحالة في الأسفل بعرض كامل -->
+                <div class="summary-row summary-row-status">
                     <div class="summary-item summary-item-status">
                         <div class="summary-label"><i class="fas fa-info-circle"></i> الحاله</div>
                         <div class="summary-value" id="status-summary">غير محدد</div>
                     </div>
                 </div>
+            </div>
 
+            <!-- قسم ملخص الفئات في حاوية منفصلة -->
+            <div class="categories-section">
                 <div class="categories-summary">
                     <h3 class="categories-title">ملخص الفئات</h3>
                     <div id="categories-container">
@@ -1158,6 +1699,17 @@
                                 <i class="fas fa-inbox"></i>
                                 <p>لا توجد بيانات لعرضها</p>
                             </div>
+                        </div>
+                    </div>
+                    <!-- شريط إجمالي لملخص الفئات -->
+                    <div class="counter-totals categories-totals">
+                        <div class="counter-total">
+                            <div class="counter-total-label">إجمالي ملخص الفئات</div>
+                            <div class="counter-total-value" id="categories-grand-total">0 <span class="currency-label">EG</span></div>
+                        </div>
+                        <div class="counter-total">
+                            <div class="counter-total-label">اجمالى الفكه :</div>
+                            <div class="counter-total-value" id="categories-small-total">0 <span class="currency-label">EG</span></div>
                         </div>
                     </div>
                 </div>
@@ -1277,6 +1829,12 @@
             grandTotalElement.classList.add('highlight');
             setTimeout(() => grandTotalElement.classList.remove('highlight'), 500);
 
+            // نسخ نفس القيمة إلى شريط إجمالي ملخص الفئات (بدون حسابات إضافية)
+            const categoriesGrandTotal = document.getElementById('categories-grand-total');
+            if (categoriesGrandTotal) {
+                categoriesGrandTotal.innerHTML = grandTotalElement.innerHTML;
+            }
+
             // حساب إجمالي الفئات الصغيرة
             calculateTotalSmallCount();
 
@@ -1296,6 +1854,12 @@
             totalSmallCountElement.innerHTML = `${formatNumber(totalSmallCount)} <span class="currency-label">EG</span>`;
             totalSmallCountElement.classList.add('highlight');
             setTimeout(() => totalSmallCountElement.classList.remove('highlight'), 500);
+
+            // نسخ نفس قيمة إجمالي الفكة إلى شريط ملخص الفئات
+            const categoriesSmallTotal = document.getElementById('categories-small-total');
+            if (categoriesSmallTotal) {
+                categoriesSmallTotal.innerHTML = totalSmallCountElement.innerHTML;
+            }
         }
 
         // تحديث ملخص الفئات
@@ -1419,6 +1983,40 @@
                 clonedTable.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08)';
                 clonedTable.style.border = '2px solid var(--primary)';
                 exportElement.appendChild(clonedTable);
+
+                // إضافة شريط الاجماليات أسفل الجدول في الصورة المصدَّرة
+                const totalsBar = document.createElement('div');
+                totalsBar.style.display = 'flex';
+                totalsBar.style.justifyContent = 'space-between';
+                totalsBar.style.alignItems = 'center';
+                totalsBar.style.marginTop = '10px';
+                totalsBar.style.padding = '10px 14px';
+                totalsBar.style.background = 'linear-gradient(135deg, #f9fafb, #eef2f7)';
+                totalsBar.style.borderTop = '1px solid rgba(0,0,0,0.06)';
+                totalsBar.style.borderRadius = '10px';
+
+                const rightTotal = document.createElement('div');
+                rightTotal.style.fontSize = '0.95rem';
+                rightTotal.style.fontWeight = '600';
+                rightTotal.style.color = '#111827';
+
+                const leftTotal = document.createElement('div');
+                leftTotal.style.fontSize = '0.95rem';
+                leftTotal.style.fontWeight = '600';
+                leftTotal.style.color = '#4b5563';
+
+                const categoriesGrandTotalEl = document.getElementById('categories-grand-total');
+                const categoriesSmallTotalEl = document.getElementById('categories-small-total');
+
+                const grandText = categoriesGrandTotalEl ? categoriesGrandTotalEl.textContent.trim() : '0 EG';
+                const smallText = categoriesSmallTotalEl ? categoriesSmallTotalEl.textContent.trim() : '0 EG';
+
+                rightTotal.textContent = `إجمالي ملخص الفئات: ${grandText}`;
+                leftTotal.textContent = `اجمالى الفكه : ${smallText}`;
+
+                totalsBar.appendChild(rightTotal);
+                totalsBar.appendChild(leftTotal);
+                exportElement.appendChild(totalsBar);
             } else {
                 const noDataMsg = document.createElement('p');
                 noDataMsg.textContent = 'لا توجد بيانات لعرضها';
