@@ -619,6 +619,8 @@ function formatNumber(n) {
               loadHarvestDataFromStorage(harvestData, tbody);
               // مسح البيانات المؤقتة بعد التحميل
               localStorage.removeItem("harvestData");
+              // ضمان وجود صف فارغ في نهاية الجدول بعد التحميل
+              addFinalEmptyRowIfNeeded();
             }
           );
           return true;
@@ -626,6 +628,8 @@ function formatNumber(n) {
           const result = loadHarvestDataFromStorage(harvestData, tbody);
           // مسح البيانات المؤقتة بعد التحميل
           localStorage.removeItem("harvestData");
+          // ضمان وجود صف فارغ في نهاية الجدول بعد التحميل
+          addFinalEmptyRowIfNeeded();
           return result;
         }
       }
@@ -695,6 +699,8 @@ function formatNumber(n) {
       const rows = Array.from(tbody.querySelectorAll("tr"));
       rows.forEach((r) => attachRowListeners(r));
       updateTotals();
+      // ضمان وجود صف فارغ في نهاية الجدول بعد تحميل البيانات المحفوظة
+      addFinalEmptyRowIfNeeded();
       return true;
     }
     
@@ -756,6 +762,8 @@ function formatNumber(n) {
         } catch (e) {}
 
         updateTotals();
+        // ضمان وجود صف فارغ في نهاية الجدول بعد استخراج البيانات الأصلية
+        addFinalEmptyRowIfNeeded();
         return true;
       }
     }
