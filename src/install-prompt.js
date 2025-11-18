@@ -79,7 +79,7 @@
         container.innerHTML = `
           <div class="install-prompt-content">
             <div class="install-icon">
-              <img src="web-app-manifest-192x192.png" alt="أيقونة التطبيق" />
+              <img src="/logo-momkn.png" alt="شعار CollectPro" />
             </div>
             <div class="install-text">
               <h3>ثبّت تطبيق Collect Pro</h3>
