@@ -3,9 +3,9 @@
  * Handles caching, offline functionality, and app updates
  */
 
-const CACHE_NAME = 'collectpro-v2.4.4';
-const STATIC_CACHE = 'collectpro-static-v2.4.4';
-const DYNAMIC_CACHE = 'collectpro-dynamic-v2.4.4';
+const CACHE_NAME = 'collectpro-v2.4.5';
+const STATIC_CACHE = 'collectpro-static-v2.4.5';
+const DYNAMIC_CACHE = 'collectpro-dynamic-v2.4.5';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -102,6 +102,14 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests and external requests
   if (event.request.method !== 'GET' ||
       !event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Always let the browser handle navigation/HTML requests directly
+  // so that pages (dashboard, counter, subscriptions, etc.)
+  // always load the latest version from the network.
+  const acceptHeader = event.request.headers.get('accept') || '';
+  if (event.request.mode === 'navigate' || acceptHeader.includes('text/html')) {
     return;
   }
 
