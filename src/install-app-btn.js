@@ -6,8 +6,6 @@
 (function() {
   'use strict';
 
-  let deferredPrompt;
-
   // Wait for DOM to be ready
   document.addEventListener('DOMContentLoaded', () => {
     console.log('📱 Install app button script loaded');
@@ -19,15 +17,29 @@
       return;
     }
 
-    // Listen for beforeinstallprompt event
+    // Check if deferred prompt is already available (set by install-prompt.js)
+    if (window.deferredPrompt) {
+      console.log('📱 Deferred prompt already available');
+      // Show pulse animation to draw attention
+      installAppBtn.classList.add('pulse');
+
+      // Remove pulse after 3 seconds
+      setTimeout(() => {
+        installAppBtn.classList.remove('pulse');
+      }, 3000);
+    }
+
+    // Listen for beforeinstallprompt event (in case install-prompt.js hasn't loaded yet)
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('📱 beforeinstallprompt event fired');
-      e.preventDefault();
-      deferredPrompt = e;
+      if (!window.deferredPrompt) {
+        e.preventDefault();
+        window.deferredPrompt = e;
+      }
 
       // Show pulse animation to draw attention
       installAppBtn.classList.add('pulse');
-      
+
       // Remove pulse after 3 seconds
       setTimeout(() => {
         installAppBtn.classList.remove('pulse');
@@ -37,8 +49,8 @@
     // Handle install button click
     installAppBtn.addEventListener('click', async () => {
       console.log('📱 Install app button clicked');
-      
-      if (deferredPrompt) {
+
+      if (window.deferredPrompt) {
         // Show loading state
         const originalContent = installAppBtn.innerHTML;
         installAppBtn.innerHTML = `
@@ -57,8 +69,8 @@
 
         try {
           // Show the install prompt
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
+          window.deferredPrompt.prompt();
+          const { outcome } = await window.deferredPrompt.userChoice;
           
           console.log('📱 Install prompt outcome:', outcome);
           
@@ -93,7 +105,8 @@
             installAppBtn.disabled = false;
           }
           
-          deferredPrompt = null;
+          // Clear the global deferredPrompt
+          window.deferredPrompt = null;
           
         } catch (error) {
           console.error('📱 Install error:', error);
@@ -101,11 +114,15 @@
           // Silent fallback - no instructions shown
           installAppBtn.innerHTML = originalContent;
           installAppBtn.disabled = false;
+          
+          // Clear the global deferredPrompt on error too
+          window.deferredPrompt = null;
         }
         
       } else {
-        // No deferred prompt - silent fallback
-        console.log('📱 No deferred prompt available');
+        // No deferred prompt - show manual install instructions
+        console.log('📱 No deferred prompt available, showing install instructions');
+        showInstallInstructions();
       }
     });
 

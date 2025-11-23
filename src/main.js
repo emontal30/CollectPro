@@ -23,15 +23,26 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('📱 Service Worker registered successfully:', registration.scope);
+        console.log('📱 Service Worker state:', registration.installing?.state || registration.active?.state || 'unknown');
+
+        // Check if there's an active service worker
+        if (registration.active) {
+          console.log('📱 Service Worker is already active');
+        }
 
         // Handle updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
+          console.log('📱 New service worker found, state:', newWorker.state);
+          
           newWorker.addEventListener('statechange', () => {
+            console.log('📱 Service Worker state changed to:', newWorker.state);
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New version available
               console.log('📱 New version available. Please refresh to update.');
               // You could show a notification to the user here
+            } else if (newWorker.state === 'activated') {
+              console.log('📱 Service Worker activated - PWA install prompt should now be available');
             }
           });
         });

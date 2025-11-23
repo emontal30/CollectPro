@@ -7,6 +7,36 @@ const CACHE_NAME = 'collectpro-v2.4.5';
 const STATIC_CACHE = 'collectpro-static-v2.4.5';
 const DYNAMIC_CACHE = 'collectpro-dynamic-v2.4.5';
 
+// Log when service worker is installed and activated
+self.addEventListener('install', (event) => {
+  console.log('📱 Service Worker installing...');
+  event.waitUntil(
+    caches.open(STATIC_CACHE).then((cache) => {
+      console.log('📱 Caching static assets...');
+      return cache.addAll(STATIC_ASSETS);
+    })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('📱 Service Worker activating...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            console.log('📱 Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  
+  // Take control of all pages immediately
+  return self.clients.claim();
+});
+
 // Files to cache immediately
 const STATIC_ASSETS = [
   '/',
@@ -37,6 +67,8 @@ const STATIC_ASSETS = [
   '/src/supabase-client.js',
   '/src/install-prompt.js',
   '/src/install-app-btn.js',
+  '/src/notification-system.js',
+  '/src/backup-restore.js',
   '/site.webmanifest',
   '/manifest.json',
   '/favicon.ico',
@@ -60,8 +92,8 @@ self.addEventListener('install', (event) => {
             const failed = results.filter(result => result.status === 'rejected');
             if (failed.length > 0) {
               console.warn('📱 Service Worker: Some assets failed to cache:', failed.length);
-              failed.forEach((result, index) => {
-                console.error(`📱 Service Worker: Failed to cache ${STATIC_ASSETS[index]}:`, result.reason);
+              failed.forEach(result => {
+                console.error('📱 Service Worker: Failed to cache:', result.reason);
               });
             } else {
               console.log('📱 Service Worker: All static assets cached successfully');

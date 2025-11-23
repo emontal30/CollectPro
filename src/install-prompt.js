@@ -7,6 +7,9 @@
   'use strict';
 
   let deferredPrompt;
+  
+  // Make deferredPrompt globally available
+  window.deferredPrompt = null;
 
   // Function to show install prompt
   function showInstallPrompt() {
@@ -31,11 +34,19 @@
   if ('serviceWorker' in navigator) {
     console.log('📱 Service Worker supported, checking for PWA features...');
 
+    // Check if beforeinstallprompt is supported
+    if ('BeforeInstallPromptEvent' in window) {
+      console.log('📱 beforeinstallprompt event is supported');
+    } else {
+      console.warn('📱 beforeinstallprompt event is NOT supported');
+    }
+
     // Listen for beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('📱 beforeinstallprompt event fired');
       e.preventDefault();
       deferredPrompt = e;
+      window.deferredPrompt = e; // Store globally
 
       // Check if prompt was previously dismissed or app installed
       const dismissed = localStorage.getItem('installPromptDismissed');
@@ -59,6 +70,22 @@
       localStorage.setItem('appInstalled', 'true');
       hideInstallPrompt();
     });
+
+    // Check for deferred prompt periodically (helps with timing issues)
+    let checkCount = 0;
+    const maxChecks = 10;
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      if (window.deferredPrompt) {
+        console.log('📱 Deferred prompt found after', checkCount, 'checks');
+        clearInterval(checkInterval);
+      } else if (checkCount >= maxChecks) {
+        console.log('📱 Deferred prompt not found after', maxChecks, 'checks');
+        clearInterval(checkInterval);
+      } else {
+        console.log('📱 Checking for deferred prompt...', checkCount, '/', maxChecks);
+      }
+    }, 1000);
 
     // Set up all event listeners when DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
@@ -105,12 +132,11 @@
 
       if (installBtn) {
         installBtn.addEventListener('click', async () => {
-          console.log('📱 Install button clicked, deferredPrompt:', !!deferredPrompt);
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
+          console.log('📱 Install button clicked, deferredPrompt:', !!window.deferredPrompt);
+          if (window.deferredPrompt) {
+            window.deferredPrompt.prompt();
+            const { outcome } = await window.deferredPrompt.userChoice;
             console.log('📱 Install prompt outcome:', outcome);
-            deferredPrompt = null;
 
             if (outcome === 'accepted') {
               localStorage.setItem('appInstalled', 'true');
@@ -118,6 +144,9 @@
             } else {
               console.log('📱 App installation rejected');
             }
+            
+            // Clear the global deferredPrompt
+            window.deferredPrompt = null;
           } else {
             console.log('📱 No deferredPrompt available');
             // Silent fallback - no instructions shown
@@ -167,13 +196,61 @@
     },
     debug: function() {
       console.log('📱 Debug info:', {
-        deferredPrompt: !!deferredPrompt,
+        deferredPrompt: !!window.deferredPrompt,
         dismissed: localStorage.getItem('installPromptDismissed'),
         installed: localStorage.getItem('appInstalled'),
         serviceWorker: 'serviceWorker' in navigator,
         beforeInstallPrompt: 'BeforeInstallPromptEvent' in window,
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        isStandalone: (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true,
+        httpsProtocol: location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       });
+    },
+    checkPWA: async function() {
+      console.log('📱 Checking PWA installability criteria...');
+      
+      // Check service worker
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        console.log('📱 Service Worker registration:', registration);
+        if (registration && registration.active) {
+          console.log('📱 Service Worker is active');
+        } else {
+          console.warn('📱 Service Worker is not active');
+        }
+      } else {
+        console.warn('📱 Service Worker not supported');
+      }
+
+      // Check manifest
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        console.log('📱 Manifest link found:', manifestLink.href);
+        try {
+          const manifest = await fetch(manifestLink.href).then(r => r.json());
+          console.log('📱 Manifest loaded:', manifest);
+        } catch (e) {
+          console.error('📱 Failed to load manifest:', e);
+        }
+      } else {
+        console.warn('📱 No manifest link found');
+      }
+
+      // Check if served over HTTPS (required for PWA)
+      const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      console.log('📱 Secure context:', isSecure);
+
+      // Check if already installed
+      const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+      console.log('📱 Already in standalone mode:', isStandalone);
+
+      return {
+        serviceWorker: 'serviceWorker' in navigator,
+        manifest: !!manifestLink,
+        secure: isSecure,
+        standalone: isStandalone,
+        deferredPrompt: !!window.deferredPrompt
+      };
     }
   };
 
