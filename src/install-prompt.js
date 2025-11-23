@@ -120,8 +120,7 @@
             }
           } else {
             console.log('📱 No deferredPrompt available');
-            // Fallback: show manual install instructions
-            alert('لتثبيت التطبيق:\n1. اضغط على قائمة المتصفح (ثلاث نقاط)\n2. اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق"');
+            // Silent fallback - no instructions shown
           }
           hideInstallPrompt();
         });

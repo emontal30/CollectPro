@@ -98,17 +98,14 @@
         } catch (error) {
           console.error('📱 Install error:', error);
           
-          // Show fallback instructions
+          // Silent fallback - no instructions shown
           installAppBtn.innerHTML = originalContent;
           installAppBtn.disabled = false;
-          
-          showInstallInstructions();
         }
         
       } else {
-        // No deferred prompt - show manual instructions
+        // No deferred prompt - silent fallback
         console.log('📱 No deferred prompt available');
-        showInstallInstructions();
       }
     });
 
