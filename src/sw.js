@@ -27,16 +27,15 @@ const STATIC_ASSETS = [
   '/payment.css',
   '/subscriptions.css',
   '/sidebar.css',
-  '/src/script.js',
-  '/src/main.js',
-  '/src/admin.js',
-  '/src/my-subscription.js',
-  '/src/payment.js',
-  '/src/subscriptions.js',
-  '/src/sidebar.js',
-  '/src/supabase-client.js',
-  '/src/install-prompt.js',
-  '/src/install-app-btn.js',
+  '/script.js',
+  '/index.js',
+  '/admin.js',
+  '/my-subscription.js',
+  '/payment.js',
+  '/subscriptions.js',
+  '/sidebar.js',
+  '/supabase-client.js',
+  '/install-prompt.js',
   '/site.webmanifest',
   '/manifest.json',
   '/favicon.ico',
@@ -60,8 +59,8 @@ self.addEventListener('install', (event) => {
             const failed = results.filter(result => result.status === 'rejected');
             if (failed.length > 0) {
               console.warn('📱 Service Worker: Some assets failed to cache:', failed.length);
-              failed.forEach((result, index) => {
-                console.error(`📱 Service Worker: Failed to cache ${STATIC_ASSETS[index]}:`, result.reason);
+              failed.forEach(result => {
+                console.error('📱 Service Worker: Failed to cache:', result.reason);
               });
             } else {
               console.log('📱 Service Worker: All static assets cached successfully');
