@@ -50,9 +50,36 @@
           بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
         </p>
 
+        <!-- فاصل بين سياسة الخصوصية والزرار -->
+        <hr class="privacy-divider">
+
+        <!-- أيقونة تثبيت التطبيق الاحترافية -->
+        <div class="install-app-section">
+          <button id="install-app-btn" class="install-app-btn">
+            <div class="install-app-icon">
+              <img src="web-app-manifest-512x512.png" alt="أيقونة التطبيق" />
+            </div>
+            <div class="install-app-text">
+              <h4>ثبّت تطبيق Collect Pro</h4>
+              <p>تطبيق تحصيل شامل و احترافى</p>
+            </div>
+            <div class="install-app-arrow">
+              <i class="fas fa-download"></i>
+            </div>
+          </button>
+        </div>
+
         <div class="footer-info">
           <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-          <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.5.0</p>
+          <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.6.0</p>
+        </div>
+
+        <!-- أيقونة مشاركة التطبيق -->
+        <div class="share-section">
+          <button id="share-app-btn" class="share-btn" title="مشاركة التطبيق">
+            <i class="fas fa-share-alt"></i>
+            <span>مشاركة</span>
+          </button>
         </div>
       </div>
     </div>
@@ -65,5 +92,6 @@
   <script type="module" src="/src/main.js"></script>
   <script type="module" src="/src/script.js"></script>
   <script type="module" src="/src/install-prompt.js"></script>
+  <script type="module" src="/src/install-app-btn.js"></script>
 </body>
 </html>

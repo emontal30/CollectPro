@@ -80,7 +80,7 @@
         container.innerHTML = `
           <div class="install-prompt-content">
             <div class="install-icon">
-              <img src="web-app-manifest-512x512.png" alt="شعار CollectPro" onerror="console.error('Icon failed to load'); this.src='/logo-momkn.png';" />
+              <img src="web-app-manifest-512x512.png" alt="أيقونة التطبيق" onerror="console.error('Icon failed to load'); this.src='logo-momkn.png';" />
             </div>
             <div class="install-text">
               <h3>ثبّت تطبيق Collect Pro</h3>

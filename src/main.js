@@ -46,9 +46,32 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Initializing login page...');
 
   const googleLoginBtn = document.getElementById('google-login-btn');
+  const shareAppBtn = document.getElementById('share-app-btn');
 
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
+
+  // أيقونة مشاركة التطبيق
+  if (shareAppBtn) {
+    shareAppBtn.addEventListener('click', async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Collect Pro - تطبيق تحصيل شامل و احترافى',
+            text: 'تطبيق ويب تقدمي لإدارة التحصيلات بشكل احترافي وسريع',
+            url: window.location.href
+          });
+        } else {
+          // نسخ الرابط إذا Web Share API غير مدعومة
+          await navigator.clipboard.writeText(window.location.href);
+          showNotification('تم نسخ رابط التطبيق!', 'success');
+        }
+      } catch (err) {
+        console.log('Error sharing:', err);
+        showNotification('حدث خطأ أثناء المشاركة', 'error');
+      }
+    });
+  }
 
   // محاولة جلب الجلسة الحالية فورًا عند فتح التطبيق (مثل فتح اختصار PWA من الشاشة الرئيسية)
   (async () => {
@@ -154,6 +177,49 @@ async function syncUserProfile(user) {
     console.error('❌ Sync user profile error:', err);
   }
 }
+
+// دالة للإشعارات
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+// إضافة أنيميشن للإشعارات
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
 
 /**
  * Redirects the user based on their role.
