@@ -73,13 +73,14 @@
 
       // Inject banner if missing
       if (!document.getElementById('install-prompt')) {
+        console.log('📱 Injecting install prompt banner');
         const container = document.createElement('div');
         container.id = 'install-prompt';
         container.className = 'install-prompt';
         container.innerHTML = `
           <div class="install-prompt-content">
             <div class="install-icon">
-              <img src="/web-app-manifest-512x512.png" alt="شعار CollectPro" />
+              <img src="web-app-manifest-512x512.png" alt="شعار CollectPro" onerror="console.error('Icon failed to load'); this.src='/logo-momkn.png';" />
             </div>
             <div class="install-text">
               <h3>ثبّت تطبيق Collect Pro</h3>
@@ -104,6 +105,7 @@
 
       if (installBtn) {
         installBtn.addEventListener('click', async () => {
+          console.log('📱 Install button clicked, deferredPrompt:', !!deferredPrompt);
           if (deferredPrompt) {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
@@ -112,7 +114,14 @@
 
             if (outcome === 'accepted') {
               localStorage.setItem('appInstalled', 'true');
+              console.log('📱 App installation accepted');
+            } else {
+              console.log('📱 App installation rejected');
             }
+          } else {
+            console.log('📱 No deferredPrompt available');
+            // Fallback: show manual install instructions
+            alert('لتثبيت التطبيق:\n1. اضغط على قائمة المتصفح (ثلاث نقاط)\n2. اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق"');
           }
           hideInstallPrompt();
         });
