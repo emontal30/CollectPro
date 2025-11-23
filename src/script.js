@@ -526,12 +526,33 @@ function formatNumber(n) {
     }
   }
 
+  function filterClientDataLines(raw) {
+    if (!raw) return raw;
+    const lines = raw.split("\n");
+    const filtered = [];
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      if (trimmed.includes("المسلسل") && trimmed.includes("إجمالي البيع-التحويل-الرصيد")) {
+        filtered.push(line);
+        return;
+      }
+      if (/^[0-9٠-٩]+[\t\s]/.test(trimmed)) {
+        filtered.push(line);
+      }
+    });
+    return filtered.join("\n");
+  }
+
   function handleSaveAndGo(dataInput) {
-    const data = dataInput.value.trim();
+    let data = dataInput.value.trim();
     if (!data) {
       showModal("تنبيه", "من فضلك أدخل البيانات أولاً!");
       return;
     }
+
+    data = filterClientDataLines(data);
+    dataInput.value = data;
 
     function proceed() {
       localStorage.setItem("clientData", data);

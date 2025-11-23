@@ -118,6 +118,24 @@
            </div>
          </div>
          <div class="stat-card">
+           <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+           <div class="stat-content">
+             <h3 id="active-users-title">مستخدمون فعّالون</h3>
+             <p class="stat-value" id="active-users-30">0</p>
+             <div class="stat-trend positive">
+               <i class="fas fa-user-clock"></i>
+               <span>نشطون مؤخرًا</span>
+             </div>
+             <div class="stat-filters">
+               <select id="active-users-period" class="stat-filter-select">
+                 <option value="1">آخر يوم</option>
+                 <option value="7">آخر 7 أيام</option>
+                 <option value="30" selected>آخر 30 يوم</option>
+               </select>
+             </div>
+           </div>
+         </div>
+         <div class="stat-card">
            <div class="stat-icon"><i class="fas fa-clock"></i></div>
            <div class="stat-content">
              <h3>طلبات قيد المراجعة</h3>
@@ -245,6 +263,56 @@
             <i class="fas fa-sync-alt"></i>
             <span>اضغط على زر "تحديث" للحصول على أحدث البيانات</span>
           </div>
+          <div class="info-item">
+            <i class="fas fa-chart-pie"></i>
+            <span id="advanced-stats-summary">سيتم تحميل الإحصائيات المتقدمة...</span>
+          </div>
+        </div>
+      </div>
+      <div class="admin-section">
+        <div class="section-header">
+          <div class="section-title-with-refresh">
+            <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
+            <div class="table-stats users-header-stats">
+              <span id="logged-in-users-count">0</span> مستخدم مسجل
+            </div>
+            <button id="refresh-users-btn" class="btn-secondary small-refresh-btn">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+          <p class="section-subtitle users-subtitle">إدارة المستخدمين الذين قاموا بتسجيل الدخول وتفعيل الاشتراكات لهم</p>
+        </div>
+        <div class="table-header-info">
+          <div class="table-actions users-search">
+            <input type="text" id="logged-in-users-search" class="filter-select users-search-input" placeholder="ابحث باسم المستخدم أو البريد الإلكتروني" />
+          </div>
+          <div class="table-actions users-bulk-actions">
+            <input type="number" id="bulk-users-days-input" class="subscription-days-input" min="1" placeholder="ادخل الفتره" />
+            <button id="bulk-activate-users-btn" class="btn-success">
+              <i class="fas fa-check-double"></i> تفعيل الكل / المحدد
+            </button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table id="logged-in-users-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="select-all-logged-users" class="select-all-checkbox" title="تحديد كل المستخدمين" /></th>
+                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
+                <th><i class="fas fa-user"></i> اسم المستخدم</th>
+                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
+                <th><i class="fas fa-calendar-alt"></i> تاريخ الإنشاء</th>
+                <th class="col-subscription"><i class="fas fa-clock"></i> مدة الاشتراك (أيام)</th>
+                <th><i class="fas fa-cogs"></i> الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="no-logged-in-users" class="no-data">
+            <i class="fas fa-inbox"></i>
+            <p>لا يوجد مستخدمون مسجلون حتى الآن</p>
+            <small>سيظهر هنا كل من قام بتسجيل دخول ناجح</small>
+          </div>
         </div>
       </div>
       <div class="admin-section">
@@ -291,39 +359,53 @@
           </div>
         </div>
       </div>
-
-
       <div class="admin-section">
         <div class="section-header">
            <div class="section-title-with-refresh">
              <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
+             <div class="table-stats subscriptions-header-stats">
+               <span id="total-subscriptions-count">0</span> اشتراك إجمالي
+             </div>
              <button id="refresh-btn" class="btn-secondary small-refresh-btn">
                <i class="fas fa-sync-alt"></i>
              </button>
            </div>
-           <div class="filter-container">
-             <div class="filter-group">
-               <label for="status-filter" class="filter-label">
-                 <i class="fas fa-filter"></i>
-                 <span>فلترة حسب الحالة</span>
-               </label>
-               <select id="status-filter" class="filter-select">
-                 <option value="all">جميع الحالات</option>
-                 <option value="pending">قيد المراجعة</option>
-                 <option value="active">نشط</option>
-                 <option value="cancelled">ملغي</option>
-                 <option value="expired">منتهي</option>
-               </select>
-             </div>
-           </div>
-         </div>
+           <p class="section-subtitle subscriptions-subtitle">إدارة شاملة لجميع الاشتراكات في النظام</p>
+        </div>
         <div class="table-header-info">
-          <div class="table-info">
-            <i class="fas fa-chart-bar"></i>
-            <span>إدارة شاملة لجميع الاشتراكات في النظام</span>
-          </div>
-          <div class="table-stats">
-            <span id="total-subscriptions-count">0</span> اشتراك إجمالي
+          <div class="filter-container">
+            <div class="filter-group">
+              <label for="status-filter" class="filter-label">
+                <i class="fas fa-filter"></i>
+                <span>فلترة حسب الحالة</span>
+              </label>
+              <select id="status-filter" class="filter-select">
+                <option value="all">جميع الحالات</option>
+                <option value="pending">قيد المراجعة</option>
+                <option value="active">نشط</option>
+                <option value="cancelled">ملغي</option>
+                <option value="expired">منتهي</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="plan-type-filter" class="filter-label">
+                <i class="fas fa-calendar-alt"></i>
+                <span>نوع الاشتراك</span>
+              </label>
+              <select id="plan-type-filter" class="filter-select">
+                <option value="all">كل الأنواع</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="expiry-filter" class="filter-label">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>صلاحية الاشتراك</span>
+              </label>
+              <select id="expiry-filter" class="filter-select">
+                <option value="all">كل الاشتراكات</option>
+                <option value="expiring_soon">قريبة من الانتهاء (أقل من 7 أيام)</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="table-container">
@@ -336,7 +418,7 @@
                 <th><i class="fas fa-crown"></i> نوع الاشتراك</th>
                 <th><i class="fas fa-hashtag"></i> رقم العملية</th>
                 <th><i class="fas fa-play-circle"></i> تاريخ البدء</th>
-                <th><i class="fas fa-stop-circle"></i> تاريخ الانتهاء</th>
+                <th><i class="fas fa-stop-circle"></i> صلاحية الاشتراك</th>
                 <th><i class="fas fa-flag"></i> الحالة</th>
                 <th><i class="fas fa-cogs"></i> الإجراءات</th>
               </tr>

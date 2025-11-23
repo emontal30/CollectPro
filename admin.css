@@ -154,6 +154,21 @@
   background: rgba(0, 121, 101, 0.1);
 }
 
+.stat-filters {
+  margin-top: 8px;
+}
+
+.stat-filter-select {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid #e1e5e9;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: #ffffff;
+  color: #495057;
+  cursor: pointer;
+}
+
 .admin-section {
   background: white;
   border-radius: 20px;
@@ -208,6 +223,32 @@
   height: 24px;
   background: linear-gradient(135deg, #007965, #00a085);
   border-radius: 2px;
+}
+
+.section-subtitle {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #6c757d;
+  flex-basis: 100%;
+}
+
+.users-subtitle {
+  margin-right: 34px; /* محاذاة مع أيقونة وعنوان القسم */
+}
+
+.subscriptions-subtitle {
+  margin-right: 34px; /* محاذاة مع أيقونة وعنوان القسم */
+}
+
+.users-header-stats {
+  align-self: center;
+  margin: 0 10px;
+}
+
+.subscriptions-header-stats {
+  align-self: center;
+  margin: 0 10px;
 }
 
 .section-actions {
@@ -332,6 +373,44 @@ table {
   text-align: right;
 }
 
+#logged-in-users-table .col-subscription,
+#logged-in-users-table .col-actions {
+  text-align: center;
+}
+
+#logged-in-users-table th:first-child,
+#logged-in-users-table td:first-child {
+  width: 40px;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
+}
+
+#logged-in-users-table .user-select-checkbox,
+#logged-in-users-table #select-all-logged-users {
+  margin: 0 auto;
+  display: block;
+}
+
+#logged-in-users-table #select-all-logged-users {
+  width: 14px;
+  height: 14px;
+}
+
+#pending-subscriptions-table th:first-child,
+#pending-subscriptions-table td:first-child {
+  width: 40px;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
+}
+
+#pending-subscriptions-table .subscription-checkbox,
+#pending-subscriptions-table #select-all {
+  margin: 0 auto;
+  display: block;
+}
+
 th, td {
   padding: 12px 14px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
@@ -349,6 +428,20 @@ th {
   background: linear-gradient(135deg, #007965 0%, #00a085 100%);
   color: white;
   font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.remaining-days-low {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.user-no-subscription {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+th {
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
   border-bottom: 2px solid rgba(255,255,255,0.2);
@@ -1189,9 +1282,20 @@ body.dark .detail-value {
   opacity: 1 !important;
 }
 
-/* إضافة تأثيرات انتقالية عامة محسنة */
-.admin-dashboard * {
-  animation: fadeInUp 1s ease-out;
+.subscription-days-input {
+  text-align: center;
+  display: inline-block;
+  width: 130px;
+  max-width: 100%;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.subscription-days-input::placeholder,
+.subscription-days-input::-webkit-input-placeholder,
+.subscription-days-input:-ms-input-placeholder {
+  text-align: center;
 }
 
 @keyframes fadeInUp {
@@ -1297,6 +1401,30 @@ tr:nth-child(n+6) { animation-delay: 0.35s; }
   cursor: pointer;
   position: relative;
   overflow: hidden;
+}
+
+/* زر تفعيل الكل / المحدد في قسم المستخدمين المسجلين بحجم أصغر */
+#bulk-activate-users-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+#bulk-activate-users-btn i {
+  font-size: 0.9rem;
+}
+
+/* أزرار تفعيل الكل / إلغاء الكل في قسم الطلبات المعلقة بنفس المقاس الصغير */
+#activate-all-btn,
+#cancel-all-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+#activate-all-btn i,
+#cancel-all-btn i {
+  font-size: 0.9rem;
 }
 
 @keyframes pulse {
@@ -2114,6 +2242,20 @@ body.dark .action-btn.details {
   min-height: 70px;
 }
 
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.users-bulk-actions .subscription-days-input {
+  margin: 0;
+}
+
+.users-search-input {
+  min-width: 220px;
+}
+
 .table-info {
   display: flex;
   align-items: center;
@@ -2216,6 +2358,18 @@ th:hover i {
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* محاذاة خاصة لعمود الإجراءات في جدول المستخدمين المسجلين */
+#logged-in-users-table .actions-cell {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* أزرار الإجراءات في جدول المستخدمين المسجلين بدون حواف دائرية */
+#logged-in-users-table .action-btn {
+  border-radius: 0;
 }
 
 /* تحسين النصوص المختصرة */

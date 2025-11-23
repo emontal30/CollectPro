@@ -136,7 +136,8 @@ async function syncUserProfile(user) {
       const { error: insertError } = await supabase.from('users').insert({
         id: user.id,
         full_name: full_name,
-        email: user.email
+        email: user.email,
+        password_hash: ''
       });
 
       if (insertError) {

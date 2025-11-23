@@ -98,6 +98,51 @@ function measurePerformance(operation, startTime) {
   }
 }
 
+function updatePlanTypeFilterOptions(subscriptions) {
+  const select = document.getElementById('plan-type-filter');
+  if (!select || !Array.isArray(subscriptions)) return;
+
+  const previousValue = select.value;
+
+  const planTypes = new Map();
+  subscriptions.forEach(sub => {
+    const planId = sub.plan_id;
+    if (!planId) return;
+
+    const planName = (sub.subscription_plans && (sub.subscription_plans.name_ar || sub.subscription_plans.name))
+      || planId
+      || 'خطة غير معروفة';
+
+    if (!planTypes.has(planId)) {
+      planTypes.set(planId, planName);
+    }
+  });
+
+  select.innerHTML = '';
+
+  const allOption = document.createElement('option');
+  allOption.value = 'all';
+  allOption.textContent = 'كل الأنواع';
+  select.appendChild(allOption);
+
+  planTypes.forEach((name, id) => {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+
+  if (previousValue && previousValue !== 'all' && planTypes.has(previousValue)) {
+    select.value = previousValue;
+  } else {
+    select.value = 'all';
+  }
+}
+
+let activeUsersPeriodDays = 30;
+let loggedInUsersData = [];
+let loggedInUsersWithActiveSubs = new Set();
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 بدء تحميل صفحة لوحة التحكم...');
 
@@ -143,7 +188,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([
       loadDashboardStats(),
       loadPendingSubscriptions(),
-      loadAllSubscriptions()
+      loadAllSubscriptions(),
+      loadLoggedInUsers()
     ]);
 
     console.log('✅ تم تحميل جميع البيانات بنجاح');
@@ -178,11 +224,47 @@ async function checkAdminAccess() {
        throw new Error('User is not an admin.');
      }
 
+     await ensureUserProfileInUsersTable(user);
      updateUserDisplay(user);
    } catch (error) {
      console.error('Admin access check failed:', error.message);
      throw error;
    }
+}
+
+async function ensureUserProfileInUsersTable(user) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      const full_name = user.user_metadata?.full_name || user.user_metadata?.name || user.email;
+
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          full_name: full_name,
+          email: user.email,
+          password_hash: ''
+        });
+
+      if (insertError) {
+        console.error('❌ Error inserting admin user profile into users table:', insertError);
+      } else {
+        console.log('✅ Admin user profile ensured in users table');
+      }
+    } else if (error) {
+      console.error('❌ Error checking admin user in users table:', error);
+    } else if (data) {
+      console.log('ℹ️ Admin user already exists in users table');
+    }
+  } catch (err) {
+    console.error('❌ ensureUserProfileInUsersTable error:', err);
+  }
 }
 
 // --- تحميل البيانات (محسّن) --- //
@@ -263,10 +345,147 @@ async function loadDashboardStats() {
              }
          }
 
+         // إحصائيات من جدول الاشتراكات للتحليلات المتقدمة
+         let subsAnalytics = [];
+         try {
+             const { data: subsData, error: subsError } = await supabase
+                 .from('subscriptions')
+                 .select('user_id, plan_id, start_date, end_date, status, created_at');
+
+             if (subsError) {
+                 console.warn('⚠️ خطأ في تحميل بيانات التحليلات للاشتراكات:', subsError);
+             } else if (Array.isArray(subsData)) {
+                 subsAnalytics = subsData;
+             }
+         } catch (err) {
+             console.warn('⚠️ فشل في جلب بيانات التحليلات للاشتراكات:', err);
+         }
+
          // حساب إحصائيات إضافية
          const totalSubscriptions = (pendingCount || 0) + (activeCount || 0) + (cancelledCount || 0) + (expiredCount || 0);
          const completionRate = totalSubscriptions > 0 ? Math.round(((activeCount || 0) / totalSubscriptions) * 100) : 0;
          const pendingRate = totalSubscriptions > 0 ? Math.round(((pendingCount || 0) / totalSubscriptions) * 100) : 0;
+
+         // مستخدمون فعّالون خلال فترة زمنية (مثلاً آخر 1 / 7 / 30 يوم) من خلال دالة RPC على auth.users
+        let activeUsersLast30 = 0;
+        try {
+            const { data: activeData, error: activeError } = await supabase
+                .rpc('get_active_users_last_n_days', { days: activeUsersPeriodDays });
+
+            if (activeError) {
+                console.warn('⚠️ خطأ في جلب عدد المستخدمين الفعّالين خلال آخر', activeUsersPeriodDays, 'يوم:', activeError);
+            } else if (typeof activeData === 'number') {
+                activeUsersLast30 = activeData;
+            }
+        } catch (err) {
+            console.warn('⚠️ فشل استدعاء get_active_users_last_n_days:', err);
+        }
+
+         // تحليلات متقدمة: مستخدمون فعّالون/غير فعّالين بالاشتراك، متوسط مدة الاشتراك، أعلى خطة، اشتراكات تنتهي خلال 7 أيام، اشتراكات جديدة شهريًا
+         let activeUsersWithSub = 0;
+         let inactiveUsersBySub = 0;
+         let avgSubscriptionDurationDays = 0;
+         let topPlanId = null;
+         let topPlanLabel = 'غير معروف';
+         let expiringSoonCount = 0;
+         let expiringSoonPercent = 0;
+         let monthlyNewSubs = [];
+         let monthlyLabels = [];
+
+         if (Array.isArray(subsAnalytics) && subsAnalytics.length > 0) {
+             const dayMs = 1000 * 60 * 60 * 24;
+             const now = new Date();
+
+             const activeUsersSet = new Set();
+             const planUsageMap = {};
+             let totalDurationDays = 0;
+             let durationCount = 0;
+             let activeSubsForExpiring = 0;
+
+             // إعداد نطاق آخر 5 أشهر للمخطط الخطي
+             const monthsWindow = 5;
+             const monthKeys = [];
+             const monthCounts = new Map();
+             for (let i = monthsWindow - 1; i >= 0; i--) {
+                 const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                 const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                 monthKeys.push(key);
+                 monthCounts.set(key, 0);
+             }
+
+             subsAnalytics.forEach(sub => {
+                 // مستخدمون لديهم اشتراك نشط حاليًا
+                 if (sub.status === 'active' && sub.user_id) {
+                     activeUsersSet.add(sub.user_id);
+
+                     if (sub.end_date) {
+                         const end = new Date(sub.end_date);
+                         const diffDays = Math.ceil((end - now) / dayMs);
+                         if (diffDays > 0) {
+                             activeSubsForExpiring++;
+                             if (diffDays <= 7) {
+                                 expiringSoonCount++;
+                             }
+                         }
+                     }
+                 }
+
+                 // استخدام الخطط
+                 if (sub.plan_id) {
+                     planUsageMap[sub.plan_id] = (planUsageMap[sub.plan_id] || 0) + 1;
+                 }
+
+                 // متوسط مدة الاشتراك
+                 if (sub.start_date && sub.end_date) {
+                     const start = new Date(sub.start_date);
+                     const end = new Date(sub.end_date);
+                     const diffDays = Math.round((end - start) / dayMs);
+                     if (diffDays > 0) {
+                         totalDurationDays += diffDays;
+                         durationCount++;
+                     }
+                 }
+
+                 // الاشتراكات الجديدة شهريًا (حسب created_at)
+                 if (sub.created_at) {
+                     const cd = new Date(sub.created_at);
+                     const key = `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}`;
+                     if (monthCounts.has(key)) {
+                         monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+                     }
+                 }
+             });
+
+             activeUsersWithSub = activeUsersSet.size;
+             inactiveUsersBySub = Math.max(0, (usersCount || 0) - activeUsersWithSub);
+             avgSubscriptionDurationDays = durationCount > 0 ? Math.round(totalDurationDays / durationCount) : 0;
+             if (activeSubsForExpiring > 0) {
+                 expiringSoonPercent = Math.round((expiringSoonCount / activeSubsForExpiring) * 100);
+             }
+
+             // أعلى خطة استخدامًا
+             if (Object.keys(planUsageMap).length > 0) {
+                 const sortedPlans = Object.entries(planUsageMap).sort((a, b) => b[1] - a[1]);
+                 topPlanId = sortedPlans[0][0];
+             }
+             const planNameMap = {
+                 'monthly': 'خطة شهرية',
+                 'quarterly': 'خطة 3 شهور',
+                 'yearly': 'خطة سنوية'
+             };
+             if (topPlanId) {
+                 topPlanLabel = planNameMap[topPlanId] || topPlanId;
+             }
+
+             // تحضير بيانات المخطط الخطي
+             monthlyNewSubs = monthKeys.map(k => monthCounts.get(k) || 0);
+             const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+             monthlyLabels = monthKeys.map(key => {
+                 const [yearStr, monthStr] = key.split('-');
+                 const m = parseInt(monthStr, 10);
+                 return `${monthNames[m - 1]} ${yearStr}`;
+             });
+         }
 
          console.log('📊 إحصائيات محملة:', {
              users: usersCount || 0,
@@ -277,12 +496,21 @@ async function loadDashboardStats() {
              revenue: finalRevenue,
              totalSubscriptions: totalSubscriptions,
              completionRate: completionRate,
-             pendingRate: pendingRate
+             pendingRate: pendingRate,
+             activeUsersLast30,
+             activeUsersWithSub,
+             inactiveUsersBySub,
+             avgSubscriptionDurationDays,
+             topPlanId,
+             topPlanLabel,
+             expiringSoonCount,
+             expiringSoonPercent
          });
 
          // تحديث العناصر في DOM
          const elements = {
              'total-users': usersCount || 0,
+             'active-users-30': activeUsersLast30 || 0,
              'pending-requests': pendingCount || 0,
              'active-subscriptions': activeCount || 0,
              'total-revenue': `${finalRevenue} ج.م`
@@ -295,6 +523,18 @@ async function loadDashboardStats() {
              }
          });
 
+         // ملخص إحصائيات متقدمة أسفل المخططات
+         const advancedSummaryEl = document.getElementById('advanced-stats-summary');
+         if (advancedSummaryEl) {
+             advancedSummaryEl.textContent = `أعلى خطة استخدامًا: ${topPlanLabel} • متوسط مدة الاشتراك: ${avgSubscriptionDurationDays || 0} يوم • اشتراكات تنتهي خلال 7 أيام: ${expiringSoonCount} (${expiringSoonPercent}%)`;
+         }
+
+         // تثبيت عنوان كارت المستخدمين الفعّالين
+         const activeUsersTitleEl = document.getElementById('active-users-title');
+         if (activeUsersTitleEl) {
+             activeUsersTitleEl.textContent = 'مستخدمون فعّالون';
+         }
+
          // تحديث المخططات الديناميكية
          updateCharts({
              users: usersCount || 0,
@@ -304,7 +544,17 @@ async function loadDashboardStats() {
              expired: expiredCount || 0,
              revenue: finalRevenue,
              completionRate: completionRate,
-             pendingRate: pendingRate
+             pendingRate: pendingRate,
+             activeUsersLast30,
+             activeUsersWithSub,
+             inactiveUsersBySub,
+             avgSubscriptionDurationDays,
+             topPlanId,
+             topPlanLabel,
+             expiringSoonCount,
+             expiringSoonPercent,
+             monthlyNewSubs,
+             monthlyLabels
          });
 
          // إضافة إحصائيات جديدة في HTML
@@ -318,6 +568,71 @@ async function loadDashboardStats() {
          showAlert('❌ فشل تحميل إحصائيات لوحة التحكم', 'danger');
          measurePerformance('loadDashboardStats (failed)', startTime);
      }
+}
+
+function updateUsersSelectAllState() {
+    const selectAllCheckbox = document.getElementById('select-all-logged-users');
+    if (!selectAllCheckbox) return;
+
+    const checkboxes = document.querySelectorAll('#logged-in-users-table .user-select-checkbox');
+    if (!checkboxes || checkboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        return;
+    }
+
+    const total = checkboxes.length;
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+    selectAllCheckbox.checked = checkedCount === total;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < total;
+}
+
+async function handleBulkActivateUsers() {
+    const daysInput = document.getElementById('bulk-users-days-input');
+    if (!daysInput) return;
+
+    const days = parseInt(daysInput.value, 10);
+
+    if (isNaN(days) || days <= 0) {
+        showAlert('يرجى إدخال عدد أيام اشتراك صالح (أكبر من صفر) في الحقل المخصص', 'warning');
+        daysInput.focus();
+        return;
+    }
+
+    const selectedCheckboxes = Array.from(document.querySelectorAll('#logged-in-users-table .user-select-checkbox:checked'));
+
+    if (selectedCheckboxes.length === 0) {
+        showAlert('يرجى تحديد مستخدم واحد على الأقل من القائمة لتفعيل الاشتراك له', 'warning');
+        return;
+    }
+
+    const userIds = selectedCheckboxes
+        .map(cb => cb.closest('tr'))
+        .filter(row => !!row)
+        .map(row => row.dataset.userId || row.dataset.id)
+        .filter(id => !!id);
+
+    if (userIds.length === 0) {
+        showAlert('تعذر تحديد معرفات المستخدمين المحددين', 'danger');
+        return;
+    }
+
+    const confirmationMessage = `سيتم تفعيل أو تمديد الاشتراك لمدة ${days} يوم لعدد ${userIds.length} من المستخدمين المحددين دفعة واحدة. هل أنت متأكد؟`;
+
+    showCustomConfirm(confirmationMessage, 'success', async () => {
+        const startTime = performance.now();
+        try {
+            for (const userId of userIds) {
+                await createManualSubscriptionForUser(userId, days);
+            }
+            measurePerformance('handleBulkActivateUsers', startTime);
+        } catch (error) {
+            console.error('❌ خطأ أثناء تفعيل الاشتراكات الجماعية للمستخدمين:', error);
+            showAlert('❌ حدث خطأ أثناء تفعيل الاشتراكات للمستخدمين المحددين', 'danger');
+            measurePerformance('handleBulkActivateUsers (failed)', startTime);
+        }
+    });
 }
 
 async function loadPendingSubscriptions() {
@@ -410,6 +725,12 @@ async function loadAllSubscriptions() {
         const statusFilterElement = document.getElementById('status-filter');
         const statusFilter = statusFilterElement?.value || 'all';
 
+        const planTypeFilterElement = document.getElementById('plan-type-filter');
+        const planTypeFilter = planTypeFilterElement?.value || 'all';
+
+        const expiryFilterElement = document.getElementById('expiry-filter');
+        const expiryFilter = expiryFilterElement?.value || 'all';
+
         let query = supabase
             .from('subscriptions')
             .select(`
@@ -423,6 +744,11 @@ async function loadAllSubscriptions() {
             console.log('🔍 تطبيق فلتر الحالة:', statusFilter);
         }
 
+        if (planTypeFilter !== 'all') {
+            query = query.eq('plan_id', planTypeFilter);
+            console.log('🔍 تطبيق فلتر نوع الاشتراك:', planTypeFilter);
+        }
+
         let { data: viewData, error: viewError } = await query.order('created_at', { ascending: false });
 
         if (viewError) {
@@ -434,10 +760,26 @@ async function loadAllSubscriptions() {
             throw new Error('البيانات المستلمة غير صالحة');
         }
 
-        validateData(viewData, 'loadAllSubscriptions');
-        console.log('📊 تم العثور على', viewData.length, 'اشتراك');
+        let filteredData = viewData;
 
-        const formattedData = viewData.map(sub => ({
+        if (expiryFilter === 'expiring_soon') {
+            const now = new Date();
+            const dayMs = 1000 * 60 * 60 * 24;
+            filteredData = viewData.filter(sub => {
+                if (!sub.end_date) return false;
+                const end = new Date(sub.end_date);
+                const diffDays = Math.ceil((end - now) / dayMs);
+                return diffDays > 0 && diffDays <= 7;
+            });
+            console.log('🔍 تطبيق فلتر الصلاحية (أقل من 7 أيام)، عدد النتائج بعد الفلتر:', filteredData.length);
+        }
+
+        validateData(filteredData, 'loadAllSubscriptions');
+        console.log('📊 تم العثور على', filteredData.length, 'اشتراك بعد تطبيق الفلاتر');
+
+        updatePlanTypeFilterOptions(filteredData);
+
+        const formattedData = filteredData.map(sub => ({
             id: sub.id || '',
             user_id: sub.user_id || '',
             user_name: sub.users
@@ -471,6 +813,120 @@ async function loadAllSubscriptions() {
     }
 }
 
+async function loadLoggedInUsers() {
+    const startTime = performance.now();
+    try {
+        console.log('🔄 جاري تحميل المستخدمين المسجلين...');
+
+        const table = document.getElementById('logged-in-users-table');
+        const tbody = table ? table.querySelector('tbody') : null;
+        const noDataEl = document.getElementById('no-logged-in-users');
+
+        if (!table || !tbody || !noDataEl) {
+            console.warn('⚠️ لم يتم العثور على عناصر جدول المستخدمين المسجلين في DOM');
+            return;
+        }
+
+        const [usersResult, activeSubsResult] = await Promise.all([
+            supabase
+                .from('users')
+                .select('id, full_name, email, created_at')
+                .order('created_at', { ascending: false }),
+            supabase
+                .from('subscriptions')
+                .select('user_id, status')
+                .eq('status', 'active')
+        ]);
+
+        const { data: usersData, error: usersError } = usersResult;
+        const { data: activeSubsData, error: activeSubsError } = activeSubsResult;
+
+        if (usersError) {
+            logDatabaseError('loadLoggedInUsers', usersError);
+            throw usersError;
+        }
+
+        if (activeSubsError) {
+            logDatabaseError('loadLoggedInUsers (active subscriptions)', activeSubsError);
+        }
+
+        loggedInUsersWithActiveSubs = new Set(
+            Array.isArray(activeSubsData)
+                ? activeSubsData
+                    .map(sub => sub.user_id)
+                    .filter(id => typeof id === 'string' && id.length > 0)
+                : []
+        );
+
+        loggedInUsersData = Array.isArray(usersData) ? usersData : [];
+
+        const totalUsers = loggedInUsersData.length;
+        const usersCountEl = document.getElementById('logged-in-users-count');
+        if (usersCountEl) {
+            usersCountEl.textContent = totalUsers;
+        }
+
+        renderLoggedInUsersTable(loggedInUsersData);
+
+        measurePerformance('loadLoggedInUsers', startTime);
+    } catch (error) {
+        console.error('❌ خطأ في تحميل المستخدمين المسجلين:', error);
+        logDatabaseError('loadLoggedInUsers', error);
+        showAlert('❌ فشل تحميل قائمة المستخدمين', 'danger');
+        measurePerformance('loadLoggedInUsers (failed)', startTime);
+    }
+}
+
+function renderLoggedInUsersTable(users) {
+    const table = document.getElementById('logged-in-users-table');
+    const tbody = table ? table.querySelector('tbody') : null;
+    const noDataEl = document.getElementById('no-logged-in-users');
+
+    if (!table || !tbody || !noDataEl) {
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    if (users && users.length > 0) {
+        users.forEach(user => {
+            const row = tbody.insertRow();
+            row.dataset.id = user.id;
+            row.dataset.userId = user.id;
+
+            const userIdShort = (user.id || '').slice(-7);
+            const fullName = user.full_name || user.email || userIdShort;
+            const email = user.email || '';
+            const createdAt = formatDate(user.created_at);
+
+            const hasActiveSubscription = loggedInUsersWithActiveSubs.has(user.id);
+            const nameCellClass = hasActiveSubscription ? 'ellipsis' : 'ellipsis user-no-subscription';
+
+            row.innerHTML = `
+              <td><input type="checkbox" class="user-select-checkbox" title="تحديد هذا المستخدم" /></td>
+              <td class="col-id ellipsis" title="${user.id || ''}">${userIdShort}</td>
+              <td class="${nameCellClass}" title="${fullName}">${fullName}</td>
+              <td class="col-email ellipsis" title="${email}"><a href="mailto:${email}" class="email-link">${email}</a></td>
+              <td class="ellipsis">${createdAt}</td>
+              <td class="col-subscription ellipsis"><input type="text" inputmode="numeric" class="subscription-days-input" placeholder="ادخل الفتره" /></td>
+              <td class="col-actions actions-cell"><button class="action-btn manual-activate" title="تفعيل اشتراك للمستخدم"><i class="fas fa-play-circle"></i></button></td>
+            `;
+        });
+
+        const selectAllUsersCheckbox = document.getElementById('select-all-logged-users');
+        if (selectAllUsersCheckbox) {
+            selectAllUsersCheckbox.checked = false;
+            selectAllUsersCheckbox.indeterminate = false;
+        }
+        updateUsersSelectAllState();
+
+        noDataEl.style.display = 'none';
+        table.style.display = 'table';
+    } else {
+        noDataEl.style.display = 'block';
+        table.style.display = 'none';
+    }
+}
 
 
 // --- باقي الدوال (بدون تغيير) --- //
@@ -527,13 +983,41 @@ function createRowHtml(sub, isPending) {
     const userIdShort = (sub.user_id || '').slice(-7);
     const transactionId = sub.transaction_id ? sub.transaction_id.substring(0, 10) + '...' : '-';
 
+    let remainingDaysText = '-';
+    let remainingDaysClass = '';
+
+    if (!isPending) {
+        if (sub.end_date) {
+            const endDate = new Date(sub.end_date);
+            const today = new Date();
+            const diffTime = endDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+                remainingDaysText = `${diffDays} يوم`;
+                if (diffDays <= 7) {
+                    remainingDaysClass = 'remaining-days-low';
+                }
+            } else {
+                remainingDaysText = 'انتهى';
+                remainingDaysClass = 'remaining-days-low';
+            }
+        } else {
+            remainingDaysText = '-';
+        }
+    }
+
     let rowContent = `
       <td class="col-id ellipsis" title="${sub.user_id || ''}">${userIdShort}</td>
         <td class="ellipsis" title="${sub.user_name || ''}">${sub.user_name || ''}</td>
         <td class="col-email ellipsis" title="${sub.email || ''}"><a href="mailto:${sub.email || ''}" class="email-link">${sub.email || ''}</a></td>
         <td class="ellipsis" title="${planName}">${planName}</td>
         <td class="num ltr ellipsis" title="${sub.transaction_id || ''}">${transactionId}</td>
-        ${isPending ? `<td class="ellipsis">${formatDate(sub.created_at)}</td>` : `<td class="ellipsis">${formatDate(sub.start_date)}</td><td class="ellipsis">${formatDate(sub.end_date)}</td><td>${statusBadge}</td>`}
+        ${isPending
+            ? `<td class="ellipsis">${formatDate(sub.created_at)}</td>`
+            : `<td class="ellipsis">${formatDate(sub.start_date)}</td>` +
+              `<td class="ellipsis ${remainingDaysClass}" title="${sub.end_date ? formatDate(sub.end_date) : '-'}">${remainingDaysText}</td>` +
+              `<td>${statusBadge}</td>`}
         <td class="col-actions actions-cell">
             ${actions}
             <button class="action-btn details" title="عرض التفاصيل"><i class="fas fa-info-circle"></i></button>
@@ -559,14 +1043,70 @@ function getStatusText(status) {
 function setupEventListeners() {
     document.querySelector('#pending-subscriptions-table tbody').addEventListener('click', (e) => handleTableClick(e));
     document.querySelector('#all-subscriptions-table tbody').addEventListener('click', (e) => handleTableClick(e));
+    document.querySelector('#logged-in-users-table tbody').addEventListener('click', (e) => handleUsersTableClick(e));
 
     document.getElementById('refresh-btn').addEventListener('click', async () => {
         showAlert('🔄 جاري تحديث البيانات...', 'info');
         await Promise.all([loadDashboardStats(), loadPendingSubscriptions(), loadAllSubscriptions()]);
         showAlert('✅ تم تحديث البيانات بنجاح', 'success');
     });
+    document.getElementById('refresh-users-btn').addEventListener('click', async () => {
+        showAlert('🔄 جاري تحديث قائمة المستخدمين...', 'info');
+        await loadLoggedInUsers();
+        showAlert('✅ تم تحديث قائمة المستخدمين', 'success');
+    });
     
     document.getElementById('status-filter').addEventListener('change', () => loadAllSubscriptions());
+
+    const planTypeFilterElement = document.getElementById('plan-type-filter');
+    if (planTypeFilterElement) {
+        planTypeFilterElement.addEventListener('change', () => loadAllSubscriptions());
+    }
+
+    const expiryFilterElement = document.getElementById('expiry-filter');
+    if (expiryFilterElement) {
+        expiryFilterElement.addEventListener('change', () => loadAllSubscriptions());
+    }
+
+    const activeUsersPeriodSelect = document.getElementById('active-users-period');
+    if (activeUsersPeriodSelect) {
+        activeUsersPeriodSelect.addEventListener('change', async (e) => {
+            const days = parseInt(e.target.value, 10);
+            if (!isNaN(days) && days > 0) {
+                activeUsersPeriodDays = days;
+                await loadDashboardStats();
+            }
+        });
+    }
+
+    const selectAllLoggedUsers = document.getElementById('select-all-logged-users');
+    if (selectAllLoggedUsers) {
+        selectAllLoggedUsers.addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('#logged-in-users-table .user-select-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            updateUsersSelectAllState();
+        });
+    }
+
+    const usersSearchInput = document.getElementById('logged-in-users-search');
+    if (usersSearchInput) {
+        usersSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim().toLowerCase();
+
+            if (!searchTerm) {
+                renderLoggedInUsersTable(loggedInUsersData);
+                return;
+            }
+
+            const filtered = loggedInUsersData.filter(user => {
+                const name = (user.full_name || '').toLowerCase();
+                const email = (user.email || '').toLowerCase();
+                return name.includes(searchTerm) || email.includes(searchTerm);
+            });
+
+            renderLoggedInUsersTable(filtered);
+        });
+    }
 
 
     // إضافة مستمعي الأحداث للمخططات التفاعلية
@@ -583,11 +1123,18 @@ function setupEventListeners() {
         if (e.target.classList.contains('subscription-checkbox')) {
             updateSelectedCount();
             updateSelectAllState();
+        } else if (e.target.classList.contains('user-select-checkbox')) {
+            updateUsersSelectAllState();
         }
     });
 
     document.getElementById('activate-all-btn').addEventListener('click', () => activateAllPendingSubscriptions());
     document.getElementById('cancel-all-btn').addEventListener('click', () => cancelAllPendingSubscriptions());
+
+    const bulkActivateUsersBtn = document.getElementById('bulk-activate-users-btn');
+    if (bulkActivateUsersBtn) {
+        bulkActivateUsersBtn.addEventListener('click', () => handleBulkActivateUsers());
+    }
 
 }
 
@@ -619,6 +1166,188 @@ function handleTableClick(event) {
         });
     } else if (target.classList.contains('details')) {
         showSubscriptionDetails(subscriptionId);
+    }
+}
+
+async function handleUsersTableClick(event) {
+    const target = event.target.closest('.manual-activate');
+    if (!target) return;
+
+    const row = target.closest('tr');
+    if (!row) return;
+
+    const userId = row.dataset.userId || row.dataset.id;
+    const daysInput = row.querySelector('.subscription-days-input');
+
+    if (!userId || !daysInput) {
+        showAlert('تعذر تحديد المستخدم أو مدة الاشتراك', 'danger');
+        return;
+    }
+
+    const days = parseInt(daysInput.value, 10);
+
+    if (isNaN(days) || days <= 0) {
+        showAlert('يرجى إدخال عدد أيام اشتراك صالح (أكبر من صفر)', 'warning');
+        daysInput.focus();
+        return;
+    }
+
+    try {
+        const { data: activeSubscriptions, error: activeError } = await supabase
+            .from('subscriptions')
+            .select('id, status, end_date, plan_name, created_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (activeError) {
+            logDatabaseError('handleUsersTableClick - checkActive', activeError, { userId });
+        }
+
+        const activeSubscription = activeSubscriptions && activeSubscriptions.length > 0 ? activeSubscriptions[0] : null;
+
+        let message;
+        if (activeSubscription) {
+            const endDateText = activeSubscription.end_date ? formatDate(activeSubscription.end_date) : 'تاريخ غير محدد';
+            const planLabel = activeSubscription.plan_name || 'الخطة الحالية';
+            message = `هذا المستخدم لديه اشتراك نشط (${planLabel}) ينتهي في ${endDateText}.
+سيتم إضافة ${days} يوم إلى مدة هذا الاشتراك.`;
+        } else {
+            message = `هذا المستخدم لا يملك اشتراكًا نشطًا حاليًا.
+سيتم تفعيل اشتراك جديد لمدة ${days} يوم بدءًا من اليوم.`;
+        }
+
+        showCustomConfirm(message, 'success', () => {
+            createManualSubscriptionForUser(userId, days);
+        });
+    } catch (err) {
+        console.error('❌ خطأ أثناء التحقق من اشتراك المستخدم قبل التفعيل اليدوي:', err);
+        showAlert('❌ تعذر التحقق من حالة اشتراك المستخدم', 'danger');
+    }
+}
+
+async function createManualSubscriptionForUser(userId, days) {
+    const startTime = performance.now();
+    try {
+        console.log('🔄 بدء إنشاء اشتراك يدوي للمستخدم:', { userId, days });
+
+        const { data: activeSubscriptions, error: activeCheckError } = await supabase
+            .from('subscriptions')
+            .select('id, status, plan_name, end_date, created_at')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (activeCheckError) {
+            logDatabaseError('createManualSubscriptionForUser - checkActive', activeCheckError, { userId });
+        }
+
+        const activeSubscription = activeSubscriptions && activeSubscriptions.length > 0 ? activeSubscriptions[0] : null;
+
+        const { error: pendingDeleteError } = await supabase
+            .from('subscriptions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('status', 'pending');
+
+        if (pendingDeleteError) {
+            logDatabaseError('createManualSubscriptionForUser - deletePending', pendingDeleteError, { userId });
+        }
+
+        const now = new Date();
+        let extendedExisting = false;
+
+        if (activeSubscription) {
+            let baseEndDate;
+            if (activeSubscription.end_date) {
+                const currentEnd = new Date(activeSubscription.end_date);
+                baseEndDate = currentEnd > now ? currentEnd : now;
+            } else {
+                baseEndDate = now;
+            }
+
+            baseEndDate.setDate(baseEndDate.getDate() + days);
+
+            const { error: updateError } = await supabase
+                .from('subscriptions')
+                .update({
+                    end_date: baseEndDate.toISOString()
+                })
+                .eq('id', activeSubscription.id);
+
+            if (updateError) {
+                logDatabaseError('createManualSubscriptionForUser - extendActive', updateError, { userId, subscriptionId: activeSubscription.id });
+                throw updateError;
+            }
+
+            extendedExisting = true;
+        }
+
+        if (!extendedExisting) {
+            const startDate = now;
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + days);
+
+            let planId = null;
+            let planName = 'اشتراك يدوي';
+            let price = 0;
+
+            try {
+                const { data: firstPlan } = await supabase
+                    .from('subscription_plans')
+                    .select('id, name, name_ar, price_egp')
+                    .order('price_egp', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (firstPlan) {
+                    planId = firstPlan.id;
+                    planName = firstPlan.name_ar || firstPlan.name || planName;
+                    price = firstPlan.price_egp || 0;
+                }
+            } catch (planError) {
+                console.warn('⚠️ تعذر جلب خطة الاشتراك الافتراضية للاشتراك اليدوي:', planError);
+            }
+
+            const { error: insertError } = await supabase
+                .from('subscriptions')
+                .insert([
+                    {
+                        user_id: userId,
+                        plan_id: planId,
+                        plan_name: planName,
+                        plan_period: `${days} يوم`,
+                        price: price,
+                        transaction_id: `MANUAL-${Date.now()}`,
+                        status: 'active',
+                        start_date: startDate.toISOString(),
+                        end_date: endDate.toISOString(),
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+
+            if (insertError) {
+                throw insertError;
+            }
+        }
+
+        showAlert('✅ تم تفعيل الاشتراك اليدوي للمستخدم بنجاح', 'success');
+
+        await Promise.all([
+            loadDashboardStats(),
+            loadPendingSubscriptions(),
+            loadAllSubscriptions(),
+            loadLoggedInUsers()
+        ]);
+
+        measurePerformance('createManualSubscriptionForUser', startTime);
+    } catch (error) {
+        console.error('❌ خطأ في إنشاء الاشتراك اليدوي للمستخدم:', error);
+        logDatabaseError('createManualSubscriptionForUser', error, { userId, days });
+        showAlert('❌ فشل تفعيل الاشتراك للمستخدم', 'danger');
+        measurePerformance('createManualSubscriptionForUser (failed)', startTime);
     }
 }
 
@@ -1377,20 +2106,36 @@ function showAlert(message, type = 'info') {
 function updateCharts(stats) {
     console.log('📊 تحديث المخططات بالبيانات الجديدة:', stats);
 
-    // تحديث المخطط الشريطي
+    // --- المخطط الشريطي: تركيز على نشاط المستخدمين والاشتراكات ---
     const barsChart = document.getElementById('bars-chart');
     if (barsChart) {
         const bars = barsChart.querySelectorAll('.chart-bar');
         if (bars.length >= 4) {
-            // حساب النسب المئوية بناءً على البيانات
-            const totalSubs = stats.pending + stats.active + stats.cancelled + stats.expired;
-            const satisfactionRate = totalSubs > 0 ? Math.round((stats.active / totalSubs) * 100) : 0;
-            const successRate = stats.completionRate;
-            const growthRate = stats.users > 0 ? Math.round((stats.active / stats.users) * 100) : 0;
-            const performanceRate = Math.min(100, Math.round((stats.revenue / 1000) * 100)); // افتراضي بناءً على الإيرادات
+            const totalUsers = stats.users || 0;
+            const activeUsersWithSub = stats.activeUsersWithSub || 0;
+            const inactiveUsersBySub = stats.inactiveUsersBySub || 0;
 
-            const rates = [satisfactionRate, successRate, growthRate, performanceRate];
-            const labels = ['الرضا العام', 'معدل النجاح', 'النمو الشهري', 'الأداء'];
+            const activeUsersPercent = totalUsers > 0 ? Math.round((activeUsersWithSub / totalUsers) * 100) : 0;
+            const inactiveUsersPercent = totalUsers > 0 ? Math.round((inactiveUsersBySub / totalUsers) * 100) : 0;
+            const expiringSoonPercent = stats.expiringSoonPercent || 0;
+
+            // متوسط مدة الاشتراك كنسبة من سنة (365 يوم) لعرضها بشكل بصري
+            const avgDurationDays = stats.avgSubscriptionDurationDays || 0;
+            const avgDurationPercent = Math.min(100, Math.round((avgDurationDays / 365) * 100));
+
+            const rates = [
+                activeUsersPercent,
+                inactiveUsersPercent,
+                expiringSoonPercent,
+                avgDurationPercent
+            ];
+
+            const labels = [
+                'مستخدمون فعّالون بالاشتراك',
+                'مستخدمون غير فعّالين بالاشتراك',
+                'اشتراكات تنتهي خلال 7 أيام',
+                'متوسط مدة الاشتراك (٪ من سنة)'
+            ];
 
             bars.forEach((bar, index) => {
                 const fill = bar.querySelector('.bar-fill');
@@ -1410,19 +2155,19 @@ function updateCharts(stats) {
         }
     }
 
-    // تحديث المخطط الدائري
+    // --- المخطط الدائري: توزيع حالات الاشتراكات ---
     const pieChart = document.getElementById('pie-chart');
     if (pieChart) {
         const pieSegments = pieChart.querySelectorAll('.pie-segment');
         const pieLegend = pieChart.querySelector('.pie-legend');
 
         if (pieSegments.length >= 4 && pieLegend) {
-            const total = stats.pending + stats.active + stats.cancelled + stats.expired;
+            const total = (stats.pending || 0) + (stats.active || 0) + (stats.cancelled || 0) + (stats.expired || 0);
             const percentages = total > 0 ? [
-                Math.round((stats.active / total) * 100),
-                Math.round((stats.pending / total) * 100),
-                Math.round((stats.cancelled / total) * 100),
-                Math.round((stats.expired / total) * 100)
+                Math.round(((stats.active || 0) / total) * 100),
+                Math.round(((stats.pending || 0) / total) * 100),
+                Math.round(((stats.cancelled || 0) / total) * 100),
+                Math.round(((stats.expired || 0) / total) * 100)
             ] : [0, 0, 0, 0];
 
             const colors = ['#007965', '#00a085', '#28a745', '#f39c12'];
@@ -1444,17 +2189,55 @@ function updateCharts(stats) {
         }
     }
 
-    // تحديث المخطط الخطي (بيانات وهمية للأشهر)
+    // --- المخطط الخطي: الاشتراكات الجديدة شهريًا لآخر عدة أشهر ---
     const lineChart = document.getElementById('line-chart');
-    if (lineChart) {
-        // يمكن تحسين هذا لاحقاً ببيانات حقيقية شهرية
-        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو'];
-        const monthLabels = lineChart.querySelectorAll('.line-labels span');
-        monthLabels.forEach((span, index) => {
-            if (span && months[index]) {
-                span.textContent = months[index];
+    if (lineChart && Array.isArray(stats.monthlyLabels) && stats.monthlyLabels.length > 0 && Array.isArray(stats.monthlyNewSubs)) {
+        const monthLabelsSpans = lineChart.querySelectorAll('.line-labels span');
+        monthLabelsSpans.forEach((span, index) => {
+            if (!span) return;
+            if (stats.monthlyLabels[index]) {
+                span.textContent = stats.monthlyLabels[index];
+            } else {
+                span.textContent = '';
             }
         });
+
+        const points = lineChart.querySelectorAll('.line-point');
+        const path = lineChart.querySelector('.line-path');
+
+        if (points.length > 0 && path) {
+            const values = stats.monthlyNewSubs;
+            const maxValue = Math.max(...values, 1);
+
+            // الإحداثيات الأفقية الثابتة كما في الـ SVG الأصلي
+            const xPositions = [50, 125, 200, 275, 350];
+            const yBase = 180; // أسفل الرسم
+            const yTop = 40;   // أعلى ارتفاع
+            const yRange = yBase - yTop;
+
+            const newPoints = [];
+
+            points.forEach((circle, index) => {
+                if (index < values.length && index < xPositions.length) {
+                    const x = xPositions[index];
+                    const value = values[index];
+                    const y = yBase - (value / maxValue) * yRange;
+
+                    circle.setAttribute('cx', String(x));
+                    circle.setAttribute('cy', String(y));
+                    circle.setAttribute('data-value', String(value));
+                    circle.style.display = 'block';
+
+                    newPoints.push(`${x},${y}`);
+                } else {
+                    circle.style.display = 'none';
+                }
+            });
+
+            if (newPoints.length > 0) {
+                path.setAttribute('points', newPoints.join(' '));
+            }
+        }
     }
 }
 
