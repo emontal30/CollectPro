@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Initializing login page...');
 
   const googleLoginBtn = document.getElementById('google-login-btn');
+  const shareAppBtn = document.getElementById('share-app-btn');
 
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
@@ -116,7 +117,132 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.');
     }
   });
+
+  // إعداد مستمع النقر على زر المشاركة
+  if (shareAppBtn) {
+    shareAppBtn.addEventListener('click', async () => {
+      console.log('🔧 Share app button clicked');
+      
+      const shareData = {
+        title: 'CollectPro - نظام إدارة التحصيلات المتقدم',
+        text: 'تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية',
+        url: window.location.href
+      };
+
+      try {
+        // استخدام Web Share API إذا كانت مدعومة
+        if (navigator.share) {
+          await navigator.share(shareData);
+          console.log('✅ App shared successfully');
+        } else {
+          // بديل للمتصفحات التي لا تدعم Web Share API
+          await fallbackShare(shareData);
+        }
+      } catch (error) {
+        console.error('❌ Error sharing app:', error);
+        if (error.name !== 'AbortError') {
+          showAlert('حدث خطأ أثناء محاولة المشاركة', 'danger');
+        }
+      }
+    });
+  } else {
+    console.warn('Share app button not found');
+  }
 });
+
+/**
+ * Fallback share function for browsers that don't support Web Share API
+ * @param {Object} shareData - The share data object
+ */
+async function fallbackShare(shareData) {
+  try {
+    // نسخ الرابط إلى الحافظة
+    await navigator.clipboard.writeText(shareData.url);
+    
+    // عرض رسالة تأكيد
+    showAlert('تم نسخ رابط التطبيق إلى الحافظة! يمكنك مشاركته الآن.', 'success');
+    console.log('✅ Link copied to clipboard as fallback');
+  } catch (clipboardError) {
+    // إذا فشل نسخ الحافظة، عرض الرابط في نافذة منبثقة
+    const message = `شارك تطبيق CollectPro:\n\n${shareData.title}\n${shareData.text}\n\nالرابط: ${shareData.url}`;
+    
+    // إنشاء نافذة منبثقة مخصصة لنسخ الرابط يدوياً
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>مشاركة التطبيق</h3>
+        <p>${shareData.title}</p>
+        <p>${shareData.text}</p>
+        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; direction: ltr; font-family: monospace; word-break: break-all; margin: 10px 0;">
+          ${shareData.url}
+        </div>
+        <div class="modal-buttons">
+          <button id="copyLinkBtn" class="confirm-btn">نسخ الرابط</button>
+          <button id="closeModalBtn" class="cancel-btn">إغلاق</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+    // إضافة مستمعي الأحداث للأزرار
+    document.getElementById('copyLinkBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        showAlert('تم نسخ الرابط بنجاح!', 'success');
+        modal.remove();
+      } catch (error) {
+        console.error('Failed to copy link:', error);
+        showAlert('فشل نسخ الرابط، يرجى النسخ يدوياً', 'danger');
+      }
+    };
+    
+    document.getElementById('closeModalBtn').onclick = () => {
+      modal.remove();
+    };
+    
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    };
+    
+    console.log('✅ Fallback share modal displayed');
+  }
+}
+
+/**
+ * Show alert message (simple implementation for login page)
+ * @param {string} message - The message to display
+ * @param {string} type - The type of alert (info, success, danger, warning)
+ */
+function showAlert(message, type = 'info') {
+  const alertContainer = document.getElementById('alert-container');
+  if (!alertContainer) {
+    // إذا لم يوجد حاوية تنبيهات، استخدم alert العادي
+    alert(message);
+    return;
+  }
+
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type} show`;
+
+  let icon = 'fa-info-circle';
+  if (type === 'success') icon = 'fa-check-circle';
+  if (type === 'danger') icon = 'fa-exclamation-circle';
+  if (type === 'warning') icon = 'fa-exclamation-triangle';
+
+  alert.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+
+  alertContainer.appendChild(alert);
+
+  setTimeout(() => {
+    alert.classList.remove('show');
+    setTimeout(() => alert.remove(), 500);
+  }, 5000);
+}
 
 /**
  * Redirects the user based on their role.

@@ -36,7 +36,6 @@ const STATIC_ASSETS = [
   '/sidebar.js',
   '/supabase-client.js',
   '/install-prompt.js',
-  '/site.webmanifest',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.svg',
