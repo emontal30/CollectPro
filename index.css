@@ -733,11 +733,6 @@ body.dark .dismiss-btn:hover {
   );
 }
 
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 /* أيقونة مشاركة التطبيق */
 .share-section {
   margin-top: 20px;

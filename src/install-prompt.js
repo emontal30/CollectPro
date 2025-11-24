@@ -36,7 +36,6 @@
       console.log('📱 beforeinstallprompt event fired');
       e.preventDefault();
       deferredPrompt = e;
-      window.deferredPrompt = e; // Make it globally available
 
       // Check if prompt was previously dismissed or app installed
       const dismissed = localStorage.getItem('installPromptDismissed');
