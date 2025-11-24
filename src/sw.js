@@ -3,9 +3,9 @@
  * Handles caching, offline functionality, and app updates
  */
 
-const CACHE_NAME = 'collectpro-v2.4.5';
-const STATIC_CACHE = 'collectpro-static-v2.4.5';
-const DYNAMIC_CACHE = 'collectpro-dynamic-v2.4.5';
+const CACHE_NAME = 'collectpro-v2.7.0';
+const STATIC_CACHE = 'collectpro-static-v2.7.0';
+const DYNAMIC_CACHE = 'collectpro-dynamic-v2.7.0';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -40,10 +40,17 @@ const STATIC_ASSETS = [
   '/favicon.ico',
   '/favicon.svg',
   '/favicon-96x96.png',
-  '/apple-touch-icon.png',
+  '/ios/apple-touch-icon-180x180.png',
+  '/ios/apple-touch-icon-120x120.png',
+  '/ios/apple-touch-icon-152x152.png',
+  '/ios/apple-touch-icon-167x167.png',
   '/logo-momkn.png',
-  '/web-app-manifest-192x192.png',
-  '/web-app-manifest-512x512.png'
+  '/manifest/icon-48x48.png',
+  '/manifest/icon-72x72.png',
+  '/manifest/icon-96x96.png',
+  '/manifest/icon-144x144.png',
+  '/manifest/icon-192x192.png',
+  '/manifest/icon-512x512.png'
 ];
 
 // Install event - cache static assets

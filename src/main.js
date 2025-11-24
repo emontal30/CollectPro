@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const googleLoginBtn = document.getElementById('google-login-btn');
   const shareAppBtn = document.getElementById('share-app-btn');
+  const installAppBtn = document.getElementById('install-app-btn');
 
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
@@ -123,18 +124,39 @@ document.addEventListener('DOMContentLoaded', () => {
     shareAppBtn.addEventListener('click', async () => {
       console.log('🔧 Share app button clicked');
       
-      const shareData = {
-        title: 'CollectPro - نظام إدارة التحصيلات المتقدم',
-        text: 'تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية',
-        url: window.location.href
-      };
-
       try {
+        // إنشاء محتوى المشاركة مع الشعار
+        const appUrl = window.location.href;
+        const logoUrl = `${window.location.origin}/manifest/icon-512x512.png`;
+        
+        console.log('📍 App URL:', appUrl);
+        console.log('🖼️ Logo URL:', logoUrl);
+        
+        const shareData = {
+          title: 'CollectPro - نظام إدارة التحصيلات المتقدم',
+          text: `📱 CollectPro
+تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
+
+🖼️ شعار التطبيق: ${logoUrl}
+
+🔗 رابط التطبيق: ${appUrl}
+
+📲 حمل التطبيق الآن!
+
+---
+CollectPro - نظام إدارة التحصيلات المتقدم`,
+          url: appUrl
+        };
+
+        console.log('📤 Share data prepared:', shareData);
+
         // استخدام Web Share API إذا كانت مدعومة
         if (navigator.share) {
+          console.log('🌐 Using Web Share API');
           await navigator.share(shareData);
           console.log('✅ App shared successfully');
         } else {
+          console.log('📱 Using fallback share method');
           // بديل للمتصفحات التي لا تدعم Web Share API
           await fallbackShare(shareData);
         }
@@ -146,7 +168,53 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   } else {
-    console.warn('Share app button not found');
+    console.warn('❌ Share app button not found');
+  }
+
+  // إعداد مستمع النقر على زر تثبيت التطبيق
+  if (installAppBtn) {
+    installAppBtn.addEventListener('click', async () => {
+      console.log('📱 Install app button clicked');
+      
+      // استخدام deferredPrompt العام من install-prompt.js
+      let deferredPrompt = window.deferredPrompt;
+      
+      // محاولة تثبيت التطبيق مباشرة بدون رسائل
+      try {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log('📱 Install outcome:', outcome);
+          deferredPrompt = null;
+          window.deferredPrompt = null;
+          
+          if (outcome === 'accepted') {
+            localStorage.setItem('appInstalled', 'true');
+            console.log('✅ App installed successfully');
+            // إخفاء زر التثبيت بعد التثبيت الناجح
+            installAppBtn.style.display = 'none';
+          }
+        } else {
+          // محاولة تشغيل التثبيت عبر install-prompt.js
+          console.log('📱 No install prompt available, checking if install prompt can be triggered');
+          
+          // التحقق مما إذا كان التطبيق مثبتًا بالفعل
+          const isInstalled = localStorage.getItem('appInstalled');
+          const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+          
+          if (isInstalled || isStandalone) {
+            console.log('📱 App already installed');
+            installAppBtn.style.display = 'none';
+          } else {
+            console.log('📱 Install prompt not ready, please wait for the banner to appear');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error installing app:', error);
+      }
+    });
+  } else {
+    console.warn('Install app button not found');
   }
 });
 
@@ -157,29 +225,83 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fallbackShare(shareData) {
   try {
     // نسخ الرابط إلى الحافظة
-    await navigator.clipboard.writeText(shareData.url);
+    await navigator.clipboard.writeText(shareData.text);
     
     // عرض رسالة تأكيد
-    showAlert('تم نسخ رابط التطبيق إلى الحافظة! يمكنك مشاركته الآن.', 'success');
+    showAlert('تم نسخ التطبيق مع الشعار إلى الحافظة! يمكنك مشاركته الآن.', 'success');
     console.log('✅ Link copied to clipboard as fallback');
   } catch (clipboardError) {
-    // إذا فشل نسخ الحافظة، عرض الرابط في نافذة منبثقة
-    const message = `شارك تطبيق CollectPro:\n\n${shareData.title}\n${shareData.text}\n\nالرابط: ${shareData.url}`;
+    // إذا فشل نسخ الحافظة، عرض الرابط في نافذة منبثقة مع الشعار
+    const logoUrl = `${window.location.origin}/manifest/icon-512x512.png`;
     
-    // إنشاء نافذة منبثقة مخصصة لنسخ الرابط يدوياً
+    // إنشاء نافذة منبثقة مخصصة لنسخ الرابط يدوياً مع الشعار
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-content">
-        <h3>مشاركة التطبيق</h3>
-        <p>${shareData.title}</p>
-        <p>${shareData.text}</p>
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; direction: ltr; font-family: monospace; word-break: break-all; margin: 10px 0;">
-          ${shareData.url}
+        <h3>📱 مشاركة تطبيق CollectPro</h3>
+        <div style="text-align: center; margin: 20px 0;">
+          <img src="${logoUrl}" alt="شعار CollectPro" 
+               style="width: 100px; height: 100px; border-radius: 16px; 
+                      box-shadow: 0 8px 25px rgba(0, 121, 101, 0.4);
+                      border: 3px solid #007965; transition: transform 0.3s ease;"
+               onmouseover="this.style.transform='scale(1.05)'"
+               onmouseout="this.style.transform='scale(1)'" />
+          <p style="margin: 10px 0; font-weight: bold; color: #007965; font-size: 18px;">
+            CollectPro
+          </p>
+          <p style="margin: 5px 0; color: #666; font-size: 14px;">
+            نظام إدارة التحصيلات المتقدم
+          </p>
         </div>
-        <div class="modal-buttons">
-          <button id="copyLinkBtn" class="confirm-btn">نسخ الرابط</button>
-          <button id="closeModalBtn" class="cancel-btn">إغلاق</button>
+        
+        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                    padding: 20px; border-radius: 12px; 
+                    border: 2px solid #007965; margin: 20px 0;">
+          <h4 style="margin: 0 0 15px 0; color: #007965; font-size: 16px;">
+            📤 محتوى المشاركة:
+          </h4>
+          <div style="background: white; padding: 15px; border-radius: 8px; 
+                      direction: ltr; font-family: 'Courier New', monospace; 
+                      word-break: break-all; font-size: 12px; line-height: 1.5;
+                      border: 1px solid #ddd; white-space: pre-wrap;">
+📱 CollectPro
+تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
+
+🖼️ شعار التطبيق: ${logoUrl}
+
+🔗 رابط التطبيق: ${appUrl}
+
+📲 حمل التطبيق الآن!
+
+---
+CollectPro - نظام إدارة التحصيلات المتقدم</div>
+        </div>
+        
+        <div style="text-align: center; margin: 15px 0;">
+          <p style="margin: 5px 0; color: #666; font-size: 13px;">
+            💡 انسخ المحتوى أعلاه وشاركه في أي منصة
+          </p>
+        </div>
+        
+        <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: center;">
+          <button id="copyLinkBtn" 
+                  style="background: linear-gradient(135deg, #007965 0%, #00a080 100%); 
+                         color: white; padding: 12px 24px; border: none; 
+                         border-radius: 8px; font-weight: bold; cursor: pointer;
+                         transition: transform 0.2s ease;"
+                  onmouseover="this.style.transform='translateY(-2px)'"
+                  onmouseout="this.style.transform='translateY(0)'">
+            📋 نسخ المحتوى
+          </button>
+          <button id="closeModalBtn" 
+                  style="background: #6c757d; color: white; padding: 12px 24px; 
+                         border: none; border-radius: 8px; cursor: pointer;
+                         transition: transform 0.2s ease;"
+                  onmouseover="this.style.transform='translateY(-2px)'"
+                  onmouseout="this.style.transform='translateY(0)'">
+            ✖ إغلاق
+          </button>
         </div>
       </div>
     `;
@@ -190,12 +312,24 @@ async function fallbackShare(shareData) {
     // إضافة مستمعي الأحداث للأزرار
     document.getElementById('copyLinkBtn').onclick = async () => {
       try {
-        await navigator.clipboard.writeText(shareData.url);
-        showAlert('تم نسخ الرابط بنجاح!', 'success');
+        const fullContent = `📱 CollectPro
+تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
+
+🖼️ شعار التطبيق: ${logoUrl}
+
+🔗 رابط التطبيق: ${appUrl}
+
+📲 حمل التطبيق الآن!
+
+---
+CollectPro - نظام إدارة التحصيلات المتقدم`;
+        
+        await navigator.clipboard.writeText(fullContent);
+        showAlert('✅ تم نسخ المحتوى مع شعار التطبيق بنجاح! يمكنك لصقه ومشاركته الآن.', 'success');
         modal.remove();
       } catch (error) {
-        console.error('Failed to copy link:', error);
-        showAlert('فشل نسخ الرابط، يرجى النسخ يدوياً', 'danger');
+        console.error('Failed to copy content:', error);
+        showAlert('❌ فشل نسخ المحتوى', 'danger');
       }
     };
     
@@ -203,13 +337,14 @@ async function fallbackShare(shareData) {
       modal.remove();
     };
     
+    // إغلاق النافذة عند النقر خارجها
     modal.onclick = (e) => {
       if (e.target === modal) {
         modal.remove();
       }
     };
     
-    console.log('✅ Fallback share modal displayed');
+    console.log('✅ Share modal displayed as fallback');
   }
 }
 

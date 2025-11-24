@@ -498,9 +498,12 @@ body.dark .google-login-btn:hover {
 
 .install-prompt-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 15px;
   flex: 1;
+  text-align: center;
 }
 
 .install-prompt-content::before {
@@ -519,20 +522,75 @@ body.dark .google-login-btn:hover {
 }
 
 .install-icon img {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
-  border: 2px solid var(--primary);
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 121, 101, 0.4);
+  border: none;
+  animation: iconPulse 2s infinite ease-in-out, iconGlow 3s infinite alternate;
+  transition: transform 0.3s ease;
+}
+
+.install-icon img:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 35px rgba(0, 121, 101, 0.6);
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes iconGlow {
+  0% { filter: brightness(1) drop-shadow(0 0 10px rgba(0, 121, 101, 0.3)); }
+  100% { filter: brightness(1.2) drop-shadow(0 0 20px rgba(0, 121, 101, 0.6)); }
 }
 
 .install-text {
   flex: 1;
-  text-align: right;
+  text-align: center;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: nowrap;
+}
+
+.title-row span {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.inline-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.inline-icon img {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+  border: none;
+  animation: iconPulse 2s infinite ease-in-out, iconGlow 3s infinite alternate;
+  transition: transform 0.3s ease;
+  vertical-align: middle;
+}
+
+.inline-icon img:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 20px rgba(0, 121, 101, 0.5);
 }
 
 .install-text h3 {
-  color: var(--primary);
+  color: #ffffff;
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 8px;
@@ -540,7 +598,7 @@ body.dark .google-login-btn:hover {
 }
 
 .install-text p {
-  color: #666;
+  color: #e0e0e0;
   font-size: 14px;
   line-height: 1.4;
   margin: 0;
@@ -598,11 +656,11 @@ body.dark .install-prompt-content::before {
 }
 
 body.dark .install-text h3 {
-  color: #00c896;
+  color: #ffffff;
 }
 
 body.dark .install-text p {
-  color: #cccccc;
+  color: #e0e0e0;
 }
 
 body.dark .dismiss-btn {
@@ -648,8 +706,8 @@ body.dark .dismiss-btn:hover {
   }
 
   .install-icon img {
-    width: 45px;
-    height: 45px;
+    width: 60px;
+    height: 60px;
   }
 
   .install-text h3 {

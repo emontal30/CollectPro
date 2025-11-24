@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1024" />
-  <meta name="theme-color" content="#ffffff"/>
+  <meta name="theme-color" content="#3B82F6"/>
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
 
   <title>تسجيل الدخول - CollectPro</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -14,23 +18,6 @@
 <body class="loaded">
   <!-- حاوية التنبيهات -->
   <div id="alert-container" class="alert-container"></div>
-
-  <!-- رسالة تثبيت التطبيق -->
-  <div id="install-prompt" class="install-prompt">
-    <div class="install-prompt-content">
-      <div class="install-icon">
-        <img src="web-app-manifest-512x512.png" alt="أيقونة التطبيق" onerror="console.error('Icon failed to load'); this.src='logo-momkn.png';" />
-      </div>
-      <div class="install-text">
-        <h3>ثبّت تطبيق Collect Pro</h3>
-        <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
-      </div>
-      <div class="install-buttons">
-        <button id="install-btn" class="install-btn">تثبيت</button>
-        <button id="dismiss-btn" class="dismiss-btn">لاحقاً</button>
-      </div>
-    </div>
-  </div>
 
   <div class="login-page">
     <div class="login-container">
@@ -57,7 +44,7 @@
         <div class="install-app-section">
           <button id="install-app-btn" class="install-app-btn">
             <div class="install-app-icon">
-              <img src="web-app-manifest-512x512.png" alt="أيقونة التطبيق" />
+              <img src="./manifest/icon-512x512.png" alt="أيقونة التطبيق" />
             </div>
             <div class="install-app-text">
               <h4>ثبّت تطبيق Collect Pro</h4>
@@ -71,7 +58,7 @@
 
         <div class="footer-info">
           <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-          <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.6.0</p>
+          <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.7.0</p>
         </div>
 
         <!-- أيقونة مشاركة التطبيق -->
