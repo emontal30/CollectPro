@@ -1,4 +1,6 @@
-// Global error handlers
+// Import shared icons and modal for consistent design
+import { getIconHtml } from './shared-icons.js';
+import { sharedModal } from './shared-modal.js';
 window.onerror = function(message, source, lineno, colno, error) {
   console.error("An unhandled error occurred:", {
     message: message,
@@ -234,117 +236,75 @@ async function fallbackShare(shareData) {
     // إذا فشل نسخ الحافظة، عرض الرابط في نافذة منبثقة مع الشعار
     const logoUrl = `${window.location.origin}/manifest/icon-512x512.png`;
     
-    // إنشاء نافذة منبثقة مخصصة لنسخ الرابط يدوياً مع الشعار
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h3>📱 مشاركة تطبيق CollectPro</h3>
-        <div style="text-align: center; margin: 20px 0;">
-          <img src="${logoUrl}" alt="شعار CollectPro" 
-               style="width: 100px; height: 100px; border-radius: 16px; 
-                      box-shadow: 0 8px 25px rgba(0, 121, 101, 0.4);
-                      border: 3px solid #007965; transition: transform 0.3s ease;"
-               onmouseover="this.style.transform='scale(1.05)'"
-               onmouseout="this.style.transform='scale(1)'" />
-          <p style="margin: 10px 0; font-weight: bold; color: #007965; font-size: 18px;">
-            CollectPro
-          </p>
-          <p style="margin: 5px 0; color: #666; font-size: 14px;">
-            نظام إدارة التحصيلات المتقدم
-          </p>
-        </div>
-        
-        <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-                    padding: 20px; border-radius: 12px; 
-                    border: 2px solid #007965; margin: 20px 0;">
-          <h4 style="margin: 0 0 15px 0; color: #007965; font-size: 16px;">
-            📤 محتوى المشاركة:
-          </h4>
-          <div style="background: white; padding: 15px; border-radius: 8px; 
-                      direction: ltr; font-family: 'Courier New', monospace; 
-                      word-break: break-all; font-size: 12px; line-height: 1.5;
-                      border: 1px solid #ddd; white-space: pre-wrap;">
+    // إنشاء محتوى مخصص للمشاركة
+    const shareContent = `
+      <div style="text-align: center; margin: 20px 0;">
+        ${getIconHtml('appIcon', 100, 'border: 3px solid #007965;')}
+        <p style="margin: 10px 0; font-weight: bold; color: #007965; font-size: 18px;">
+          CollectPro
+        </p>
+        <p style="margin: 5px 0; color: #666; font-size: 14px;">
+          نظام إدارة التحصيلات المتقدم
+        </p>
+      </div>
+      
+      <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                  padding: 20px; border-radius: 12px; 
+                  border: 2px solid #007965; margin: 20px 0;">
+        <h4 style="margin: 0 0 15px 0; color: #007965; font-size: 16px;">
+          📤 محتوى المشاركة:
+        </h4>
+        <div style="background: white; padding: 15px; border-radius: 8px; 
+                    direction: ltr; font-family: 'Courier New', monospace; 
+                    word-break: break-all; font-size: 12px; line-height: 1.5;
+                    border: 1px solid #ddd; white-space: pre-wrap;">
 📱 CollectPro
 تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
 
 🖼️ شعار التطبيق: ${logoUrl}
 
-🔗 رابط التطبيق: ${appUrl}
+🔗 رابط التطبيق: ${shareData.url}
 
 📲 حمل التطبيق الآن!
 
 ---
 CollectPro - نظام إدارة التحصيلات المتقدم</div>
-        </div>
-        
-        <div style="text-align: center; margin: 15px 0;">
-          <p style="margin: 5px 0; color: #666; font-size: 13px;">
-            💡 انسخ المحتوى أعلاه وشاركه في أي منصة
-          </p>
-        </div>
-        
-        <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: center;">
-          <button id="copyLinkBtn" 
-                  style="background: linear-gradient(135deg, #007965 0%, #00a080 100%); 
-                         color: white; padding: 12px 24px; border: none; 
-                         border-radius: 8px; font-weight: bold; cursor: pointer;
-                         transition: transform 0.2s ease;"
-                  onmouseover="this.style.transform='translateY(-2px)'"
-                  onmouseout="this.style.transform='translateY(0)'">
-            📋 نسخ المحتوى
-          </button>
-          <button id="closeModalBtn" 
-                  style="background: #6c757d; color: white; padding: 12px 24px; 
-                         border: none; border-radius: 8px; cursor: pointer;
-                         transition: transform 0.2s ease;"
-                  onmouseover="this.style.transform='translateY(-2px)'"
-                  onmouseout="this.style.transform='translateY(0)'">
-            ✖ إغلاق
-          </button>
-        </div>
+      </div>
+      
+      <div style="text-align: center; margin: 15px 0;">
+        <p style="margin: 5px 0; color: #666; font-size: 13px;">
+          💡 انسخ المحتوى أعلاه وشاركه في أي منصة
+        </p>
       </div>
     `;
     
-    document.body.appendChild(modal);
-    modal.style.display = 'flex';
-    
-    // إضافة مستمعي الأحداث للأزرار
-    document.getElementById('copyLinkBtn').onclick = async () => {
-      try {
-        const fullContent = `📱 CollectPro
+    // استخدام النظام الموحد للرسائل المنبثقة
+    sharedModal.show('مشاركة تطبيق CollectPro', shareContent, {
+      iconType: 'share',
+      confirmText: '📋 نسخ المحتوى',
+      cancelText: '✖ إغلاق',
+      onConfirm: async () => {
+        try {
+          const fullContent = `📱 CollectPro
 تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
 
 🖼️ شعار التطبيق: ${logoUrl}
 
-🔗 رابط التطبيق: ${appUrl}
+🔗 رابط التطبيق: ${shareData.url}
 
 📲 حمل التطبيق الآن!
 
 ---
 CollectPro - نظام إدارة التحصيلات المتقدم`;
-        
-        await navigator.clipboard.writeText(fullContent);
-        showAlert('✅ تم نسخ المحتوى مع شعار التطبيق بنجاح! يمكنك لصقه ومشاركته الآن.', 'success');
-        modal.remove();
-      } catch (error) {
-        console.error('Failed to copy content:', error);
-        showAlert('❌ فشل نسخ المحتوى', 'danger');
+          
+          await navigator.clipboard.writeText(fullContent);
+          showAlert('✅ تم نسخ المحتوى مع شعار التطبيق بنجاح! يمكنك لصقه ومشاركته الآن.', 'success');
+        } catch (error) {
+          console.error('Failed to copy content:', error);
+          showAlert('❌ فشل نسخ المحتوى', 'danger');
+        }
       }
-    };
-    
-    document.getElementById('closeModalBtn').onclick = () => {
-      modal.remove();
-    };
-    
-    // إغلاق النافذة عند النقر خارجها
-    modal.onclick = (e) => {
-      if (e.target === modal) {
-        modal.remove();
-      }
-    };
-    
-    console.log('✅ Share modal displayed as fallback');
+    });
   }
 }
 

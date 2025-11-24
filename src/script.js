@@ -1,3 +1,7 @@
+// Import shared icons for consistent modal display
+import { getIconHtml } from './shared-icons.js';
+import { sharedModal } from './shared-modal.js';
+
 // Script loading check
 console.log("CollectPro script.js loaded successfully");
 // Global error handlers
@@ -21,7 +25,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/src/sw.js')
+  navigator.serviceWorker.register('/sw.js')
     .then(registration => {
       // Check for updates every 60 seconds
       setInterval(() => {
@@ -121,43 +125,10 @@ function formatNumber(n) {
     };
   }
 
-  /* ========== Custom Modal ========== */
-  function showModal(title, message, onConfirm, onCancel) {
-    const existingModal = document.querySelector('.modal');
-    if (existingModal) existingModal.remove();
-    
-    const modal = document.createElement("div");
-    modal.className = "modal";
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h3>${title}</h3>
-        <p>${message}</p>
-        <div class="modal-buttons">
-          <button id="modalYes" class="confirm-btn">تأكيد</button>
-          <button id="modalNo" class="cancel-btn">إلغاء</button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    modal.style.display = "flex";
-    
-    document.getElementById("modalYes").onclick = () => {
-      if (onConfirm) onConfirm();
-      modal.remove();
-    };
-    
-    document.getElementById("modalNo").onclick = () => {
-      if (onCancel) onCancel();
-      modal.remove();
-    };
-    
-    modal.onclick = (e) => {
-      if (e.target === modal) {
-        if (onCancel) onCancel();
-        modal.remove();
-      }
-    };
+  /* ========== Modal System - Using Shared Modal ========== */
+  // Backward compatibility - redirect to shared modal
+  function showModal(title, message, onConfirm, onCancel, iconType = 'info') {
+    sharedModal.show(title, message, { onConfirm, onCancel, iconType });
   }
 
   /* ========== Alert System ========== */

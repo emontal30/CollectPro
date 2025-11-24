@@ -291,6 +291,9 @@
       }
     });
 
+    // Import shared icons (make sure this is loaded first)
+    import { getInlineIcon } from './shared-icons.js';
+
     // Listen for appinstalled event
     window.addEventListener('appinstalled', () => {
       console.log('📱 App installed successfully');
@@ -318,39 +321,13 @@
         // Get the correct base path for the icon
         const currentPath = window.location.pathname;
         
-        // Use correct path for Vercel deployment
-        let iconPath;
-        if (window.location.hostname.includes('vercel.app')) {
-          // Vercel deployment
-          iconPath = '/manifest/icon-512x512.png';
-        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          // Local development
-          iconPath = './manifest/icon-512x512.png';
-        } else {
-          // Other deployments
-          iconPath = '/manifest/icon-512x512.png';
-        }
+        // Use guaranteed icon display with shared icons
+        const iconSvg = getInlineIcon('appIcon', 30);
         
         console.log('📍 Current path:', currentPath);
-        console.log('🖼️ Icon path:', iconPath);
+        console.log('🖼️ Using guaranteed shared icon');
         console.log('🌐 Origin:', window.location.origin);
         console.log('🌍 Hostname:', window.location.hostname);
-        
-        // Test if icon exists before using it
-        const testImg = new Image();
-        testImg.onload = function() {
-          console.log('✅ Icon loaded successfully at:', iconPath);
-        };
-        testImg.onerror = function() {
-          console.error('❌ Icon failed to load at:', iconPath);
-          // Use a simple emoji fallback as base64
-          console.log('🔄 Using emoji fallback for icon');
-        };
-        testImg.src = iconPath;
-        
-        // Also try relative path as backup
-        const relativeIconPath = './manifest/icon-512x512.png';
-        console.log('🔄 Backup path:', relativeIconPath);
         
         container.innerHTML = `
           <div class="install-prompt-content">
@@ -358,31 +335,7 @@
               <div class="title-row">
                 <span>ثبّت تطبيق</span>
                 <div class="inline-icon">
-                  <img src="${iconPath}" alt="شعار CollectPro" 
-                       onload="console.log('✅ Icon loaded successfully at:', this.src);"
-                       onerror="console.error('❌ Icon failed to load at:', this.src); 
-                                // Try alternative paths
-                                if (!this.dataset.tried1) {
-                                  this.dataset.tried1 = 'true';
-                                  this.src = './manifest/icon-512x512.png';
-                                } else if (!this.dataset.tried2) {
-                                  this.dataset.tried2 = 'true';
-                                  this.src = '/manifest/icon-512x512.png';
-                                } else if (!this.dataset.tried3) {
-                                  this.dataset.tried3 = 'true';
-                                  this.src = window.location.origin + '/manifest/icon-512x512.png';
-                                } else {
-                                  // Final fallback - show emoji
-                                  this.classList.add('error');
-                                  this.alt='📱';
-                                  this.style.background = 'linear-gradient(135deg, #007965 0%, #00a080 100%)';
-                                  this.style.display = 'inline-flex';
-                                  this.style.alignItems = 'center';
-                                  this.style.justifyContent = 'center';
-                                  this.style.fontSize = '16px';
-                                  this.style.color = 'white';
-                                  this.style.fontWeight = 'bold';
-                                }" />
+                  ${getInlineIcon('appIcon', 30)}
                 </div>
                 <span>Collect Pro</span>
               </div>
