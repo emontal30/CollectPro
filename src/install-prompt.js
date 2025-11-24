@@ -92,20 +92,25 @@
       animation: iconPulse 2s infinite ease-in-out, iconGlow 3s infinite alternate;
       transition: transform 0.3s ease;
       vertical-align: middle;
-      background: linear-gradient(135deg, #007965 0%, #00a080 100%);
       object-fit: cover;
+      background: transparent;
     }
 
-    .inline-icon img[src=""], .inline-icon img:not([src]) {
+    .inline-icon img.error {
       width: 30px;
       height: 30px;
       background: linear-gradient(135deg, #007965 0%, #00a080 100%);
       border-radius: 8px;
-      display: inline-block;
-      content: '📱';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: 16px;
-      line-height: 30px;
-      text-align: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .inline-icon img.error::before {
+      content: '📱';
     }
 
     .inline-icon img:hover {
@@ -312,28 +317,40 @@
         
         // Get the correct base path for the icon
         const currentPath = window.location.pathname;
-        let iconPath = './manifest/icon-512x512.png';
         
-        // Handle different page structures
-        if (currentPath.includes('/pages/') || currentPath.includes('/src/')) {
-          iconPath = '../manifest/icon-512x512.png';
-        } else if (currentPath.endsWith('.html') && !currentPath.includes('index.html')) {
-          // For admin.html, dashboard.html, etc. in root
-          iconPath = './manifest/icon-512x512.png';
-        } else if (currentPath === '/' || currentPath.endsWith('index.html')) {
-          // For index.html
-          iconPath = './manifest/icon-512x512.png';
-        }
-        
-        // Fallback: try to detect the actual path structure
-        if (window.location.origin.includes('localhost') || window.location.hostname === '127.0.0.1') {
+        // Use correct path for Vercel deployment
+        let iconPath;
+        if (window.location.hostname.includes('vercel.app')) {
+          // Vercel deployment
+          iconPath = '/manifest/icon-512x512.png';
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
           // Local development
           iconPath = './manifest/icon-512x512.png';
+        } else {
+          // Other deployments
+          iconPath = '/manifest/icon-512x512.png';
         }
         
         console.log('📍 Current path:', currentPath);
         console.log('🖼️ Icon path:', iconPath);
         console.log('🌐 Origin:', window.location.origin);
+        console.log('🌍 Hostname:', window.location.hostname);
+        
+        // Test if icon exists before using it
+        const testImg = new Image();
+        testImg.onload = function() {
+          console.log('✅ Icon loaded successfully at:', iconPath);
+        };
+        testImg.onerror = function() {
+          console.error('❌ Icon failed to load at:', iconPath);
+          // Use a simple emoji fallback as base64
+          console.log('🔄 Using emoji fallback for icon');
+        };
+        testImg.src = iconPath;
+        
+        // Also try relative path as backup
+        const relativeIconPath = './manifest/icon-512x512.png';
+        console.log('🔄 Backup path:', relativeIconPath);
         
         container.innerHTML = `
           <div class="install-prompt-content">
@@ -342,13 +359,29 @@
                 <span>ثبّت تطبيق</span>
                 <div class="inline-icon">
                   <img src="${iconPath}" alt="شعار CollectPro" 
-                       onerror="console.error('Icon failed to load at: ${iconPath}'); 
-                                this.src='./manifest/icon-512x512.png'; 
-                                if (this.naturalWidth === 0) { 
-                                   this.src='../manifest/icon-512x512.png'; 
-                                   if (this.naturalWidth === 0) { 
-                                      this.src='/manifest/icon-512x512.png'; 
-                                   } 
+                       onload="console.log('✅ Icon loaded successfully at:', this.src);"
+                       onerror="console.error('❌ Icon failed to load at:', this.src); 
+                                // Try alternative paths
+                                if (!this.dataset.tried1) {
+                                  this.dataset.tried1 = 'true';
+                                  this.src = './manifest/icon-512x512.png';
+                                } else if (!this.dataset.tried2) {
+                                  this.dataset.tried2 = 'true';
+                                  this.src = '/manifest/icon-512x512.png';
+                                } else if (!this.dataset.tried3) {
+                                  this.dataset.tried3 = 'true';
+                                  this.src = window.location.origin + '/manifest/icon-512x512.png';
+                                } else {
+                                  // Final fallback - show emoji
+                                  this.classList.add('error');
+                                  this.alt='📱';
+                                  this.style.background = 'linear-gradient(135deg, #007965 0%, #00a080 100%)';
+                                  this.style.display = 'inline-flex';
+                                  this.style.alignItems = 'center';
+                                  this.style.justifyContent = 'center';
+                                  this.style.fontSize = '16px';
+                                  this.style.color = 'white';
+                                  this.style.fontWeight = 'bold';
                                 }" />
                 </div>
                 <span>Collect Pro</span>
