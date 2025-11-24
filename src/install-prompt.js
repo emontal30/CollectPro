@@ -92,6 +92,20 @@
       animation: iconPulse 2s infinite ease-in-out, iconGlow 3s infinite alternate;
       transition: transform 0.3s ease;
       vertical-align: middle;
+      background: linear-gradient(135deg, #007965 0%, #00a080 100%);
+      object-fit: cover;
+    }
+
+    .inline-icon img[src=""], .inline-icon img:not([src]) {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #007965 0%, #00a080 100%);
+      border-radius: 8px;
+      display: inline-block;
+      content: '📱';
+      font-size: 16px;
+      line-height: 30px;
+      text-align: center;
     }
 
     .inline-icon img:hover {
@@ -295,12 +309,48 @@
         const container = document.createElement('div');
         container.id = 'install-prompt';
         container.className = 'install-prompt';
+        
+        // Get the correct base path for the icon
+        const currentPath = window.location.pathname;
+        let iconPath = './manifest/icon-512x512.png';
+        
+        // Handle different page structures
+        if (currentPath.includes('/pages/') || currentPath.includes('/src/')) {
+          iconPath = '../manifest/icon-512x512.png';
+        } else if (currentPath.endsWith('.html') && !currentPath.includes('index.html')) {
+          // For admin.html, dashboard.html, etc. in root
+          iconPath = './manifest/icon-512x512.png';
+        } else if (currentPath === '/' || currentPath.endsWith('index.html')) {
+          // For index.html
+          iconPath = './manifest/icon-512x512.png';
+        }
+        
+        // Fallback: try to detect the actual path structure
+        if (window.location.origin.includes('localhost') || window.location.hostname === '127.0.0.1') {
+          // Local development
+          iconPath = './manifest/icon-512x512.png';
+        }
+        
+        console.log('📍 Current path:', currentPath);
+        console.log('🖼️ Icon path:', iconPath);
+        console.log('🌐 Origin:', window.location.origin);
+        
         container.innerHTML = `
           <div class="install-prompt-content">
             <div class="install-text">
               <div class="title-row">
                 <span>ثبّت تطبيق</span>
-                <div class="inline-icon"><img src="./manifest/icon-512x512.png" alt="شعار CollectPro" /></div>
+                <div class="inline-icon">
+                  <img src="${iconPath}" alt="شعار CollectPro" 
+                       onerror="console.error('Icon failed to load at: ${iconPath}'); 
+                                this.src='./manifest/icon-512x512.png'; 
+                                if (this.naturalWidth === 0) { 
+                                   this.src='../manifest/icon-512x512.png'; 
+                                   if (this.naturalWidth === 0) { 
+                                      this.src='/manifest/icon-512x512.png'; 
+                                   } 
+                                }" />
+                </div>
                 <span>Collect Pro</span>
               </div>
               <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
