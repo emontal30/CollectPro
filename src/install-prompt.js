@@ -1,8 +1,7 @@
 /**
  * Import icon utilities for consistent icon display
  */
-import { createIconElement } from './icon-base64.js';
-import { getInlineIcon } from './shared-icons.js';
+import { SHARED_ICONS } from './shared-icons.js';
 
 /**
  * Install Prompt Script for PWA
@@ -16,24 +15,26 @@ let deferredPrompt;
 // Make deferredPrompt globally accessible
 window.deferredPrompt = null;
 
-  // Add unified CSS styles
+// Add unified CSS styles
 const unifiedStyles = `
   .install-prompt {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(15px);
-    border-radius: 0 0 16px 16px;
-    padding: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 0 0 20px 20px;
+    padding: 16px 20px;
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 10000;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    animation: slideDownFromTop 0.3s ease-out;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    animation: slideDownFromTop 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    direction: rtl;
   }
 
   .install-prompt.show {
@@ -44,100 +45,76 @@ const unifiedStyles = `
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 15px;
-    flex: 1;
-    text-align: center;
-    }
+    width: 100%;
+    max-width: 600px;
+  }
 
   .install-prompt-content::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #007965 0%, #00a080 100%);
-    border-radius: 16px 16px 0 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #007965, transparent);
+    border-radius: 0 0 4px 4px;
+    opacity: 0.8;
+  }
+
+  .install-info-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    text-align: right;
+  }
+
+  .inline-icon {
+    flex-shrink: 0;
+    position: relative;
+    width: 48px;
+    height: 48px;
+  }
+
+  .inline-icon img {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: iconPulse 3s infinite ease-in-out;
+    object-fit: cover;
+    background-color: #fff; /* خلفية بيضاء لضمان وضوح الشعار */
+  }
+
+  @keyframes iconPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 4px 25px rgba(0, 121, 101, 0.5); }
   }
 
   .install-text {
     flex: 1;
-    text-align: center;
   }
 
   .title-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    flex-wrap: nowrap;
+    margin-bottom: 4px;
   }
 
   .title-row span {
     color: #ffffff;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
-
-  .inline-icon {
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
-  }
-
-    .inline-icon img {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
-    border: none;
-    animation: iconPulse 2s infinite ease-in-out, iconGlow 3s infinite alternate;
-    transition: transform 0.3s ease;
-    vertical-align: middle;
-    object-fit: cover;
-    background: transparent;
-  }
-
-  .inline-icon img.error {
-    width: 30px;
-    height: 30px;
-    background: linear-gradient(135deg, #007965 0%, #00a080 100%);
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     font-size: 16px;
-    color: white;
-    font-weight: bold;
-  }
-
-  .inline-icon img.error::before {
-    content: '📱';
-  }
-
-    .inline-icon img:hover {
-    transform: scale(1.1) rotate(5deg);
-    box-shadow: 0 6px 20px rgba(0, 121, 101, 0.5);
-  }
-
-  @keyframes iconPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-
-    @keyframes iconGlow {
-    0% { filter: brightness(1) drop-shadow(0 0 10px rgba(0, 121, 101, 0.3)); }
-    100% { filter: brightness(1.2) drop-shadow(0 0 20px rgba(0, 121, 101, 0.6)); }
+    font-weight: 700;
+    display: block;
   }
 
   .install-text p {
     color: #e0e0e0;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.4;
     margin: 0;
+    opacity: 0.9;
   }
 
   .install-buttons {
@@ -147,102 +124,83 @@ const unifiedStyles = `
   }
 
   .install-btn, .dismiss-btn {
-    padding: 10px 16px;
+    padding: 10px 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 80px;
+    transition: all 0.2s ease;
+    font-family: inherit;
   }
 
-    .install-btn {
+  .install-btn {
     background: linear-gradient(135deg, #007965 0%, #00a080 100%);
     color: white;
     box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
   }
 
   .install-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 121, 101, 0.4);
-    }
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 121, 101, 0.5);
+    background: linear-gradient(135deg, #008c76 0%, #00b38f 100%);
+  }
 
-    .dismiss-btn {
-    background: transparent;
-    color: #999;
-    border: 1px solid #ddd;
+  .install-btn:active {
+    transform: translateY(0);
+  }
+
+  .dismiss-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .dismiss-btn:hover {
-    background: #f5f5f5;
-    color: #666;
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
   }
 
   @keyframes slideDownFromTop {
-    from { opacity: 0; transform: translateY(-50px); }
+    from { opacity: 0; transform: translateY(-100%); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Dark mode support */
+  /* Dark mode enhancements */
   body.dark .install-prompt {
-    background: rgba(30, 30, 30, 0.9);
-    border-color: rgba(0, 200, 150, 0.3);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    background: rgba(20, 20, 20, 0.9);
+    border-bottom: 1px solid rgba(0, 200, 150, 0.2);
   }
 
-  body.dark .install-prompt-content::before {
-    background: linear-gradient(90deg, rgba(0, 200, 150, 0.8) 0%, rgba(0, 150, 130, 0.9) 100%);
-  }
-
-    body.dark .dismiss-btn {
-    background: transparent;
-    color: #999;
-    border-color: #555;
-  }
-
-  body.dark .dismiss-btn:hover {
-    background: #333;
-    color: #cccccc;
-    }
-
-    /* Responsive design */
+  /* Responsive design */
   @media (max-width: 480px) {
     .install-prompt {
-      padding: 16px;
-      border-radius: 0 0 12px 12px;
+      padding: 12px 15px;
     }
-
+    
     .install-prompt-content {
+      flex-direction: column;
       gap: 12px;
     }
-
-    .inline-icon img {
-      width: 25px;
-      height: 25px;
+    
+    .install-info-wrapper {
+      width: 100%;
+      text-align: right;
     }
-
-    .title-row span {
-      font-size: 18px;
-    }
-
-    .install-text p {
-      font-size: 13px;
-    }
-
+    
     .install-buttons {
-      gap: 8px;
+      width: 100%;
+      justify-content: stretch;
     }
-
-      .install-btn, .dismiss-btn {
-      padding: 8px 12px;
-      font-size: 13px;
+    
+    .install-btn, .dismiss-btn {
+      flex: 1;
+      padding: 10px;
     }
   }
 `;
 
-  // Inject CSS styles
+// Inject CSS styles
 if (!document.getElementById('install-prompt-styles')) {
   const styleElement = document.createElement('style');
   styleElement.id = 'install-prompt-styles';
@@ -283,19 +241,14 @@ if ('serviceWorker' in navigator) {
     const dismissed = localStorage.getItem('installPromptDismissed');
     const installed = localStorage.getItem('appInstalled');
 
-    console.log('📱 Install prompt status - dismissed:', dismissed, 'installed:', installed);
-
     if (!dismissed && !installed) {
-      // Show prompt (top banner), but final decision also happens on DOMContentLoaded guard
       setTimeout(() => {
         tryShowAccordingToGuards();
-      }, 1000);
-    } else {
-      console.log('📱 Install prompt not shown - dismissed or already installed');
+      }, 2000); // Small delay to ensure UI is ready
     }
   });
 
-    // Listen for appinstalled event
+  // Listen for appinstalled event
   window.addEventListener('appinstalled', () => {
     console.log('📱 App installed successfully');
     localStorage.setItem('appInstalled', 'true');
@@ -304,12 +257,11 @@ if ('serviceWorker' in navigator) {
 
   // Set up all event listeners when DOM is loaded
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('📱 DOMContentLoaded listener triggered for install prompt');
-
+    
     // Guards
     const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
     const path = (location.pathname || '').toLowerCase();
-    const isAdminPage = path.endsWith('/admin.html') || path.endsWith('admin.html');
+    const isAdminPage = path.includes('admin.html');
     const dismissed = localStorage.getItem('installPromptDismissed');
     const installed = localStorage.getItem('appInstalled');
 
@@ -319,37 +271,37 @@ if ('serviceWorker' in navigator) {
       container.id = 'install-prompt';
       container.className = 'install-prompt';
       
-      // Get the correct base path for the icon
-      const currentPath = window.location.pathname;
+      // استخدام مسار نسبي للصورة لضمان العمل عند النشر
+      const iconSrc = 'manifest/icon-192x192.png'; 
       
-      console.log('📍 Current path:', currentPath);
-      console.log('🖼️ Using icon-512x512.png for install prompt');
-      console.log('🌐 Origin:', window.location.origin);
-      console.log('🌍 Hostname:', window.location.hostname);
+      // استخدام أيقونة SVG الأصلية كبديل فوري في حال فشل التحميل
+      // SHARED_ICONS.appIcon تحتوي على كود SVG Base64 للشعار الأصلي
+      const fallbackIcon = SHARED_ICONS.appIcon; 
 
       container.innerHTML = `
         <div class="install-prompt-content">
-          <div class="inline-icon">
-            <img src="/manifest/icon-512x512.png" alt="Collect Pro icon"
-                 style="width: 45px; height: 45px; border-radius: 10px;
-                        box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
-                        object-fit: cover;"
-                 onerror="this.src='manifest/icon-192x192.png'; this.onerror=function(){this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDUiIGhlaWdodD0iNDUiIHZpZXdCb3g9IjAgMCA0NSA0NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ1IiBoZWlnaHQ9IjQ1IiByeD0iMTAiIGZpbGw9InVybCgjZ3JhZDApIi8+CjxwYXRoIGQ9Ik0yMi41IDguNUMyMi41IDguNSAyMi41IDguNSAyMi41IDguNVYxNi41SDguNVYyMi41SDguNUM4LjUgMjIuNSA4LjUgMjIuNSA4LjUgMjIuNVYzNi41SDIyLjVWMjIuNUgzNi41VjIyLjVIMzYuNVY4LjVIMjIuNVoiIGZpbGw9IndoaXRlIi8+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQwIiB4MT0iMCIgeTE9IjAiIHgyPSI0NSIgeTI9IjQ1Ij4KPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwNzk2NSIvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMGEwODAiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K';}" />
-          </div>
-          <div class="install-text">
-            <div class="title-row">
-              <span>ثبّت تطبيق Collect Pro</span>
+          <div class="install-info-wrapper">
+            <div class="inline-icon">
+              <img id="pwa-install-icon" 
+                   src="${iconSrc}" 
+                   alt="CollectPro"
+                   onerror="this.onerror=null; this.src='${fallbackIcon}';" />
             </div>
-            <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
+            <div class="install-text">
+              <div class="title-row">
+                <span>ثبّت تطبيق CollectPro</span>
+              </div>
+              <p>تجربة استخدام أسرع والوصول للميزات بدون إنترنت</p>
+            </div>
           </div>
           <div class="install-buttons">
             <button id="install-btn" class="install-btn">تثبيت</button>
-            <button id="dismiss-btn" class="dismiss-btn">لاحقاً</button>
+            <button id="dismiss-btn" class="dismiss-btn">ليس الآن</button>
           </div>
         </div>
       `;
 
-      // Insert at top of body
+      // إدراج العنصر في بداية الـ body
       if (document.body.firstChild) {
         document.body.insertBefore(container, document.body.firstChild);
       } else {
@@ -368,11 +320,19 @@ if ('serviceWorker' in navigator) {
           const { outcome } = await deferredPrompt.userChoice;
           console.log('📱 Install prompt outcome:', outcome);
           deferredPrompt = null;
-          window.deferredPrompt = null; // Reset global reference
+          window.deferredPrompt = null;
 
           if (outcome === 'accepted') {
             localStorage.setItem('appInstalled', 'true');
           }
+        } else {
+            // Fallback instruction if automatic prompt fails
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+               alert('لتثبيت التطبيق على iOS: اضغط على أيقونة المشاركة (Share) أسفل الشاشة ثم اختر "إضافة إلى الشاشة الرئيسية" (Add to Home Screen)');
+            } else {
+               alert('لتثبيت التطبيق: اضغط على أيقونة القائمة في متصفحك ثم اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق"');
+            }
         }
         hideInstallPrompt();
       });
@@ -386,27 +346,24 @@ if ('serviceWorker' in navigator) {
       });
     }
 
-    // Decide initial visibility strictly by guards
-    function tryShowAccordingToGuards() {
+    // Function to verify if we should show the prompt
+    window.tryShowAccordingToGuards = function() {
       const nowDismissed = localStorage.getItem('installPromptDismissed');
       const nowInstalled = localStorage.getItem('appInstalled');
+      
       if (!isAdminPage && !isStandalone && !nowDismissed && !nowInstalled) {
         showInstallPrompt();
       } else {
         hideInstallPrompt();
       }
-    }
-
-    window.tryShowAccordingToGuards = tryShowAccordingToGuards; // debug helper
+    };
 
     // Initial check
     tryShowAccordingToGuards();
   });
-} else {
-  console.log('📱 PWA not fully supported, but Service Worker available');
 }
 
-// Expose functions globally for debugging
+// Expose functions globally
 window.installPromptUtils = {
   show: showInstallPrompt,
   hide: hideInstallPrompt,
@@ -414,15 +371,6 @@ window.installPromptUtils = {
     localStorage.removeItem('installPromptDismissed');
     localStorage.removeItem('appInstalled');
     console.log('📱 Install prompt state reset');
-  },
-  debug: function() {
-    console.log('📱 Debug info:', {
-      deferredPrompt: !!deferredPrompt,
-      dismissed: localStorage.getItem('installPromptDismissed'),
-      installed: localStorage.getItem('appInstalled'),
-      serviceWorker: 'serviceWorker' in navigator,
-      beforeInstallPrompt: 'BeforeInstallPromptEvent' in window,
-      userAgent: navigator.userAgent
-    });
+    alert('تم إعادة تعيين حالة التثبيت. قم بتحديث الصفحة.');
   }
 };
