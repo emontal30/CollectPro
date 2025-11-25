@@ -272,7 +272,7 @@ if ('serviceWorker' in navigator) {
       container.className = 'install-prompt';
       
       // استخدام مسار نسبي للصورة لضمان العمل عند النشر
-      const iconSrc = 'manifest/icon-192x192.png'; 
+      const iconSrc = '/manifest/icon-192x192.png';
       
       // استخدام أيقونة SVG الأصلية كبديل فوري في حال فشل التحميل
       // SHARED_ICONS.appIcon تحتوي على كود SVG Base64 للشعار الأصلي
