@@ -271,21 +271,17 @@ if ('serviceWorker' in navigator) {
       container.id = 'install-prompt';
       container.className = 'install-prompt';
       
-      // استخدام مسار نسبي للصورة لضمان العمل عند النشر
-      const iconSrc = '/manifest/icon-192x192.png';
-      
-      // استخدام أيقونة SVG الأصلية كبديل فوري في حال فشل التحميل
-      // SHARED_ICONS.appIcon تحتوي على كود SVG Base64 للشعار الأصلي
-      const fallbackIcon = SHARED_ICONS.appIcon; 
+      // استخدام أكبر أيقونة كأساسية مع احتياطيات أصغر
+      const iconSrc = 'manifest/icon-512x512.png';
 
       container.innerHTML = `
         <div class="install-prompt-content">
           <div class="install-info-wrapper">
             <div class="inline-icon">
-              <img id="pwa-install-icon" 
-                   src="${iconSrc}" 
+              <img id="pwa-install-icon"
+                   src="${iconSrc}"
                    alt="CollectPro"
-                   onerror="this.onerror=null; this.src='${fallbackIcon}';" />
+                   onerror="this.src='manifest/icon-192x192.png'; this.onerror=function(){this.src='manifest/icon-96x96.png';};" />
             </div>
             <div class="install-text">
               <div class="title-row">
