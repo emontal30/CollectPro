@@ -86,7 +86,7 @@ const unifiedStyles = `
     border: 1px solid rgba(255, 255, 255, 0.1);
     animation: iconPulse 3s infinite ease-in-out;
     object-fit: cover;
-    background-color: #fff; /* خلفية بيضاء لضمان وضوح الشعار */
+    background-color: transparent;
   }
 
   @keyframes iconPulse {
@@ -272,7 +272,7 @@ if ('serviceWorker' in navigator) {
       container.className = 'install-prompt';
       
       // استخدام أكبر أيقونة كأساسية مع احتياطيات أصغر
-      const iconSrc = 'manifest/icon-512x512.png';
+      const iconSrc = '/manifest/icon-512x512.png';
 
       container.innerHTML = `
         <div class="install-prompt-content">
@@ -281,7 +281,7 @@ if ('serviceWorker' in navigator) {
               <img id="pwa-install-icon"
                    src="${iconSrc}"
                    alt="CollectPro"
-                   onerror="this.src='manifest/icon-192x192.png'; this.onerror=function(){this.src='manifest/icon-96x96.png';};" />
+                   onerror="this.src='/manifest/icon-192x192.png'; this.onerror=function(){this.src='/manifest/icon-96x96.png';};" />
             </div>
             <div class="install-text">
               <div class="title-row">
