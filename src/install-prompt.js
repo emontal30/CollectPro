@@ -329,31 +329,31 @@ if ('serviceWorker' in navigator) {
 
       container.innerHTML = `
         <div class="install-prompt-content">
+          <div class="inline-icon">
+            <img src="/manifest/icon-512x512.png" alt="Collect Pro icon"
+                 style="width: 45px; height: 45px; border-radius: 10px;
+                        box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+                        object-fit: cover;" />
+          </div>
           <div class="install-text">
             <div class="title-row">
-              <span>ثبّت تطبيق</span>
-              <div class="inline-icon">
-                <img src="/manifest/icon-512x512.png" alt="Collect Pro icon"
-                     style="width: 30px; height: 30px; border-radius: 8px;
-                            box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
-                            vertical-align: middle; object-fit: cover;" />
-              </div>
-              <span>Collect Pro</span>
+              <span>ثبّت تطبيق Collect Pro</span>
             </div>
             <p>احصل على تجربة استخدام أفضل وأسرع! ثبّت التطبيق على هاتفك للوصول الفوري وميزات حصرية.</p>
-            </div>
+          </div>
           <div class="install-buttons">
             <button id="install-btn" class="install-btn">تثبيت</button>
             <button id="dismiss-btn" class="dismiss-btn">لاحقاً</button>
           </div>
-        </div>`;
-      
-      // Insert at top of body
-      if (document.body.firstChild) {
-        document.body.insertBefore(container, document.body.firstChild);
-      } else {
-        document.body.appendChild(container);
-      }
+        </div>
+      `;
+  
+  // Insert at top of body
+  if (document.body.firstChild) {
+    document.body.insertBefore(container, document.body.firstChild);
+  } else {
+    document.body.appendChild(container);
+  }
     }
 
     // Set up button event listeners

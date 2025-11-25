@@ -103,7 +103,7 @@ body::before {
   position: relative;
 }
 
-.logo {
+.logo-img {
   height: 80px;
   width: auto;
   margin-bottom: 30px; /* مسافة أكبر تحت الشعار */
@@ -112,10 +112,9 @@ body::before {
   display: block; /* لضمان أنه يأخذ سطرًا كاملاً */
   margin-left: auto;
   margin-right: auto;
-  transform: scaleX(-1); /* تصحيح اتجاه الشعار */
 }
 
-.logo:hover {
+.logo-img:hover {
   transform: scale(1.05);
 }
 
@@ -316,7 +315,7 @@ body::before {
     max-width: 450px;
   }
 
-  .logo {
+  .logo-img {
     height: 70px;
   }
 
@@ -346,7 +345,7 @@ body::before {
     width: 90%;
   }
 
-  .logo {
+  .logo-img {
     height: 60px;
   }
 
@@ -924,6 +923,18 @@ body.dark .dismiss-btn:hover {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 12px rgba(0, 121, 101, 0.2);
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(0, 121, 101, 0.2);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 121, 101, 0.4);
+  }
 }
 
 .install-app-icon img {
