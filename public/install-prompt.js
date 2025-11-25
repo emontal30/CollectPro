@@ -28,7 +28,7 @@ class InstallPrompt {
             <button class="install-prompt-close" id="installPromptClose">
               <i class="fas fa-times"></i>
             </button>
-            <img src="/icon-512x512.png" alt="شعار CollectPro" class="install-prompt-logo">
+            <img src="/manifest/icon-512x512.png" alt="شعار CollectPro" class="install-prompt-logo">
             <h2 class="install-prompt-title">ثبت تطبيق CollectPro</h2>
             <p class="install-prompt-subtitle">احصل على تجربة استخدام أسهل وأسرع</p>
           </div>
