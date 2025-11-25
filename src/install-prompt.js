@@ -333,7 +333,8 @@ if ('serviceWorker' in navigator) {
             <img src="/manifest/icon-512x512.png" alt="Collect Pro icon"
                  style="width: 45px; height: 45px; border-radius: 10px;
                         box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
-                        object-fit: cover;" />
+                        object-fit: cover;"
+                 onerror="this.src='manifest/icon-192x192.png'; this.onerror=function(){this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDUiIGhlaWdodD0iNDUiIHZpZXdCb3g9IjAgMCA0NSA0NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ1IiBoZWlnaHQ9IjQ1IiByeD0iMTAiIGZpbGw9InVybCgjZ3JhZDApIi8+CjxwYXRoIGQ9Ik0yMi41IDguNUMyMi41IDguNSAyMi41IDguNSAyMi41IDguNVYxNi41SDguNVYyMi41SDguNUM4LjUgMjIuNSA4LjUgMjIuNSA4LjUgMjIuNVYzNi41SDIyLjVWMjIuNUgzNi41VjIyLjVIMzYuNVY4LjVIMjIuNVoiIGZpbGw9IndoaXRlIi8+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQwIiB4MT0iMCIgeTE9IjAiIHgyPSI0NSIgeTI9IjQ1Ij4KPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwNzk2NSIvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMGEwODAiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K';}" />
           </div>
           <div class="install-text">
             <div class="title-row">
@@ -347,13 +348,13 @@ if ('serviceWorker' in navigator) {
           </div>
         </div>
       `;
-  
-  // Insert at top of body
-  if (document.body.firstChild) {
-    document.body.insertBefore(container, document.body.firstChild);
-  } else {
-    document.body.appendChild(container);
-  }
+
+      // Insert at top of body
+      if (document.body.firstChild) {
+        document.body.insertBefore(container, document.body.firstChild);
+      } else {
+        document.body.appendChild(container);
+      }
     }
 
     // Set up button event listeners
