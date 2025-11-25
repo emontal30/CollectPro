@@ -112,6 +112,7 @@ body::before {
   display: block; /* لضمان أنه يأخذ سطرًا كاملاً */
   margin-left: auto;
   margin-right: auto;
+  transform: scaleX(-1); /* تصحيح اتجاه الشعار */
 }
 
 .logo:hover {

@@ -1,6 +1,7 @@
 /**
- * Import shared icons for consistent icon display
+ * Import icon utilities for consistent icon display
  */
+import { createIconElement } from './icon-base64.js';
 import { getInlineIcon } from './shared-icons.js';
 
 /**
@@ -321,21 +322,21 @@ if ('serviceWorker' in navigator) {
       // Get the correct base path for the icon
       const currentPath = window.location.pathname;
       
-      // Use guaranteed icon display with shared icons
-      const iconSvg = getInlineIcon('appIcon', 30);
-      
       console.log('📍 Current path:', currentPath);
-      console.log('🖼️ Using guaranteed shared icon');
+      console.log('🖼️ Using icon-512x512.png for install prompt');
       console.log('🌐 Origin:', window.location.origin);
       console.log('🌍 Hostname:', window.location.hostname);
-      
+
       container.innerHTML = `
         <div class="install-prompt-content">
           <div class="install-text">
             <div class="title-row">
               <span>ثبّت تطبيق</span>
               <div class="inline-icon">
-                ${getInlineIcon('appIcon', 30)}
+                <img src="/manifest/icon-512x512.png" alt="Collect Pro icon"
+                     style="width: 30px; height: 30px; border-radius: 8px;
+                            box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+                            vertical-align: middle; object-fit: cover;" />
               </div>
               <span>Collect Pro</span>
             </div>
