@@ -21,7 +21,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/src/sw.js')
+  navigator.serviceWorker.register('/sw.js')
     .then(registration => {
       // Check for updates every 60 seconds
       setInterval(() => {
