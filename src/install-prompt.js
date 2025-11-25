@@ -281,7 +281,7 @@ if ('serviceWorker' in navigator) {
               <img id="pwa-install-icon"
                    src="${iconSrc}"
                    alt="CollectPro"
-                   onerror="this.src='/manifest/icon-192x192.png'; this.onerror=function(){this.src='/manifest/icon-96x96.png';};" />
+                   onerror="this.src='/manifest/icon-192x192.png'; this.onerror=function(){this.src='/manifest/icon-144x144.png'; this.onerror=function(){this.style.display='none'; this.parentElement.innerHTML='<div style=\"width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#007965 0%,#00a080 100%);display:flex;align-items:center;justify-content:center;color:white;font-size:18px;font-weight:bold;\">CP</div>';};}" />
             </div>
             <div class="install-text">
               <div class="title-row">
