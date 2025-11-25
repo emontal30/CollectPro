@@ -14,7 +14,22 @@ export default defineConfig({
         subscriptions: resolve(__dirname, 'subscriptions.html'),
         'my-subscription': resolve(__dirname, 'my-subscription.html'),
         payment: resolve(__dirname, 'payment.html'),
-      }
-    }
-  }
+      },
+      external: ['install-prompt.js'],
+    },
+    assetsDir: 'assets',
+    sourcemap: true,
+    minify: 'esbuild',
+    target: 'es2015',
+  },
+  server: {
+    port: 3000,
+    host: true,
+  },
+  preview: {
+    port: 4173,
+    host: true,
+  },
+  publicDir: 'public',
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.svg', '**/*.ico', '**/*.webmanifest'],
 });
