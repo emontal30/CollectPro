@@ -1,4 +1,4 @@
-// Shared Modal System for consistent design across all pages
+// Shared Modal System for consistent design across all pages - v2.8.4
 import { getIconHtml } from './shared-icons.js';
 
 export class SharedModal {
@@ -55,12 +55,28 @@ export class SharedModal {
       position: relative;
     `;
 
-    // Icon section
+    // Icon section with enhanced fallback
     const iconSection = document.createElement('div');
     iconSection.style.cssText = `
       margin-bottom: 25px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
     iconSection.innerHTML = getIconHtml(iconType, 80);
+    
+    // Additional fallback check - if icon fails to load after 2 seconds, show fallback
+    setTimeout(() => {
+      const img = iconSection.querySelector('img');
+      if (img && img.naturalWidth === 0) {
+        iconSection.innerHTML = `
+          <div style="width:80px;height:80px;border-radius:16px;background:linear-gradient(135deg,#007965 0%,#00a080 100%);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-weight:bold;border:3px solid rgba(255,255,255,0.8);box-shadow: 0 10px 25px rgba(0, 121, 101, 0.3);">
+            CP
+          </div>
+        `;
+      }
+    }, 2000);
 
     // Title
     const titleElement = document.createElement('h3');
