@@ -1,6 +1,3 @@
-// Import shared icons and modal for consistent design
-import { getIconHtml } from './shared-icons.js';
-import { sharedModal } from './shared-modal.js';
 window.onerror = function(message, source, lineno, colno, error) {
   console.error("An unhandled error occurred:", {
     message: message,
@@ -22,7 +19,7 @@ window.addEventListener('unhandledrejection', function(event) {
 // Register Service Worker for PWA functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/src/sw.js')
       .then((registration) => {
         console.log('📱 Service Worker registered successfully:', registration.scope);
 
@@ -239,7 +236,7 @@ async function fallbackShare(shareData) {
     // إنشاء محتوى مخصص للمشاركة
     const shareContent = `
       <div style="text-align: center; margin: 20px 0;">
-        ${getIconHtml('appIcon', 100, 'border: 3px solid #007965;')}
+        <img src="${logoUrl}" alt="CollectPro" style="width: 100px; height: 100px; border: 3px solid #007965; border-radius: 50%;" />
         <p style="margin: 10px 0; font-weight: bold; color: #007965; font-size: 18px;">
           CollectPro
         </p>
@@ -278,33 +275,8 @@ CollectPro - نظام إدارة التحصيلات المتقدم</div>
       </div>
     `;
     
-    // استخدام النظام الموحد للرسائل المنبثقة
-    sharedModal.show('مشاركة تطبيق CollectPro', shareContent, {
-      iconType: 'share',
-      confirmText: '📋 نسخ المحتوى',
-      cancelText: '✖ إغلاق',
-      onConfirm: async () => {
-        try {
-          const fullContent = `📱 CollectPro
-تطبيق احترافي لإدارة التحصيلات وتتبع البيانات المالية
-
-🖼️ شعار التطبيق: ${logoUrl}
-
-🔗 رابط التطبيق: ${shareData.url}
-
-📲 حمل التطبيق الآن!
-
----
-CollectPro - نظام إدارة التحصيلات المتقدم`;
-          
-          await navigator.clipboard.writeText(fullContent);
-          showAlert('✅ تم نسخ المحتوى مع شعار التطبيق بنجاح! يمكنك لصقه ومشاركته الآن.', 'success');
-        } catch (error) {
-          console.error('Failed to copy content:', error);
-          showAlert('❌ فشل نسخ المحتوى', 'danger');
-        }
-      }
-    });
+    // استخدام تنبيه بسيط بدلاً من النافذة المنبثقة
+    alert('مشاركة تطبيق CollectPro:\n\n' + shareContent);
   }
 }
 

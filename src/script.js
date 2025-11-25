@@ -1,7 +1,3 @@
-// Import shared icons for consistent modal display
-import { getIconHtml } from './shared-icons.js';
-import { sharedModal } from './shared-modal.js';
-
 // Script loading check
 console.log("CollectPro script.js loaded successfully");
 // Global error handlers
@@ -25,7 +21,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 /* ========== Service Worker Auto-Update ========== */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  navigator.serviceWorker.register('/src/sw.js')
     .then(registration => {
       // Check for updates every 60 seconds
       setInterval(() => {
@@ -123,12 +119,6 @@ function formatNumber(n) {
       clearTimeout(timeout);
       timeout = setTimeout(later, wait);
     };
-  }
-
-  /* ========== Modal System - Using Shared Modal ========== */
-  // Backward compatibility - redirect to shared modal
-  function showModal(title, message, onConfirm, onCancel, iconType = 'info') {
-    sharedModal.show(title, message, { onConfirm, onCancel, iconType });
   }
 
   /* ========== Alert System ========== */
@@ -1857,74 +1847,10 @@ async function searchArchive(query) {
 
     // التأكد من تهيئة أزرار صفحة الإدخال بشكل صحيح
     if (window.location.pathname.includes('dashboard') || window.location.pathname.endsWith('/') || window.location.pathname.endsWith('index.html')) {
-      console.log("Dashboard page detected - initializing buttons");
+      console.log("Login page detected - skipping button initialization");
 
-      // تأخير بسيط للتأكد من تحميل العناصر
-      setTimeout(() => {
-        // زر لصق البيانات
-        const pasteBtn = document.getElementById("pasteBtn");
-        const dataInput = document.getElementById("dataInput");
-
-        if (pasteBtn && dataInput) {
-          console.log("Initializing paste button");
-          pasteBtn.addEventListener("click", () => {
-            console.log("Paste button clicked");
-            pasteInto(dataInput);
-          });
-        } else {
-          console.error("pasteBtn or dataInput not found", { pasteBtn: !!pasteBtn, dataInput: !!dataInput });
-        }
-
-        // زر حفظ وانتقال
-        const saveGoBtn = document.getElementById("saveGoBtn");
-        if (saveGoBtn && dataInput && !saveGoBtn.dataset.saveGoInit) {
-          console.log("Initializing save and go button");
-          saveGoBtn.dataset.saveGoInit = "1";
-          saveGoBtn.addEventListener("click", () => {
-            console.log("Save and Go button clicked");
-            handleSaveAndGo(dataInput);
-          });
-        } else if (!saveGoBtn) {
-          console.error("saveGoBtn not found");
-        }
-
-        // زر الذهاب للأرشيف
-        const goToArchiveBtn = document.getElementById("goToArchiveBtn");
-        if (goToArchiveBtn) {
-          console.log("Initializing go to archive button");
-          goToArchiveBtn.addEventListener("click", () => {
-            console.log("Go to Archive button clicked");
-            navigateTo("archive");
-          });
-        } else {
-          console.error("goToArchiveBtn not found");
-        }
-
-        // زر مسح البيانات
-        const clearBtn = document.getElementById("clearBtn");
-        if (clearBtn) {
-          console.log("Initializing clear button");
-          clearBtn.addEventListener("click", function() {
-            console.log("Clear button clicked");
-            if (dataInput) {
-              dataInput.value = "";
-              dataInput.focus();
-
-              // مسح البيانات من localStorage
-              localStorage.removeItem("clientData");
-              localStorage.removeItem("harvestData");
-
-              // إضافة علامة للدلالة على أن البيانات تم مسحها يدوياً
-              sessionStorage.setItem("dataCleared", "true");
-
-              console.log("تم مسح البيانات بنجاح");
-              showAlert("تم مسح البيانات بنجاح!", "success");
-            }
-          });
-        } else {
-          console.error("clearBtn not found");
-        }
-      }, 300);
+      // لا نقوم بتهيئة أزرار الإدخال في صفحة تسجيل الدخول
+      // هذه الأزرار موجودة فقط في صفحة dashboard.html
     }
 
     const toggleDarkBtn = document.getElementById("toggleDark");

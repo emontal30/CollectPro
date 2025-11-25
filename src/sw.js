@@ -3,9 +3,9 @@
  * Handles caching, offline functionality, and app updates
  */
 
-const CACHE_NAME = 'collectpro-v2.8.3';
-const STATIC_CACHE = 'collectpro-static-v2.8.3';
-const DYNAMIC_CACHE = 'collectpro-dynamic-v2.8.3';
+const CACHE_NAME = 'collectpro-v2.8.4';
+const STATIC_CACHE = 'collectpro-static-v2.8.4';
+const DYNAMIC_CACHE = 'collectpro-dynamic-v2.8.4';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -27,30 +27,18 @@ const STATIC_ASSETS = [
   '/payment.css',
   '/subscriptions.css',
   '/sidebar.css',
-  '/script.js',
-  '/index.js',
-  '/admin.js',
-  '/my-subscription.js',
-  '/payment.js',
-  '/subscriptions.js',
-  '/sidebar.js',
-  '/supabase-client.js',
-  '/install-prompt.js',
-  '/manifest.json',
-  '/favicon.ico',
+  '/src/script.js',
+  '/src/admin.js',
+  '/src/my-subscription.js',
+  '/src/payment.js',
+  '/src/subscriptions.js',
+  '/src/sidebar.js',
+  '/src/supabase-client.js',
+  '/src/install-prompt.js',
+  '/site.webmanifest',
   '/favicon.svg',
   '/favicon-96x96.png',
-  '/ios/apple-touch-icon-180x180.png',
-  '/ios/apple-touch-icon-120x120.png',
-  '/ios/apple-touch-icon-152x152.png',
-  '/ios/apple-touch-icon-167x167.png',
-  '/logo-momkn.png',
-  '/manifest/icon-48x48.png',
-  '/manifest/icon-72x72.png',
-  '/manifest/icon-96x96.png',
-  '/manifest/icon-144x144.png',
-  '/manifest/icon-192x192.png',
-  '/manifest/icon-512x512.png'
+  '/logo-momkn.png'
 ];
 
 // Install event - cache static assets

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=1024" />
   <meta name="theme-color" content="#3B82F6"/>
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/site.webmanifest" />
   <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
   <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
@@ -14,6 +14,9 @@
   <title>تسجيل الدخول - CollectPro</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="index.css?v=284f44" />
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="loaded">
   <!-- حاوية التنبيهات -->
@@ -73,22 +76,15 @@
   </div>
   
  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="/src/supabase-client.js"></script>
-
-  <!-- Shared Components System -->
-  <script type="module" src="/src/shared-icons.js"></script>
-  <script type="module" src="/src/shared-modal.js"></script>
-  
+  <script type="module" src="/src/supabase-client.js?v=284f44"></script>
   <script type="module" src="/src/main.js?v=284f44"></script>
   <script type="module" src="/src/script.js?v=284f44"></script>
-  <script type="module" src="/src/install-prompt.js?v=284f44"></script>
-  
+
   <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('/src/sw.js')
           .then((registration) => {
             console.log('✅ Service Worker registered successfully:', registration);
           })
