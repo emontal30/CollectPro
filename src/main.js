@@ -175,45 +175,36 @@ CollectPro - نظام إدارة التحصيلات المتقدم`,
     installAppBtn.addEventListener('click', async () => {
       console.log('📱 Install app button clicked');
       
-      // استخدام deferredPrompt العام من install-prompt.js
-      let deferredPrompt = window.deferredPrompt;
-      
-      // محاولة تثبيت التطبيق مباشرة بدون رسائل
-      try {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log('📱 Install outcome:', outcome);
-          deferredPrompt = null;
-          window.deferredPrompt = null;
-          
-          if (outcome === 'accepted') {
-            localStorage.setItem('appInstalled', 'true');
-            console.log('✅ App installed successfully');
-            // إخفاء زر التثبيت بعد التثبيت الناجح
-            installAppBtn.style.display = 'none';
-          }
-        } else {
-          // محاولة تشغيل التثبيت عبر install-prompt.js
-          console.log('📱 No install prompt available, checking if install prompt can be triggered');
-          
-          // التحقق مما إذا كان التطبيق مثبتًا بالفعل
-          const isInstalled = localStorage.getItem('appInstalled');
-          const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
-          
-          if (isInstalled || isStandalone) {
-            console.log('📱 App already installed');
-            installAppBtn.style.display = 'none';
+      // استخدام نفس دالة التثبيت المباشر من install-prompt.js
+      if (window.installPrompt) {
+        window.installPrompt.handleInstall();
+      } else {
+        // fallback إذا لم تكن الرسالة المنبثقة متاحة
+        let deferredPrompt = window.deferredPrompt;
+        
+        try {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('📱 Install outcome:', outcome);
+            deferredPrompt = null;
+            window.deferredPrompt = null;
+            
+            if (outcome === 'accepted') {
+              localStorage.setItem('appInstalled', 'true');
+              console.log('✅ App installed successfully');
+              installAppBtn.style.display = 'none';
+            }
           } else {
-            console.log('📱 Install prompt not ready, please wait for the banner to appear');
+            console.log('📱 Install prompt not ready');
           }
+        } catch (error) {
+          console.error('❌ Error installing app:', error);
         }
-      } catch (error) {
-        console.error('❌ Error installing app:', error);
       }
     });
   } else {
-    console.warn('Install app button not found');
+    console.warn('❌ Install app button not found');
   }
 });
 
