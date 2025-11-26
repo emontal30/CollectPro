@@ -293,15 +293,17 @@ body.dark .shared-modal-close:hover {
   padding: 0;
 }
 body {
-  font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Cairo', sans-serif;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-medium) 100%);
-  color: var(--text-dark);
-  line-height: 1.6;
+  background: var(--light-bg); /* خلفية فاتحة */
+  color: #333;
+  transition: var(--transition);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   opacity: 0; /* للانتقال السلس بين الصفحات */
+  min-width: 1024px;
   overflow-x: auto;
   font-size: 22px; /* تعيين المستوى الافتراضي إلى zoom-2xl */
 }

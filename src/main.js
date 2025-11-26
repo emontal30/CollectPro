@@ -23,27 +23,14 @@ if ('serviceWorker' in navigator) {
       .then((registration) => {
         console.log('📱 Service Worker registered successfully:', registration.scope);
 
-        // نظام التحديث التلقائي المتقدم
-        setupAutoUpdateSystem(registration);
-
         // Handle updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
-          console.log('🔄 New service worker found, installing...');
-          
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New version available
-              console.log('📱 New version available. Refreshing automatically...');
-              
-              // إظهار إشعار التحديث
-              showUpdateNotification();
-              
-              // تحديث تلقائي بعد 3 ثواني
-              setTimeout(() => {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
-              }, 3000);
+              console.log('📱 New version available. Please refresh to update.');
+              // You could show a notification to the user here
             }
           });
         });
@@ -52,94 +39,6 @@ if ('serviceWorker' in navigator) {
         console.error('📱 Service Worker registration failed:', error);
       });
   });
-}
-
-/**
- * نظام التحديث التلقائي المتقدم
- */
-function setupAutoUpdateSystem(registration) {
-  // التحقق من التحديثات كل 5 دقائق
-  setInterval(async () => {
-    try {
-      const response = await fetch('/sw.js', { cache: 'no-store' });
-      const newVersion = await response.text();
-      
-      // مقارنة النسخة الحالية بالجديدة
-      registration.getRegistration().then(reg => {
-        if (reg && reg.active) {
-          reg.active.postMessage({ type: 'GET_VERSION' });
-          
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.version) {
-              const currentVersion = event.data.version;
-              // هنا يمكن مقارنة النسخ والتحديث
-            }
-          });
-        }
-      });
-    } catch (error) {
-      console.log('🔄 Check for updates failed:', error);
-    }
-  }, 5 * 60 * 1000); // كل 5 دقائق
-}
-
-/**
- * إظهار إشعار التحديث
- */
-function showUpdateNotification() {
-  // إنشاء عنصر الإشعار
-  const notification = document.createElement('div');
-  notification.className = 'update-notification';
-  notification.innerHTML = `
-    <div class="update-content">
-      <i class="fas fa-sync-alt fa-spin"></i>
-      <span>جاري تحديث التطبيق تلقائياً...</span>
-    </div>
-  `;
-  
-  // إضافة التنسيقات
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #007965, #005a4b);
-    color: white;
-    padding: 15px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 121, 101, 0.3);
-    z-index: 10000;
-    font-family: 'Tajawal', sans-serif;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    animation: slideIn 0.3s ease;
-  `;
-  
-  // إضافة CSS للأنيميشن
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    .update-notification .update-content {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-  `;
-  document.head.appendChild(style);
-  
-  // إضافة الإشعار للصفحة
-  document.body.appendChild(notification);
-  
-  // إزالة الإشعار بعد التحديث
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  }, 5000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -152,93 +51,47 @@ document.addEventListener('DOMContentLoaded', () => {
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
   googleLoginBtn.style.display = 'none';
 
-  // الاستماع لأحداث تثبيت PWA
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    window.deferredPrompt = e;
-    console.log('📱 Install prompt is now available');
-  });
-
-  // التحقق مما إذا كان التطبيق مثبتاً بالفعل
-  window.addEventListener('appinstalled', () => {
-    console.log('✅ App was installed');
-    localStorage.setItem('appInstalled', 'true');
-    if (installAppBtn) {
-      installAppBtn.style.display = 'none';
-    }
-  });
-
-  // إدارة الجلسة المستمرة - حل احترافي
+  // محاولة جلب الجلسة الحالية فورًا عند فتح التطبيق (مثل فتح اختصار PWA من الشاشة الرئيسية)
   (async () => {
     try {
-      // أولاً: التحقق من الجلسة الحالية
       const { data: { session }, error } = await supabase.auth.getSession();
-      
       if (error) {
         console.error('❌ Error getting current session:', error);
-        showLoginButton();
-        return;
+      } else if (session) {
+        console.log('✅ Active session found via getSession, syncing profile and redirecting...');
+        await syncUserProfile(session.user);
+        redirectUser(session.user);
+        return; // لا نحتاج لإظهار زر الدخول في هذه الحالة
+      } else {
+        console.log('No active session from getSession, waiting for onAuthStateChange...');
       }
-
-      if (session) {
-        console.log('✅ Active session found, validating...');
-        
-        // التحقق من صلاحية الجلسة
-        const isValid = await validateSession(session);
-        
-        if (isValid) {
-          console.log('✅ Session is valid, syncing profile and redirecting...');
-          await syncUserProfile(session.user);
-          redirectUser(session.user);
-          
-          // تحديث وقت آخر نشاط
-          localStorage.setItem('lastActivity', Date.now().toString());
-          return;
-        } else {
-          console.log('❌ Session expired, clearing...');
-          await supabase.auth.signOut();
-          localStorage.removeItem('lastActivity');
-        }
-      }
-
-      // إذا لم توجد جلسة صالحة، أظهر زر تسجيل الدخول
-      console.log('No valid session found, showing login button...');
-      showLoginButton();
-      
     } catch (err) {
-      console.error('❌ Session validation error:', err);
-      showLoginButton();
+      console.error('❌ getSession threw an error:', err);
     }
   })();
 
-  // إضافة فترة زمنية لضمان ظهور الزر إذا لم توجد جلسة
+  // ضمان عدم بقاء الزر مخفيًا في حال لم يصل أي حدث من Supabase (حماية من التوقف على شاشة البداية)
   setTimeout(() => {
     if (googleLoginBtn && googleLoginBtn.style.display === 'none') {
-      console.log('🔧 Fallback: Showing login button after timeout');
-      showLoginButton();
+      console.warn('Auth state did not respond in time. Showing login button fallback.');
+      googleLoginBtn.style.display = 'flex';
     }
-  }, 2000); // 2 ثانية
-
-  // مراقبة نشاط المستخدم لتحديث الجلسة
-  setupActivityMonitoring();
+  }, 4000);
 
   // onAuthStateChange هو المصدر الوحيد للحقيقة
   supabase.auth.onAuthStateChange(async (_event, session) => {
-    console.log('🔄 Auth state changed:', _event, session ? 'Session exists' : 'No session');
-    
+    // يتم استدعاء هذا عند التحميل الأولي وعندما تتغير حالة المصادقة.
     if (session) {
       // المستخدم مسجل دخوله.
       console.log('✅ Active session found, syncing profile...');
       await syncUserProfile(session.user);
       console.log('✅ Profile synced, redirecting...');
       redirectUser(session.user);
-      
-      // تحديث وقت آخر نشاط
-      localStorage.setItem('lastActivity', Date.now().toString());
     } else {
       // المستخدم غير مسجل دخوله.
       console.log('No active session. Showing login UI.');
-      showLoginButton();
+      // إظهار زر تسجيل الدخول فقط عندما نتأكد من عدم وجود جلسة
+      googleLoginBtn.style.display = 'flex'; 
     }
   });
 
@@ -285,11 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 🖼️ شعار التطبيق: ${logoUrl}
 
-📱 تطبيق تحصيل شامل واحترافي
+🔗 رابط التطبيق: ${appUrl}
 
 📲 حمل التطبيق الآن!
 
-----
+---
 CollectPro - نظام إدارة التحصيلات المتقدم`,
           url: appUrl
         };
@@ -322,137 +175,38 @@ CollectPro - نظام إدارة التحصيلات المتقدم`,
     installAppBtn.addEventListener('click', async () => {
       console.log('📱 Install app button clicked');
       
-      // التحقق من وجود deferredPrompt
-      let deferredPrompt = window.deferredPrompt;
-      
-      try {
-        if (deferredPrompt) {
-          // استخدام PWA install prompt مباشرة
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log('📱 Install outcome:', outcome);
-          deferredPrompt = null;
-          window.deferredPrompt = null;
-          
-          if (outcome === 'accepted') {
-            localStorage.setItem('appInstalled', 'true');
-            console.log('✅ App installed successfully');
-            installAppBtn.style.display = 'none';
+      // استخدام نفس دالة التثبيت المباشر من install-prompt.js
+      if (window.installPrompt) {
+        window.installPrompt.handleInstall();
+      } else {
+        // fallback إذا لم تكن الرسالة المنبثقة متاحة
+        let deferredPrompt = window.deferredPrompt;
+        
+        try {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('📱 Install outcome:', outcome);
+            deferredPrompt = null;
+            window.deferredPrompt = null;
+            
+            if (outcome === 'accepted') {
+              localStorage.setItem('appInstalled', 'true');
+              console.log('✅ App installed successfully');
+              installAppBtn.style.display = 'none';
+            }
+          } else {
+            console.log('📱 Install prompt not ready');
           }
-        } else {
-          console.log('📱 Install prompt not available');
-          // لا تفعل شيئاً - فقط انتظر until PWA prompt becomes available
+        } catch (error) {
+          console.error('❌ Error installing app:', error);
         }
-      } catch (error) {
-        console.error('❌ Error installing app:', error);
       }
     });
   } else {
     console.warn('❌ Install app button not found');
   }
 });
-
-/**
- * Validate session and check if it's still active
- */
-async function validateSession(session) {
-  try {
-    // التحقق من انتهاء صلاحية الجلسة
-    const now = Date.now();
-    const sessionAge = now - (session.expires_at * 1000);
-    
-    if (sessionAge > 0) {
-      console.log('❌ Session expired');
-      return false;
-    }
-
-    // التحقق من آخر نشاط للمستخدم (24 ساعة)
-    const lastActivity = localStorage.getItem('lastActivity');
-    if (lastActivity) {
-      const inactiveTime = now - parseInt(lastActivity);
-      const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 ساعة
-      
-      if (inactiveTime > maxInactiveTime) {
-        console.log('❌ User inactive too long');
-        return false;
-      }
-    }
-
-    // التحقق من وجود المستخدم في قاعدة البيانات
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', session.user.id)
-      .single();
-    
-    if (error || !data) {
-      console.log('❌ User not found in database');
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('❌ Session validation error:', error);
-    return false;
-  }
-}
-
-/**
- * Setup activity monitoring for session management
- */
-function setupActivityMonitoring() {
-  // تحديث وقت النشاط عند تفاعل المستخدم
-  const activities = [
-    'mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'
-  ];
-  
-  let activityTimer;
-  
-  function updateActivity() {
-    localStorage.setItem('lastActivity', Date.now().toString());
-    
-    // مسح المؤقت الحالي وبدء مؤقت جديد
-    clearTimeout(activityTimer);
-    
-    // تسجيل الخروج التلقائي بعد 24 ساعة من عدم النشاط
-    activityTimer = setTimeout(async () => {
-      console.log('⏰ Auto logout due to inactivity');
-      await supabase.auth.signOut();
-      localStorage.removeItem('lastActivity');
-      
-      // إظهار رسالة للمستخدم
-      if (typeof showAlert === 'function') {
-        showAlert('تم تسجيل الخروج تلقائياً بسبب عدم النشاط لمدة 24 ساعة', 'info');
-      }
-    }, 24 * 60 * 60 * 1000); // 24 ساعة
-  }
-  
-  // إضافة مستمعي الأحداث
-  activities.forEach(event => {
-    document.addEventListener(event, updateActivity, true);
-  });
-  
-  // تحديث النشاط عند تحميل الصفحة
-  updateActivity();
-}
-
-/**
- * Show login button with animation
- */
-function showLoginButton() {
-  const loginBtn = document.getElementById('google-login-btn');
-  if (loginBtn) {
-    loginBtn.style.display = 'flex';
-    loginBtn.style.opacity = '0';
-    loginBtn.style.transform = 'translateY(20px)';
-    
-    setTimeout(() => {
-      loginBtn.style.transition = 'all 0.3s ease';
-      loginBtn.style.opacity = '1';
-      loginBtn.style.transform = 'translateY(0)';
-    }, 100);
-  }
-}
 
 /**
  * Fallback share function for browsers that don't support Web Share API
@@ -497,7 +251,7 @@ async function fallbackShare(shareData) {
 
 🖼️ شعار التطبيق: ${logoUrl}
 
-📱 تطبيق تحصيل شامل واحترافي
+🔗 رابط التطبيق: ${shareData.url}
 
 📲 حمل التطبيق الآن!
 
