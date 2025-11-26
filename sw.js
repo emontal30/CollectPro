@@ -7,7 +7,7 @@ const CACHE_NAME = 'collectpro-v2.8.4';
 const STATIC_CACHE = 'collectpro-static-v2.8.4';
 const DYNAMIC_CACHE = 'collectpro-dynamic-v2.8.4';
 
-// Files to cache immediately
+// Files to cache immediately (core files only)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -26,13 +26,6 @@ const STATIC_ASSETS = [
   '/favicon-96x96.png',
   '/favicon.ico',
   '/logo-momkn.png',
-  '/assets/main-DLbRlHSB.css',
-  '/assets/main-_azjsN3T.js',
-  '/assets/modulepreload-polyfill-B5Qt9EMX.js',
-  '/assets/install-prompt-CB0hNm03.css',
-  '/assets/script-gY9x2Jyw.css',
-  '/assets/script-DsyCASZx.js',
-  '/assets/logo-momkn-B2Qx5NNB.png',
   '/manifest/icon-512x512.png',
   '/manifest/icon-192x192.png',
   '/manifest/icon-144x144.png',
@@ -41,6 +34,19 @@ const STATIC_ASSETS = [
   '/manifest/icon-48x48.png'
 ];
 
+// Asset patterns to cache dynamically (will be discovered during runtime)
+const ASSET_PATTERNS = [
+  '/assets/*.css',
+  '/assets/*.js',
+  '/assets/*.png'
+];
+
+// Helper function to check if a URL matches an asset pattern
+function isAssetUrl(url) {
+  return url.includes('/assets/') && 
+         (url.endsWith('.css') || url.endsWith('.js') || url.endsWith('.png'));
+}
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('📱 Service Worker: Installing...');
@@ -48,9 +54,16 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('📱 Service Worker: Caching static assets...');
-        return Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url)))
+        return Promise.allSettled(STATIC_ASSETS.map(url => {
+          // For assets that might not exist (like hashed files), try to cache them
+          // but don't fail if they're not found
+          return cache.add(url).catch(error => {
+            console.warn('📱 Service Worker: Asset not found, skipping:', url);
+            return Promise.resolve(); // Don't fail the entire caching process
+          });
+        }))
           .then(results => {
-            const failed = results.filter(result => result.status === 'rejected');
+            const failed = results.filter(result => result.status === 'rejected' && result.reason);
             if (failed.length > 0) {
               console.warn('📱 Service Worker: Some assets failed to cache:', failed.length);
               failed.forEach(result => {
@@ -130,12 +143,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Check if request is for dynamic files (JS, CSS, HTML)
+  // Check if request is for dynamic files (JS, CSS, HTML) or assets
   const url = new URL(event.request.url);
   const isDynamic = url.pathname.endsWith('.js') || 
                     url.pathname.endsWith('.css') || 
                     url.pathname.endsWith('.html') ||
-                    url.pathname === '/';
+                    url.pathname === '/' ||
+                    isAssetUrl(url.pathname);
 
   if (isDynamic) {
     // Network First strategy for dynamic files - always try to get fresh version

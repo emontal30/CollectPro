@@ -803,18 +803,21 @@ body.dark .dismiss-btn:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  background: #808080;
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 25px;
+  padding: 12px 24px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+  box-shadow: none;
   position: relative;
   overflow: hidden;
+  width: auto;
+  min-width: 200px;
+  justify-content: center;
 }
 
 .share-btn::before {
@@ -829,9 +832,9 @@ body.dark .dismiss-btn:hover {
 }
 
 .share-btn:hover {
-  background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  background: #696969;
+  transform: none;
+  box-shadow: none;
 }
 
 .share-btn:hover::before {
@@ -839,8 +842,8 @@ body.dark .dismiss-btn:hover {
 }
 
 .share-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  transform: none;
+  box-shadow: none;
 }
 
 .share-btn i {
@@ -921,7 +924,7 @@ body.dark .dismiss-btn:hover {
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid #90EE90;
   box-shadow: 0 4px 12px rgba(0, 121, 101, 0.2);
   animation: breathe 3s ease-in-out infinite;
 }
