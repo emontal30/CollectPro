@@ -1,14 +1,14 @@
 {
   "name": "CollectPro",
-  "short_name": "CollectPro",
+  "short_name": "تطبيق تحصيل شامل واحترافى",
   "version": "2.8.3",
   "description": "تطبيق تحصيل شامل واحترافى",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "transparent",
-  "theme_color": "#3B82F6",
+  "background_color": "#007965",
+  "theme_color": "#007965",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
