@@ -201,14 +201,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // إذا لم توجد جلسة صالحة، انتظر onAuthStateChange
-      console.log('No valid session found, waiting for auth state change...');
+      // إذا لم توجد جلسة صالحة، أظهر زر تسجيل الدخول
+      console.log('No valid session found, showing login button...');
+      showLoginButton();
       
     } catch (err) {
       console.error('❌ Session validation error:', err);
       showLoginButton();
     }
   })();
+
+  // إضافة فترة زمنية لضمان ظهور الزر إذا لم توجد جلسة
+  setTimeout(() => {
+    if (googleLoginBtn && googleLoginBtn.style.display === 'none') {
+      console.log('🔧 Fallback: Showing login button after timeout');
+      showLoginButton();
+    }
+  }, 2000); // 2 ثانية
 
   // مراقبة نشاط المستخدم لتحديث الجلسة
   setupActivityMonitoring();
@@ -431,15 +440,16 @@ function setupActivityMonitoring() {
  * Show login button with animation
  */
 function showLoginButton() {
-  if (googleLoginBtn) {
-    googleLoginBtn.style.display = 'flex';
-    googleLoginBtn.style.opacity = '0';
-    googleLoginBtn.style.transform = 'translateY(20px)';
+  const loginBtn = document.getElementById('google-login-btn');
+  if (loginBtn) {
+    loginBtn.style.display = 'flex';
+    loginBtn.style.opacity = '0';
+    loginBtn.style.transform = 'translateY(20px)';
     
     setTimeout(() => {
-      googleLoginBtn.style.transition = 'all 0.3s ease';
-      googleLoginBtn.style.opacity = '1';
-      googleLoginBtn.style.transform = 'translateY(0)';
+      loginBtn.style.transition = 'all 0.3s ease';
+      loginBtn.style.opacity = '1';
+      loginBtn.style.transform = 'translateY(0)';
     }, 100);
   }
 }
