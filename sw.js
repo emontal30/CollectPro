@@ -4,10 +4,14 @@
  */
 
 // Version management - يتم تحديث هذا الرقم مع كل تحديث
-const APP_VERSION = '2.8.5';
+const APP_VERSION = '2.8.6';
 const CACHE_NAME = `collectpro-v${APP_VERSION}`;
 const STATIC_CACHE = `collectpro-static-v${APP_VERSION}`;
 const DYNAMIC_CACHE = `collectpro-dynamic-v${APP_VERSION}`;
+
+// Force update notification
+const FORCE_UPDATE_KEY = 'collectpro_force_update';
+const LAST_UPDATE_CHECK_KEY = 'collectpro_last_update_check';
 
 // Files to cache immediately (core files only)
 const STATIC_ASSETS = [
@@ -33,7 +37,17 @@ const STATIC_ASSETS = [
   '/ios/apple-touch-icon-120x120.png',
   '/ios/apple-touch-icon-152x152.png',
   '/ios/apple-touch-icon-167x167.png',
-  '/ios/apple-touch-icon-180x180.png'
+  '/ios/apple-touch-icon-180x180.png',
+  // Alternative paths for development
+  '/public/favicon.svg',
+  '/public/favicon-96x96.png',
+  '/public/favicon.ico',
+  '/public/manifest/icon-512x512.png',
+  '/public/manifest/icon-192x192.png',
+  '/public/ios/apple-touch-icon-120x120.png',
+  '/public/ios/apple-touch-icon-152x152.png',
+  '/public/ios/apple-touch-icon-167x167.png',
+  '/public/ios/apple-touch-icon-180x180.png'
 ];
 
 // Dynamic asset patterns for hashed files
@@ -58,9 +72,17 @@ self.addEventListener('install', (event) => {
         console.log('📦 Caching static assets');
         return Promise.allSettled(
           STATIC_ASSETS.map(url => 
-            cache.add(url).catch(err => {
-              console.warn(`⚠️ Failed to cache ${url}:`, err);
-            })
+            fetch(url, { method: 'HEAD' })
+              .then(response => {
+                if (response.ok) {
+                  return cache.add(url);
+                } else {
+                  console.warn(`⚠️ File not found, skipping cache: ${url}`);
+                }
+              })
+              .catch(err => {
+                console.warn(`⚠️ Failed to check file existence: ${url}`, err);
+              })
           )
         );
       })
@@ -185,7 +207,32 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0].postMessage({ version: APP_VERSION });
   }
+  
+  if (event.data && event.data.type === 'CHECK_UPDATES') {
+    // Check for updates manually
+    checkForUpdates();
+  }
 });
+
+// Check for updates function
+async function checkForUpdates() {
+  try {
+    const registration = self.registration;
+    if (!registration) return;
+    
+    // Check if there's a newer version
+    const response = await fetch('/sw.js', { cache: 'no-cache' });
+    const currentVersion = APP_VERSION;
+    
+    // Store last check time
+    const now = Date.now();
+    localStorage?.setItem?.(LAST_UPDATE_CHECK_KEY, now.toString());
+    
+    console.log('🔄 Checked for updates at:', new Date(now).toISOString());
+  } catch (error) {
+    console.error('❌ Error checking for updates:', error);
+  }
+}
 
 // Push notification support (للمستقبل)
 self.addEventListener('push', (event) => {

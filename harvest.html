@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=284f44" />
   <link rel="stylesheet" href="sidebar.css?v=284f44" />
   <link rel="stylesheet" href="install-prompt.css?v=284f44" />
@@ -38,12 +38,35 @@
 
   <!-- 🎨 الشريط الجانبي -->
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
+      <div class="sidebar-header">
         <div class="user-box">
-          <div class="user-meta">
-            <span class="user-name" id="user-name">اسم المستخدم</span>
-            <span class="user-email" id="user-email">user@example.com</span>
-            <span class="user-id" id="user-id"></span>
+          <!-- حاوية بيانات المستخدم -->
+          <div class="user-data-container">
+            <div class="user-meta">
+              <span class="user-name" id="user-name">اسم المستخدم</span>
+              <span class="user-email" id="user-email">user@example.com</span>
+              <span class="user-id" id="user-id"></span>
+            </div>
+          </div>
+          
+          <!-- حاوية حالة الاشتراك -->
+          <div class="subscription-container">
+            <h4 class="subscription-title">حالة الاشتراك</h4>
+            <div class="subscription-info" id="subscription-info">
+              <div class="subscription-days-simple">
+                <i class="fas fa-clock"></i>
+                <span id="days-left">-</span>
+                <span> يوم متبقي</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- حاوية تسجيل الخروج -->
+          <div class="logout-container">
+            <button id="logout-btn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل الخروج</span>
+            </button>
           </div>
         </div>
       </div>
@@ -57,19 +80,6 @@
           <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
           <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
         </ul>
-      </div>
-      <div class="sidebar-footer">
-          <div class="subscription-info" id="subscription-info">
-            <div class="subscription-days-simple">
-              <i class="fas fa-clock"></i>
-              <span id="days-left">-</span>
-              <span> يوم متبقي</span>
-            </div>
-          </div>
-          <button id="logout-btn" class="logout-btn">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>تسجيل الخروج</span>
-          </button>
       </div>
   </div>
 
@@ -186,11 +196,13 @@
   </div>
 
   <!-- Scripts at the end for better performance -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
   <script type="module" src="/src/supabase-client.js"></script>
+  <script type="module" src="/src/session-manager.js"></script>
+  <script type="module" src="/src/page-tracker.js"></script>
   <script type="module" src="/src/shared-modal.js"></script>
   <script type="module" src="/src/sidebar.js"></script>
   <script type="module" src="/src/script.js"></script>
-  <script src="install-prompt.js?v=284f44"></script>
+  <script type="module" src="install-prompt.js?v=284f44"></script>
 </body>
 </html>

@@ -335,7 +335,7 @@ body.dark #days-remaining.high-days {
 }
 
 .subscription-history h2::before {
-  content: '1da';
+  content: '\f1da';
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
   font-size: 1.2rem;
@@ -557,14 +557,14 @@ body.dark .renew-plan h3 {
 }
 
 #history-table .status-active::before {
-  content: '058';
+  content: '\f058';
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
   margin-left: 5px;
 }
 
 #history-table .status-pending::before {
-  content: '111';
+  content: '\f111';
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
   margin-left: 5px;
@@ -572,7 +572,7 @@ body.dark .renew-plan h3 {
 
 #history-table .status-expired::before,
 #history-table .status-cancelled::before {
-  content: '057';
+  content: '\f057';
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
   margin-left: 5px;

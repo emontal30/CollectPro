@@ -2077,7 +2077,7 @@ body.dark td.code {
 /* تحسين تجربة الجداول */
 tbody tr {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
+  cursor: default;
 }
 tbody tr:hover {
   background: linear-gradient(135deg, rgba(0, 121, 101, 0.15), rgba(0, 121, 101, 0.05));
@@ -2321,7 +2321,7 @@ body.dark tbody tr:nth-child(odd) {
 
     /* تحسين التفاعل مع الجدول */
     tbody tr {
-      cursor: pointer;
+      cursor: default;
       transition: all 0.2s ease;
     }
 

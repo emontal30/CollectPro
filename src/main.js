@@ -23,14 +23,21 @@ if ('serviceWorker' in navigator) {
       .then((registration) => {
         console.log('📱 Service Worker registered successfully:', registration.scope);
 
-        // Handle updates
+        // Handle updates with automatic refresh
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available
-              console.log('📱 New version available. Please refresh to update.');
-              // You could show a notification to the user here
+              // New version available - notify user and auto refresh
+              console.log('📱 New version available. Auto-refreshing...');
+              
+              // Show update notification
+              showUpdateNotification();
+              
+              // Auto refresh after 3 seconds
+              setTimeout(() => {
+                window.location.reload();
+              }, 3000);
             }
           });
         });
@@ -42,6 +49,15 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // تحقق من أننا في صفحة تسجيل الدخول فقط
+  const currentPage = window.location.pathname.split('/').pop();
+  const isLoginPage = currentPage === 'index.html' || currentPage === '' || currentPage === '/';
+  
+  if (!isLoginPage) {
+    console.log('📍 Not on login page, skipping main.js initialization');
+    return;
+  }
+  
   console.log('🔧 Initializing login page...');
 
   const googleLoginBtn = document.getElementById('google-login-btn');
@@ -49,24 +65,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const installAppBtn = document.getElementById('install-app-btn');
 
   // إخفاء زر تسجيل الدخول مبدئيًا لمنع الوميض
-  googleLoginBtn.style.display = 'none';
+  if (googleLoginBtn) {
+    googleLoginBtn.style.display = 'none';
+  }
+
+  // Add loading state to prevent freezing
+  document.body.classList.add('loading');
+  
+  // Set a timeout to prevent infinite loading
+  const loadingTimeout = setTimeout(() => {
+    document.body.classList.remove('loading');
+    if (googleLoginBtn) {
+      googleLoginBtn.style.display = 'flex';
+    }
+    console.warn('⚠️ Loading timeout reached - showing fallback UI');
+  }, 8000); // 8 seconds timeout
 
   // محاولة جلب الجلسة الحالية فورًا عند فتح التطبيق (مثل فتح اختصار PWA من الشاشة الرئيسية)
   (async () => {
     try {
+      // Check session validity first
+      if (window.sessionManager && !window.sessionManager.checkSessionValidity()) {
+        console.log('❌ Session expired, showing login');
+        clearTimeout(loadingTimeout);
+        document.body.classList.remove('loading');
+        if (googleLoginBtn) googleLoginBtn.style.display = 'flex';
+        return;
+      }
+
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('❌ Error getting current session:', error);
+        clearTimeout(loadingTimeout);
+        document.body.classList.remove('loading');
+        if (googleLoginBtn) googleLoginBtn.style.display = 'flex';
       } else if (session) {
         console.log('✅ Active session found via getSession, syncing profile and redirecting...');
         await syncUserProfile(session.user);
+        clearTimeout(loadingTimeout);
         redirectUser(session.user);
         return; // لا نحتاج لإظهار زر الدخول في هذه الحالة
       } else {
         console.log('No active session from getSession, waiting for onAuthStateChange...');
+        clearTimeout(loadingTimeout);
+        document.body.classList.remove('loading');
       }
     } catch (err) {
       console.error('❌ getSession threw an error:', err);
+      clearTimeout(loadingTimeout);
+      document.body.classList.remove('loading');
+      if (googleLoginBtn) googleLoginBtn.style.display = 'flex';
     }
   })();
 
@@ -74,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     if (googleLoginBtn && googleLoginBtn.style.display === 'none') {
       console.warn('Auth state did not respond in time. Showing login button fallback.');
+      clearTimeout(loadingTimeout);
+      document.body.classList.remove('loading');
       googleLoginBtn.style.display = 'flex';
     }
   }, 4000);
@@ -81,6 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // onAuthStateChange هو المصدر الوحيد للحقيقة
   supabase.auth.onAuthStateChange(async (_event, session) => {
     // يتم استدعاء هذا عند التحميل الأولي وعندما تتغير حالة المصادقة.
+    clearTimeout(loadingTimeout);
+    document.body.classList.remove('loading');
+    
     if (session) {
       // المستخدم مسجل دخوله.
       console.log('✅ Active session found, syncing profile...');
@@ -91,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // المستخدم غير مسجل دخوله.
       console.log('No active session. Showing login UI.');
       // إظهار زر تسجيل الدخول فقط عندما نتأكد من عدم وجود جلسة
-      googleLoginBtn.style.display = 'flex'; 
+      if (googleLoginBtn) googleLoginBtn.style.display = 'flex'; 
     }
   });
 
@@ -272,6 +325,44 @@ CollectPro - نظام إدارة التحصيلات المتقدم</div>
 }
 
 /**
+ * Show update notification to user
+ */
+function showUpdateNotification() {
+  const notification = document.createElement('div');
+  notification.className = 'update-notification';
+  notification.innerHTML = `
+    <div class="update-content">
+      <i class="fas fa-download"></i>
+      <span>جاري تحديث التطبيق تلقائياً...</span>
+    </div>
+  `;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #007965, #00a86b);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0, 121, 101, 0.3);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    animation: slideDown 0.5s ease;
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Remove notification after refresh
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 4000);
+}
+
+/**
  * Show alert message (simple implementation for login page)
  * @param {string} message - The message to display
  * @param {string} type - The type of alert (info, success, danger, warning)
@@ -340,11 +431,21 @@ async function syncUserProfile(user) {
 }
 
 /**
- * Redirects the user based on their role.
+ * Redirects the user based on their role and last page
  * @param {Object} user The Supabase user object.
  */
 async function redirectUser(user) {
     if (!user) return;
+
+    // لا تقم بالتحويل إذا كنا بالفعل في صفحة محددة (غير صفحة تسجيل الدخول)
+    const currentPage = window.location.pathname.split('/').pop();
+    const isLoginPage = currentPage === 'index.html' || currentPage === '' || currentPage === '/';
+    
+    // إذا لم نكن في صفحة تسجيل الدخول، لا تقم بالتحويل التلقائي
+    if (!isLoginPage) {
+        console.log('📍 User is already on a page:', currentPage, '- skipping automatic redirect');
+        return;
+    }
 
     console.log('🔍 Checking user role for redirection. User ID:', user.id);
 
@@ -353,14 +454,28 @@ async function redirectUser(user) {
     const isAdmin = adminEmails.includes(user.email);
 
     if (isAdmin) {
-      console.log('👑 Admin user detected. Redirecting to data entry page.');
+      console.log('👑 Admin user detected. Redirecting to dashboard page.');
       window.location.href = 'dashboard.html';
     } else {
-      // Check for last page
-      const lastPage = localStorage.getItem('lastPage');
-      if (lastPage) {
+      // Check for last page using session manager
+      const lastPage = window.sessionManager ? window.sessionManager.getLastPage() : localStorage.getItem('lastPage');
+      
+      if (lastPage && lastPage !== 'index.html' && lastPage !== '/') {
         console.log('👤 Regular user detected. Redirecting to last page:', lastPage);
-        window.location.href = lastPage;
+        
+        // Validate that the last page still exists
+        try {
+          const response = await fetch(lastPage, { method: 'HEAD' });
+          if (response.ok) {
+            window.location.href = lastPage;
+          } else {
+            console.warn('⚠️ Last page not accessible, redirecting to dashboard');
+            window.location.href = 'dashboard.html';
+          }
+        } catch (error) {
+          console.warn('⚠️ Error checking last page, redirecting to dashboard:', error);
+          window.location.href = 'dashboard.html';
+        }
       } else {
         console.log('👤 Regular user detected. Redirecting to dashboard page.');
         window.location.href = 'dashboard.html';

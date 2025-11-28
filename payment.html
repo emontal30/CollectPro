@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=284f44" />
   <link rel="stylesheet" href="sidebar.css?v=284f44" />
   <link rel="stylesheet" href="payment.css?v=284f44" />
@@ -35,10 +35,33 @@
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="user-box">
-        <div class="user-meta">
-          <span class="user-name" id="user-name">اسم المستخدم</span>
-          <span class="user-email" id="user-email">user@example.com</span>
-          <span class="user-id" id="user-id"></span>
+        <!-- حاوية بيانات المستخدم -->
+        <div class="user-data-container">
+          <div class="user-meta">
+            <span class="user-name" id="user-name">اسم المستخدم</span>
+            <span class="user-email" id="user-email">user@example.com</span>
+            <span class="user-id" id="user-id"></span>
+          </div>
+        </div>
+        
+        <!-- حاوية حالة الاشتراك -->
+        <div class="subscription-container">
+          <h4 class="subscription-title">حالة الاشتراك</h4>
+          <div class="subscription-info" id="subscription-info">
+            <div class="subscription-days-simple">
+              <i class="fas fa-clock"></i>
+              <span id="days-left">-</span>
+              <span> يوم متبقي</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- حاوية تسجيل الخروج -->
+        <div class="logout-container">
+          <button id="logout-btn" class="logout-btn">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>تسجيل الخروج</span>
+          </button>
         </div>
       </div>
     </div>
@@ -54,19 +77,6 @@
       </ul>
     </div>
 
-    <div class="sidebar-footer">
-      <div class="subscription-info" id="subscription-info">
-        <div class="subscription-days-simple">
-          <i class="fas fa-clock"></i>
-          <span id="days-left">-</span>
-          <span> يوم متبقي</span>
-        </div>
-      </div>
-      <button id="logout-btn" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i>
-        <span>تسجيل الخروج</span>
-      </button>
-    </div>
   </div>
 
   <!-- Main Content -->
@@ -217,9 +227,11 @@
     <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.8.3</p>
   </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5"></script>
     <script type="module" src="/src/supabase-client.js"></script>
+    <script type="module" src="/src/session-manager.js"></script>
+    <script type="module" src="/src/page-tracker.js"></script>
     <script type="module" src="/src/shared-modal.js"></script>
     <script type="module" src="/src/sidebar.js"></script>
     <script type="module" src="/src/script.js"></script>
