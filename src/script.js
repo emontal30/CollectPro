@@ -84,6 +84,14 @@ function toIsoDate(dateStr) {
   }
   return dateStr;
 }
+// Function to update the mobile status bar color dynamically
+function updateThemeColor(isDark) {
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  if (metaThemeColor) {
+    // Set to Dark Grey (#1a1a1a) for Dark Mode, or Primary Green (#007965) for Light Mode
+    metaThemeColor.setAttribute('content', isDark ? '#1a1a1a' : '#007965');
+  }
+}
 
 // دالة للتحقق من إمكانية الوصول لقاعدة البيانات
 async function checkDatabaseConnection() {
@@ -147,6 +155,9 @@ function formatNumber(n) {
   function applyDarkModeFromStorage() {
     const isDarkMode = localStorage.getItem("darkMode") === "on";
     document.body.classList.toggle("dark", isDarkMode);
+
+    // Update status bar color on app load
+    updateThemeColor(isDarkMode);
   }
 
   /* ========== Zoom/Font Size Control ========== */
@@ -1859,6 +1870,9 @@ async function searchArchive(query) {
         document.body.classList.toggle("dark");
         const isDark = document.body.classList.contains("dark");
         localStorage.setItem("darkMode", isDark ? "on" : "off");
+
+        // Update status bar color immediately
+        updateThemeColor(isDark);
 
         // تغيير رمز الأيقونة حسب الوضع
         toggleDarkBtn.textContent = isDark ? "☀️" : "🌙";
