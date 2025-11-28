@@ -758,6 +758,7 @@ table {
    overflow: hidden;
    box-shadow: 0 8px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08);
    border: 2px solid var(--primary);
+   min-width: 100%; /* ضمان ملء العرض المتاح */
    position: relative;
    transition: var(--transition);
   }
@@ -806,6 +807,12 @@ tr:last-child td {
 }
 /* ضبط أعمدة الجدول مع استجابة تدريجية */
 th.serial, td.serial { width: 50px; min-width: 50px; }
+
+/* تصغير حجم النص في خلايا عمود المسلسل فقط */
+td.serial {
+  font-size: 10px !important;
+  font-weight: normal !important;
+}
 th.shop, td.shop {
     width: 120px;
     min-width: 120px;
@@ -3084,42 +3091,36 @@ body.dark tbody tr:nth-child(odd) {
  
      /* تقليل عرض الأعمدة في الشاشات الصغيرة جداً */
      th.serial, td.serial { width: 35px; min-width: 35px; }
-     th.shop, td.shop { width: 70px; min-width: 70px; max-width: 70px; }
-     th.code, td.code { width: 55px; min-width: 55px; }
-     th.amount, td.amount { width: 75px; min-width: 75px; }
-     th.net, td.net { width: 65px; min-width: 65px; }
  
-     /* تخصيص عرض عمود التاريخ في الشاشات الصغيرة جداً */
-     th:first-child, td:first-child {
-       width: 80px !important;
-       min-width: 80px !important;
-       font-size: 9px;
-       padding: 4px 2px;
-     }
+  .table-wrap table {
+    width: 100% !important; /* فرض العرض الكامل */
+    min-width: 100% !important; /* ضمان الحد الأدنى للعرض */
+    table-layout: auto !important; /* السماح بتوزيع العرض تلقائياً */
+  }
  
-     /* تخصيص عرض عمود الصافي في الشاشات الصغيرة جداً */
-     th.net, td.net {
-       width: 65px !important;
-       min-width: 65px !important;
-       font-size: 11px;
-       padding: 4px 2px;
-     }
+  /* توزيع العرض بالتساوي عند إخفاء أعمدة */
+  .table-wrap table[style*="display"] {
+    width: 100% !important;
+  }
  
-     /* تحسين عرض النص في الأعمدة */
-     th, td {
-       white-space: nowrap;
-       overflow: hidden;
-       text-overflow: ellipsis;
-       font-size: 10px;
-     }
+  /* ضمان عدم وجود فراغ في الجداول المخفية */
+  table th.hidden,
+  table td.hidden {
+    display: none;
+    width: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+  }
  
-     /* تخصيص عرض عمود المحل */
-     th.shop, td.shop {
-       max-width: 70px;
-       white-space: nowrap;
-       overflow: hidden;
-       text-overflow: ellipsis;
-     }
+  /* توزيع العرض المتبقي على الأعمدة المرئية */
+  table:not(.hidden-columns) th:not(.hidden):not([style*="display: none"]),
+  table:not(.hidden-columns) td:not(.hidden):not([style*="display: none"]) {
+    flex: 1;
+    min-width: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
  
      /* تخصيص عرض عمود الكود */
      th.code, td.code {
@@ -5657,5 +5658,309 @@ input {
 @media screen and (max-width: 768px) {
   input, select, textarea, .input-field {
     font-size: 16px !important;
+  }
+}
+
+/* إصلاح شامل لمشكلة الفراغ عند إخفاء الأعمدة في جدول الأرشيف */
+
+/* ضمان ملء الحاوية دائماً لجدول الأرشيف */
+#archiveTable {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* معالجة الأعمدة المخفية في جدول الأرشيف */
+#archiveTable th[style*="display: none"],
+#archiveTable td[style*="display: none"],
+#archiveTable th.hidden,
+#archiveTable td.hidden {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+/* توزيع العرض المتبقي بالتساوي على الأعمدة المرئية في جدول الأرشيف */
+#archiveTable th:not([style*="display: none"]):not(.hidden),
+#archiveTable td:not([style*="display: none"]):not(.hidden) {
+  min-width: auto !important;
+  flex: 1 !important;
+}
+
+/* معالجة خاصة لإخفاء الأعمدة في جدول الأرشيف */
+#archiveTable.hide-col-shop th:nth-child(2),
+#archiveTable.hide-col-shop td:nth-child(2),
+#archiveTable.hide-col-code th:nth-child(3),
+#archiveTable.hide-col-code td:nth-child(3),
+#archiveTable.hide-col-amount th:nth-child(4),
+#archiveTable.hide-col-amount td:nth-child(4),
+#archiveTable.hide-col-extra th:nth-child(5),
+#archiveTable.hide-col-extra td:nth-child(5),
+#archiveTable.hide-col-collector th:nth-child(6),
+#archiveTable.hide-col-collector td:nth-child(6),
+#archiveTable.hide-col-net th:nth-child(7),
+#archiveTable.hide-col-net td:nth-child(7) {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+/* توزيع العرض عند إخفاء أعمدة محددة في جدول الأرشيف */
+#archiveTable.hide-col-shop th:not(:nth-child(2)):not([style*="display: none"]),
+#archiveTable.hide-col-shop td:not(:nth-child(2)):not([style*="display: none"]),
+#archiveTable.hide-col-code th:not(:nth-child(3)):not([style*="display: none"]),
+#archiveTable.hide-col-code td:not(:nth-child(3)):not([style*="display: none"]),
+#archiveTable.hide-col-amount th:not(:nth-child(4)):not([style*="display: none"]),
+#archiveTable.hide-col-amount td:not(:nth-child(4)):not([style*="display: none"]),
+#archiveTable.hide-col-extra th:not(:nth-child(5)):not([style*="display: none"]),
+#archiveTable.hide-col-extra td:not(:nth-child(5)):not([style*="display: none"]),
+#archiveTable.hide-col-collector th:not(:nth-child(6)):not([style*="display: none"]),
+#archiveTable.hide-col-collector td:not(:nth-child(6)):not([style*="display: none"]),
+#archiveTable.hide-col-net th:not(:nth-child(7)):not([style*="display: none"]),
+#archiveTable.hide-col-net td:not(:nth-child(7)):not([style*="display: none"]) {
+  min-width: auto !important;
+  width: auto !important;
+  flex: 1 !important;
+}
+
+/* إصلاح للشاشات المختلفة لجدول الأرشيف */
+@media (max-width: 768px) {
+  #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ضمان ملء الحاوية دائماً */
+.table-wrap {
+  width: 100% !important;
+  overflow-x: auto;
+  position: relative;
+}
+
+/* إصلاحات إضافية وقوية لجدول الأرشيف - حل نهائي لمشكلة الفراغ */
+
+/* إصلاح خاص لجدول الأرشيف داخل table-wrap */
+.table-wrap #archiveTable {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+  display: table !important;
+}
+
+/* معالجة قوية للأعمدة المخفية في جدول الأرشيف */
+.table-wrap #archiveTable th[style*="display: none"],
+.table-wrap #archiveTable td[style*="display: none"],
+.table-wrap #archiveTable th.hidden,
+.table-wrap #archiveTable td.hidden,
+.table-wrap #archiveTable.hide-col-shop th:nth-child(2),
+.table-wrap #archiveTable.hide-col-shop td:nth-child(2),
+.table-wrap #archiveTable.hide-col-code th:nth-child(3),
+.table-wrap #archiveTable.hide-col-code td:nth-child(3),
+.table-wrap #archiveTable.hide-col-amount th:nth-child(4),
+.table-wrap #archiveTable.hide-col-amount td:nth-child(4),
+.table-wrap #archiveTable.hide-col-extra th:nth-child(5),
+.table-wrap #archiveTable.hide-col-extra td:nth-child(5),
+.table-wrap #archiveTable.hide-col-collector th:nth-child(6),
+.table-wrap #archiveTable.hide-col-collector td:nth-child(6),
+.table-wrap #archiveTable.hide-col-net th:nth-child(7),
+.table-wrap #archiveTable.hide-col-net td:nth-child(7) {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  content: none !important;
+}
+
+/* توزيع العرض المتبقي بالقوة على الأعمدة المرئية */
+.table-wrap #archiveTable th:not([style*="display: none"]):not(.hidden):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(4)):not(:nth-child(5)):not(:nth-child(6)):not(:nth-child(7)),
+.table-wrap #archiveTable td:not([style*="display: none"]):not(.hidden):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(4)):not(:nth-child(5)):not(:nth-child(6)):not(:nth-child(7)) {
+  width: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  flex: 1 !important;
+  flex-grow: 1 !important;
+  flex-shrink: 1 !important;
+}
+
+/* توزيع خاص عند إخفاء عمود معين */
+.table-wrap #archiveTable.hide-col-shop th:not(:nth-child(2)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-shop td:not(:nth-child(2)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-code th:not(:nth-child(3)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-code td:not(:nth-child(3)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-amount th:not(:nth-child(4)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-amount td:not(:nth-child(4)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-extra th:not(:nth-child(5)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-extra td:not(:nth-child(5)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-collector th:not(:nth-child(6)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-collector td:not(:nth-child(6)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-net th:not(:nth-child(7)):not([style*="display: none"]),
+.table-wrap #archiveTable.hide-col-net td:not(:nth-child(7)):not([style*="display: none"]) {
+  width: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  flex: 1 !important;
+  flex-grow: 1 !important;
+}
+
+/* إصلاح للشاشات المختلفة - قوة قصوى */
+@media (max-width: 1200px) {
+  .table-wrap #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-wrap #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-wrap #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* إصلاح نهائي - فرض العرض الكامل دائماً */
+.table-wrap {
+  width: 100% !important;
+  overflow-x: auto;
+  position: relative;
+}
+
+.table-wrap #archiveTable {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* معالجة جميع الحالات الممكنة للإخفاء */
+.table-wrap #archiveTable[style*="display"] {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* إصلاح مشكلة الفراغ في الجدول عند إخفاء الأعمدة */
+#harvestTable,
+#archiveTable {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* معالجة الأعمدة المخفية */
+table th[style*="display: none"],
+table td[style*="display: none"] {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+/* توزيع العرض المتبقي بالتساوي على الأعمدة المرئية */
+table th:not([style*="display: none"]):not(.hidden),
+table td:not([style*="display: none"]):not(.hidden) {
+  min-width: auto !important;
+  flex: 1 !important;
+}
+
+/* ضمان عدم وجود فراغ في الجداول المخفية */
+table th.hidden,
+table td.hidden {
+  display: none !important;
+  width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* فرض العرض الكامل للجدول دائماً */
+.table-wrap table {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* معالجة خاصة لجداول التحصيلات والأرشيف */
+#harvestTable,
+#archiveTable {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* توزيع العرض عند إخفاء الأعمدة */
+#harvestTable th:not([style*="display: none"]),
+#harvestTable td:not([style*="display: none"]),
+#archiveTable th:not([style*="display: none"]),
+#archiveTable td:not([style*="display: none"]) {
+  min-width: auto !important;
+  width: auto !important;
+  flex: 1 !important;
+}
+
+/* إصلاح للشاشات المختلفة */
+@media (max-width: 768px) {
+  .table-wrap table {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  #harvestTable,
+  #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-wrap table {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  #harvestTable,
+  #archiveTable {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
   }
 }
