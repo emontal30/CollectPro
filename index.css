@@ -1183,3 +1183,9 @@ body.dark .dismiss-btn:hover {
 .dark .cancel-btn:hover {
   background: #718096;
 }
+/* Fix Auto-Zoom on Mobile Inputs */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
