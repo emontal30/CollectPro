@@ -814,11 +814,12 @@ td.serial {
   font-weight: normal !important;
 }
 th.shop, td.shop {
-    width: 120px;
-    min-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    width: auto !important;
+    min-width: 200px !important;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
     font-weight: bold !important;
    }
 
@@ -829,14 +830,10 @@ th.shop, td.shop {
     word-break: break-word !important;
     overflow: visible !important;
     text-overflow: clip !important;
+    width: auto !important;
+    min-width: 200px !important;
+    max-width: none !important;
   }
-
-/* منع امتداد النص في عمود المحل في صفحة الأرشيف */
-#archiveTable .shop {
-     white-space: nowrap !important;
-     overflow: hidden !important;
-     text-overflow: ellipsis !important;
-   }
 
 /* تفعيل wrap في عمود المحل في صفحة التحصيلات */
 #harvestTable .shop {
@@ -845,6 +842,9 @@ th.shop, td.shop {
     word-break: break-word !important;
     overflow: visible !important;
     text-overflow: clip !important;
+    width: auto !important;
+    min-width: 200px !important;
+    max-width: none !important;
   }
 
 th.code, td.code { width: 100px; min-width: 100px; }
@@ -875,9 +875,7 @@ th.net, td.net {
 /* استجابة تدريجية لجميع الأعمدة */
 @media (max-width: 1400px) {
   th.serial, td.serial { width: 45px; min-width: 45px; }
-  th.shop, td.shop { width: 110px; min-width: 110px; }
   th.code, td.code { width: 95px; min-width: 95px; }
-  th.amount, td.amount { width: 115px; min-width: 115px; }
   th.extra, td.extra { width: 105px; min-width: 105px; }
   th.collector, td.collector { width: 105px; min-width: 105px; }
   th.net, td.net { width: 105px; min-width: 105px; }
@@ -885,9 +883,7 @@ th.net, td.net {
 
 @media (max-width: 1200px) {
   th.serial, td.serial { width: 40px; min-width: 40px; }
-  th.shop, td.shop { width: 100px; min-width: 100px; }
   th.code, td.code { width: 90px; min-width: 90px; }
-  th.amount, td.amount { width: 110px; min-width: 110px; }
   th.extra, td.extra { width: 100px; min-width: 100px; }
   th.collector, td.collector { width: 100px; min-width: 100px; }
   th.net, td.net { width: 100px; min-width: 100px; }
@@ -900,9 +896,7 @@ th.net, td.net {
     -webkit-overflow-scrolling: touch;
   }
   th.serial, td.serial { width: 35px; min-width: 35px; }
-  th.shop, td.shop { width: 90px; min-width: 90px; }
   th.code, td.code { width: 80px; min-width: 80px; }
-  th.amount, td.amount { width: 100px; min-width: 100px; }
   th.extra, td.extra { width: 90px; min-width: 90px; }
   th.collector, td.collector { width: 90px; min-width: 90px; }
   th.net, td.net { width: 90px; min-width: 90px; }
@@ -938,8 +932,6 @@ th.net, td.net {
     display: table-row-group !important;
   }
   th.serial, td.serial { width: 32px; min-width: 32px; }
-  th.shop, td.shop { width: 85px; min-width: 85px; }
-  th.code, td.code { width: 75px; min-width: 75px; }
   th.amount, td.amount { width: 95px; min-width: 95px; }
   th.extra, td.extra { width: 85px; min-width: 85px; }
   th.collector, td.collector { width: 85px; min-width: 85px; }
@@ -952,8 +944,6 @@ th.net, td.net {
 
 @media (max-width: 780px) {
   th.serial, td.serial { width: 28px; min-width: 28px; }
-  th.shop, td.shop { width: 75px; min-width: 75px; }
-  th.code, td.code { width: 65px; min-width: 65px; }
   th.amount, td.amount { width: 85px; min-width: 85px; }
   th.extra, td.extra { width: 75px; min-width: 75px; }
   th.collector, td.collector { width: 75px; min-width: 75px; }
@@ -969,8 +959,6 @@ th.net, td.net {
     font-size: 10px;
   }
   th.serial, td.serial { width: 20px; min-width: 20px; }
-  th.shop, td.shop { width: 60px; min-width: 60px; }
-  th.code, td.code { width: 50px; min-width: 50px; }
   th.amount, td.amount { width: 70px; min-width: 70px; }
   th.extra, td.extra { width: 60px; min-width: 60px; }
   th.collector, td.collector { width: 60px; min-width: 60px; }
@@ -986,8 +974,6 @@ th.net, td.net {
     font-size: 11px;
   }
   th.serial, td.serial { width: 25px; min-width: 25px; }
-  th.shop, td.shop { width: 70px; min-width: 70px; }
-  th.code, td.code { width: 60px; min-width: 60px; }
   th.amount, td.amount { width: 80px; min-width: 80px; }
   th.extra, td.extra { width: 70px; min-width: 70px; }
   th.collector, td.collector { width: 70px; min-width: 70px; }
@@ -1001,8 +987,6 @@ th.net, td.net {
 /* Force desktop layout - no mobile responsive behavior */
 @media (max-width: 768px) {
   th.serial, td.serial { width: 30px; min-width: 30px; }
-  th.shop, td.shop { width: 80px; min-width: 80px; }
-  th.code, td.code { width: 70px; min-width: 70px; }
   th.amount, td.amount { width: 90px; min-width: 90px; }
   th.extra, td.extra { width: 80px; min-width: 80px; }
   th.collector, td.collector { width: 80px; min-width: 80px; }
