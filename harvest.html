@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ك<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -113,6 +113,9 @@
       <span class="date-label">التاريخ:</span>
       <span id="currentDate" class="date-value"></span>
     </div>
+    <div class="search-container">
+      <input type="text" id="harvestSearch" placeholder="🔍 ابحث في المحل أو الكود..." class="search-input" />
+    </div>
     <div class="table-wrap">
       <table id="harvestTable" class="collections-table">      <thead>
         <tr>
@@ -128,63 +131,72 @@
       <tbody></tbody>
       </table>
     </div>
-    <section id="summary">
-      <h2>ملخص البيان</h2>
-      <div class="summary-grid">
-        <label class="master-limit-field">
-          <div class="field-header">
-            <i class="fas fa-crown field-icon"></i>
-            <strong>ليمِت الماستر:</strong>
+    <div class="summary-container">
+      <section id="summary">
+        <h2>ملخص البيان</h2>
+        <div class="summary-grid">
+          <div class="summary-row">
+            <label class="master-limit-field">
+              <div class="field-header">
+                <i class="fas fa-crown field-icon"></i>
+                <strong>ليمِت الماستر:</strong>
+              </div>
+              <input type="text" id="masterLimit" class="bold-input" />
+            </label>
+            <label class="current-balance-field">
+              <div class="field-header">
+                <i class="fas fa-wallet field-icon"></i>
+                <strong>رصيد الماستر الحالي:</strong>
+              </div>
+              <input type="text" id="currentBalance" class="bold-input" />
+            </label>
           </div>
-          <input type="text" id="masterLimit" class="bold-input" />
-        </label>
-        <label class="current-balance-field">
-          <div class="field-header">
-            <i class="fas fa-wallet field-icon"></i>
-            <strong>رصيد الماستر الحالي:</strong>
+          <div class="summary-row">
+            <label class="reset-amount-field">
+              <div class="field-header">
+                <i class="fas fa-undo-alt field-icon"></i>
+                <strong>مبلغ التصفيرة:</strong>
+              </div>
+              <span id="resetAmount" class="calc-field">0</span>
+            </label>
+            <label class="total-collected-field">
+              <div class="field-header">
+                <i class="fas fa-coins field-icon"></i>
+                <strong>إجمالي المحصل:</strong>
+              </div>
+              <span id="totalCollected" class="calc-field">0</span>
+            </label>
           </div>
-          <input type="text" id="currentBalance" class="bold-input" />
-        </label>
-        <label class="reset-amount-field">
-          <div class="field-header">
-            <i class="fas fa-undo-alt field-icon"></i>
-            <strong>مبلغ التصفيرة:</strong>
-          </div>
-          <span id="resetAmount" class="calc-field">0</span>
-        </label>
-        <label class="total-collected-field">
-          <div class="field-header">
-            <i class="fas fa-coins field-icon"></i>
-            <strong>إجمالي المحصل:</strong>
-          </div>
-          <span id="totalCollected" class="calc-field">0</span>
-        </label>
-        <label class="reset-status-field">
-          <div class="field-header">
-            <i class="fas fa-check-circle field-icon"></i>
-            <strong>حالة التصفير:</strong>
-          </div>
-          <span id="resetStatus" class="calc-field">0</span>
-        </label>
+          <label class="reset-status-field">
+            <div class="field-header">
+              <i class="fas fa-check-circle field-icon"></i>
+              <strong>حالة التصفير:</strong>
+            </div>
+            <span id="resetStatus" class="calc-field">0</span>
+          </label>
+        </div>
+      </section>
+    </div>
+    <!-- حاوية منفصلة للأزرار -->
+    <div class="buttons-container">
+      <div class="buttons">
+        <button id="goToInputBtn" class="btn">
+          <i class="fas fa-home"></i>
+          <span>صفحة الإدخال</span>
+        </button>
+        <button id="goToArchiveBtn" class="btn">
+          <i class="fas fa-archive"></i>
+          <span>الذهاب للأرشيف</span>
+        </button>
+        <button id="clearHarvestBtn" class="btn">
+          <i class="fas fa-broom"></i>
+          <span>تفريغ الحقول</span>
+        </button>
+        <button id="archiveTodayBtn" class="btn">
+          <i class="fas fa-box-archive"></i>
+          <span>أرشفه اليوم</span>
+        </button>
       </div>
-    </section>
-    <div class="buttons">
-      <button id="goToInputBtn" class="btn">
-        <i class="fas fa-home"></i>
-        <span>صفحة الإدخال</span>
-      </button>
-      <button id="goToArchiveBtn" class="btn">
-        <i class="fas fa-archive"></i>
-        <span>الذهاب للأرشيف</span>
-      </button>
-      <button id="archiveTodayBtn" class="btn">
-        <i class="fas fa-box-archive"></i>
-        <span>أرشفه اليوم</span>
-      </button>
-      <button id="clearHarvestBtn" class="btn">
-        <i class="fas fa-broom"></i>
-        <span>تفريغ الحقول</span>
-      </button>
     </div>
   </main>
   

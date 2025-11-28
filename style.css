@@ -729,6 +729,91 @@ body.dark .date-separator {
   color: #00c896;
   opacity: 0.8;
 }
+
+/* تنسيق حاوية البحث في صفحة التحصيلات */
+.search-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 8px 15px;
+  background: linear-gradient(135deg, rgba(0, 121, 101, 0.08), rgba(0, 121, 101, 0.04));
+  border-radius: 10px;
+  border: 1px solid rgba(0, 121, 101, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 121, 101, 0.08);
+  position: relative;
+  overflow: hidden;
+  max-width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  flex-wrap: wrap;
+}
+
+.search-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 121, 101, 0.03), transparent);
+  transition: left 0.8s ease;
+}
+
+.search-container:hover::before {
+  left: 100%;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 2px solid rgba(0, 121, 101, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 250px;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(0, 121, 101, 0.1);
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2), 0 4px 12px rgba(0, 121, 101, 0.15);
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+}
+
+.search-input::placeholder {
+  color: #666;
+  font-style: italic;
+}
+
+/* الوضع الليلي لحاوية البحث */
+body.dark .search-container {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.1), rgba(0, 200, 150, 0.05));
+  border-color: rgba(0, 200, 150, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 200, 150, 0.12);
+}
+
+body.dark .search-input {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border-color: rgba(0, 200, 150, 0.4);
+  color: #e0e0e0;
+  box-shadow: 0 2px 6px rgba(0, 200, 150, 0.15);
+}
+
+body.dark .search-input:focus {
+  border-color: #00c896;
+  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.25), 0 4px 12px rgba(0, 200, 150, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+}
+
+body.dark .search-input::placeholder {
+  color: #cccccc;
+}
 textarea {
   width: 100%;
   height: 150px;
@@ -806,7 +891,23 @@ tr:last-child td {
   border-bottom: none;
 }
 /* ضبط أعمدة الجدول مع استجابة تدريجية */
-th.serial, td.serial { width: 50px; min-width: 50px; }
+th.serial, td.serial { 
+  width: auto; 
+  min-width: 20px; 
+  max-width: 40px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Force serial column to be responsive but controlled */
+#harvestTable th.serial, #harvestTable td.serial { 
+  width: auto !important; 
+  min-width: 20px !important; 
+  max-width: 40px !important;
+  padding: 16px 6px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
 
 /* تصغير حجم النص في خلايا عمود المسلسل فقط */
 td.serial {
@@ -814,12 +915,12 @@ td.serial {
   font-weight: normal !important;
 }
 th.shop, td.shop {
-    width: auto !important;
-    min-width: 200px !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    white-space: normal !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
     font-weight: bold !important;
    }
 
@@ -837,14 +938,13 @@ th.shop, td.shop {
 
 /* تفعيل wrap في عمود المحل في صفحة التحصيلات */
 #harvestTable .shop {
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    width: auto !important;
-    min-width: 200px !important;
-    max-width: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    font-weight: bold !important;
   }
 
 th.code, td.code { width: 100px; min-width: 100px; }
@@ -874,15 +974,15 @@ th.net, td.net {
 
 /* استجابة تدريجية لجميع الأعمدة */
 @media (max-width: 1400px) {
-  th.serial, td.serial { width: 45px; min-width: 45px; }
+  th.serial, td.serial { width: auto; min-width: 20px; max-width: 40px; }
   th.code, td.code { width: 95px; min-width: 95px; }
   th.extra, td.extra { width: 105px; min-width: 105px; }
   th.collector, td.collector { width: 105px; min-width: 105px; }
-  th.net, td.net { width: 105px; min-width: 105px; }
+  th.net, td.net { width: 100px; min-width: 100px; }
 }
 
 @media (max-width: 1200px) {
-  th.serial, td.serial { width: 40px; min-width: 40px; }
+  th.serial, td.serial { width: auto; min-width: 20px; max-width: 40px; }
   th.code, td.code { width: 90px; min-width: 90px; }
   th.extra, td.extra { width: 100px; min-width: 100px; }
   th.collector, td.collector { width: 100px; min-width: 100px; }
@@ -895,7 +995,7 @@ th.net, td.net {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  th.serial, td.serial { width: 35px; min-width: 35px; }
+  th.serial, td.serial { width: auto; min-width: 20px; max-width: 40px; }
   th.code, td.code { width: 80px; min-width: 80px; }
   th.extra, td.extra { width: 90px; min-width: 90px; }
   th.collector, td.collector { width: 90px; min-width: 90px; }
@@ -931,7 +1031,7 @@ th.net, td.net {
   tbody, thead {
     display: table-row-group !important;
   }
-  th.serial, td.serial { width: 32px; min-width: 32px; }
+  th.serial, td.serial { width: auto; min-width: 20px; max-width: 40px; }
   th.amount, td.amount { width: 95px; min-width: 95px; }
   th.extra, td.extra { width: 85px; min-width: 85px; }
   th.collector, td.collector { width: 85px; min-width: 85px; }
@@ -943,7 +1043,7 @@ th.net, td.net {
 }
 
 @media (max-width: 780px) {
-  th.serial, td.serial { width: 28px; min-width: 28px; }
+  th.serial, td.serial { width: auto; min-width: 18px; max-width: 35px; }
   th.amount, td.amount { width: 85px; min-width: 85px; }
   th.extra, td.extra { width: 75px; min-width: 75px; }
   th.collector, td.collector { width: 75px; min-width: 75px; }
@@ -958,7 +1058,7 @@ th.net, td.net {
   table {
     font-size: 10px;
   }
-  th.serial, td.serial { width: 20px; min-width: 20px; }
+  th.serial, td.serial { width: auto; min-width: 15px; max-width: 30px; }
   th.amount, td.amount { width: 70px; min-width: 70px; }
   th.extra, td.extra { width: 60px; min-width: 60px; }
   th.collector, td.collector { width: 60px; min-width: 60px; }
@@ -973,7 +1073,7 @@ th.net, td.net {
   table {
     font-size: 11px;
   }
-  th.serial, td.serial { width: 25px; min-width: 25px; }
+  th.serial, td.serial { width: 18px; min-width: 18px; }
   th.amount, td.amount { width: 80px; min-width: 80px; }
   th.extra, td.extra { width: 70px; min-width: 70px; }
   th.collector, td.collector { width: 70px; min-width: 70px; }
@@ -986,7 +1086,7 @@ th.net, td.net {
 
 /* Force desktop layout - no mobile responsive behavior */
 @media (max-width: 768px) {
-  th.serial, td.serial { width: 30px; min-width: 30px; }
+  th.serial, td.serial { width: auto; min-width: 18px; max-width: 35px; }
   th.amount, td.amount { width: 90px; min-width: 90px; }
   th.extra, td.extra { width: 80px; min-width: 80px; }
   th.collector, td.collector { width: 80px; min-width: 80px; }
@@ -1256,13 +1356,47 @@ td.highlight {
   font-weight: bold; 
   font-family: 'Cairo', sans-serif;
 }
-.buttons { 
-  text-align: center; 
+/* حاوية منفصلة للأزرار */
+.buttons-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.9));
+  border: 2px solid rgba(0, 121, 101, 0.15);
+  border-radius: 15px;
+  padding: 20px;
   margin: 25px 0;
+  box-shadow: 0 8px 32px rgba(0, 121, 101, 0.1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.buttons-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,121,101,0.05), transparent);
+  transition: left 0.8s ease;
+}
+
+.buttons-container:hover::before {
+  left: 100%;
+}
+
+/* الوضع الليلي لحاوية الأزرار */
+body.dark .buttons-container {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(42, 42, 42, 0.9));
+  border: 2px solid rgba(0, 200, 150, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.buttons { 
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 button {
    margin: 8px;
@@ -1492,6 +1626,32 @@ td.amount {
   padding: 20px;
   margin-top: 10px;
 }
+
+.summary-container {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(0, 121, 101, 0.05), rgba(0, 121, 101, 0.02));
+  border-radius: 10px;
+  border: 1px solid rgba(0, 121, 101, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 121, 101, 0.08);
+}
+
+/* نمط خاص لصف الإجمالي في الجدول */
+#totalRow.summary-row, .total-row.summary-row {
+  display: table-row !important;
+}
+
+/* نمط خاص لصفوف الملخص الأخرى (ليس صفوف الجداول) */
+.summary-row:not(.total-row):not(#totalRow) {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+.summary-row label {
+  flex: 1;
+  min-width: 0;
+}
 .summary-grid label {
   display: flex;
   flex-direction: column;
@@ -1526,8 +1686,14 @@ td.amount {
   gap: 10px;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(0,121,101,0.15);
+  border-bottom: 1px solid rgba(0, 121, 101, 0.2);
+  justify-content: center;
   position: relative;
+}
+
+.reset-status-field .field-header {
+  justify-content: center;
+  text-align: center;
 }
 
 .field-icon {
@@ -1997,8 +2163,108 @@ body.dark .modal-note {
 .modal-buttons {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 15px;
-  margin-top: 20px;
+  margin: 20px 0;
+  flex-wrap: nowrap;
+}
+
+/* Individual button styling */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), #005a4b);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  font-family: 'Cairo', sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 121, 101, 0.3);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 121, 101, 0.4);
+  background: linear-gradient(135deg, #00897b, #005a4b);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Icon colors for specific buttons */
+#goToInputBtn i {
+  color: #90EE90 !important; /* Light green */
+}
+
+#archiveTodayBtn i {
+  color: #FFA500 !important; /* Orange */
+}
+
+#goToArchiveBtn i {
+  color: #D3D3D3 !important; /* Light gray */
+}
+
+#clearHarvestBtn i {
+  color: #DC143C !important; /* Red */
+}
+
+/* Icon colors for dashboard data entry page buttons */
+#pasteBtn i {
+  color: #90EE90 !important; /* Light green - same as input page */
+}
+
+#saveGoBtn i {
+  color: #FFA500 !important; /* Orange - same as archive today */
+}
+
+#goToArchiveBtn i {
+  color: #D3D3D3 !important; /* Light gray - same as go to archive */
+}
+
+#clearBtn i {
+  color: #DC143C !important; /* Red - same as clear fields */
+}
+
+/* Icon colors for counter page buttons */
+.reset-counters-btn i {
+  color: #DC143C !important; /* Red for reset */
+}
+
+.export-data-btn i {
+  color: #90EE90 !important; /* Green for export */
+}
+
+/* Icon colors for login page buttons */
+#google-login-btn i {
+  color: #4285F4 !important; /* Google blue */
+}
+
+#install-app-btn i {
+  color: #FFA500 !important; /* Orange for install */
+}
+
+#share-app-btn i {
+  color: #1DA1F2 !important; /* Twitter blue for share */
+}
+
+#logout-btn i {
+  color: #FFFFFF !important; /* White */
+}
+
+/* Icon colors for archive page buttons */
+#backToHarvestBtn i {
+  color: #90EE90 !important; /* Light green - same as input page (navigation back) */
+}
+
+#deleteArchiveBtn i {
+  color: #DC143C !important; /* Red - same as clear fields (delete action) */
 }
 .modal button {
   padding: 10px 20px;
@@ -2467,21 +2733,31 @@ body.dark tbody tr:nth-child(odd) {
 }
 /* Responsive */
 @media (max-width: 768px) {
+  .buttons-container {
+    padding: 15px;
+    margin: 20px 0;
+  }
+
   .buttons {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn {
+    justify-content: center;
   }
 
   button {
-    width: 100%;
+    width: auto;
     max-width: none;
-    padding: 16px 24px;
-    font-size: 18px;
+    padding: 12px 16px;
+    font-size: 14px;
     flex-direction: row;
-    gap: 12px;
-    min-height: 60px;
-    border-radius: 12px;
+    gap: 8px;
+    min-height: 48px;
+    border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,121,101,0.25);
   }
 
@@ -2493,6 +2769,15 @@ body.dark tbody tr:nth-child(odd) {
   button span {
     font-size: 1em;
   }
+}
+
+@media (min-width: 769px) {
+  .buttons {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 20px;
+  }
+}
 
   .archive-controls {
     padding: 12px 15px;
@@ -2688,14 +2973,14 @@ body.dark tbody tr:nth-child(odd) {
   /* تثبيت حجم أزرار التكبير والتصغير للشاشات المتوسطة */
   .zoom-in-btn,
   .zoom-out-btn {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     padding: 4px !important;
     font-size: 11px !important;
-    min-width: 30px !important;
-    max-width: 30px !important;
-    min-height: 30px !important;
-    max-height: 30px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
     border-radius: 4px !important;
     flex-shrink: 0 !important;
   }
@@ -2886,7 +3171,6 @@ body.dark tbody tr:nth-child(odd) {
       font-weight: 800 !important;
     }
   }
-}
 
 @media (max-width: 480px) {
    /* تعديل حجم اللوجو والاسم للشاشات الصغيرة */
@@ -2967,14 +3251,14 @@ body.dark tbody tr:nth-child(odd) {
   /* تثبيت حجم أزرار التكبير والتصغير للشاشات الصغيرة جداً */
   .zoom-in-btn,
   .zoom-out-btn {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     padding: 3px !important;
     font-size: 10px !important;
-    min-width: 30px !important;
-    max-width: 30px !important;
-    min-height: 30px !important;
-    max-height: 30px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
     border-radius: 3px !important;
     flex-shrink: 0 !important;
   }
@@ -3074,7 +3358,7 @@ body.dark tbody tr:nth-child(odd) {
      }
  
      /* تقليل عرض الأعمدة في الشاشات الصغيرة جداً */
-     th.serial, td.serial { width: 35px; min-width: 35px; }
+     th.serial, td.serial { width: auto; min-width: 20px; max-width: 40px; }
  
   .table-wrap table {
     width: 100% !important; /* فرض العرض الكامل */
@@ -4916,12 +5200,12 @@ body.dark .table-settings-modal .btn-save:hover {
   backdrop-filter: blur(10px);
   font-size: 12px;
   font-weight: 600;
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  max-width: 38px;
-  min-height: 38px;
-  max-height: 38px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  min-height: 40px;
+  max-height: 40px;
   flex-shrink: 0;
 }
 

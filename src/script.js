@@ -1313,9 +1313,9 @@ function formatNumber(n) {
     const tbody = document.querySelector("#harvestTable tbody");
     if (!tbody) return;
 
-    // حذف صف الإجمالي القديم
-    const oldTotal = document.getElementById("totalRow");
-    if (oldTotal) oldTotal.remove();
+    // حذف جميع صفوف الإجمالي القديمة
+    const oldTotals = tbody.querySelectorAll("#totalRow");
+    oldTotals.forEach(total => total.remove());
 
     let totalAmount = 0, totalExtra = 0, totalCollector = 0;
     const rows = Array.from(tbody.querySelectorAll("tr"));
@@ -1330,7 +1330,7 @@ function formatNumber(n) {
       }
     });
 
-    // حساب الإجماليات
+    // حساب الإجماليات من الصفوف العادية فقط
     rows.forEach((row) => {
       if (row.id === "totalRow") return;
 
@@ -2220,6 +2220,89 @@ async function searchArchive(query) {
         goToArchiveBtn.addEventListener("click", () => {
           navigateTo("archive");
         });
+      }
+
+      // Search functionality for harvest table
+      const harvestSearch = document.getElementById("harvestSearch");
+      if (harvestSearch) {
+        harvestSearch.addEventListener("input", debounce((e) => {
+          const query = e.target.value.trim().toLowerCase();
+          const tbody = harvestTable.querySelector("tbody");
+          if (!tbody) return;
+
+          const rows = Array.from(tbody.querySelectorAll("tr"));
+          const totalRow = document.getElementById("totalRow");
+
+          // Check if we need to show hidden columns
+          const table = document.getElementById("harvestTable");
+          let showShop = false;
+          let showCode = false;
+
+          if (query) {
+            // Check if any row matches the query in shop or code
+            rows.forEach(row => {
+              if (row.id === "totalRow") return;
+              const shopCell = row.querySelector(".shop");
+              const codeCell = row.querySelector(".code");
+              const shopText = shopCell ? shopCell.innerText.toLowerCase() : "";
+              const codeText = codeCell ? codeCell.innerText.toLowerCase() : "";
+
+              if (shopText.includes(query)) showShop = true;
+              if (codeText.includes(query)) showCode = true;
+            });
+
+            // Show columns if they match the search
+            if (showCode && table.classList.contains("hide-col-code")) {
+              table.classList.remove("hide-col-code");
+              // Update settings
+              const settings = loadColumnSettings('harvestTableCols', [
+                { key: 'serial', label: '#️⃣' },
+                { key: 'shop', label: '🏪 المحل' },
+                { key: 'code', label: '🔢 الكود' },
+                { key: 'amount', label: '💸 مبلغ التحويل' },
+                { key: 'extra', label: '🔄 اخرى' },
+              ]);
+              settings.code = true;
+              saveColumnSettings('harvestTableCols', settings);
+            }
+            if (showShop && table.classList.contains("hide-col-shop")) {
+              table.classList.remove("hide-col-shop");
+              const settings = loadColumnSettings('harvestTableCols', [
+                { key: 'serial', label: '#️⃣' },
+                { key: 'shop', label: '🏪 المحل' },
+                { key: 'code', label: '🔢 الكود' },
+                { key: 'amount', label: '💸 مبلغ التحويل' },
+                { key: 'extra', label: '🔄 اخرى' },
+              ]);
+              settings.shop = true;
+              saveColumnSettings('harvestTableCols', settings);
+            }
+
+            // Filter rows
+            rows.forEach(row => {
+              if (row.id === "totalRow") return;
+              const shopCell = row.querySelector(".shop");
+              const codeCell = row.querySelector(".code");
+              const shopText = shopCell ? shopCell.innerText.toLowerCase() : "";
+              const codeText = codeCell ? codeCell.innerText.toLowerCase() : "";
+
+              if (shopText.includes(query) || codeText.includes(query)) {
+                row.style.display = "";
+              } else {
+                row.style.display = "none";
+              }
+            });
+
+            // Hide total row during search
+            if (totalRow) totalRow.style.display = "none";
+          } else {
+            // Show all rows when search is cleared
+            rows.forEach(row => {
+              if (row.id !== "totalRow") row.style.display = "";
+            });
+            if (totalRow) totalRow.style.display = "";
+          }
+        }, 300));
       }
     }
 
