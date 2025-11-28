@@ -303,7 +303,7 @@ body {
   display: flex;
   flex-direction: column;
   opacity: 0; /* للانتقال السلس بين الصفحات */
-  min-width: 768px;
+  min-width: 600px;
   overflow-x: auto;
   font-size: 22px; /* تعيين المستوى الافتراضي إلى zoom-2xl */
 }
@@ -5005,7 +5005,7 @@ input {
 }
 
 /* Fix Auto-Zoom on Mobile Inputs */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 600px) {
   input, select, textarea, .input-field {
     font-size: 16px !important;
   }
