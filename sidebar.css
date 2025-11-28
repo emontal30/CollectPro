@@ -28,13 +28,13 @@
 }
 
 .topbar .logo .logo-img {
-    height: 60px; /* تكبير الشعار */
+    height: 70px; /* زيادة تكبير الشعار */
     width: auto;
     flex-shrink: 0;
 }
 
 .topbar .logo .app-name {
-    font-size: 32px; /* تكبير اسم التطبيق */
+    font-size: 36px; /* زيادة تكبير اسم التطبيق */
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -626,11 +626,11 @@ header {
     }
 
     .topbar .logo .logo-img {
-      height: 48px; /* تكبير الشعار في الموبايل */
+      height: 55px; /* زيادة تكبير الشعار في الموبايل */
     }
 
     .topbar .logo .app-name {
-      font-size: 20px; /* تكبير اسم التطبيق في الموبايل */
+      font-size: 22px; /* زيادة تكبير اسم التطبيق في الموبايل */
       display: block;
       max-width: 120px;
       overflow: hidden;
@@ -739,6 +739,15 @@ header {
       width: 40px; /* تصغير الزر في الشاشات الصغيرة */
       height: 40px;
       font-size: 20px;
+    }
+
+    /* زيادة حجم الشعار والاسم في الشاشات الصغيرة جداً */
+    .topbar .logo .logo-img {
+      height: 50px; /* زيادة تكبير الشعار في الشاشات الصغيرة جداً */
+    }
+
+    .topbar .logo .app-name {
+      font-size: 20px; /* زيادة تكبير اسم التطبيق في الشاشات الصغيرة جداً */
     }
 
     main {

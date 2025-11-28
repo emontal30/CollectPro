@@ -864,10 +864,23 @@ function formatNumber(n) {
 
     console.log(`setupTableSettings: Setting up for ${tableId}`);
 
-    // Create container above table if not exists
-    let tableContainer = table.closest('.table-wrap');
-    if (!tableContainer) {
-      tableContainer = table.parentElement;
+    // Find the appropriate container based on table ID
+    let targetContainer;
+    if (tableId === 'harvestTable') {
+      // For harvest table, use date display container
+      targetContainer = document.querySelector('.date-display');
+    } else if (tableId === 'archiveTable') {
+      // For archive table, use the first control-group (date selection)
+      targetContainer = document.querySelector('.archive-controls .control-group');
+    }
+    
+    // Fallback to original behavior if target container not found
+    if (!targetContainer) {
+      let tableContainer = table.closest('.table-wrap');
+      if (!tableContainer) {
+        tableContainer = table.parentElement;
+      }
+      targetContainer = tableContainer;
     }
 
     // Create settings button container
@@ -875,8 +888,8 @@ function formatNumber(n) {
     if (!btnContainer) {
       btnContainer = document.createElement('div');
       btnContainer.id = `${tableId}-settings-container`;
-      btnContainer.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:12px;';
-      tableContainer.insertBefore(btnContainer, table);
+      btnContainer.style.cssText = 'display:flex;align-items:center;gap:8px;margin-right:auto;';
+      targetContainer.appendChild(btnContainer);
     }
 
     // Create settings button
@@ -885,7 +898,7 @@ function formatNumber(n) {
       btn = document.createElement('button');
       btn.id = `${tableId}-settings-btn`;
       btn.className = 'table-settings-btn';
-      btn.innerHTML = '<i class="fas fa-cog"></i><span> إعداد الأعمدة</span>';
+      btn.innerHTML = '<i class="fas fa-cog"></i>'; // إزالة النص وترك الأيقونة فقط
       btnContainer.appendChild(btn);
     }
 
