@@ -275,7 +275,7 @@
             margin-bottom: 16px;
         }
 
-        /* الصف العلوي في ملخص الإجمالي (3 مربعات جنبًا إلى جنب في صف واحد دائمًا) */
+        /* الصف العلوي في ملخص الإجمالي */
         .summary-grid-top {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -283,7 +283,6 @@
             margin-bottom: 16px;
         }
 
-        /* تصغير حجم النص في قيم إجمالي العدادين وإجمالي الفكة داخل الصف العلوي فقط */
         .summary-grid-top .summary-value {
             font-size: 1.2rem;
         }
@@ -304,7 +303,6 @@
             flex: 1;
         }
 
-        /* تصغير حجم الأرقام في إجمالي التصفيرة وإجمالي المحصل */
         .summary-row-middle .summary-value {
             font-size: 1.2rem;
         }
@@ -406,12 +404,6 @@
         .summary-label i {
             font-size: 1.1em;
             opacity: 0.8;
-        }
-
-        .summary-label {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
         }
 
         .summary-value {
@@ -1416,15 +1408,11 @@
         body.dark .categories-table {
             border: none;
         }
-
-        body.dark .categories-title {
     </style>
     </head>
     <body class="loaded">
-        <!-- حاوية التنبيهات -->
         <div id="alert-container" class="alert-container"></div>
 
-        <!-- الشريط العلوي -->
         <div class="topbar">
         <div class="actions">
             <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
@@ -1435,14 +1423,11 @@
         </div>
     </div>
 
-    <!-- الخلفية الشفافة للشريط الجانبي -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- الشريط الجانبي -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <div class="user-box">
-            <!-- حاوية بيانات المستخدم -->
             <div class="user-data-container">
               <div class="user-meta">
                 <span class="user-name" id="user-name">اسم المستخدم</span>
@@ -1451,7 +1436,6 @@
               </div>
             </div>
             
-            <!-- حاوية حالة الاشتراك -->
             <div class="subscription-container">
               <h4 class="subscription-title">حالة الاشتراك</h4>
               <div class="subscription-info" id="subscription-info">
@@ -1463,7 +1447,6 @@
               </div>
             </div>
             
-            <!-- حاوية تسجيل الخروج -->
             <div class="logout-container">
               <button id="logout-btn" class="logout-btn">
                   <i class="fas fa-sign-out-alt"></i>
@@ -1480,14 +1463,14 @@
             <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
             <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
             <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-            <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></li>
+            <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
           </ul>
         </div>
     </div>
 
     <header>
         <button id="toggleDark" title="تبديل الوضع الليلي">
-            
+            🌙
         </button>
         <div class="header-content">
             <div class="zoom-controls">
@@ -1507,8 +1490,6 @@
     <main>
         <div class="counter-container">
             <div class="counters-wrapper">
-{{ ... }
-                <!-- Counter 1 -->
                 <div class="counter-card">
                     <h2 class="counter-title"><span>العداد الأول</span> <button id="sortCategoriesBtn" class="sort-btn" title="ترتيب الفئات">⇵</button></h2>
                     <div class="cp-table">
@@ -1576,13 +1557,8 @@
                         </div>
                     </div>
                 </div>
-            </div> <!-- /counters-wrapper (Counter 1) -->
-            </div> <!-- /counter-container (Counter 1) -->
-
-            <!-- حاوية منفصلة للعداد الثاني -->
-            <div class="counter-container second-counter-container">
+            </div> </div> <div class="counter-container second-counter-container">
             <div class="counters-wrapper">
-                <!-- Counter 2 -->
                 <div class="counter-card">
                     <h2 class="counter-title"><span>العداد الثاني</span> <button id="sortCategoriesBtn2" class="sort-btn" title="ترتيب الفئات">⇵</button></h2>
                     <div class="cp-table">
@@ -1650,13 +1626,9 @@
                         </div>
                     </div>
                 </div>
-            </div> <!-- /counters-wrapper (Counter 2) -->
-
-            <!-- قسم ملخص إجمالي -->
-            <div class="summary-section">
+            </div> <div class="summary-section">
                 <h2 class="summary-title">ملخص إجمالي</h2>
 
-                <!-- الصف العلوي: إجمالي العداد الأول، إجمالي العداد الثاني، إجمالي الفئات الصغيرة -->
                 <div class="summary-grid summary-grid-top">
                     <div class="summary-item">
                         <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الأول</div>
@@ -1672,7 +1644,6 @@
                     </div>
                 </div>
 
-                <!-- المجموع الكلي في صف مستقل بعرض كامل -->
                 <div class="summary-row summary-row-grand">
                     <div class="summary-item summary-item-total">
                         <div class="summary-label"><i class="fas fa-plus-circle"></i> المجموع الكلي</div>
@@ -1680,10 +1651,8 @@
                     </div>
                 </div>
 
-                <!-- فاصل خفيف تحت المجموع الكلي -->
                 <div class="summary-divider"></div>
 
-                <!-- صف متوسط: مبلغ التصفيرة + إجمالي المحصل -->
                 <div class="summary-row summary-row-middle">
                     <div class="summary-item summary-item-clearance">
                         <div class="summary-label"><i class="fas fa-money-bill-wave"></i> مبلغ التصفيرة</div>
@@ -1695,7 +1664,6 @@
                     </div>
                 </div>
 
-                <!-- صف الحالة في الأسفل بعرض كامل -->
                 <div class="summary-row summary-row-status">
                     <div class="summary-item summary-item-status">
                         <div class="summary-label"><i class="fas fa-info-circle"></i> الحاله</div>
@@ -1704,7 +1672,6 @@
                 </div>
             </div>
 
-            <!-- قسم ملخص الفئات في حاوية منفصلة -->
             <div class="categories-section">
                 <div class="categories-summary">
                     <h3 class="categories-title">ملخص الفئات</h3>
@@ -1729,7 +1696,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- شريط إجمالي لملخص الفئات -->
                     <div class="counter-totals categories-totals">
                         <div class="counter-total">
                             <div class="counter-total-label">إجمالي ملخص الفئات</div>
@@ -1761,14 +1727,11 @@
         <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.8.3</p>
     </div>
 
-    <!-- Scripts at the end for better performance -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="/src/supabase-client.js"></script>
     <script type="module" src="/src/shared-modal.js"></script>
     <script type="module" src="/src/sidebar.js"></script>
     <script type="module" src="/src/script.js"></script>
-</body>
-</html>
     <script>
         // تنسيق الأرقام مع فواصل عشرية بدون أصفار بالإنجليزي
         function formatNumber(num) {
