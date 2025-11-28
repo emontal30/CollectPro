@@ -193,6 +193,63 @@ body.dark .shared-modal-close:hover {
   .shared-modal-btn {
     width: 100%;
   }
+
+  /* تثبيت حجم زر إعدادات الأعمدة للشاشات الصغيرة */
+  .table-settings-btn {
+    width: 26px !important;
+    height: 26px !important;
+    padding: 3px !important;
+    font-size: 9px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .table-settings-btn i {
+    font-size: 9px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير للشاشات الصغيرة */
+  .zoom-in-btn,
+  .zoom-out-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 3px !important;
+    font-size: 10px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .zoom-in-btn i,
+  .zoom-out-btn i {
+    font-size: 10px !important;
+  }
+
+  .zoom-controls {
+    gap: 4px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير في header للشاشات الصغيرة */
+  header .zoom-in-btn,
+  header .zoom-out-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 3px !important;
+    font-size: 10px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
 }
 
 /* ====== Table Column Visibility Controls ====== */
@@ -303,7 +360,7 @@ body {
   display: flex;
   flex-direction: column;
   opacity: 0; /* للانتقال السلس بين الصفحات */
-  min-width: 600px;
+  min-width: 768px;
   overflow-x: auto;
   font-size: 22px; /* تعيين المستوى الافتراضي إلى zoom-2xl */
 }
@@ -354,15 +411,21 @@ header .zoom-out-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: white;
-  padding: 5px 10px; /* أصغر للموبايل */
-  border-radius: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  font-size: 13px; /* أصغر للموبايل */
-  min-width: 32px; /* حد أدنى للعرض */
+  font-size: 11px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  flex-shrink: 0;
 }
 
 header .zoom-in-btn:hover:not(:disabled),
@@ -839,6 +902,63 @@ th.net, td.net {
   th.extra, td.extra { width: 80px; min-width: 80px; }
   th.collector, td.collector { width: 80px; min-width: 80px; }
   th.net, td.net { width: 80px; min-width: 80px; }
+
+  /* تثبيت حجم زر إعدادات الأعمدة للشاشات المتوسطة */
+  .table-settings-btn {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 5px !important;
+    font-size: 11px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-radius: 5px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .table-settings-btn i {
+    font-size: 11px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير للشاشات المتوسطة */
+  .zoom-in-btn,
+  .zoom-out-btn {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .zoom-in-btn i,
+  .zoom-out-btn i {
+    font-size: 11px !important;
+  }
+
+  .zoom-controls {
+    gap: 6px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير في header للشاشات المتوسطة */
+  header .zoom-in-btn,
+  header .zoom-out-btn {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
 }
 
 /* تنسيقات خاصة بعمود الصافي حسب قيمة الرقم */
@@ -2279,6 +2399,45 @@ body.dark tbody tr:nth-child(odd) {
     outline: none !important;
   }
 
+  /* تثبيت حجم أزرار التكبير والتصغير للشاشات المتوسطة */
+  .zoom-in-btn,
+  .zoom-out-btn {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .zoom-in-btn i,
+  .zoom-out-btn i {
+    font-size: 11px !important;
+  }
+
+  .zoom-controls {
+    gap: 6px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير في header للشاشات المتوسطة */
+  header .zoom-in-btn,
+  header .zoom-out-btn {
+    width: 30px !important;
+    height: 30px !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
   /* تحسين الصفوف في الجداول للموبايل */
   tbody tr {
     transition: all 0.2s ease;
@@ -2443,6 +2602,63 @@ body.dark tbody tr:nth-child(odd) {
      height: 36px;
      border-radius: 6px;
    }
+
+   /* تثبيت حجم زر إعدادات الأعمدة للشاشات الصغيرة */
+  .table-settings-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 4px !important;
+    font-size: 10px !important;
+    min-width: 28px !important;
+    max-width: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .table-settings-btn i {
+    font-size: 10px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير للشاشات الصغيرة جداً */
+  .zoom-in-btn,
+  .zoom-out-btn {
+    width: 26px !important;
+    height: 26px !important;
+    padding: 2px !important;
+    font-size: 9px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .zoom-in-btn i,
+  .zoom-out-btn i {
+    font-size: 9px !important;
+  }
+
+  .zoom-controls {
+    gap: 3px !important;
+  }
+
+  /* تثبيت حجم أزرار التكبير والتصغير في header للشاشات الصغيرة جداً */
+  header .zoom-in-btn,
+  header .zoom-out-btn {
+    width: 26px !important;
+    height: 26px !important;
+    padding: 2px !important;
+    font-size: 9px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
 
    /* إزالة التأثيرات في الشاشات الصغيرة */
    #toggleDark:hover,
@@ -2778,12 +2994,23 @@ body.dark tbody tr:nth-child(odd) {
    /* تحسين الشريط العلوي للمحمول */
    .topbar {
      padding: 10px 15px;
+     height: 60px; /* تقليل الارتفاع في الموبايل */
    }
- 
+
    .topbar .logo {
-     display: none;
+     display: flex; /* إظهار اللوجو في الموبايل */
+     align-items: center;
+     gap: 8px;
    }
- 
+
+   .topbar .logo .logo-img {
+     height: 40px; /* حجم مناسب للموبايل */
+   }
+
+   .topbar .logo .app-name {
+     font-size: 18px; /* حجم مناسب للموبايل */
+   }
+
    .topbar .actions {
      margin-right: auto;
    }
@@ -3982,16 +4209,22 @@ body.dark .non-editable-row .code {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 6px 12px; /* تقليل الـ padding */
   background: linear-gradient(135deg, var(--primary), #00a085);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px; /* تقليل الـ border-radius */
+  font-size: 12px; /* تقليل حجم الخط */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 121, 101, 0.2);
+  min-width: auto; /* إزالة الحد الأدنى للعرض */
+  max-width: none; /* إزالة الحد الأقصى للعرض */
+  width: auto; /* عرض تلقائي */
+  height: auto; /* ارتفاع تلقائي */
+  white-space: nowrap; /* منع كسر النص */
+  flex-shrink: 0; /* منع التقلص */
 }
 
 .table-settings-btn:hover {
@@ -4001,7 +4234,7 @@ body.dark .non-editable-row .code {
 }
 
 .table-settings-btn i {
-  font-size: 16px;
+  font-size: 12px; /* تقليل حجم الأيقونة */
 }
 
 /* Modal Overlay */
@@ -4278,17 +4511,24 @@ body.dark .table-settings-modal .btn-save:hover {
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  flex-shrink: 0;
 }
 
 .zoom-in-btn:hover:not(:disabled),
@@ -4311,7 +4551,7 @@ body.dark .table-settings-modal .btn-save:hover {
 
 .zoom-in-btn i,
 .zoom-out-btn i {
-  font-size: 18px;
+  font-size: 12px;
 }
 
 .zoom-in-btn {
@@ -5005,7 +5245,7 @@ input {
 }
 
 /* Fix Auto-Zoom on Mobile Inputs */
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 768px) {
   input, select, textarea, .input-field {
     font-size: 16px !important;
   }
