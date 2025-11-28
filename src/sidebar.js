@@ -1,9 +1,16 @@
 const sidebar = document.getElementById("sidebar");
 const toggleBtn = document.getElementById("toggle-btn");
 const overlay = document.getElementById("overlay");
+console.log('Sidebar elements found - sidebar:', sidebar, 'toggleBtn:', toggleBtn, 'overlay:', overlay);
+
+// Add global click listener for debugging
+document.addEventListener('click', (e) => {
+    console.log('Document click on element:', e.target, 'tag:', e.target.tagName, 'id:', e.target.id, 'class:', e.target.className);
+});
 
 // Function to open the sidebar
 const openSidebar = () => {
+  console.log('Opening sidebar, adding active to overlay');
   if (sidebar) {
     sidebar.classList.add("active");
     sidebar.style.transform = "translateX(0)";
@@ -13,6 +20,7 @@ const openSidebar = () => {
 
 // Function to close the sidebar
 const closeSidebar = () => {
+  console.log('Closing sidebar, removing active from overlay');
   if (sidebar) {
     sidebar.classList.remove("active");
     sidebar.style.transform = "translateX(100%)";
@@ -23,6 +31,7 @@ const closeSidebar = () => {
 // Event listeners
 if (toggleBtn) {
     toggleBtn.addEventListener("click", () => {
+        console.log('Toggle button clicked, sidebar active:', sidebar ? sidebar.classList.contains('active') : 'no sidebar');
         // If sidebar is open, close it. Otherwise, open it.
         if (sidebar && sidebar.classList.contains("active")) {
             closeSidebar();
@@ -33,7 +42,10 @@ if (toggleBtn) {
 }
 
 if (overlay) {
-    overlay.addEventListener("click", closeSidebar);
+    overlay.addEventListener("click", () => {
+        console.log('Overlay clicked, overlay has active class:', overlay.classList.contains('active'), 'sidebar has active class:', sidebar ? sidebar.classList.contains('active') : 'no sidebar');
+        closeSidebar();
+    });
 }
 
 function showAlert(message, type = 'info', duration = 4000) {

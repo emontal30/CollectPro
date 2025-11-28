@@ -120,3 +120,10 @@ window.showConfirm = showConfirm;
 window.showAlertModal = showAlertModal;
 
 console.log('Shared modal system loaded');
+
+// Add log when modal is shown
+const originalShowModal = showModal;
+window.showModal = function(...args) {
+    console.log('Modal shown with args:', args);
+    return originalShowModal.apply(this, args);
+};
