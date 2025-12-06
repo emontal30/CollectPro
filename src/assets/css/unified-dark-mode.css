@@ -40,11 +40,15 @@ body.dark .info-card,
 body.dark .plan-card,
 body.dark .subscription-card,
 body.dark .payment-card,
-body.dark .admin-section {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-  box-shadow: 0 4px 12px var(--dark-shadow);
+body.dark .admin-section,
+body.dark .counter-card,
+body.dark .summary-section,
+body.dark .input-container,
+body.dark .help-card {
+  background-color: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
 }
 
 body.dark .card:hover,
@@ -85,27 +89,43 @@ body.dark tr:nth-child(even) td {
 /* Form Elements */
 body.dark input,
 body.dark textarea,
-body.dark select {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
+body.dark select,
+body.dark .data-input {
+  background-color: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
 }
 
 body.dark input:focus,
 body.dark textarea:focus,
-body.dark select:focus {
-  border-color: var(--dark-accent);
-  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2);
+body.dark select:focus,
+body.dark .data-input:focus {
+  border-color: var(--dark-accent) !important;
+  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2) !important;
+  background-color: var(--dark-surface) !important;
 }
 
 body.dark input::placeholder,
-body.dark textarea::placeholder {
-  color: var(--dark-text-muted);
+body.dark textarea::placeholder,
+body.dark .data-input::placeholder,
+body.dark .input-field::placeholder {
+  color: var(--dark-text-muted) !important;
+}
+
+body.dark .input-field {
+  background-color: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .input-field:focus {
+  border-color: var(--dark-accent) !important;
+  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2) !important;
 }
 
 body.dark .readonly-input {
-  background-color: var(--dark-surface-light);
-  color: var(--dark-text-secondary);
+  background-color: var(--dark-surface-light) !important;
+  color: var(--dark-text-secondary) !important;
 }
 
 /* Buttons */
@@ -181,13 +201,16 @@ body.dark h2,
 body.dark h3,
 body.dark h4,
 body.dark h5,
-body.dark h6 {
-  color: var(--dark-text-primary);
+body.dark h6,
+body.dark .counter-title,
+body.dark .summary-title,
+body.dark .categories-title {
+  color: var(--dark-text-primary) !important;
 }
 
 body.dark .page-title,
 body.dark .section-title {
-  color: var(--dark-text-primary);
+  color: var(--dark-text-primary) !important;
 }
 
 /* Navigation */
@@ -369,25 +392,22 @@ body.dark .summary-section,
 body.dark .help-card,
 body.dark .collections-table,
 body.dark .archive-table,
-body.dark .counter-table {
-  background-color: var(--dark-surface);
+body.dark .counter-table,
+body.dark .summary-item {
+  background-color: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
 }
 
 body.dark .counter-title,
 body.dark .summary-title,
 body.dark .categories-title,
 body.dark .plan-header {
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover));
-  color: var(--dark-text-primary);
-}
-
-body.dark .summary-item {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
+  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover)) !important;
+  color: var(--dark-text-primary) !important;
 }
 
 body.dark .summary-value {
-  color: var(--dark-accent);
+  color: var(--dark-accent) !important;
 }
 
 body.dark .total-row {

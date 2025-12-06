@@ -12,13 +12,13 @@
         <div class="counter-card">
           <h2 class="counter-title"><span>العداد الأول</span></h2>
           <div class="cp-table">
-            <div class="table-container">
-              <table class="counter-table">
+            <div class="overflow-x-auto w-full">
+              <table class="counter-table w-full">
                 <thead>
                   <tr>
-                    <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
-                    <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
-                    <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                    <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
+                    <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
+                    <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -59,13 +59,13 @@
           <div class="counter-card">
             <h2 class="counter-title"><span>العداد الثاني</span></h2>
             <div class="cp-table">
-              <div class="table-container">
-                <table class="counter-table">
+              <div class="overflow-x-auto w-full">
+                <table class="counter-table w-full">
                   <thead>
                     <tr>
-                      <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
-                      <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
-                      <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                      <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
+                      <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
+                      <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -154,13 +154,13 @@
         <div class="categories-summary">
           <h3 class="categories-title">ملخص الفئات</h3>
           <div class="cp-table">
-            <div class="table-container">
-              <table class="categories-table">
+            <div class="overflow-x-auto w-full">
+              <table class="categories-table w-full">
                 <thead>
                   <tr>
-                    <th class="num"><i class="fas fa-calculator"></i> الإجمالي</th>
-                    <th class="num"><i class="fas fa-hashtag"></i> العدد</th>
-                    <th class="ltr"><i class="fas fa-coins"></i> الفئة</th>
+                    <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
+                    <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
+                    <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -331,7 +331,7 @@ table {
   border-collapse: collapse;
   text-align: center;
   background: white;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 th {
@@ -521,6 +521,8 @@ td.category-label[data-val="1"] { color: #ef4444; }
   padding: 20px;
   color: #888;
   font-style: italic;
+  text-align: center;
+  width: 100%;
 }
 
 /* Responsive column widths */
@@ -544,7 +546,7 @@ td.category-label[data-val="1"] { color: #ef4444; }
 
 .categories-table th:nth-child(1),
 .categories-table td:nth-child(1) {
-  width: 35%;
+  width: 40%;
   min-width: 120px;
 }
 
@@ -556,7 +558,7 @@ td.category-label[data-val="1"] { color: #ef4444; }
 
 .categories-table th:nth-child(3),
 .categories-table td:nth-child(3) {
-  width: 35%;
+  width: 30%;
   min-width: 80px;
 }
 
@@ -590,16 +592,16 @@ td.category-label[data-val="1"] { color: #ef4444; }
   .counter-table td:nth-child(1),
   .categories-table th:nth-child(1),
   .categories-table td:nth-child(1) {
-    width: 40%;
-    min-width: 100px;
+    width: 35%;
+    min-width: 90px;
   }
   
   .counter-table th:nth-child(2),
   .counter-table td:nth-child(2),
   .categories-table th:nth-child(2),
   .categories-table td:nth-child(2) {
-    width: 30%;
-    min-width: 80px;
+    width: 35%;
+    min-width: 70px;
   }
   
   .counter-table th:nth-child(3),
@@ -607,7 +609,7 @@ td.category-label[data-val="1"] { color: #ef4444; }
   .categories-table th:nth-child(3),
   .categories-table td:nth-child(3) {
     width: 30%;
-    min-width: 60px;
+    min-width: 50px;
   }
   
   th, td {
@@ -641,16 +643,16 @@ td.category-label[data-val="1"] { color: #ef4444; }
   .counter-table td:nth-child(1),
   .categories-table th:nth-child(1),
   .categories-table td:nth-child(1) {
-    width: 45%;
-    min-width: 80px;
+    width: 35%;
+    min-width: 70px;
   }
   
   .counter-table th:nth-child(2),
   .counter-table td:nth-child(2),
   .categories-table th:nth-child(2),
   .categories-table td:nth-child(2) {
-    width: 25%;
-    min-width: 60px;
+    width: 35%;
+    min-width: 50px;
   }
   
   .counter-table th:nth-child(3),
@@ -658,7 +660,7 @@ td.category-label[data-val="1"] { color: #ef4444; }
   .categories-table th:nth-child(3),
   .categories-table td:nth-child(3) {
     width: 30%;
-    min-width: 50px;
+    min-width: 40px;
   }
   
   th, td {

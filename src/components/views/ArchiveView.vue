@@ -36,20 +36,25 @@
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table id="archiveTable" class="collections-table">
+    <div class="overflow-x-auto w-full">
+      <table id="archiveTable" class="collections-table w-full">
         <thead>
           <tr>
-            <th>📅 التاريخ</th>
-            <th>🏪 المحل</th>
-            <th>🔢 الكود</th>
-            <th>💸 مبلغ التحويل</th>
-            <th class="extra">🔄 اخرى</th>
-            <th>💰 المحصّل</th>
-            <th>⚖️ الصافي</th>
+            <th class="whitespace-nowrap">📅 التاريخ</th>
+            <th class="whitespace-nowrap">🏪 المحل</th>
+            <th class="whitespace-nowrap">🔢 الكود</th>
+            <th class="whitespace-nowrap">💸 مبلغ التحويل</th>
+            <th class="extra whitespace-nowrap">🔄 اخرى</th>
+            <th class="whitespace-nowrap">💰 المحصّل</th>
+            <th class="whitespace-nowrap">⚖️ الصافي</th>
           </tr>
         </thead>
         <tbody>
+          <tr v-if="store.isLoading">
+            <td colspan="7" style="text-align: center; padding: 20px;">
+              <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+            </td>
+          </tr>
           <tr v-if="store.isLoading">
             <td colspan="7" style="text-align: center; padding: 20px;">
               <i class="fas fa-spinner fa-spin"></i> جاري التحميل...

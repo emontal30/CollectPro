@@ -25,17 +25,17 @@
       />
     </div>
 
-    <div class="table-wrap">
-      <table class="collections-table">
+    <div class="overflow-x-auto w-full">
+      <table class="collections-table w-full">
         <thead>
           <tr>
-            <th class="serial">#️⃣</th>
-            <th class="shop">🏪 المحل</th>
-            <th class="code">🔢 الكود</th>
-            <th class="amount">💸 مبلغ التحويل</th>
-            <th class="extra">🔄 اخرى</th>
-            <th class="collector highlight">💰 المحصّل</th>
-            <th class="net highlight">⚖️ الصافي</th>
+            <th class="serial whitespace-nowrap">#️⃣</th>
+            <th class="shop whitespace-nowrap">🏪 المحل</th>
+            <th class="code whitespace-nowrap">🔢 الكود</th>
+            <th class="amount whitespace-nowrap">💸 مبلغ التحويل</th>
+            <th class="extra whitespace-nowrap">🔄 اخرى</th>
+            <th class="collector highlight whitespace-nowrap">💰 المحصّل</th>
+            <th class="net highlight whitespace-nowrap">⚖️ الصافي</th>
           </tr>
         </thead>
         <tbody>

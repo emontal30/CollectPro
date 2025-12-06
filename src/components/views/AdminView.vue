@@ -164,13 +164,13 @@
         <table id="logged-in-users-table">
           <thead>
             <tr>
-              <th><input v-model="selectAllUsers" type="checkbox" /></th>
-              <th>ID</th>
-              <th>الاسم</th>
-              <th>البريد</th>
-              <th>تاريخ التسجيل</th>
-              <th>مدة الاشتراك</th>
-              <th>إجراء</th>
+              <th class="whitespace-nowrap"><input v-model="selectAllUsers" type="checkbox" /></th>
+              <th class="whitespace-nowrap">ID</th>
+              <th class="whitespace-nowrap">الاسم</th>
+              <th class="whitespace-nowrap">البريد</th>
+              <th class="whitespace-nowrap">تاريخ التسجيل</th>
+              <th class="whitespace-nowrap">مدة الاشتراك</th>
+              <th class="whitespace-nowrap">إجراء</th>
             </tr>
           </thead>
           <tbody>
@@ -199,11 +199,11 @@
         <table>
           <thead>
             <tr>
-              <th>المستخدم</th>
-              <th>الخطة</th>
-              <th>رقم العملية</th>
-              <th>التاريخ</th>
-              <th>الإجراءات</th>
+              <th class="whitespace-nowrap">المستخدم</th>
+              <th class="whitespace-nowrap">الخطة</th>
+              <th class="whitespace-nowrap">رقم العملية</th>
+              <th class="whitespace-nowrap">التاريخ</th>
+              <th class="whitespace-nowrap">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -249,12 +249,12 @@
         <table>
           <thead>
             <tr>
-              <th>المستخدم</th>
-              <th>الخطة</th>
-              <th>البدء</th>
-              <th>الانتهاء</th>
-              <th>الحالة</th>
-              <th>إجراء</th>
+              <th class="whitespace-nowrap">المستخدم</th>
+              <th class="whitespace-nowrap">الخطة</th>
+              <th class="whitespace-nowrap">البدء</th>
+              <th class="whitespace-nowrap">الانتهاء</th>
+              <th class="whitespace-nowrap">الحالة</th>
+              <th class="whitespace-nowrap">إجراء</th>
             </tr>
           </thead>
           <tbody>

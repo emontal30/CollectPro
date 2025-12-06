@@ -1,45 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/layouts/MainLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-
-// Cache for authentication state to avoid repeated API calls
-let authCache = {
-  isAuthenticated: null,
-  lastCheck: null,
-  cacheTimeout: 60000 // Increased from 30 to 60 seconds
-}
-
-// Function to check authentication with caching
-async function checkAuth() {
-  const now = Date.now()
-
-  // Return cached value if still valid
-  if (authCache.isAuthenticated !== null &&
-      authCache.lastCheck &&
-      (now - authCache.lastCheck) < authCache.cacheTimeout) {
-    return authCache.isAuthenticated
-  }
-
-  // Check authentication and cache the result
-  try {
-    const isAuthenticated = await api.auth.isAuthenticated()
-    authCache.isAuthenticated = isAuthenticated
-    authCache.lastCheck = now
-    return isAuthenticated
-  } catch (error) {
-    console.error('Auth check error:', error)
-    authCache.isAuthenticated = false
-    authCache.lastCheck = now
-    return false
-  }
-}
-
-// Function to invalidate cache (call after login/logout)
-function invalidateAuthCache() {
-  authCache.isAuthenticated = null
-  authCache.lastCheck = null
-}
 
 // Lazy load components with prefetch for better performance
 const LoginView = () => import(/* webpackPrefetch: true */ '@/components/views/LoginView.vue')
@@ -65,7 +27,9 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/app/dashboard'
+        name: 'Home',
+        component: DashboardView,
+        meta: { requiresAuth: true }
       },
       {
         path: 'dashboard',
@@ -123,10 +87,7 @@ const routes = [
   { path: '/harvest.html', redirect: '/app/harvest' },
   { path: '/archive.html', redirect: '/app/archive' },
   { path: '/counter.html', redirect: '/app/counter' },
-  { path: '/admin.html', redirect: '/app/admin' },
-  { path: '/subscriptions.html', redirect: '/app/subscriptions' },
-  { path: '/my-subscription.html', redirect: '/app/my-subscription' },
-  { path: '/payment.html', redirect: '/app/payment' }
+  { path: '/admin.html', redirect: '/app/admin' }
 ]
 
 const router = createRouter({
@@ -134,25 +95,62 @@ const router = createRouter({
   routes
 })
 
-// Optimized Navigation guard - حماية المسارات مع كاشينج
+// Simplified Navigation guard - Single Source of Truth with Pinia
 router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  
+
+  // Get auth store (imported directly for simplicity)
+  const authStore = useAuthStore()
+
+  console.log('Router guard - Path:', to.path, 'User:', authStore.user?.email || 'No user', 'Initialized:', authStore.isInitialized);
+
+  // Handle post-login redirect when user just logged in
+  if (authStore.user && (to.path === '/' || to.path === '/login')) {
+    console.log('Authenticated user on login page, redirecting to app...');
+    next('/app');
+    return;
+  }
+
   // Skip auth check for login page to prevent loops
   if (to.path === '/' || to.path === '/login') {
+    console.log('Allowing access to login page');
     next()
     return
   }
-  
-  // Use cached auth check to avoid repeated API calls
-  const isAuthenticated = await checkAuth()
 
-  if (requiresAuth && !isAuthenticated) {
+  // If auth is not initialized yet, wait for it
+  if (!authStore.isInitialized && !authStore.isLoading) {
+    console.log('Auth not initialized yet, waiting...');
+    try {
+      await authStore.initializeAuth();
+      console.log('Auth initialization completed, user:', authStore.user?.email || 'No user');
+    } catch (error) {
+      console.error('Auth initialization failed during navigation:', error);
+    }
+  } else if (authStore.isLoading) {
+    // Wait for ongoing initialization to complete
+    console.log('Auth initialization in progress, waiting...');
+    while (authStore.isLoading) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    console.log('Auth initialization completed, user:', authStore.user?.email || 'No user');
+  }
+
+  // If user is already loaded in store, use that
+  if (authStore.user !== null) {
+    console.log('User found in store, allowing access');
+    next()
+    return
+  }
+
+  // Final check after initialization
+  if (requiresAuth && authStore.user === null) {
+    console.log('No user found after initialization, requiring auth - redirecting to login');
     next('/')
   } else {
+    console.log('Allowing access');
     next()
   }
 })
 
 export default router
-export { invalidateAuthCache }

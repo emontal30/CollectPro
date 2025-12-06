@@ -18,9 +18,18 @@
             <span id="user-email" class="user-email">
               {{ store.user?.email }}
             </span>
-            <span id="user-id" class="user-id">
-              ID: {{ store.user?.id?.slice(-7) }}
-            </span>
+            <div class="user-id-row">
+              <span id="user-id" class="user-id">
+                ID: {{ store.user?.id?.slice(-7) }}
+              </span>
+              <button 
+                class="dark-mode-toggle-small" 
+                title="تبديل الوضع الليلي"
+                @click="toggleDarkMode"
+              >
+                <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -39,15 +48,6 @@
         </div>
 
         <div class="logout-container">
-          <button 
-            class="dark-mode-toggle" 
-            title="تبديل الوضع الليلي"
-            @click="toggleDarkMode"
-          >
-            <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-            <span>{{ isDarkMode ? 'وضع نهاري' : 'وضع ليلي' }}</span>
-          </button>
-          
           <button id="logout-btn" class="logout-btn" @click="store.logout">
             <i class="fas fa-sign-out-alt"></i>
             <span>تسجيل الخروج</span>
@@ -139,7 +139,6 @@ onMounted(() => {
     transition: right 0.3s ease, transform 0.3s ease;
     z-index: 1009;
     transform: translateX(0);
-    backdrop-filter: blur(10px);
     overflow-y: auto;
 }
 
@@ -206,6 +205,31 @@ onMounted(() => {
     padding: 2px 6px;
     border-radius: 4px;
     display: inline-block;
+}
+
+.user-id-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.dark-mode-toggle-small {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    border-radius: 0;
+}
+
+.dark-mode-toggle-small:hover {
+    color: white;
 }
 
 /* Subscription Container */
@@ -302,28 +326,26 @@ onMounted(() => {
   background: #c82333;
 }
 
-/* Dark mode toggle button */
+/* Dark mode toggle button - Classic Style */
 .dark-mode-toggle {
-  background: rgba(52, 152, 219, 0.8);
+  background: none;
   border: none;
-  border-radius: 10px;
-  padding: 10px 15px;
-  color: white;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 8px;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  font-size: 18px;
   transition: all 0.3s ease;
-  width: 100%;
+  width: auto;
   margin-bottom: 8px;
+  border-radius: 0;
 }
 
 .dark-mode-toggle:hover {
-  background: rgba(52, 152, 219, 1);
-  transform: scale(1.02);
+  color: white;
+  transform: scale(1.1);
 }
 
 /* Navigation Links */
@@ -397,13 +419,13 @@ onMounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
+  0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
 
 /* Dark Mode Styles - Cleaned Up */
 :global(body.dark) .sidebar {
-    background: var(--dark-surface) !important;
+    background: #004d3d !important;
     color: var(--dark-text-primary) !important;
     border-right: 1px solid var(--dark-border) !important;
 }
@@ -478,12 +500,21 @@ onMounted(() => {
 }
 
 :global(body.dark) .dark-mode-toggle {
-    background: rgba(52, 152, 219, 0.6) !important;
-    color: var(--dark-text-primary) !important;
+    background: none !important;
+    color: rgba(255, 255, 255, 0.8) !important;
 }
 
 :global(body.dark) .dark-mode-toggle:hover {
-    background: rgba(52, 152, 219, 0.8) !important;
+    color: white !important;
+}
+
+:global(body.dark) .dark-mode-toggle-small {
+    background: none !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:global(body.dark) .dark-mode-toggle-small:hover {
+    color: white !important;
 }
 
 :global(body.dark) .logout-btn {

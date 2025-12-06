@@ -17,9 +17,8 @@ const settingsStore = useSettingsStore();
 const route = useRoute();
 const router = useRouter();
 
-// مراقبة التبديل بين الصفحات
-let pageVisibilityHandler = null;
-let beforeUnloadHandler = null;
+// Cleanup handler for page visibility changes
+let visibilityCleanup = null;
 
 // Function to update body class based on route
 function updateBodyClass(routeName) {
@@ -36,63 +35,69 @@ watch(() => route.name, (newName) => {
   updateBodyClass(newName);
 });
 
-onMounted(async () => {
-  console.log('App mounted, initializing...')
+// Fallback: Watch for authentication state and redirect if needed
+watch(() => authStore.user, (newUser, oldUser) => {
+  if (newUser && !oldUser && (route.path === '/' || route.path === '/login')) {
+    console.log('User authenticated, performing redirect...');
+    router.push('/app/dashboard');
+  }
+});
 
-  // NON-BLOCKING: Initialize auth without await to prevent UI freeze
-  const authInitPromise = authStore.initializeAuth().catch(error => {
+onMounted(() => {
+  console.log('App mounted, initializing auth and stores...');
+
+  // Initialize auth asynchronously (non-blocking)
+  authStore.initializeAuth().catch(error => {
     console.error('Auth initialization failed:', error);
+    // Don't block UI for auth errors
   });
 
-  // Load other stores immediately (non-blocking)
-  if (uiStore && uiStore.loadFromLocalStorage) {
-    uiStore.loadFromLocalStorage()
+  // Initialize other stores immediately (non-blocking)
+  if (uiStore?.loadFromLocalStorage) {
+    uiStore.loadFromLocalStorage();
   }
 
-  if (settingsStore && settingsStore.loadSettings) {
-    settingsStore.loadSettings()
+  if (settingsStore?.loadSettings) {
+    settingsStore.loadSettings();
   }
 
   updateBodyClass(route.name);
 
-  pageVisibilityHandler = () => {
-    console.log('Page became visible');
-  };
-
-  beforeUnloadHandler = () => {
-    if (authStore.stopSessionMonitoring) {
-      authStore.stopSessionMonitoring();
+  // Simplified page visibility handler (no looping)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      console.log('Page became visible');
+      // Only check auth state when actually needed
+      if (authStore.user === null && authStore.isLoading === false) {
+        authStore.getUser().catch(console.error);
+      }
     }
   };
 
-  document.addEventListener('visibilitychange', pageVisibilityHandler);
-  window.addEventListener('beforeunload', beforeUnloadHandler);
+  document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
+  visibilityCleanup = () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
 
-  document.body.classList.add('loaded')
-  console.log('App initialization complete, body should be visible now')
-
-  // Optionally wait for auth to complete if needed
-  // await authInitPromise;
-})
+  document.body.classList.add('loaded');
+  console.log('App initialization complete');
+});
 
 onUnmounted(() => {
-  // تنظيف مستمعي الأحداث
-  if (pageVisibilityHandler) {
-    document.removeEventListener('visibilitychange', pageVisibilityHandler);
-  }
-  if (beforeUnloadHandler) {
-    window.removeEventListener('beforeunload', beforeUnloadHandler);
+  // Cleanup event listeners
+  if (visibilityCleanup) {
+    visibilityCleanup();
   }
 
-  // إيقاف المراقبة
+  // Stop all monitoring systems
   authStore.stopSessionMonitoring?.();
   authStore.stopActivityTracking?.();
 
-  // تنظيف page tracker
-  if (window.pageTracker && window.pageTracker.cleanup) {
+  // Cleanup page tracker
+  if (window.pageTracker?.cleanup) {
     window.pageTracker.cleanup();
   }
-})
+});
 </script>
 
 <style>
