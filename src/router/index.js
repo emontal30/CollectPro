@@ -98,7 +98,8 @@ const router = createRouter({
 // --- Enhanced Navigation Guard ---
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-  const { checkSessionValidity, getLastPage, shouldRestorePage } = useSessionManager();
+  // Remove shouldRestorePage, only keep getLastPage
+  const { checkSessionValidity, getLastPage } = useSessionManager();
 
   // 1. Ensure Auth is Initialized
   // ننتظر التهيئة مرة واحدة فقط إذا لم تكن مكتملة
@@ -114,17 +115,17 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
 
   // 2. Logic for Logged-In Users trying to access Login page
+  // This usually happens on reload if the app momentarily thinks it's at '/' or if user visits Login
   if (isLoggedIn && to.name === 'Login') {
     console.log('👤 User already logged in, redirecting...');
-    
-    // Check if we should restore the last page
-    // ملاحظة: تأكد أن shouldRestorePage في Composable لا تعيد true إذا كانت الصفحة الأخيرة هي Login
+
+    // DIRECT FIX: Check lastPage directly without shouldRestorePage() restrictions
     const lastPage = getLastPage();
-    if (shouldRestorePage() && lastPage && lastPage !== '/' && !lastPage.includes('login')) {
+    if (lastPage && lastPage !== '/' && !lastPage.includes('login') && lastPage !== to.path) {
       console.log('📍 Restoring last page:', lastPage);
       return next(lastPage);
     }
-    
+
     return next({ name: 'Dashboard' });
   }
 
