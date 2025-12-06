@@ -34,7 +34,7 @@ export const payment = paymentService
 export const general = generalService
 
 // Export supabase client for direct access
-export { supabase } from './authService.js'
+export { supabase } from '@/supabase.js'
 
 // Unified API object (maintains backward compatibility)
 const api = {

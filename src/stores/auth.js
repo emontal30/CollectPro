@@ -1,272 +1,266 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { useRouter } from 'vue-router'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null);
-  const isLoading = ref(false);
-  const isInitialized = ref(false);
-  const router = useRouter();
-  let sessionCheckInterval = null;
-  let activityCleanup = null;
+  // --- State ---
+  const user = ref(null)
+  const isLoading = ref(false)
+  const isInitialized = ref(false)
+  const isInitializing = ref(false) // Prevent multiple simultaneous initializations
+  const router = useRouter()
 
-  // Constants disabled for persistent login
-  // const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 60 minutes - disabled
-  // const SESSION_CHECK_INTERVAL = 10 * 60 * 1000; // 10 minutes - disabled
+  // --- Getters ---
+  const isAuthenticated = computed(() => !!user.value)
 
-  // 1. Initialize auth - non-blocking, async
-  async function initializeAuth() {
-    // Prevent multiple initializations
-    if (isInitialized.value) {
-      console.log('Auth already initialized, skipping...');
-      return;
+  // --- Private Helpers ---
+
+  /**
+   * دالة مركزية لتعيين المستخدم ومزامنة الملف الشخصي
+   * تمنع تكرار الكود في initializeAuth و getUser
+   */
+  async function setUserSession(session) {
+    if (session?.user) {
+      console.debug('✅ Session active for:', session.user.email)
+      user.value = session.user
+      await syncUserProfile(session.user)
+    } else {
+      console.debug('❌ No active session found')
+      user.value = null
+    }
+  }
+
+  /**
+   * تنظيف مخلفات جوجل والستوريج عند تسجيل الخروج
+   */
+  function clearLocalArtifacts() {
+    const projectRef = import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0]
+    
+    // 1. Clear Supabase specific token
+    if (projectRef) {
+      localStorage.removeItem(`sb-${projectRef}-auth-token`)
     }
     
-    isLoading.value = true;
-    try {
-      console.log('Initializing auth...');
-      
-      // Handle OAuth callback from URL hash first
-      await handleOAuthCallback();
+    // 2. Clear Session Storage
+    sessionStorage.clear()
 
-      const { session } = await api.auth.getSession();
-      console.log('Initial session check:', session ? 'Session found' : 'No session');
-      
-      if (session?.user) {
-        // Keep user logged in regardless of session expiration
-        console.log('Session found, setting user:', session.user.email);
-        user.value = session.user;
-        await syncUserProfile(session.user);
-        // Monitoring systems disabled for persistent login
-        console.log('User stays logged in - monitoring disabled');
-      }
-
-      // Listen for auth state changes (only set once)
-      api.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email || 'No user');
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-           user.value = session.user;
-           await syncUserProfile(session.user);
-           // Monitoring disabled for persistent login
-           console.log('User signed in - monitoring disabled');
-         } else if (event === 'SIGNED_OUT') {
-           console.log('User signed out');
-           user.value = null;
-           isInitialized.value = false;
-           // Monitoring already disabled
-         }
-        // Ignore INITIAL_SESSION to prevent conflicts
-      });
-      
-      isInitialized.value = true;
-    } catch (error) {
-      console.error('Auth Initialization Error:', error);
-      // Don't block the app for auth errors
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // 2. Get user - helper method for router
-  async function getUser() {
-    if (user.value !== null) {
-      return user.value;
-    }
-
-    try {
-      isLoading.value = true;
-      const { session } = await api.auth.getSession();
-      if (session?.user) {
-        // Keep user logged in regardless of session expiration
-        user.value = session.user;
-        await syncUserProfile(session.user);
-        console.log('User stays logged in - monitoring disabled');
-      }
-    } catch (error) {
-      console.error('Failed to get user:', error);
-      user.value = null;
-    } finally {
-      isLoading.value = false;
-    }
-
-    return user.value;
-  }
-
-  // 3. Handle OAuth callback from URL
-  async function handleOAuthCallback() {
-    console.log('Checking for OAuth callback...');
-    
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    
-    console.log('OAuth tokens found:', { accessToken: !!accessToken, refreshToken: !!refreshToken });
-    
-    if (accessToken || refreshToken) {
-      try {
-        console.log('Processing OAuth callback...');
-        // Let Supabase handle the OAuth session
-        const { data, error } = await api.auth.getSession();
-        if (error) {
-          console.error('OAuth callback error:', error);
-          // Clear the URL to remove stale parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (data?.session?.user) {
-          console.log('OAuth callback successful, user:', data.session.user.email);
-          // Clear the URL to remove stale parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      } catch (error) {
-        console.error('Error handling OAuth callback:', error);
-        // Clear the URL even on error
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  }
-
-  // 4. Login with Google
-  async function loginWithGoogle() {
-    isLoading.value = true;
-    try {
-      // Ensure we're logged out first if there's an active session
-      const { session } = await api.auth.getSession();
-      if (session) {
-        await api.auth.signOut();
-      }
-
-      const { error } = await api.auth.signInWithGoogle();
-      if (error) throw error;
-    } catch (error) {
-      console.error('Google Login Error:', error);
-      alert('فشل تسجيل الدخول: ' + error.message);
-      isLoading.value = false;
-    }
-  }
-
-  // 5. Logout with cleanup
-  async function logout() {
-    isLoading.value = true;
-    try {
-      // Clear local storage (keep settings for dark mode)
-      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token');
-      sessionStorage.clear();
-
-      // Clean up Google-related data
-      cleanupGoogleData();
-
-      // Sign out from Supabase
-      const { error } = await api.auth.signOut();
-      if (error) {
-        console.warn('SignOut error (continuing anyway):', error);
-      }
-
-      // Force clear session
-      user.value = null;
-      isInitialized.value = false;
-
-      // Navigate to login
-      router.push('/');
-
-    } catch (error) {
-      console.error('Logout Error:', error);
-      // Ensure we clear state even on error
-      user.value = null;
-      isInitialized.value = false;
-      router.push('/');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // 6. Clean up Google data
-  function cleanupGoogleData() {
-    // Clean cookies
-    document.cookie.split(";").forEach(cookie => {
-      const cookieName = cookie.split("=")[0].trim();
-      if (cookieName.toLowerCase().includes('google') || 
-          cookieName.toLowerCase().includes('g_state') ||
-          cookieName.toLowerCase().includes('oauth')) {
-        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=${window.location.hostname};`;
-        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.${window.location.hostname};`;
-      }
-    });
-
-    // Clean localStorage and sessionStorage
-    const googleKeys = [];
+    // 3. Clear Google/OAuth related LocalStorage items
+    const keysToRemove = []
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.toLowerCase().includes('google') || 
-                 key.toLowerCase().includes('gauth') ||
-                 key.toLowerCase().includes('oauth'))) {
-        googleKeys.push(key);
+      const key = localStorage.key(i)
+      if (key && /google|gauth|oauth/i.test(key)) {
+        keysToRemove.push(key)
       }
     }
-    googleKeys.forEach(key => localStorage.removeItem(key));
+    keysToRemove.forEach(key => localStorage.removeItem(key))
 
-    const sessionGoogleKeys = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key && (key.toLowerCase().includes('google') || 
-                 key.toLowerCase().includes('gauth') ||
-                 key.toLowerCase().includes('oauth'))) {
-        sessionGoogleKeys.push(key);
+    // 4. Clear Cookies (Google related)
+    document.cookie.split(";").forEach(cookie => {
+      const name = cookie.split("=")[0].trim()
+      if (/google|g_state|oauth/i.test(name)) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=${window.location.hostname};`
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.${window.location.hostname};`
       }
-    }
-    sessionGoogleKeys.forEach(key => sessionStorage.removeItem(key));
+    })
   }
 
-  // 7. Sync user profile
-  async function syncUserProfile(userData) {
+  // --- Actions ---
+
+  /**
+   * 1. تهيئة المصادقة عند بدء التطبيق
+   */
+  async function initializeAuth() {
+    if (isInitialized.value) return
+
+    // Prevent multiple simultaneous initializations
+    if (isInitializing.value) {
+      // Wait for ongoing initialization to complete
+      while (isInitializing.value) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+      return
+    }
+
+    isInitializing.value = true
+    isLoading.value = true
+
     try {
-      const { error } = await api.user.syncUserProfile(userData);
-      if (error) {
-        console.error('Profile Sync Error:', error);
+      console.debug('🚀 Initializing Auth...')
+
+      // معالجة العودة من جوجل (OAuth Callback)
+      await handleOAuthCallback()
+
+      // جلب الجلسة الحالية
+      const { session } = await api.auth.getSession()
+      await setUserSession(session)
+
+      // إعداد مستمع لتغييرات الحالة (يتم تنفيذه مرة واحدة)
+      api.auth.onAuthStateChange(async (event, session) => {
+        console.debug(`🔔 Auth State Changed: ${event}`)
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await setUserSession(session)
+          // Reset loading state when successfully signed in
+          isLoading.value = false
+        } else if (event === 'SIGNED_OUT') {
+          user.value = null
+          isInitialized.value = false
+          isLoading.value = false
+        }
+      })
+
+      isInitialized.value = true
+    } catch (error) {
+      console.error('💥 Auth Initialization Error:', error)
+    } finally {
+      isLoading.value = false
+      isInitializing.value = false
+    }
+  }
+
+  /**
+   * 2. الحصول على المستخدم الحالي (للاستخدام في الراوتر)
+   */
+  async function getUser() {
+    if (user.value) return user.value
+
+    isLoading.value = true
+    try {
+      const { session } = await api.auth.getSession()
+      await setUserSession(session)
+    } catch (error) {
+      console.error('Failed to get user:', error)
+      user.value = null
+    } finally {
+      isLoading.value = false
+    }
+    return user.value
+  }
+
+  /**
+   * 3. معالجة الرابط بعد العودة من جوجل
+   */
+  async function handleOAuthCallback() {
+    const hash = window.location.hash.substring(1)
+    if (!hash) return
+
+    const params = new URLSearchParams(hash)
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const type = params.get('type')
+
+    if (accessToken || refreshToken || type === 'recovery') {
+      console.log('🔄 Processing OAuth Callback...')
+      try {
+        // نترك Supabase يعالج التوكن تلقائياً، نحن فقط ننظف الرابط
+        const { data, error } = await api.auth.getSession()
+        if (!error && data?.session) {
+          console.log('✅ OAuth Login Successful')
+        }
+      } catch (err) {
+        console.error('OAuth Handling Error:', err)
+      } finally {
+        // تنظيف الرابط من التوكنز للحماية
+        window.history.replaceState({}, document.title, window.location.pathname)
       }
+    }
+  }
+
+  /**
+   * 4. تسجيل الدخول بجوجل
+   */
+  async function loginWithGoogle() {
+    isLoading.value = true
+
+    // Ensure loading state shows for at least 200ms to be visible
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // Set up a timeout to reset loading state in case OAuth redirect fails
+    const loadingTimeout = setTimeout(() => {
+      isLoading.value = false
+    }, 5000) // 5 seconds timeout
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project')) {
+        throw new Error('إعدادات Supabase غير صحيحة في ملف .env')
+      }
+
+      const { error } = await api.auth.signInWithGoogle()
+      if (error) throw error
+
+      // If OAuth call succeeds, clear the timeout since loading will be handled by auth state change
+      clearTimeout(loadingTimeout)
+
+    } catch (error) {
+      console.error('Login Error:', error)
+      alert(error.message)
+      isLoading.value = false
+      clearTimeout(loadingTimeout)
+    }
+  }
+
+  /**
+   * 5. تسجيل الخروج
+   */
+  async function logout() {
+    isLoading.value = true
+    try {
+      // 1. تنظيف المتصفح
+      clearLocalArtifacts()
+
+      // 2. تسجيل الخروج من Supabase
+      const { error } = await api.auth.signOut()
+      if (error) console.warn('Supabase SignOut Warning:', error.message)
+
+      // 3. تحديث الحالة
+      user.value = null
+      isInitialized.value = false
+
+      // 4. التوجيه لصفحة الدخول
+      router.push('/')
+      
+    } catch (error) {
+      console.error('Logout Critical Error:', error)
+      // في حالة الخطأ، نضمن تفريغ المستخدم وتحويله
+      user.value = null
+      router.push('/')
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * 6. مزامنة بيانات المستخدم مع قاعدة البيانات
+   */
+  async function syncUserProfile(userData) {
+    if (!userData) return
+    try {
+      const { error } = await api.user.syncUserProfile(userData)
+      if (error) console.error('Profile Sync Error:', error)
     } catch (err) {
-      console.error('Profile Sync Error:', err);
-    }
-  }
-
-  // 8. Session monitoring - disabled for persistent login
-  function startSessionMonitoring() {
-    // Disabled - user stays logged in until manual logout
-    console.log('Session monitoring disabled - user stays logged in');
-  }
-
-  function stopSessionMonitoring() {
-    if (sessionCheckInterval) {
-      clearInterval(sessionCheckInterval);
-      sessionCheckInterval = null;
-    }
-  }
-
-  // 9. Activity tracking - disabled for persistent login
-  function startActivityTracking() {
-    // Disabled - user stays logged in until manual logout
-    console.log('Activity tracking disabled - user stays logged in');
-  }
-
-  function stopActivityTracking() {
-    if (activityCleanup) {
-      activityCleanup();
-      activityCleanup = null;
+      console.error('Profile Sync Unexpected Error:', err)
     }
   }
 
   return {
+    // State
     user,
     isLoading,
     isInitialized,
+    isInitializing,
+
+    // Getters
+    isAuthenticated,
+
+    // Actions
     initializeAuth,
     getUser,
     loginWithGoogle,
     logout,
-    syncUserProfile,
-    startSessionMonitoring,
-    stopSessionMonitoring,
-    startActivityTracking,
-    stopActivityTracking
-  };
-});
+    syncUserProfile
+  }
+})

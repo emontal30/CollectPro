@@ -7,18 +7,25 @@
 <script setup>
 import { onMounted, onUnmounted, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useSessionManager } from '@/composables/useSessionManager';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
 import { useRoute, useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
+const sessionManager = useSessionManager();
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const route = useRoute();
 const router = useRouter();
 
-// Cleanup handler for page visibility changes
+// Cleanup handlers
 let visibilityCleanup = null;
+let activityCleanup = null;
+
+// Throttling for visibility checks
+let lastVisibilityCheck = 0;
+const VISIBILITY_CHECK_THROTTLE = 30000; // 30 seconds
 
 // Function to update body class based on route
 function updateBodyClass(routeName) {
@@ -44,7 +51,13 @@ watch(() => authStore.user, (newUser, oldUser) => {
 });
 
 onMounted(() => {
-  console.log('App mounted, initializing auth and stores...');
+  console.log('🚀 App mounted, initializing session management and stores...');
+
+  // Initialize session management first
+  sessionManager.initializeSession();
+  
+  // Setup activity listeners for session tracking
+  activityCleanup = sessionManager.setupActivityListeners();
 
   // Initialize auth asynchronously (non-blocking)
   authStore.initializeAuth().catch(error => {
@@ -63,13 +76,22 @@ onMounted(() => {
 
   updateBodyClass(route.name);
 
-  // Simplified page visibility handler (no looping)
+  // Enhanced page visibility handler with session check (throttled)
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
-      console.log('Page became visible');
-      // Only check auth state when actually needed
+      // Update activity timestamp
+      sessionManager.updateLastActivity();
+
+      // Check auth state when actually needed
       if (authStore.user === null && authStore.isLoading === false) {
         authStore.getUser().catch(console.error);
+      }
+
+      // Check session validity with throttling (max once per 30 seconds)
+      const now = Date.now();
+      if (now - lastVisibilityCheck > VISIBILITY_CHECK_THROTTLE) {
+        lastVisibilityCheck = now;
+        sessionManager.checkSessionValidity().catch(console.error);
       }
     }
   };
@@ -80,23 +102,35 @@ onMounted(() => {
   };
 
   document.body.classList.add('loaded');
-  console.log('App initialization complete');
+  console.log('✅ App initialization complete');
 });
 
 onUnmounted(() => {
+  console.log('🧹 App unmounting, cleaning up...');
+
   // Cleanup event listeners
   if (visibilityCleanup) {
     visibilityCleanup();
   }
 
-  // Stop all monitoring systems
+  // Cleanup activity listeners
+  if (activityCleanup) {
+    activityCleanup();
+  }
+
+  // Stop session monitoring and cleanup
+  sessionManager.cleanup();
+
+  // Stop all monitoring systems (legacy)
   authStore.stopSessionMonitoring?.();
   authStore.stopActivityTracking?.();
 
-  // Cleanup page tracker
+  // Cleanup page tracker (legacy)
   if (window.pageTracker?.cleanup) {
     window.pageTracker.cleanup();
   }
+
+  console.log('✅ Cleanup complete');
 });
 </script>
 

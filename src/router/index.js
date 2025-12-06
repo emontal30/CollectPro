@@ -1,18 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import MainLayout from '@/layouts/MainLayout.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
+import { useSessionManager } from '@/composables/useSessionManager'
+// تمت إزالة استيراد supabase لأنه غير مستخدم هنا مباشرة، نعتمد على authStore
 
-// Lazy load components with prefetch for better performance
-const LoginView = () => import(/* webpackPrefetch: true */ '@/components/views/LoginView.vue')
-const DashboardView = () => import(/* webpackPrefetch: true */ '@/components/views/DashboardView.vue')
-const HarvestView = () => import(/* webpackPrefetch: true */ '@/components/views/HarvestView.vue')
-const ArchiveView = () => import(/* webpackPrefetch: true */ '@/components/views/ArchiveView.vue')
-const CounterView = () => import(/* webpackPrefetch: true */ '@/components/views/CounterView.vue')
-const AdminView = () => import(/* webpackPrefetch: true */ '@/components/views/AdminView.vue')
-const SubscriptionsView = () => import(/* webpackPrefetch: true */ '@/components/views/SubscriptionsView.vue')
-const MySubscriptionView = () => import(/* webpackPrefetch: true */ '@/components/views/MySubscriptionView.vue')
-const PaymentView = () => import(/* webpackPrefetch: true */ '@/components/views/PaymentView.vue')
+import MainLayout from '@/layouts/MainLayout.vue'
+
+// Lazy load components
+const LoginView = () => import('@/components/views/LoginView.vue')
+const DashboardView = () => import('@/components/views/DashboardView.vue')
+const HarvestView = () => import('@/components/views/HarvestView.vue')
+const ArchiveView = () => import('@/components/views/ArchiveView.vue')
+const CounterView = () => import('@/components/views/CounterView.vue')
+const AdminView = () => import('@/components/views/AdminView.vue')
+const SubscriptionsView = () => import('@/components/views/SubscriptionsView.vue')
+const MySubscriptionView = () => import('@/components/views/MySubscriptionView.vue')
+const PaymentView = () => import('@/components/views/PaymentView.vue')
 
 const routes = [
   {
@@ -24,13 +26,9 @@ const routes = [
   {
     path: '/app',
     component: MainLayout,
+    // توجيه تلقائي للداشبورد عند فتح /app فقط
+    redirect: { name: 'Dashboard' },
     children: [
-      {
-        path: '',
-        name: 'Home',
-        component: DashboardView,
-        meta: { requiresAuth: true }
-      },
       {
         path: 'dashboard',
         name: 'Dashboard',
@@ -81,13 +79,15 @@ const routes = [
       }
     ]
   },
-  // Redirect legacy routes
-  { path: '/index.html', redirect: '/' },
-  { path: '/dashboard.html', redirect: '/app/dashboard' },
-  { path: '/harvest.html', redirect: '/app/harvest' },
-  { path: '/archive.html', redirect: '/app/archive' },
-  { path: '/counter.html', redirect: '/app/counter' },
-  { path: '/admin.html', redirect: '/app/admin' }
+  // Redirect legacy routes to new structure
+  { path: '/index.html', redirect: { name: 'Login' } },
+  { path: '/dashboard.html', redirect: { name: 'Dashboard' } },
+  { path: '/harvest.html', redirect: { name: 'Harvest' } },
+  { path: '/archive.html', redirect: { name: 'Archive' } },
+  { path: '/counter.html', redirect: { name: 'Counter' } },
+  { path: '/admin.html', redirect: { name: 'Admin' } },
+  // Catch all unknown routes
+  { path: '/:pathMatch(.*)*', redirect: { name: 'Login' } }
 ]
 
 const router = createRouter({
@@ -95,62 +95,67 @@ const router = createRouter({
   routes
 })
 
-// Simplified Navigation guard - Single Source of Truth with Pinia
+// --- Enhanced Navigation Guard ---
 router.beforeEach(async (to, from, next) => {
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const authStore = useAuthStore();
+  const { checkSessionValidity, getLastPage, shouldRestorePage } = useSessionManager();
 
-  // Get auth store (imported directly for simplicity)
-  const authStore = useAuthStore()
-
-  console.log('Router guard - Path:', to.path, 'User:', authStore.user?.email || 'No user', 'Initialized:', authStore.isInitialized);
-
-  // Handle post-login redirect when user just logged in
-  if (authStore.user && (to.path === '/' || to.path === '/login')) {
-    console.log('Authenticated user on login page, redirecting to app...');
-    next('/app');
-    return;
-  }
-
-  // Skip auth check for login page to prevent loops
-  if (to.path === '/' || to.path === '/login') {
-    console.log('Allowing access to login page');
-    next()
-    return
-  }
-
-  // If auth is not initialized yet, wait for it
-  if (!authStore.isInitialized && !authStore.isLoading) {
-    console.log('Auth not initialized yet, waiting...');
+  // 1. Ensure Auth is Initialized
+  // ننتظر التهيئة مرة واحدة فقط إذا لم تكن مكتملة
+  if (!authStore.isInitialized) {
     try {
       await authStore.initializeAuth();
-      console.log('Auth initialization completed, user:', authStore.user?.email || 'No user');
     } catch (error) {
-      console.error('Auth initialization failed during navigation:', error);
+      console.error('❌ Auth init failed in router:', error);
     }
-  } else if (authStore.isLoading) {
-    // Wait for ongoing initialization to complete
-    console.log('Auth initialization in progress, waiting...');
-    while (authStore.isLoading) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  const isLoggedIn = !!authStore.user;
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+
+  // 2. Logic for Logged-In Users trying to access Login page
+  if (isLoggedIn && to.name === 'Login') {
+    console.log('👤 User already logged in, redirecting...');
+    
+    // Check if we should restore the last page
+    // ملاحظة: تأكد أن shouldRestorePage في Composable لا تعيد true إذا كانت الصفحة الأخيرة هي Login
+    const lastPage = getLastPage();
+    if (shouldRestorePage() && lastPage && lastPage !== '/' && !lastPage.includes('login')) {
+      console.log('📍 Restoring last page:', lastPage);
+      return next(lastPage);
     }
-    console.log('Auth initialization completed, user:', authStore.user?.email || 'No user');
+    
+    return next({ name: 'Dashboard' });
   }
 
-  // If user is already loaded in store, use that
-  if (authStore.user !== null) {
-    console.log('User found in store, allowing access');
-    next()
-    return
+  // 3. Protected Routes Logic
+  if (requiresAuth) {
+    if (!isLoggedIn) {
+      console.log('🛡️ Access denied. Redirecting to Login.');
+      return next({ name: 'Login' });
+    }
+
+    // Check session validity only for protected routes
+    const isSessionValid = await checkSessionValidity();
+    if (!isSessionValid) {
+      console.log('⌛ Session expired. Redirecting to Login.');
+      // ملاحظة: authStore.logout() قد يتم استدعاؤه داخل checkSessionValidity أو هنا
+      return next({ name: 'Login' });
+    }
   }
 
-  // Final check after initialization
-  if (requiresAuth && authStore.user === null) {
-    console.log('No user found after initialization, requiring auth - redirecting to login');
-    next('/')
-  } else {
-    console.log('Allowing access');
-    next()
-  }
-})
+  // 4. Allow Navigation
+  next();
+});
 
-export default router
+// --- Page Tracking Hook ---
+router.afterEach((to) => {
+  // لا نحتاج لتتبع صفحة الدخول
+  if (to.name !== 'Login') {
+    const { saveCurrentPage } = useSessionManager();
+    saveCurrentPage(to.fullPath);
+    console.log('📍 Page tracked:', to.fullPath);
+  }
+});
+
+export default router;
