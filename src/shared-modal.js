@@ -119,11 +119,11 @@ window.showModal = showModal;
 window.showConfirm = showConfirm;
 window.showAlertModal = showAlertModal;
 
-console.log('Shared modal system loaded');
+// console.log('Shared modal system loaded'); // Removed for production
 
 // Add log when modal is shown
 const originalShowModal = showModal;
 window.showModal = function(...args) {
-    console.log('Modal shown with args:', args);
+    // console.log('Modal shown with args:', args); // Removed for production
     return originalShowModal.apply(this, args);
 };

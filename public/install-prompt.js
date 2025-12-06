@@ -84,7 +84,10 @@ class InstallPrompt {
 
     // زر لاحقاً
     const laterBtn = document.getElementById('laterBtn');
-    laterBtn.addEventListener('click', () => this.hide());
+    laterBtn.addEventListener('click', () => {
+      this.hide();
+      localStorage.setItem('installPromptDismissed', 'true');
+    });
 
     // النقر على الخلفية للإغلاق
     this.overlay.addEventListener('click', (e) => {
@@ -122,9 +125,16 @@ class InstallPrompt {
       return;
     }
 
-    // دائماً أظهر الرسالة للمستخدمين في المتصفح
-    // بغض النظر عن عدد الزيارات أو الضغط على "لاحقاً"
-    this.show();
+    // التحقق مما إذا كان المستخدم قد أغلق الرسالة من قبل
+    const dismissed = localStorage.getItem('installPromptDismissed');
+    if (dismissed) {
+      return;
+    }
+
+    // إظهار الرسالة بعد 3 ثوانٍ
+    setTimeout(() => {
+      this.show();
+    }, 3000);
   }
 
   isAppInstalled() {
@@ -162,8 +172,7 @@ class InstallPrompt {
         this.deferredPrompt = null;
       });
     } else {
-      // إذا لم يكن هناك PWA prompt، فقط أغلق الرسالة
-      // لا تظهر أي رسائل تعليمات
+      // إذا لم يكن هناك PWA prompt، أغلق الرسالة
       this.hide();
     }
   }

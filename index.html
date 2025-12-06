@@ -2,104 +2,66 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=768" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#007965"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="#007965"/>
   <meta name="msapplication-TileColor" content="#007965"/>
   <meta name="msapplication-navbutton-color" content="#007965"/>
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
   <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
 
-  <title>تسجيل الدخول - CollectPro</title>
+  <title>CollectPro - نظام إدارة التحصيلات</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-  <link rel="stylesheet" href="index.css?v=284f44" />
-  <link rel="stylesheet" href="install-prompt.css?v=284f44" />
-
-  <!-- Supabase CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
-</head>
-<body class="loaded">
-  <!-- حاوية التنبيهات -->
-  <div id="alert-container" class="alert-container"></div>
-
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-card">
-        <div class="logo-container">
-          <img src="logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
-          <h1 class="app-name">CollectPro</h1>
-          <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
-        </div>
-
-        <button id="google-login-btn" class="google-login-btn">
-          <i class="fab fa-google"></i>
-          <span>تسجيل الدخول باستخدام Google</span>
-        </button>
-
-        <p class="privacy-policy">
-          بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
-        </p>
-
-        <!-- فاصل بين سياسة الخصوصية والزرار -->
-        <hr class="privacy-divider">
-
-        <!-- أيقونة تثبيت التطبيق الاحترافية -->
-        <div class="install-app-section">
-          <button id="install-app-btn" class="install-app-btn">
-            <div class="install-app-icon">
-              <img src="/manifest/icon-512x512.png" alt="أيقونة التطبيق" />
-            </div>
-            <div class="install-app-text">
-              <h4>ثبّت تطبيق Collect Pro</h4>
-              <p>تطبيق تحصيل شامل و احترافى</p>
-            </div>
-            <div class="install-app-arrow">
-              <i class="fas fa-download"></i>
-            </div>
-          </button>
-        </div>
-
-        <div class="footer-info">
-          <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-          <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.8.4</p>
-        </div>
-
-        <!-- أيقونة مشاركة التطبيق -->
-        <div class="share-section">
-          <button id="share-app-btn" class="share-btn" title="شارك التطبيق">
-            <i class="fas fa-share-alt"></i>
-            <span>شارك التطبيق</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
   
- 
-  <script type="module" src="/src/supabase-client.js?v=284f44"></script>
-  <script type="module" src="/src/session-manager.js?v=284f44"></script>
-  <script type="module" src="/src/shared-modal.js?v=284f44"></script>
-  <script type="module" src="/src/auth-handler.js?v=284f44"></script>
-  <script type="module" src="/src/script.js?v=284f44"></script>
-  <script type="module" src="install-prompt.js?v=284f44"></script>
-
-  <!-- Service Worker Registration -->
+  <!-- Simple dark mode prevention -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('✅ Service Worker registered successfully:', registration);
-          })
-          .catch((error) => {
-            console.error('❌ Service Worker registration failed:', error);
-          });
-      });
+    // Check and apply dark mode immediately
+    var isDarkMode = false;
+    try {
+      var settings = localStorage.getItem('settings');
+      if (settings) {
+        var parsed = JSON.parse(settings);
+        isDarkMode = parsed.darkMode === true;
+      }
+    } catch (e) {
+      console.error('Settings error:', e);
+    }
+    
+    // Apply dark mode to documentElement immediately
+    if (isDarkMode) {
+      document.documentElement.className = 'dark';
     }
   </script>
+  
+  <!-- Basic styles to prevent flash -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    body.loaded {
+      opacity: 1;
+    }
+    
+    html.dark, html.dark body {
+      background: #0f0f0f !important;
+      color: #ffffff !important;
+    }
+    
+    #app {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

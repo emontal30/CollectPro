@@ -1,205 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=768" />
-  <title>اشتراكي - CollectPro</title>
-  <meta name="theme-color" content="#3B82F6"/>
-  <link rel="manifest" href="/site.webmanifest" />
-  <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=284f44" />
-  <link rel="stylesheet" href="sidebar.css?v=284f44" />
-  <link rel="stylesheet" href="my-subscription.css?v=284f44" />
-</head>
-<body class="loaded">
-  <!-- حاوية التنبيهات -->
-  <div id="alert-container" class="alert-container"></div>
-
-  <!-- 🔝 الشريط العلوي -->
-  <div class="topbar">
-    <div class="actions">
-      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
-    </div>
-    <div class="logo">
-      <img src="logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
-      <p class="app-name">CollectPro</p>
-    </div>
-  </div>
-
-  <!-- الخلفية الشفافة للشريط الجانبي -->
-  <div class="overlay" id="overlay"></div>
-
-  <!-- 🎨 الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <!-- حاوية بيانات المستخدم -->
-        <div class="user-data-container">
-          <div class="user-meta">
-            <span class="user-name" id="user-name">اسم المستخدم</span>
-            <span class="user-email" id="user-email">user@example.com</span>
-            <span class="user-id" id="user-id"></span>
-          </div>
-        </div>
-        
-        <!-- حاوية حالة الاشتراك -->
-        <div class="subscription-container">
-          <h4 class="subscription-title">حالة الاشتراك</h4>
-          <div class="subscription-info" id="subscription-info">
-            <div class="subscription-days-simple">
-              <i class="fas fa-clock"></i>
-              <span id="days-left">-</span>
-              <span> يوم متبقي</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- حاوية تسجيل الخروج -->
-        <div class="logout-container">
-          <button id="logout-btn" class="logout-btn">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>تسجيل الخروج</span>
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-        <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
-        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-        <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <header>
-      <button id="toggleDark" title="تبديل الوضع الليلي">
-        🌙
-      </button>
-      <div class="header-content">
-        <div class="zoom-controls">
-          <button class="zoom-out-btn" id="zoom-out-btn" title="تصغير النص">
-            <i class="fas fa-search-minus"></i>
-          </button>
-          <button class="zoom-in-btn" id="zoom-in-btn" title="تكبير النص">
-            <i class="fas fa-search-plus"></i>
-          </button>
-        </div>
-        <h1>اشتراكي 👤</h1>
-        <div style="width: 100px;"></div>
-      </div>
-    </header>
-
-    <main>
-      <div class="subscription-container">
-        <!-- حالة التحميل -->
-        <div id="loading-container" class="subscription-card">
-          <div class="subscription-details">
-            <div class="loading-spinner">
-              <i class="fas fa-spinner fa-spin"></i>
-              <p>جاري تحميل بيانات اشتراكك...</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- بطاقة الاشتراك -->
-        <div class="subscription-card">
-          <div class="subscription-header">
-            <h2><i class="fas fa-shield-alt"></i> حالة اشتراكك</h2>
-            <div id="subscription-status"></div>
-          </div>
-          <div id="subscription-details" class="subscription-details">
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-cube"></i> نوع الخطة:</span>
-              <span class="detail-value" id="plan-type">-</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-calendar-alt"></i> تاريخ البدء:</span>
-              <span class="detail-value" id="start-date">-</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-calendar-check"></i> تاريخ الانتهاء:</span>
-              <span class="detail-value" id="end-date">-</span>
-            </div>
-            <div class="detail-row">
-               <span class="detail-label"><i class="fas fa-info-circle"></i> الحالة:</span>
-               <span class="detail-value" id="subscription-state">-</span>
-            </div>
-            <div class="detail-row">
-               <span class="detail-label"><i class="fas fa-hourglass-half"></i> الأيام المتبقية:</span>
-               <span class="detail-value" id="days-remaining">-</span>
-            </div>
-          </div>
-          <div id="subscription-actions" class="subscription-actions">
-            <!-- سيتم ملؤها بواسطة جافاسكريبت -->
-          </div>
-        </div>
-
-        <!-- تاريخ الاشتراكات -->
-        <div class="subscription-history">
-          <h2>تاريخ الاشتراكات</h2>
-          <div class="table-container">
-            <table id="history-table">
-              <thead>
-                <tr>
-                  <th><i class="fas fa-cube"></i> نوع الخطة</th>
-                  <th><i class="fas fa-calendar-alt"></i> تاريخ البدء</th>
-                  <th><i class="fas fa-calendar-check"></i> تاريخ الانتهاء</th>
-                  <th><i class="fas fa-info-circle"></i> الحالة</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-            <div id="no-history" class="no-data">
-              <i class="fas fa-inbox"></i>
-              <p>لا يوجد تاريخ اشتراكات</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- نافذة تجديد الاشتراك -->
-      <div id="renew-modal" class="modal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>تجديد الاشتراك</h2>
-            <button class="close-modal">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div id="renew-plans-container" class="renew-plans">
-              <!-- سيتم ملؤها بواسطة جافاسكريبت -->
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button id="cancel-renew-btn" class="btn-secondary">إلغاء</button>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <div class="footer">
-    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.8.3</p>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
-  <script type="module" src="/src/supabase-client.js"></script>
-  <script type="module" src="/src/session-manager.js"></script>
-  <script type="module" src="/src/page-tracker.js"></script>
-  <script type="module" src="/src/shared-modal.js"></script>
-  <script type="module" src="/src/sidebar.js"></script>
-  <script type="module" src="/src/script.js"></script>
-  <script type="module" src="/src/my-subscription.js"></script>
-</body>
-</html>

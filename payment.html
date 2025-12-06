@@ -1,239 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=768" />
-  <title>الدفع - CollectPro</title>
-  <meta name="theme-color" content="#3B82F6"/>
-  <link rel="manifest" href="/site.webmanifest" />
-  <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=284f44" />
-  <link rel="stylesheet" href="sidebar.css?v=284f44" />
-  <link rel="stylesheet" href="payment.css?v=284f44" />
-  <script type="module" src="/src/payment.js"></script>
-</head>
-<body class="loaded">
-  <!-- 🔝 الشريط العلوي -->
-  <div class="topbar">
-    <div class="actions">
-      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
-    </div>
-    <div class="logo">
-      <img src="logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
-      <p class="app-name">CollectPro</p>
-    </div>
-  </div>
-
-  <!-- الخلفية الشفافة للشريط الجانبي -->
-  <div class="overlay" id="overlay"></div>
-
-  <!-- 🎨 الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="user-box">
-        <!-- حاوية بيانات المستخدم -->
-        <div class="user-data-container">
-          <div class="user-meta">
-            <span class="user-name" id="user-name">اسم المستخدم</span>
-            <span class="user-email" id="user-email">user@example.com</span>
-            <span class="user-id" id="user-id"></span>
-          </div>
-        </div>
-        
-        <!-- حاوية حالة الاشتراك -->
-        <div class="subscription-container">
-          <h4 class="subscription-title">حالة الاشتراك</h4>
-          <div class="subscription-info" id="subscription-info">
-            <div class="subscription-days-simple">
-              <i class="fas fa-clock"></i>
-              <span id="days-left">-</span>
-              <span> يوم متبقي</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- حاوية تسجيل الخروج -->
-        <div class="logout-container">
-          <button id="logout-btn" class="logout-btn">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>تسجيل الخروج</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-content">
-      <ul class="nav-links">
-        <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-        <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-        <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-        <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-        <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-        <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-      </ul>
-    </div>
-
-  </div>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <header>
-      <button id="toggleDark" title="تبديل الوضع الليلي">
-        🌙
-      </button>
-      <div class="header-content">
-        <div class="zoom-controls">
-          <button class="zoom-out-btn" id="zoom-out-btn" title="تصغير النص">
-            <i class="fas fa-search-minus"></i>
-          </button>
-          <button class="zoom-in-btn" id="zoom-in-btn" title="تكبير النص">
-            <i class="fas fa-search-plus"></i>
-          </button>
-        </div>
-        <h1>إتمام الدفع 💳</h1>
-        <div style="width: 100px;"></div>
-      </div>
-    </header>
-
-    <main>
-      <div class="payment-container">
-        <div class="payment-card">
-          <div class="payment-header">
-            <h2>تفاصيل الدفع</h2>
-            <div class="plan-summary">
-              <div class="plan-info">
-                <span class="plan-label">الخطة المختارة:</span>
-                <span class="plan-value" id="selected-plan">-</span>
-              </div>
-              <div class="plan-info">
-                <span class="plan-label">السعر:</span>
-                <span class="plan-value" id="plan-price">-</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="payment-form">
-            <form id="payment-form">
-              <div class="form-group">
-                <label for="user-name-field">اسم المستخدم <span class="required">*</span></label>
-                <div class="input-container">
-                  <i class="fas fa-user input-icon"></i>
-                  <input type="text" id="user-name-field" name="user-name" readonly required />
-                </div>
-                <small class="field-note">يتم جلب اسم المستخدم من حسابك المسجل في قاعدة البيانات</small>
-              </div>
-
-              <div class="form-group">
-                <label for="email">البريد الإلكتروني <span class="required">*</span></label>
-                <div class="input-container">
-                  <i class="fas fa-envelope input-icon"></i>
-                  <input type="email" id="email" name="email" readonly required />
-                </div>
-                <small class="field-note">يتم جلب البريد الإلكتروني من حسابك المسجل في قاعدة البيانات</small>
-              </div>
-
-              <div class="form-group">
-                <label for="user-id-field">معرف المستخدم <span class="required">*</span></label>
-                <div class="input-container">
-                  <i class="fas fa-user input-icon"></i>
-                  <input type="text" id="user-id-field" name="user-id" readonly required />
-                </div>
-                <small class="field-note">يتم جلب معرف المستخدم من حسابك المسجل في قاعدة البيانات</small>
-              </div>
-
-              <div class="form-group">
-                <label for="subscription-type">نوع الاشتراك</label>
-                <div class="input-container">
-                  <i class="fas fa-calendar-alt input-icon"></i>
-                  <input type="text" id="subscription-type" name="subscription-type" readonly />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="transaction-id">رقم عملية التحويل</label>
-                <div class="input-container">
-                  <i class="fas fa-receipt input-icon"></i>
-                  <input type="text" id="transaction-id" name="transaction-id" placeholder="أدخل رقم عملية التحويل" required />
-                </div>
-                <span class="help-text">أدخل رقم العملية الذي حصلت عليه بعد إتمام التحويل</span>
-              </div>
-
-              <div class="payment-methods">
-                <h3>طرق الدفع المتاحة</h3>
-                <p class="payment-info-text">اختر طريقة الدفع المفضلة لديك، ثم أدخل رقم عملية التحويل في الحقل أعلاه.</p>
-
-                <div class="payment-options">
-                  <div class="payment-option active" data-method="vodafone-cash">
-                    <div class="payment-icon">
-                      <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <div class="payment-details">
-                      <h4>فودافون كاش</h4>
-                      <p>ادفع بسهولة من خلال تطبيق فودافون كاش</p>
-                      <div class="payment-steps">
-                        <p><strong>الخطوات:</strong></p>
-                        <ol>
-                          <li>افتح تطبيق - فودافون كاش</li>
-                          <li>اختر "تحويل الأموال"</li>
-                          <li>ادخل رقم الحساب: <strong>01094085228</strong></li>
-                          <li>ادخل المبلغ المطلوب</li>
-                          <li>انسخ رقم العملية وأدخله في الحقل أعلاه</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="payment-option" data-method="instapay">
-                    <div class="payment-icon">
-                      <i class="fas fa-university"></i>
-                    </div>
-                    <div class="payment-details">
-                      <h4>انستا باي</h4>
-                      <p>ادفع مباشرة من خلال خدمة انستا باي البنكية</p>
-                      <div class="payment-steps">
-                        <p><strong>الخطوات:</strong></p>
-                        <ol>
-                          <li>افتح تطبيق - انستا باي</li>
-                          <li>اختر "تحويل لحساب آخر"</li>
-                          <li>ادخل رقم الحساب : <strong>01094085228</strong></li>
-                        
-                          <li>ادخل المبلغ المطلوب</li>
-                          <li>انسخ رقم العملية وأدخله في الحقل أعلاه</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <button type="submit" class="submit-btn">
-                <span class="btn-text">إرسال طلب الدفع</span>
-                <i class="fas fa-spinner fa-spin spinner"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <div id="alert-container" class="alert-container"></div>
-
-  <div class="footer">
-    <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> 💻 v2.8.3</p>
-  </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5"></script>
-    <script type="module" src="/src/supabase-client.js"></script>
-    <script type="module" src="/src/session-manager.js"></script>
-    <script type="module" src="/src/page-tracker.js"></script>
-    <script type="module" src="/src/shared-modal.js"></script>
-    <script type="module" src="/src/sidebar.js"></script>
-    <script type="module" src="/src/script.js"></script>
-</body>
-</html>

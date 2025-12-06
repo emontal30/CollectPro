@@ -39,66 +39,88 @@ class PageTracker {
    * Setup tracking for page visibility changes
    */
   setupPageTracking() {
-    // Track when page becomes visible
-    document.addEventListener('visibilitychange', () => {
+    // Use passive listeners for better performance
+    const handleVisibilityChange = () => {
       if (!document.hidden) {
         this.saveCurrentPage();
       }
-    });
+    };
 
-    // Track before page unload
-    window.addEventListener('beforeunload', () => {
+    const handleBeforeUnload = () => {
       this.saveCurrentPage();
-    });
+    };
 
-    // Track page focus
-    window.addEventListener('focus', () => {
+    const handleFocus = () => {
       this.saveCurrentPage();
-    });
+    };
+
+    // Store cleanup functions
+    this.cleanup = this.cleanup || [];
+    this.cleanup.push(
+      () => document.removeEventListener('visibilitychange', handleVisibilityChange),
+      () => window.removeEventListener('beforeunload', handleBeforeUnload),
+      () => window.removeEventListener('focus', handleFocus)
+    );
+
+    // Add event listeners with passive option
+    document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
+    window.addEventListener('beforeunload', handleBeforeUnload, { passive: true });
+    window.addEventListener('focus', handleFocus, { passive: true });
   }
 
   /**
    * Setup tracking for navigation events
    */
   setupNavigationTracking() {
-    // Track all internal navigation clicks
-    document.addEventListener('click', (event) => {
-      const target = event.target.closest('a');
-      if (target && target.href) {
-        const url = new URL(target.href);
-        
-        // Only track internal navigation
-        if (url.origin === window.location.origin) {
-          // Save the target page before navigation
-          const targetPath = url.pathname;
-          if (window.sessionManager) {
-            localStorage.setItem('collectpro_last_page', targetPath);
-          } else {
-            localStorage.setItem('collectpro_last_page', targetPath);
-          }
-          
-          console.log('🔗 Navigation tracked:', targetPath);
-        }
-      }
-    });
+    // Throttled click handler to prevent excessive calls
+  let clickTimeout;
+  const handleClick = (event) => {
+    if (clickTimeout) return; // Throttle clicks
 
-    // Track SPA navigation if using history API
-    let lastPushState = window.history.pushState;
-    window.history.pushState = function(state, title, url) {
-      lastPushState.call(this, state, title, url);
-      
-      // Save the new page
-      if (window.pageTracker) {
-        window.pageTracker.saveCurrentPage();
+    const target = event.target.closest('a');
+    if (target && target.href) {
+      const url = new URL(target.href);
+
+      // Only track internal navigation
+      if (url.origin === window.location.origin) {
+        // Save the target page before navigation
+        const targetPath = url.pathname;
+        if (window.sessionManager) {
+          localStorage.setItem('collectpro_last_page', targetPath);
+        } else {
+          localStorage.setItem('collectpro_last_page', targetPath);
+        }
+
+        console.log('🔗 Navigation tracked:', targetPath);
       }
-    };
+    }
+
+    // Reset throttle after 200ms (reduced frequency)
+    clickTimeout = setTimeout(() => {
+      clickTimeout = null;
+    }, 200);
+  };
 
     // Track browser back/forward buttons
-    window.addEventListener('popstate', () => {
-      setTimeout(() => {
-        this.saveCurrentPage();
-      }, 100);
-    });
+  const handlePopState = () => {
+    setTimeout(() => {
+      this.saveCurrentPage();
+    }, 200); // Increased delay to reduce frequency
+  };
+
+    // Store cleanup functions
+    this.cleanup = this.cleanup || [];
+    this.cleanup.push(
+      () => document.removeEventListener('click', handleClick),
+      () => window.removeEventListener('popstate', handlePopState)
+    );
+
+    // Add event listeners with passive option
+    document.addEventListener('click', handleClick, { passive: true });
+    window.addEventListener('popstate', handlePopState, { passive: true });
+
+    // Don't override pushState - it can interfere with Vue Router
+    // Instead, use a more targeted approach with history API
   }
 
   /**
@@ -119,6 +141,22 @@ class PageTracker {
       localStorage.removeItem('collectpro_last_page');
     } else {
       localStorage.removeItem('collectpro_last_page');
+    }
+  }
+
+  /**
+   * Cleanup all event listeners (call this during logout)
+   */
+  cleanup() {
+    if (this.cleanup && Array.isArray(this.cleanup)) {
+      this.cleanup.forEach(cleanupFn => {
+        try {
+          cleanupFn();
+        } catch (error) {
+          console.warn('Error during page tracker cleanup:', error);
+        }
+      });
+      this.cleanup = [];
     }
   }
 

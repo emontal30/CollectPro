@@ -1,462 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=768" />
-  <title>لوحة التحكم - CollectPro</title>
-  <meta name="theme-color" content="#007965"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="#007965"/>
-  <meta name="msapplication-TileColor" content="#007965"/>
-  <meta name="msapplication-navbutton-color" content="#007965"/>
-  <link rel="manifest" href="/site.webmanifest" />
-  <link rel="apple-touch-icon" sizes="120x120" href="./ios/apple-touch-icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="./ios/apple-touch-icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="./ios/apple-touch-icon-167x167.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./ios/apple-touch-icon-180x180.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=284f44" />
-  <link rel="stylesheet" href="sidebar.css?v=284f44" />
-  <link rel="stylesheet" href="admin.css?v=284f44" />
-  <link rel="stylesheet" href="install-prompt.css?v=284f44" />
-</head>
-<body class="loaded">
-  <!-- حاوية التنبيهات -->
-  <div id="alert-container" class="alert-container"></div>
-
-  
-  <!-- 🔝 الشريط العلوي -->
-  <div class="topbar">
-    <div class="actions">
-      <button class="toggle-btn" id="toggle-btn"><i class="fa-solid fa-bars"></i></button>
-    </div>
-    <div class="logo">
-        <img src="logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
-        <p class="app-name">CollectPro</p>
-    </div>
-  </div>
-
-  <!-- الخلفية الشفافة للشريط الجانبي -->
-  <div class="overlay" id="overlay"></div>
-
-  <!-- 🎨 الشريط الجانبي -->
-  <div class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="user-box">
-          <!-- حاوية بيانات المستخدم -->
-          <div class="user-data-container">
-            <div class="user-meta">
-              <span class="user-name" id="user-name">اسم المستخدم</span>
-              <span class="user-email" id="user-email">user@example.com</span>
-              <span class="user-id" id="user-id"></span>
-            </div>
-          </div>
-          
-          <!-- حاوية حالة الاشتراك -->
-          <div class="subscription-container">
-            <h4 class="subscription-title">حالة الاشتراك</h4>
-            <div class="subscription-info" id="subscription-info">
-              <div class="subscription-days-simple">
-                <i class="fas fa-clock"></i>
-                <span id="days-left">-</span>
-                <span> يوم متبقي</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- حاوية تسجيل الخروج -->
-          <div class="logout-container">
-            <button id="logout-btn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>تسجيل الخروج</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="sidebar-content">
-        <ul class="nav-links">
-          <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span></a></li>
-          <li><a href="harvest.html"><i class="fas fa-donate"></i><span>التحصيلات</span></a></li>
-          <li><a href="archive.html"><i class="fas fa-archive"></i><span>الأرشيف</span></a></li>
-          <li><a href="counter.html"><i class="fas fa-calculator"></i><span>عداد الأموال</span></a></li>
-          <li><a href="subscriptions.html"><i class="fas fa-credit-card"></i><span>الاشتراكات</span></a></li>
-          <li><a href="my-subscription.html"><i class="fas fa-user-shield"></i><span>اشتراكي</span></a></li>
-          <li id="admin-link"><a href="admin.html"><i class="fas fa-user-cog"></i><span>لوحة التحكم</span></a></li>
-        </ul>
-      </div>
-  </div>
-
-  <!-- خلفية شفافة -->
-  <div class="overlay" id="overlay"></div>
-
-  <header>
-    <button id="toggleDark" title="تبديل الوضع الليلي">
-      <i class="fas fa-moon"></i>
-    </button>
-    <div class="header-content">
-      <div class="zoom-controls">
-        <button class="zoom-out-btn" id="zoom-out-btn" title="تصغير النص">
-          <i class="fas fa-search-minus"></i>
-        </button>
-        <button class="zoom-in-btn" id="zoom-in-btn" title="تكبير النص">
-          <i class="fas fa-search-plus"></i>
-        </button>
-      </div>
-      <h1><i class="fas fa-cog"></i> لوحة تحكم الإدارة</h1>
-      <div style="width: 100px;"></div>
-    </div>
-  </header>
-
-  <main>
-    <div class="admin-dashboard">
-      <div class="stats-container">
-         <div class="stat-card">
-           <div class="stat-icon"><i class="fas fa-users"></i></div>
-           <div class="stat-content">
-             <h3>إجمالي المستخدمين</h3>
-             <p class="stat-value" id="total-users">0</p>
-             <div class="stat-trend positive">
-               <i class="fas fa-arrow-up"></i>
-               <span>مستخدم نشط</span>
-             </div>
-           </div>
-         </div>
-         <div class="stat-card">
-           <div class="stat-icon"><i class="fas fa-user-check"></i></div>
-           <div class="stat-content">
-             <h3 id="active-users-title">مستخدمون فعّالون</h3>
-             <p class="stat-value" id="active-users-30">0</p>
-             <div class="stat-trend positive">
-               <i class="fas fa-user-clock"></i>
-               <span>نشطون مؤخرًا</span>
-             </div>
-             <div class="stat-filters">
-               <select id="active-users-period" class="stat-filter-select">
-                 <option value="1">آخر يوم</option>
-                 <option value="7">آخر 7 أيام</option>
-                 <option value="30" selected>آخر 30 يوم</option>
-               </select>
-             </div>
-           </div>
-         </div>
-         <div class="stat-card">
-           <div class="stat-icon"><i class="fas fa-clock"></i></div>
-           <div class="stat-content">
-             <h3>طلبات قيد المراجعة</h3>
-             <p class="stat-value" id="pending-requests">0</p>
-             <div class="stat-trend neutral">
-               <i class="fas fa-clock"></i>
-               <span>تحتاج مراجعة</span>
-             </div>
-           </div>
-         </div>
-         <div class="stat-card">
-           <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-           <div class="stat-content">
-             <h3>اشتراكات نشطة</h3>
-             <p class="stat-value" id="active-subscriptions">0</p>
-             <div class="stat-trend positive">
-               <i class="fas fa-arrow-up"></i>
-               <span>نشط الآن</span>
-             </div>
-           </div>
-         </div>
-         <div class="stat-card">
-           <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-           <div class="stat-content">
-             <h3>إجمالي الإيرادات</h3>
-             <p class="stat-value" id="total-revenue">0 ج.م</p>
-             <div class="stat-trend positive">
-               <i class="fas fa-chart-line"></i>
-               <span>من الاشتراكات النشطة</span>
-             </div>
-           </div>
-         </div>
-       </div>
-
-      <!-- مخطط تفاعلي للإحصائيات -->
-      <div class="admin-section">
-        <div class="section-header">
-          <h2><i class="fas fa-chart-bar"></i> تحليل الإحصائيات التفاعلي</h2>
-          <div class="chart-controls">
-            <button class="chart-toggle active" data-chart="bars">
-              <i class="fas fa-chart-bar"></i>
-              <span>أعمدة</span>
-            </button>
-            <button class="chart-toggle" data-chart="pie">
-              <i class="fas fa-chart-pie"></i>
-              <span>دائري</span>
-            </button>
-            <button class="chart-toggle" data-chart="line">
-              <i class="fas fa-chart-line"></i>
-              <span>خطي</span>
-            </button>
-          </div>
-        </div>
-        <div class="chart-container">
-          <div class="simple-chart active" id="bars-chart">
-            <div class="chart-bar" data-value="0" data-label="الرضا العام">
-              <div class="bar-fill" style="height: 0%"></div>
-              <span class="bar-label">0%</span>
-            </div>
-            <div class="chart-bar" data-value="0" data-label="معدل النجاح">
-              <div class="bar-fill" style="height: 0%"></div>
-              <span class="bar-label">0%</span>
-            </div>
-            <div class="chart-bar" data-value="0" data-label="النمو الشهري">
-              <div class="bar-fill" style="height: 0%"></div>
-              <span class="bar-label">0%</span>
-            </div>
-            <div class="chart-bar" data-value="0" data-label="الأداء">
-              <div class="bar-fill" style="height: 0%"></div>
-              <span class="bar-label">0%</span>
-            </div>
-          </div>
-
-          <div class="pie-chart" id="pie-chart">
-            <div class="pie-container">
-              <div class="pie-segment" style="--percentage: 0; --color: #007965;"></div>
-              <div class="pie-segment" style="--percentage: 0; --color: #00a085;"></div>
-              <div class="pie-segment" style="--percentage: 0; --color: #28a745;"></div>
-              <div class="pie-segment" style="--percentage: 0; --color: #f39c12;"></div>
-            </div>
-            <div class="pie-legend">
-              <div class="legend-item">
-                <span class="legend-color" style="background: #007965;"></span>
-                <span>نشط (0%)</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-color" style="background: #00a085;"></span>
-                <span>معلق (0%)</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-color" style="background: #28a745;"></span>
-                <span>ملغي (0%)</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-color" style="background: #f39c12;"></span>
-                <span>منتهي (0%)</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="line-chart" id="line-chart">
-            <svg class="line-svg" viewBox="0 0 400 200">
-              <polyline class="line-path" points="50,180 125,180 200,180 275,180 350,180"/>
-              <circle class="line-point" cx="50" cy="180" r="4"/>
-              <circle class="line-point" cx="125" cy="180" r="4"/>
-              <circle class="line-point" cx="200" cy="180" r="4"/>
-              <circle class="line-point" cx="275" cy="180" r="4"/>
-              <circle class="line-point" cx="350" cy="180" r="4"/>
-            </svg>
-            <div class="line-labels">
-              <span>يناير</span>
-              <span>فبراير</span>
-              <span>مارس</span>
-              <span>أبريل</span>
-              <span>مايو</span>
-            </div>
-          </div>
-        </div>
-        <div class="chart-info">
-          <div class="info-item">
-            <i class="fas fa-info-circle"></i>
-            <span>البيانات تُحدث تلقائياً عند تحميل الصفحة</span>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-sync-alt"></i>
-            <span>اضغط على زر "تحديث" للحصول على أحدث البيانات</span>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-chart-pie"></i>
-            <span id="advanced-stats-summary">سيتم تحميل الإحصائيات المتقدمة...</span>
-          </div>
-        </div>
-      </div>
-      <div class="admin-section">
-        <div class="section-header">
-          <div class="section-title-with-refresh">
-            <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
-            <div class="table-stats users-header-stats">
-              <span id="logged-in-users-count">0</span> مستخدم مسجل
-            </div>
-            <button id="refresh-users-btn" class="btn-secondary small-refresh-btn">
-              <i class="fas fa-sync-alt"></i>
-            </button>
-          </div>
-          <p class="section-subtitle users-subtitle">إدارة المستخدمين الذين قاموا بتسجيل الدخول وتفعيل الاشتراكات لهم</p>
-        </div>
-        <div class="table-header-info">
-          <div class="table-actions users-search">
-            <input type="text" id="logged-in-users-search" class="filter-select users-search-input" placeholder="ابحث باسم المستخدم أو البريد الإلكتروني" />
-          </div>
-          <div class="table-actions users-bulk-actions">
-            <input type="number" id="bulk-users-days-input" class="subscription-days-input" min="1" placeholder="ادخل الفتره" />
-            <button id="bulk-activate-users-btn" class="btn-success">
-              <i class="fas fa-check-double"></i> تفعيل الكل / المحدد
-            </button>
-          </div>
-        </div>
-        <div class="table-container">
-          <table id="logged-in-users-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="select-all-logged-users" class="select-all-checkbox" title="تحديد كل المستخدمين" /></th>
-                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
-                <th><i class="fas fa-user"></i> اسم المستخدم</th>
-                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
-                <th><i class="fas fa-calendar-alt"></i> تاريخ الإنشاء</th>
-                <th class="col-subscription"><i class="fas fa-clock"></i> مدة الاشتراك (أيام)</th>
-                <th><i class="fas fa-cogs"></i> الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="no-logged-in-users" class="no-data">
-            <i class="fas fa-inbox"></i>
-            <p>لا يوجد مستخدمون مسجلون حتى الآن</p>
-            <small>سيظهر هنا كل من قام بتسجيل دخول ناجح</small>
-          </div>
-        </div>
-      </div>
-      <div class="admin-section">
-        <div class="section-header">
-          <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة</h2>
-          <div class="section-actions">
-            <button id="activate-all-btn" class="btn-success">
-              <i class="fas fa-check-double"></i>تفعيل الكل
-            </button>
-            <button id="cancel-all-btn" class="btn-danger">
-              <i class="fas fa-times-circle"></i>إلغاء الكل
-            </button>
-          </div>
-        </div>
-        <div class="table-header-info">
-          <div class="table-info">
-            <i class="fas fa-info-circle"></i>
-            <span>يمكنك تحديد عدة طلبات لتفعيلها أو إلغاؤها دفعة واحدة</span>
-          </div>
-          <div class="table-stats">
-            <span id="selected-count">0</span> محدد
-          </div>
-        </div>
-        <div class="table-container">
-           <table id="pending-subscriptions-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="select-all" class="select-all-checkbox" title="تحديد الكل" /></th>
-                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
-                <th><i class="fas fa-user"></i> اسم المستخدم</th>
-                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
-                <th><i class="fas fa-crown"></i> نوع الاشتراك</th>
-                <th><i class="fas fa-hashtag"></i> رقم العملية</th>
-                <th><i class="fas fa-calendar-alt"></i> تاريخ الطلب</th>
-                <th><i class="fas fa-cogs"></i> الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="no-pending-requests" class="no-data">
-            <i class="fas fa-inbox"></i>
-            <p>لا توجد طلبات اشتراك قيد المراجعة</p>
-            <small>ستظهر الطلبات الجديدة هنا تلقائياً</small>
-          </div>
-        </div>
-      </div>
-      <div class="admin-section">
-        <div class="section-header">
-           <div class="section-title-with-refresh">
-             <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
-             <div class="table-stats subscriptions-header-stats">
-               <span id="total-subscriptions-count">0</span> اشتراك إجمالي
-             </div>
-             <button id="refresh-btn" class="btn-secondary small-refresh-btn">
-               <i class="fas fa-sync-alt"></i>
-             </button>
-           </div>
-           <p class="section-subtitle subscriptions-subtitle">إدارة شاملة لجميع الاشتراكات في النظام</p>
-        </div>
-        <div class="table-header-info">
-          <div class="filter-container">
-            <div class="filter-group">
-              <label for="status-filter" class="filter-label">
-                <i class="fas fa-filter"></i>
-                <span>فلترة حسب الحالة</span>
-              </label>
-              <select id="status-filter" class="filter-select">
-                <option value="all">جميع الحالات</option>
-                <option value="pending">قيد المراجعة</option>
-                <option value="active">نشط</option>
-                <option value="cancelled">ملغي</option>
-                <option value="expired">منتهي</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label for="plan-type-filter" class="filter-label">
-                <i class="fas fa-calendar-alt"></i>
-                <span>نوع الاشتراك</span>
-              </label>
-              <select id="plan-type-filter" class="filter-select">
-                <option value="all">كل الأنواع</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label for="expiry-filter" class="filter-label">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>صلاحية الاشتراك</span>
-              </label>
-              <select id="expiry-filter" class="filter-select">
-                <option value="all">كل الاشتراكات</option>
-                <option value="expiring_soon">قريبة من الانتهاء (أقل من 7 أيام)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="table-container">
-           <table id="all-subscriptions-table">
-            <thead>
-              <tr>
-                <th><i class="fas fa-id-badge"></i> معرف المستخدم</th>
-                <th><i class="fas fa-user"></i> اسم المستخدم</th>
-                <th><i class="fas fa-envelope"></i> البريد الإلكتروني</th>
-                <th><i class="fas fa-crown"></i> نوع الاشتراك</th>
-                <th><i class="fas fa-hashtag"></i> رقم العملية</th>
-                <th><i class="fas fa-play-circle"></i> تاريخ البدء</th>
-                <th><i class="fas fa-stop-circle"></i> صلاحية الاشتراك</th>
-                <th><i class="fas fa-flag"></i> الحالة</th>
-                <th><i class="fas fa-cogs"></i> الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="no-subscriptions" class="no-data">
-            <i class="fas fa-inbox"></i>
-            <p>لا توجد اشتراكات</p>
-            <small>سيتم عرض الاشتراكات هنا عند إنشائها</small>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <div id="alert-container" class="alert-container"></div>
-
-  <div id="subscription-details-modal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تفاصيل الاشتراك</h2><button class="close-modal">&times;</button></div><div class="modal-body"><div class="details-container"><div class="detail-item"><span class="detail-label">معرف المستخدم:</span><span class="detail-value" id="detail-user-id">-</span></div><div class="detail-item"><span class="detail-label">البريد الإلكتروني:</span><span class="detail-value" id="detail-email">-</span></div><div class="detail-item"><span class="detail-label">نوع الاشتراك:</span><span class="detail-value" id="detail-plan">-</span></div><div class="detail-item"><span class="detail-label">رقم العملية:</span><span class="detail-value" id="detail-transaction-id">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الطلب:</span><span class="detail-value" id="detail-created-at">-</span></div><div class="detail-item"><span class="detail-label">تاريخ البدء:</span><span class="detail-value" id="detail-start-date">-</span></div><div class="detail-item"><span class="detail-label">تاريخ الانتهاء:</span><span class="detail-value" id="detail-end-date">-</span></div><div class="detail-item"><span class="detail-label">الحالة:</span><span class="detail-value" id="detail-status">-</span></div></div></div><div class="modal-footer"><button id="close-details-btn" class="btn-secondary">إغلاق</button></div></div>
-
-  <footer id="footer" class="footer">
-  <p>© <span id="year"></span> جميع الحقوق محفوظة.</p>
-    <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> v2.8.3</p>
- </footer>
-
-  <!-- Scripts at the end for correct order and performance -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.86.0"></script>
-  <script type="module" src="/src/supabase-client.js"></script>
-  <script type="module" src="/src/session-manager.js"></script>
-  <script type="module" src="/src/page-tracker.js"></script>
-  <script type="module" src="/src/shared-modal.js"></script>
-  
-  <script type="module" src="/src/sidebar.js"></script>
-  <script type="module" src="/src/script.js"></script>
-  <script type="module" src="/src/admin.js"></script>
-  <script type="module" src="install-prompt.js?v=284f44"></script>
-</body>
-</html>
