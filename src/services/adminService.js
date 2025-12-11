@@ -86,6 +86,14 @@ export const adminService = {
       query = query.eq('plan_id', filters.planType);
     }
 
+    // فلترة الاشتراكات التي قاربت على الانتهاء (من جهة الخادم)
+    if (filters.expiry === 'expiring_soon') {
+      const today = new Date().toISOString();
+      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte('end_date', today);
+      query = query.lte('end_date', sevenDaysFromNow);
+    }
+
     const { data } = await query;
     return data || [];
   },

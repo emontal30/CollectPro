@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia';
-import api from '@/services/api';
 import { supabase } from '@/services/api';
 import { useAuthStore } from './auth';
+import localforage from 'localforage';
+import { addToSyncQueue, getQueueStats } from '@/services/archiveSyncQueue';
+import { setSmartCache, getSmartCache, removeFromAllCaches, safeDeepClone } from '@/services/cacheManager';
 
 export const useHarvestStore = defineStore('harvest', {
   state: () => ({
@@ -13,7 +15,8 @@ export const useHarvestStore = defineStore('harvest', {
     error: null,
     searchQuery: '',
     currentBalance: 0,
-    rows: []
+    rows: [],
+    syncQueueStats: { pendingCount: 0, totalRetries: 0, oldestItem: null }
   }),
 
   getters: {
@@ -39,29 +42,46 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     filteredRows: (state) => {
-      if (!state.rows || state.rows.length === 0) {
-        return [{
-          id: Date.now(),
-          shop: '',
-          code: '',
-          amount: 0,
-          extra: 0,
-          collector: 0
-        }]
-      }
-      if (!state.searchQuery) return state.rows
-      return state.rows.filter(row => 
-        row.shop?.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-        row.code?.toLowerCase().includes(state.searchQuery.toLowerCase())
-      )
-    },
+        let rows = state.rows || []
+        if (rows.length === 0) {
+          rows = [{
+            id: Date.now(),
+            shop: '',
+            code: '',
+            amount: 0,
+            extra: 0,
+            collector: 0,
+            isImported: false
+          }]
+        }
+
+        let filtered
+        if (!state.searchQuery) {
+          filtered = rows
+        } else {
+          filtered = rows.filter(row =>
+            row.shop?.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+            row.code?.toLowerCase().includes(state.searchQuery.toLowerCase())
+          )
+        }
+
+        // Ensure isImported is set
+        return filtered.map(row => {
+          row.isImported = row.isImported ?? false
+          return row
+        })
+      },
 
     totals: (state) => {
       const rows = state.rows || []
+      const amount = rows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+      const extra = rows.reduce((sum, row) => sum + (parseFloat(row.extra) || 0), 0)
+      const collector = rows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0)
       return {
-        amount: rows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0),
-        extra: rows.reduce((sum, row) => sum + (parseFloat(row.extra) || 0), 0),
-        collector: rows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0)
+        amount: amount,
+        extra: extra,
+        collector: collector,
+        net: collector - (amount + extra)
       }
     },
 
@@ -71,18 +91,19 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     resetAmount: (state) => {
-      const totalNet = state.totalNet || 0
-      return state.currentBalance - (state.masterLimit || 0) - totalNet
+      return state.currentBalance - (state.masterLimit || 0)
     },
 
     resetStatus: (state) => {
-      const resetAmount = state.resetAmount
-      if (resetAmount === 0) {
-        return { val: 0, text: 'تم التسوية ✅', color: '#28a745' }
-      } else if (resetAmount > 0) {
-        return { val: resetAmount, text: 'مطلوب من المحصل 💰', color: '#dc3545' }
+      const totalCollected = state.totals.collector || 0;
+      const resetAmount = state.resetAmount;
+      const combinedValue = totalCollected + resetAmount;
+      if (combinedValue === 0) {
+        return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#28a745' };
+      } else if (combinedValue < 0) {
+        return { val: combinedValue, text: 'عجز 🔴', color: '#dc3545' };
       } else {
-        return { val: resetAmount, text: 'رصيد المحصل 🎯', color: '#007bff' }
+        return { val: combinedValue, text: 'زيادة 🔵', color: '#007bff' };
       }
     }
   },
@@ -95,19 +116,10 @@ export const useHarvestStore = defineStore('harvest', {
       this.error = null
 
       try {
-        const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) throw new Error('User not authenticated')
-        const user = authStore.user
-
-        // Try to load from localStorage first
         const localData = this.loadFromLocalStorage()
         if (localData && localData.length > 0) {
           this.currentData = localData
         }
-
-        // Then sync with database
-        await this.syncWithDatabase(user.id)
-
       } catch (error) {
         console.error('Error loading current data:', error)
         this.error = error.message
@@ -156,38 +168,42 @@ export const useHarvestStore = defineStore('harvest', {
 
     // Add new harvest record
     addRecord(record) {
+      const amount = parseFloat(record.amount) || 0
+      const extra = parseFloat(record.extra) || 0
+      const collector = parseFloat(record.collector) || 0
       const newRecord = {
         id: Date.now(),
         serial: this.currentData.length + 1,
         shop: record.shop || '',
         code: record.code || '',
-        amount: parseFloat(record.amount) || 0,
-        extra: parseFloat(record.extra) || 0,
-        collector: record.collector || '',
-        net: (parseFloat(record.amount) || 0) + (parseFloat(record.extra) || 0)
+        amount: amount,
+        extra: extra,
+        collector: collector,
+        net: collector - (amount + extra)
       }
 
       this.currentData.push(newRecord)
       this.saveToLocalStorage()
-      this.saveToDatabase()
     },
 
     // Update existing record
     updateRecord(index, record) {
       if (index >= 0 && index < this.currentData.length) {
+        const amount = parseFloat(record.amount) || 0
+        const extra = parseFloat(record.extra) || 0
+        const collector = parseFloat(record.collector) || 0
         const updatedRecord = {
           ...this.currentData[index],
           shop: record.shop || '',
           code: record.code || '',
-          amount: parseFloat(record.amount) || 0,
-          extra: parseFloat(record.extra) || 0,
-          collector: record.collector || '',
-          net: (parseFloat(record.amount) || 0) + (parseFloat(record.extra) || 0)
+          amount: amount,
+          extra: extra,
+          collector: collector,
+          net: collector - (amount + extra)
         }
 
         this.currentData[index] = updatedRecord
         this.saveToLocalStorage()
-        this.saveToDatabase()
       }
     },
 
@@ -200,7 +216,6 @@ export const useHarvestStore = defineStore('harvest', {
           record.serial = i + 1
         })
         this.saveToLocalStorage()
-        this.saveToDatabase()
       }
     },
 
@@ -365,6 +380,35 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    async saveToIndexedDB() {
+      try {
+        const key = `harvest_rows_${this.currentDate}`;
+        const cleanRows = safeDeepClone(this.rows);
+        // use smart cache to ensure consistent store format & metadata
+        await setSmartCache(key, cleanRows, 'indexedDB');
+        console.log('✅ Rows saved to IndexedDB via smart cache:', key);
+      } catch (error) {
+        // Log error but don't call saveRowsToLocalStorage to avoid infinite loop
+        // localStorage is already being saved separately
+        console.warn('⚠️ IndexedDB save failed (using localStorage fallback):', error?.message);
+      }
+    },
+
+    async loadFromIndexedDB() {
+      try {
+        const key = `harvest_rows_${this.currentDate}`;
+        const data = await localforage.getItem(key);
+        if (data && data.length > 0) {
+          this.rows = data;
+          console.log('✅ Rows loaded from IndexedDB:', key);
+          return data;
+        }
+      } catch (error) {
+        console.error('Error loading from IndexedDB:', error);
+      }
+      return null;
+    },
+
     loadFromLocalStorage() {
       try {
         const data = localStorage.getItem(`harvest_${this.currentDate}`)
@@ -375,10 +419,67 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    // Save rows to localStorage (also attempt IndexedDB in background, non-blocking)
+    async saveRowsToLocalStorage() {
+      try {
+        const key = 'harvest_rows';
+        
+        // تنظيف البيانات من الـ Vue reactive proxies قبل الحفظ (structuredClone -> JSON fallback)
+        const cleanedRows = safeDeepClone(this.rows);
+        
+        // احفظ في LocalStorage مباشرة (موثوق)
+        localStorage.setItem(key, JSON.stringify(cleanedRows));
+        
+        // محاولة مزامنة إجمالي المحصل مع صفحة عداد الأموال
+        try {
+          const totalCollected = cleanedRows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0);
+          localStorage.setItem('totalCollected', totalCollected.toString());
+          
+          // إشعار counter store بتحديث إجمالي المحصل
+          window.dispatchEvent(new CustomEvent('harvestDataUpdated', { 
+            detail: { totalCollected } 
+          }));
+        } catch (syncError) {
+          console.warn('⚠️ خطأ في مزامنة إجمالي المحصل:', syncError.message);
+        }
+        
+        // حاول حفظ في IndexedDB في الخلفية (non-blocking)
+        setTimeout(async () => {
+          try {
+            await setSmartCache(key, cleanedRows, 'indexedDB');
+          } catch (dbError) {
+            // لا تكسر البرنامج - LocalStorage يكفي
+            console.warn('⚠️ IndexedDB backup failed:', dbError.message);
+          }
+        }, 0);
+        
+        console.log('✅ تم حفظ الصفوف:', this.rows.length, 'صف');
+      } catch (error) {
+        console.error('❌ خطأ في حفظ الصفوف:', error);
+      }
+    },
+
+    // Save current balance to localStorage
+    saveCurrentBalanceToLocalStorage() {
+      try {
+        localStorage.setItem('currentBalance', this.currentBalance.toString());
+        console.log('Saved currentBalance to localStorage:', this.currentBalance);
+      } catch (error) {
+        console.error('Error saving currentBalance to localStorage:', error);
+      }
+    },
+
     // Set master limit
     setMasterLimit(limit) {
       this.masterLimit = parseFloat(limit) || 100000
       localStorage.setItem('masterLimit', this.masterLimit.toString())
+      console.log('Master limit set and saved:', this.masterLimit)
+    },
+
+    // Set current balance
+    setCurrentBalance(balance) {
+      this.currentBalance = parseFloat(balance) || 0
+      this.saveCurrentBalanceToLocalStorage()
     },
 
     // Load master limit
@@ -397,45 +498,29 @@ export const useHarvestStore = defineStore('harvest', {
       }).format(num || 0)
     },
 
-    // Ensure empty row exists
+    // Ensure empty row exists (legacy, kept for compatibility but not used in new logic)
     ensureEmptyRow() {
-      if (!this.rows || this.rows.length === 0) {
-        this.rows = [{
-          id: Date.now(),
-          shop: '',
-          code: '',
-          amount: 0,
-          extra: 0,
-          collector: 0
-        }]
-      } else {
-        // Check if last row has any data
-        const lastRow = this.rows[this.rows.length - 1]
-        if (lastRow.shop || lastRow.code || lastRow.amount || lastRow.extra || lastRow.collector) {
-          this.rows.push({
-            id: Date.now() + Math.random(),
-            shop: '',
-            code: '',
-            amount: 0,
-            extra: 0,
-            collector: 0
-          })
-        }
-      }
+      // This function is deprecated and replaced by reactive logic in the component
+      // Keeping it for backward compatibility
     },
 
     // Clear all fields
     clearFields() {
+      console.log('clearFields called, clearing all data');
       this.rows = [{
         id: Date.now(),
         shop: '',
         code: '',
         amount: 0,
         extra: 0,
-        collector: 0
-      }]
-      this.searchQuery = ''
-      this.saveToLocalStorage()
+        collector: 0,
+        net: 0
+      }];
+      this.searchQuery = '';
+      this.currentBalance = 0; // Clear current balance as per user requirement
+      this.saveRowsToLocalStorage();
+      localStorage.removeItem('currentBalance'); // Remove from storage
+      console.log('Data cleared and saved');
     },
 
     // دالة لتحويل النص الخام (من localStorage) إلى كائنات صفوف
@@ -482,7 +567,8 @@ export const useHarvestStore = defineStore('harvest', {
             code: code,
             amount: transferAmount,
             extra: 0,     // القيمة الافتراضية
-            collector: 0  // القيمة الافتراضية
+            collector: 0,  // القيمة الافتراضية
+            net: 0 - transferAmount // صافي = محصل - (مبلغ + أخرى) = 0 - transferAmount
           })
         }
       })
@@ -491,30 +577,41 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     // الدالة الرئيسية لاستدعاء البيانات
-    loadDataFromStorage() {
+    async loadDataFromStorage() {
       // 1. محاولة تحميل البيانات الجديدة القادمة من صفحة الإدخال
       const newData = localStorage.getItem("harvestData")
       
       if (newData) {
         const newRows = this.parseRawDataToRows(newData)
         if (newRows.length > 0) {
-          // تحديث الصفوف بالبيانات الجديدة
-          this.rows = newRows
-          
-          // تنظيف البيانات المؤقتة حتى لا يتم تحميلها مرة أخرى
-          localStorage.removeItem("harvestData")
-          
-          // إضافة صف فارغ في النهاية للكتابة
-          this.ensureEmptyRow()
-          return true // تم التحميل بنجاح
-        }
+           // تحديث الصفوف بالبيانات الجديدة مع إضافة flag للصفوف المستوردة
+           this.rows = newRows.map(row => ({ ...row, isImported: true }))
+
+           // تنظيف البيانات المؤقتة
+           await removeFromAllCaches("harvestData")
+           localStorage.removeItem("harvestData")
+
+           // إضافة صف فارغ في النهاية للكتابة
+           this.rows.push({
+             id: Date.now(),
+             shop: '',
+             code: '',
+             amount: 0,
+             extra: 0,
+             collector: 0,
+             net: 0,
+             isImported: false
+           });
+           this.saveRowsToLocalStorage();
+           return true // تم التحميل بنجاح
+         }
       }
       
       // 2. إذا لم توجد بيانات جديدة، لا نفعل شيئاً (ستبقى البيانات المحفوظة في harvest_rows)
       return false
     },
 
-    // Archive today's data with local storage support
+    // Archive today's data with sync queue support
     async archiveTodayData() {
       try {
         // 1. التحقق من وجود صفوف (غير الصفوف الفارغة)
@@ -533,23 +630,22 @@ export const useHarvestStore = defineStore('harvest', {
 
         // 3. تحضير التواريخ
         const todayDate = new Date();
-        // تنسيق للعرض والتخزين المحلي (DD/MM/YYYY)
         const localDateStr = todayDate.toLocaleDateString("en-GB", {
           day: '2-digit', month: '2-digit', year: 'numeric'
         });
-        // تنسيق لقاعدة البيانات (YYYY-MM-DD)
         const isoDate = todayDate.toISOString().split('T')[0];
 
         // 4. التحقق من وجود أرشيف سابق لهذا اليوم (محلياً)
         const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
         if (localArchive[localDateStr]) {
-          // نترك القرار للمكون (Component) لعرض رسالة تأكيد الاستبدال
-          // ولكن هنا سنفترض أن المستخدم وافق أو أننا سنستبدل مباشرة
-          // يمكن تمرير flag للدالة: force = true/false
+          // استبدال مباشر
         }
 
-        // 5. تحضير البيانات لقاعدة البيانات
-        const supabaseData = validRows.map(row => ({
+        // 5. تحضير البيانات - تنظيفها من Vue Proxies
+        // تنسيخ عميق (deep clone) للبيانات لإزالة أي Vue reactivity
+        const cleanValidRows = safeDeepClone(validRows);
+        
+        const supabaseData = cleanValidRows.map(row => ({
           user_id: user.id,
           archive_date: isoDate,
           shop: row.shop || "",
@@ -560,43 +656,87 @@ export const useHarvestStore = defineStore('harvest', {
           net: (Number(row.collector) || 0) - ((Number(row.extra) || 0) + (Number(row.amount) || 0))
         }));
 
-        // 6. تحضير البيانات للتخزين المحلي (نفس تنسيق النص القديم مفصول بـ Tabs)
-        const localDataString = validRows.map(row => {
+        const localDataString = cleanValidRows.map(row => {
           const net = (Number(row.collector) || 0) - ((Number(row.extra) || 0) + (Number(row.amount) || 0));
-          // الترتيب: المحل - الكود - المبلغ - أخرى - المحصل - الصافي
           return `${row.shop}\t${row.code}\t${row.amount}\t${row.extra}\t${row.collector}\t${net}`;
         }).join("\n");
 
-        // 7. التنفيذ (قاعدة البيانات)
-        // In development mode, skip database operations
-        if (!import.meta.env.DEV) {
-          // أ- حذف البيانات القديمة لنفس اليوم (للاستبدال)
-          const { error: deleteError } = await supabase
-            .from('archive_data')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('archive_date', isoDate);
-
-          if (deleteError) throw deleteError;
-
-          // ب- إدراج البيانات الجديدة
-          const { error: insertError } = await supabase
-            .from('archive_data')
-            .insert(supabaseData);
-
-          if (insertError) throw insertError;
-
-          // ج- تحديث جدول التواريخ (archive_dates) لضمان ظهوره في القائمة
-          await supabase
-            .from('archive_dates')
-            .upsert({ user_id: user.id, archive_date: isoDate }, { onConflict: 'user_id, archive_date' });
-        }
-
-        // 8. التنفيذ (التخزين المحلي)
+        // 6. حفظ محلياً أولاً (ضمان عدم فقدان البيانات)
         localArchive[localDateStr] = localDataString;
         localStorage.setItem("archiveData", JSON.stringify(localArchive));
 
-        return { success: true, message: 'تم أرشفة بيانات اليوم بنجاح!' };
+        // 7. محاولة الإرسال إلى الخادم
+        let savedToServer = false;
+        if (navigator.onLine && !import.meta.env.DEV) {
+          try {
+            // حذف البيانات القديمة
+            const { error: deleteError } = await supabase
+              .from('archive_data')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('archive_date', isoDate);
+
+            if (deleteError) throw deleteError;
+
+            // إدراج البيانات الجديدة
+            const { error: insertError } = await supabase
+              .from('archive_data')
+              .insert(supabaseData);
+
+            if (insertError) throw insertError;
+
+            // تحديث جدول التواريخ
+            await supabase
+              .from('archive_dates')
+              .upsert({ user_id: user.id, archive_date: isoDate }, { onConflict: 'user_id, archive_date' });
+
+            console.log('✅ Archive synced to database');
+            savedToServer = true;
+            // نجح الإرسال — لا حاجة لإضافة للـ queue
+          } catch (err) {
+            console.warn('⚠️ Failed to sync archive to database, adding to sync queue:', err.message);
+            // فشل الإرسال — أضف للـ queue للإعادة لاحقاً
+            await addToSyncQueue({
+              user_id: user.id,
+              archive_date: isoDate,
+              rows: supabaseData,
+              localDataString
+            });
+          }
+        } else {
+          // غير متصل أو في development — أضف للـ queue
+          if (!import.meta.env.DEV) {
+            console.log('📌 Offline — adding archive to sync queue');
+            await addToSyncQueue({
+              user_id: user.id,
+              archive_date: isoDate,
+              rows: supabaseData,
+              localDataString
+            });
+          }
+        }
+
+        // تحديث إحصائيات الـ queue
+        this.updateSyncQueueStats();
+
+        // تنظيف بيانات الحصاد بعد الأرشفة بنجاح
+        await removeFromAllCaches('harvest_rows');
+        this.rows = [{
+          id: Date.now(),
+          shop: '',
+          code: '',
+          amount: 0,
+          extra: 0,
+          collector: 0,
+          net: 0
+        }];
+        this.saveRowsToLocalStorage();
+
+        const successMessage = savedToServer
+          ? 'تم أرشفة بيانات اليوم بنجاح وتم حفظها فى قاعده البيانات'
+          : 'تم أرشفة بيانات اليوم بنجاح! سيتم المزامنة عند الاتصال.';
+
+        return { success: true, message: successMessage };
 
       } catch (error) {
         console.error('Archive Error:', error);
@@ -605,7 +745,62 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     // Initialize the store
-    initialize() {
+    async initialize() {
+      console.log('Initializing harvest store...');
+      
+      // Try localStorage first (الأكثر أماناً)
+      if (!this.rows || this.rows.length === 0) {
+        const savedRows = localStorage.getItem('harvest_rows');
+        if (savedRows) {
+          try {
+            this.rows = JSON.parse(savedRows);
+            console.log('✅ Loaded rows from localStorage:', this.rows.length, 'rows');
+            console.log('Rows already exist in store:', this.rows.length, 'rows');
+
+            // Ensure master limit and current balance are loaded even when rows exist
+            this.loadMasterLimit();
+            const savedBalanceEarly = localStorage.getItem('currentBalance');
+            if (savedBalanceEarly) {
+              this.currentBalance = parseFloat(savedBalanceEarly);
+              console.log('Loaded currentBalance from localStorage (early):', this.currentBalance);
+            } else {
+              console.log('No saved currentBalance in localStorage (early)');
+            }
+
+            return; // تم التحميل بنجاح
+          } catch (error) {
+            console.error('Error parsing saved rows:', error);
+            // المتابعة إلى الخطوة التالية
+          }
+        }
+        
+        // إذا لم تكن هناك بيانات محفوظة، ابدأ برف فارغة
+        console.log('No saved rows, initializing empty row');
+        this.rows = [{
+          id: Date.now(),
+          shop: '',
+          code: '',
+          amount: 0,
+          extra: 0,
+          collector: 0,
+          net: 0
+        }];
+      }
+      
+      this.loadMasterLimit();
+      const savedBalance = localStorage.getItem('currentBalance');
+      if (savedBalance) {
+        this.currentBalance = parseFloat(savedBalance);
+        console.log('Loaded currentBalance from localStorage:', this.currentBalance);
+      } else {
+        console.log('No saved currentBalance in localStorage');
+      }
+
+      // محاولة تحميل بيانات جديدة عند التهيئة
+      const dataLoaded = this.loadDataFromStorage();
+      console.log('loadDataFromStorage result:', dataLoaded);
+
+      // التأكد من وجود صف فارغ في النهاية إذا لم تكن هناك صفوف
       if (!this.rows || this.rows.length === 0) {
         this.rows = [{
           id: Date.now(),
@@ -613,25 +808,23 @@ export const useHarvestStore = defineStore('harvest', {
           code: '',
           amount: 0,
           extra: 0,
-          collector: 0
-        }]
+          collector: 0,
+          net: 0,
+          isImported: false
+        }];
+        this.saveRowsToLocalStorage();
       }
-      this.loadMasterLimit()
-      const savedBalance = localStorage.getItem('currentBalance')
-      if (savedBalance) {
-        this.currentBalance = parseFloat(savedBalance)
+
+      // تحديث إحصائيات قائمة الانتظار
+      this.updateSyncQueueStats();
+    },
+
+    async updateSyncQueueStats() {
+      try {
+        this.syncQueueStats = await getQueueStats();
+      } catch (error) {
+        console.error('Error updating sync queue stats:', error);
       }
-      
-      // محاولة تحميل بيانات جديدة عند التهيئة
-      this.loadDataFromStorage()
     }
   }
 })
-
-// Utility function for number formatting
-function formatNumber(num) {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(num || 0)
-}

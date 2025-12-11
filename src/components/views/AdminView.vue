@@ -1,4 +1,4 @@
-<template>
+﻿التصفية<template>
   <div class="admin-dashboard">
     
     <PageHeader 
@@ -22,10 +22,10 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-user-check"></i></div>
         <div class="stat-content">
-          <h3>مستخدمون فعّالون</h3>
+          <h3>مستخدمون فعالون</h3>
           <p class="stat-value">{{ store.stats.activeUsers }}</p>
           <div class="stat-trend positive">
-            <i class="fas fa-user-clock"></i><span>نشطون مؤخرًا</span>
+            <i class="fas fa-user-clock"></i><span>نشطاء مؤخرا</span>
           </div>
           <div class="stat-filters">
             <select v-model="store.filters.activeUsersPeriod" class="stat-filter-select" @change="store.fetchStats">
@@ -51,7 +51,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
         <div class="stat-content">
-          <h3>اشتراكات نشطة</h3>
+          <h3>الاشتراكات النشطة</h3>
           <p class="stat-value">{{ store.stats.activeSubscriptions }}</p>
           <div class="stat-trend positive">
             <i class="fas fa-arrow-up"></i><span>نشط الآن</span>
@@ -87,7 +87,7 @@
           </button>
           <button class="btn-secondary chart-refresh-btn" :disabled="isRefreshingCharts" @click="refreshCharts">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingCharts }"></i>
-            تحديث
+            <span>تحديث</span>
           </button>
         </div>
       </div>
@@ -151,7 +151,7 @@
 
       <div class="table-header-info">
         <div class="table-actions users-search-row">
-          <input v-model="store.filters.usersSearch" type="text" class="filter-select users-search-input" placeholder="ابحث..." />
+          <input v-model="store.filters.usersSearch" type="text" class="filter-select users-search-input" placeholder="ابحث عن المستخدمين" />
           <button class="btn-secondary small-refresh-btn" :disabled="isRefreshingUsers" @click="refreshUsers"><i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingUsers }"></i></button>
         </div>
         <div class="table-actions users-bulk-actions">
@@ -280,12 +280,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import Swal from 'sweetalert2';
+import { useNotifications } from '@/composables/useNotifications';
+import api from '@/services/api';
+import '@/assets/css/_unified-components.css';
 
 const store = useAdminStore();
+const { error, success, confirm, warning, showDetails } = useNotifications();
+let authSubscription = null;
 const activeChart = ref('bars');
 const selectedUsers = ref([]);
 const bulkDays = ref('');
@@ -381,13 +385,7 @@ function showSubscriptionDetails(subscription) {
     </div>
   `;
 
-  Swal.fire({
-    title: 'تفاصيل الاشتراك',
-    html: detailsHtml,
-    width: '600px',
-    confirmButtonText: 'إغلاق',
-    confirmButtonColor: '#007965'
-  });
+  showDetails('تفاصيل الاشتراك', detailsHtml);
 }
 
 // Refresh Users with Loading Animation
@@ -414,24 +412,23 @@ async function refreshSubscriptions() {
 // Bulk Actions
 async function bulkActivate() {
   if (selectedUsers.value.length === 0) {
-    Swal.fire('تنبيه', 'يرجى اختيار مستخدمين أولاً', 'warning');
+    warning('يرجى اختيار مستخدمين أولاً');
     return;
   }
-  
+
   if (!bulkDays.value || bulkDays.value < 1) {
-    Swal.fire('تنبيه', 'يرجى إدخال عدد أيام صحيح', 'warning');
+    warning('يرجى إدخال عدد أيام صحيح');
     return;
   }
-  
-  const confirm = await Swal.fire({
+
+  const confirmResult = await confirm({
     title: 'تأكيد جماعي',
     text: `سيتم تفعيل اشتراك لمدة ${bulkDays.value} يوم لـ ${selectedUsers.value.length} مستخدم.`,
     icon: 'question',
-    showCancelButton: true,
     confirmButtonText: 'نعم، نفذ'
   });
 
-  if (confirm.isConfirmed) {
+  if (confirmResult.isConfirmed) {
     let successCount = 0;
     let errorCount = 0;
 
@@ -446,14 +443,14 @@ async function bulkActivate() {
     }
 
     selectedUsers.value = [];
-    bulkDays.value = ''; // إعادة تعيين الحقل ليكون فارغًا
+    bulkDays.value = ''; // إعادة تعيين الحقل ليكون فارغاً
 
     if (errorCount === 0) {
-      Swal.fire('تم', `تم تفعيل الاشتراكات بنجاح لـ ${successCount} مستخدم`, 'success');
+      success(`تم تفعيل الاشتراكات بنجاح لـ ${successCount} مستخدم`);
     } else if (successCount === 0) {
-      Swal.fire('خطأ', 'فشل في تفعيل أي اشتراكات', 'error');
+      error('فشل في تفعيل أي اشتراكات');
     } else {
-      Swal.fire('تحذير', `تم تفعيل ${successCount} اشتراك بنجاح، وفشل ${errorCount}`, 'warning');
+      warning(`تم تفعيل ${successCount} اشتراك بنجاح، وفشل ${errorCount}`);
     }
   }
 }
@@ -469,724 +466,79 @@ async function refreshCharts() {
   }
 }
 
-onMounted(() => {
-  store.loadDashboardData();
+onMounted(async () => {
+  console.log('⚙️ Admin view mounted, loading dashboard data...');
+
+  try {
+    // Subscribe to auth state changes so that if the user session becomes
+    // available after navigation, we fetch admin data automatically.
+    const res = api.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Admin view detected auth event:', event);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // تحميل البيانات مرة أخرى عند تحديث الجلسة
+        await store.loadDashboardData();
+        console.log('✅ Admin data reloaded after auth');
+      } else if (event === 'SIGNED_OUT') {
+        // تنظيف البيانات عند تسجيل الخروج
+        store.stats = {
+          totalUsers: 0,
+          activeUsers: 0,
+          pendingRequests: 0,
+          activeSubscriptions: 0,
+          totalRevenue: 0,
+          cancelled: 0,
+          expired: 0,
+          completionRate: 0,
+          pendingRate: 0
+        };
+        store.usersList = [];
+        store.pendingSubscriptions = [];
+        store.allSubscriptions = [];
+      }
+    });
+
+    // supabase returns { data: { subscription } }
+    authSubscription = res?.data?.subscription;
+  } catch (e) {
+    console.warn('⚠️ Failed to subscribe to auth events in admin view', e);
+  }
+
+  // محاولة تحميل البيانات الأولية
+  try {
+    await store.loadDashboardData();
+    console.log('✅ Admin dashboard data loaded initially');
+  } catch (err) {
+    console.error('❌ Error loading admin data initially:', err);
+  }
+
+  // محاولة إضافية لتحميل البيانات بعد فترة قصيرة (للتأكد من اكتمال المصادقة)
+  setTimeout(async () => {
+    console.log('⏰ Delayed admin data load attempt...');
+    try {
+      await store.loadDashboardData();
+      console.log('✅ Admin data loaded after delay');
+    } catch (err) {
+      console.error('❌ Error loading admin data after delay:', err);
+    }
+  }, 1500);
+});
+
+onUnmounted(() => {
+  try {
+    if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
+      authSubscription.unsubscribe();
+    }
+  } catch (e) {
+    console.warn('⚠️ Failed to unsubscribe auth events in admin view', e);
+  }
 });
 </script>
 
 <style scoped>
-/* استيراد التنسيقات من admin.css و style.css */
-/* تم تضمين أهم التنسيقات هنا لضمان عمل المكون بشكل مستقل */
+/* All styles imported from _unified-components.css */
 
-.admin-dashboard {
-  width: 100%;
-  margin: 0 auto;
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: 100vh;
-  animation: fadeIn 0.5s ease;
-}
-
-/* Stats Cards */
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.stat-card {
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  transition: transform 0.3s ease;
-}
-
-.stat-card:hover { transform: translateY(-5px); }
-
-.stat-icon {
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem;
-  background: rgba(0, 121, 101, 0.1);
-  color: var(--primary, #007965);
-}
-
-.stat-content h3 { margin: 0; font-size: 0.9rem; color: #666; }
-.stat-value { font-size: 1.8rem; font-weight: 800; margin: 5px 0; color: #333; }
-.stat-trend { font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
-.positive { color: #28a745; }
-
-/* Sections */
-.admin-section {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-  margin-bottom: 30px;
-  overflow: hidden;
-}
-
-.section-header {
-  padding: 20px 25px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.section-header h2 {
-  font-size: 1.4rem;
-  color: var(--primary, #007965);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.section-title-with-stats {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.section-title-with-refresh {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  width: 100%;
-}
-
-/* Charts */
-.chart-container { 
-  padding: 30px; 
-  height: 300px; 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  background: linear-gradient(135deg, #f8fffe 0%, #e6f7f5 100%);
-  border-radius: 12px;
-  margin: 20px;
-  box-shadow: 0 8px 32px rgba(0, 121, 101, 0.08);
-}
-.chart-toggle {
-  background: linear-gradient(135deg, #ffffff, #f8fffe); 
-  border: 2px solid #e0f2f1; 
-  padding: 8px 16px;
-  border-radius: 8px; 
-  cursor: pointer; 
-  margin-left: 8px;
-  display: inline-flex; 
-  align-items: center; 
-  gap: 6px;
-  font-weight: 500;
-  color: #007965;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 121, 101, 0.1);
-}
-.chart-toggle:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 121, 101, 0.15);
-  border-color: #00a085;
-}
-.chart-toggle.active { 
-  background: linear-gradient(135deg, #007965, #00a085); 
-  color: white; 
-  border-color: #007965;
-  box-shadow: 0 4px 16px rgba(0, 121, 101, 0.3);
-}
-
-.chart-refresh-btn {
-  margin-right: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  min-width: 80px;
-}
-
-/* Simple CSS Charts */
-.simple-chart { 
-  display: flex; 
-  align-items: flex-end; 
-  height: 200px; 
-  gap: 30px; 
-  width: 100%; 
-  max-width: 500px; 
-  padding: 20px;
-}
-.chart-bar { 
-  flex: 1; 
-  background: linear-gradient(135deg, #f0f9f8, #e0f2f1); 
-  border-radius: 12px 12px 0 0; 
-  position: relative; 
-  height: 100%; 
-  display: flex; 
-  align-items: flex-end;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-.bar-fill { 
-  width: 100%; 
-  background: linear-gradient(135deg, #007965, #00a085, #00c9a7); 
-  border-radius: 12px 12px 0 0; 
-  transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1); 
-  position: relative;
-  box-shadow: 0 4px 16px rgba(0, 121, 101, 0.2);
-}
-.bar-fill::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #00ffcc, #00d4aa, #007965);
-  border-radius: 12px 12px 0 0;
-}
-.bar-label { 
-  position: absolute; 
-  top: -30px; 
-  left: 50%; 
-  transform: translateX(-50%); 
-  font-weight: 700; 
-  color: #007965;
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-}
-
-.pie-container { 
-  width: 200px; 
-  height: 200px; 
-  border-radius: 50%; 
-  position: relative; 
-  box-shadow: 0 8px 32px rgba(0, 121, 101, 0.15);
-  border: 4px solid white;
-}
-.pie-segment { 
-  width: 100%; 
-  height: 100%; 
-  border-radius: 50%;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.5);
-}
-.pie-legend { 
-  margin-right: 30px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-}
-.legend-item { 
-  display: flex; 
-  align-items: center; 
-  gap: 10px; 
-  font-size: 0.9rem;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s ease;
-}
-.legend-item:hover {
-  background: rgba(0, 121, 101, 0.05);
-}
-.legend-color { 
-  width: 16px; 
-  height: 16px; 
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Line Chart Styles */
-.line-svg {
-  width: 100%;
-  height: 200px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 255, 254, 0.9));
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 121, 101, 0.1);
-}
-
-.line-path {
-  fill: none;
-  stroke: url(#lineGradient);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 2px 4px rgba(0, 121, 101, 0.2));
-}
-
-.line-point {
-  fill: #007965;
-  stroke: white;
-  stroke-width: 2;
-  filter: drop-shadow(0 2px 4px rgba(0, 121, 101, 0.3));
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.line-point:hover {
-  r: 7;
-  fill: #00a085;
-  filter: drop-shadow(0 4px 8px rgba(0, 121, 101, 0.5));
-}
-
-.line-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  padding: 0 20px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #007965;
-}
-
-.line-labels span {
-  background: rgba(255, 255, 255, 0.8);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 121, 101, 0.2);
-}
-
-/* Dark Mode Styles for Admin View */
-body.dark .admin-page {
-  background-color: var(--dark-bg);
-  color: var(--dark-text-primary);
-}
-
-body.dark table {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-body.dark th {
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover));
-  color: var(--dark-text-primary);
-}
-
-body.dark td {
-  background-color: var(--dark-surface);
-  color: var(--dark-text-primary);
-  border-color: var(--dark-border);
-}
-
-body.dark tbody tr:hover {
-  background-color: var(--dark-surface-hover);
-}
-
-body.dark .input-field {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-body.dark .input-field:focus {
-  border-color: var(--dark-accent);
-  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2);
-}
-
-body.dark .btn {
-  background-color: var(--dark-accent);
-  color: var(--dark-text-primary);
-  border-color: var(--dark-accent);
-}
-
-body.dark .btn:hover {
-  background-color: var(--dark-accent-hover);
-}
-
-body.dark .stats-card {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-body.dark .stats-value {
-  color: var(--dark-accent);
-}
-
-body.dark .stats-label {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .line-labels span {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-/* Tables */
-.table-container {
-  overflow-x: auto;
-  width: 100%;
-  -webkit-overflow-scrolling: touch;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-  table-layout: fixed;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 1px solid #e0e0e0;
-}
-
-tbody tr:hover {
-  background: rgba(0, 121, 101, 0.03);
-  transition: background-color 0.2s ease;
-}
-th, td {
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap;
-  min-width: 80px;
-  vertical-align: middle;
-}
-
-td {
-  text-align: right;
-  color: #333;
-  font-weight: 500;
-}
+/* Center all table headers */
 th {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
   text-align: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  border-bottom: 2px solid rgba(255,255,255,0.2);
-  padding: 16px 12px;
-  vertical-align: middle;
-}
-
-/* Specific column widths for admin tables */
-#logged-in-users-table th:nth-child(1), #logged-in-users-table td:nth-child(1) { width: 25px; min-width: 25px; padding: 15px 5px; } /* Checkbox */
-#logged-in-users-table th:nth-child(2), #logged-in-users-table td:nth-child(2) { width: 80px; min-width: 80px; } /* ID */
-#logged-in-users-table th:nth-child(3), #logged-in-users-table td:nth-child(3) { width: 150px; min-width: 150px; } /* Name */
-#logged-in-users-table th:nth-child(4), #logged-in-users-table td:nth-child(4) { width: 200px; min-width: 200px; } /* Email */
-#logged-in-users-table th:nth-child(5), #logged-in-users-table td:nth-child(5) { width: 120px; min-width: 120px; } /* Date */
-#logged-in-users-table th:nth-child(6), #logged-in-users-table td:nth-child(6) { width: 100px; min-width: 100px; } /* Duration */
-#logged-in-users-table th:nth-child(7), #logged-in-users-table td:nth-child(7) { width: 80px; min-width: 80px; } /* Action */
-
-/* Pending subscriptions table */
-.admin-section:nth-child(4) table th:nth-child(1), .admin-section:nth-child(4) table td:nth-child(1) { width: 150px; min-width: 150px; } /* User */
-.admin-section:nth-child(4) table th:nth-child(2), .admin-section:nth-child(4) table td:nth-child(2) { width: 120px; min-width: 120px; } /* Plan */
-.admin-section:nth-child(4) table th:nth-child(3), .admin-section:nth-child(4) table td:nth-child(3) { width: 150px; min-width: 150px; } /* Transaction */
-.admin-section:nth-child(4) table th:nth-child(4), .admin-section:nth-child(4) table td:nth-child(4) { width: 100px; min-width: 100px; } /* Date */
-.admin-section:nth-child(4) table th:nth-child(5), .admin-section:nth-child(4) table td:nth-child(5) { width: 100px; min-width: 100px; } /* Actions */
-
-/* All subscriptions table */
-.admin-section:nth-child(5) table th:nth-child(1), .admin-section:nth-child(5) table td:nth-child(1) { width: 150px; min-width: 150px; } /* User */
-.admin-section:nth-child(5) table th:nth-child(2), .admin-section:nth-child(5) table td:nth-child(2) { width: 120px; min-width: 120px; } /* Plan */
-.admin-section:nth-child(5) table th:nth-child(3), .admin-section:nth-child(5) table td:nth-child(3) { width: 100px; min-width: 100px; } /* Start */
-.admin-section:nth-child(5) table th:nth-child(4), .admin-section:nth-child(5) table td:nth-child(4) { width: 100px; min-width: 100px; } /* End */
-.admin-section:nth-child(5) table th:nth-child(5), .admin-section:nth-child(5) table td:nth-child(5) { width: 100px; min-width: 100px; } /* Status */
-.admin-section:nth-child(5) table th:nth-child(6), .admin-section:nth-child(5) table td:nth-child(6) { width: 100px; min-width: 100px; } /* Actions */
-.status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: white; }
-.status-active { background: #28a745; }
-.status-pending { background: #ffc107; color: #333; }
-.status-expired { background: #dc3545; }
-.status-cancelled { background: #6c757d; }
-
-/* Buttons */
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #5a6268;
-  transform: translateY(-1px);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.small-refresh-btn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  font-size: 14px;
-}
-
-.action-btn {
-  width: 32px; height: 32px; border-radius: 6px; border: none; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center; margin-left: 5px;
-  transition: transform 0.2s;
-}
-.action-btn:hover { transform: scale(1.1); }
-.approve { background: rgba(40, 167, 69, 0.1); color: #28a745; }
-.reject { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
-.delete { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
-.deactivate { background: rgba(255, 193, 7, 0.1); color: #856404; }
-.reactivate { background: rgba(23, 162, 184, 0.1); color: #17a2b8; }
-.details { background: rgba(52, 152, 219, 0.1); color: #3498db; }
-.manual-activate { background: rgba(0, 123, 255, 0.1); color: #007bff; }
-
-/* Filters */
-.table-header-info { 
-  padding: 15px 25px; 
-  background: #fcfcfc; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 15px; 
-}
-
-.filter-select { 
-  padding: 8px 12px; 
-  border-radius: 8px; 
-  border: 1px solid #ddd; 
-  background: white; 
-  outline: none; 
-}
-
-/* New layout for users search and bulk actions */
-.users-search-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.users-search-row .users-search-input {
-  width: 250px;
-  flex-shrink: 0;
-}
-
-.users-bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.users-bulk-actions .subscription-days-input {
-  width: 180px;
-  flex-shrink: 0;
-}
-
-.btn-success {
-  background: #28a745;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.btn-success:hover:not(:disabled) {
-  background: #218838;
-  transform: translateY(-1px);
-}
-
-.btn-success:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Input fields styling */
-.subscription-days-input {
-  width: 100%;
-  height: 40px;
-  padding: 8px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  color: #333;
-  outline: none;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-}
-
-.subscription-days-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.1);
-  background: #f8fffe;
-}
-
-.subscription-days-input:hover {
-  border-color: #007965;
-}
-
-/* Users search input */
-.users-search-input {
-  width: 100%;
-  height: 40px;
-  padding: 8px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-  outline: none;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-}
-
-.users-search-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.1);
-}
-
-.users-search-input:hover {
-  border-color: #007965;
-}
-
-/* Dark Mode */
-:global(body.dark) .admin-dashboard { background: #121212; color: #eee; }
-:global(body.dark) .stat-card, :global(body.dark) .admin-section { background: #1e1e1e; box-shadow: none; border: 1px solid #333; }
-:global(body.dark) .stat-value { color: #eee; }
-:global(body.dark) th {
-  background: linear-gradient(135deg, rgba(0, 200, 150, 0.8), rgba(0, 150, 130, 0.9));
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
-:global(body.dark) td { border-bottom-color: #333; color: #ddd; }
-:global(body.dark) .section-header { border-bottom-color: #333; }
-:global(body.dark) .table-header-info { background: #252525; }
-:global(body.dark) input, :global(body.dark) select { background: #333; color: #eee; border-color: #555; }
-:global(body.dark) table { background: #1e1e1e; border-color: rgba(0, 200, 150, 0.3); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
-:global(body.dark) tbody tr:hover { background: rgba(0, 200, 150, 0.08); }
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* Responsive table behavior */
-@media (max-width: 768px) {
-  .table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  table {
-    min-width: 800px;
-    font-size: 0.9rem;
-  }
-
-  th, td {
-    padding: 12px 8px;
-    min-width: 60px;
-  }
-
-  /* Adjust column widths for mobile */
-  #logged-in-users-table th:nth-child(1), #logged-in-users-table td:nth-child(1) { width: 25px; min-width: 25px; padding: 12px 3px; }
-  #logged-in-users-table th:nth-child(2), #logged-in-users-table td:nth-child(2) { width: 70px; min-width: 70px; }
-  #logged-in-users-table th:nth-child(3), #logged-in-users-table td:nth-child(3) { width: 120px; min-width: 120px; }
-  #logged-in-users-table th:nth-child(4), #logged-in-users-table td:nth-child(4) { width: 150px; min-width: 150px; }
-  #logged-in-users-table th:nth-child(5), #logged-in-users-table td:nth-child(5) { width: 100px; min-width: 100px; }
-  #logged-in-users-table th:nth-child(6), #logged-in-users-table td:nth-child(6) { width: 80px; min-width: 80px; }
-  #logged-in-users-table th:nth-child(7), #logged-in-users-table td:nth-child(7) { width: 70px; min-width: 70px; }
-
-  .admin-section:nth-child(4) table th:nth-child(1), .admin-section:nth-child(4) table td:nth-child(1) { width: 120px; min-width: 120px; }
-  .admin-section:nth-child(4) table th:nth-child(2), .admin-section:nth-child(4) table td:nth-child(2) { width: 100px; min-width: 100px; }
-  .admin-section:nth-child(4) table th:nth-child(3), .admin-section:nth-child(4) table td:nth-child(3) { width: 120px; min-width: 120px; }
-  .admin-section:nth-child(4) table th:nth-child(4), .admin-section:nth-child(4) table td:nth-child(4) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(4) table th:nth-child(5), .admin-section:nth-child(4) table td:nth-child(5) { width: 80px; min-width: 80px; }
-
-  .admin-section:nth-child(5) table th:nth-child(1), .admin-section:nth-child(5) table td:nth-child(1) { width: 120px; min-width: 120px; }
-  .admin-section:nth-child(5) table th:nth-child(2), .admin-section:nth-child(5) table td:nth-child(2) { width: 100px; min-width: 100px; }
-  .admin-section:nth-child(5) table th:nth-child(3), .admin-section:nth-child(5) table td:nth-child(3) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(5) table th:nth-child(4), .admin-section:nth-child(5) table td:nth-child(4) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(5) table th:nth-child(5), .admin-section:nth-child(5) table td:nth-child(5) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(5) table th:nth-child(6), .admin-section:nth-child(5) table td:nth-child(6) { width: 80px; min-width: 80px; }
-
-  .table-header-info {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .table-actions {
-    width: 100%;
-  }
-
-  .users-search-input {
-    width: 100%;
-  }
-
-  .subscription-days-input,
-  .users-search-input {
-    height: 36px;
-    font-size: 13px;
-    padding: 6px 10px;
-  }
-}
-
-@media (max-width: 480px) {
-  table {
-    min-width: 750px;
-    font-size: 0.8rem;
-  }
-
-  th, td {
-    padding: 8px 6px;
-    min-width: 50px;
-  }
-
-  /* Further reduce column widths for very small screens */
-  #logged-in-users-table th:nth-child(1), #logged-in-users-table td:nth-child(1) { width: 20px; min-width: 20px; padding: 8px 2px; }
-  #logged-in-users-table th:nth-child(2), #logged-in-users-table td:nth-child(2) { width: 60px; min-width: 60px; }
-  #logged-in-users-table th:nth-child(3), #logged-in-users-table td:nth-child(3) { width: 100px; min-width: 100px; }
-  #logged-in-users-table th:nth-child(4), #logged-in-users-table td:nth-child(4) { width: 120px; min-width: 120px; }
-  #logged-in-users-table th:nth-child(5), #logged-in-users-table td:nth-child(5) { width: 80px; min-width: 80px; }
-  #logged-in-users-table th:nth-child(6), #logged-in-users-table td:nth-child(6) { width: 70px; min-width: 70px; }
-  #logged-in-users-table th:nth-child(7), #logged-in-users-table td:nth-child(7) { width: 60px; min-width: 60px; }
-
-  .admin-section:nth-child(4) table th:nth-child(1), .admin-section:nth-child(4) table td:nth-child(1) { width: 100px; min-width: 100px; }
-  .admin-section:nth-child(4) table th:nth-child(2), .admin-section:nth-child(4) table td:nth-child(2) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(4) table th:nth-child(3), .admin-section:nth-child(4) table td:nth-child(3) { width: 100px; min-width: 100px; }
-  .admin-section:nth-child(4) table th:nth-child(4), .admin-section:nth-child(4) table td:nth-child(4) { width: 70px; min-width: 70px; }
-  .admin-section:nth-child(4) table th:nth-child(5), .admin-section:nth-child(4) table td:nth-child(5) { width: 70px; min-width: 70px; }
-
-  .admin-section:nth-child(5) table th:nth-child(1), .admin-section:nth-child(5) table td:nth-child(1) { width: 100px; min-width: 100px; }
-  .admin-section:nth-child(5) table th:nth-child(2), .admin-section:nth-child(5) table td:nth-child(2) { width: 80px; min-width: 80px; }
-  .admin-section:nth-child(5) table th:nth-child(3), .admin-section:nth-child(5) table td:nth-child(3) { width: 70px; min-width: 70px; }
-  .admin-section:nth-child(5) table th:nth-child(4), .admin-section:nth-child(5) table td:nth-child(4) { width: 70px; min-width: 70px; }
-  .admin-section:nth-child(5) table th:nth-child(5), .admin-section:nth-child(5) table td:nth-child(5) { width: 70px; min-width: 70px; }
-  .admin-section:nth-child(5) table th:nth-child(6), .admin-section:nth-child(5) table td:nth-child(6) { width: 70px; min-width: 70px; }
-
-  .section-header {
-    padding: 15px;
-  }
-
-  .section-header h2 {
-    font-size: 1.2rem;
-  }
-
-  .subscription-days-input,
-  .users-search-input {
-    height: 32px;
-    font-size: 12px;
-    padding: 4px 8px;
-  }
 }
 </style>

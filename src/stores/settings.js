@@ -44,14 +44,14 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     applySettings() {
-      // Apply dark mode
+      // Apply dark mode to body (unified dark mode system uses body.dark)
       if (this.darkMode) {
         document.body.classList.add('dark')
       } else {
         document.body.classList.remove('dark')
       }
 
-      // Apply zoom level
+      // Apply zoom level (remove old, add new)
       const zoomClasses = ['zoom-8xs', 'zoom-7xs', 'zoom-6xs', 'zoom-5xs', 'zoom-xs', 'zoom-sm', 'zoom-base', 'zoom-normal', 'zoom-lg', 'zoom-xl', 'zoom-2xl', 'zoom-3xl', 'zoom-4xl', 'zoom-5xl', 'zoom-6xl']
       document.body.className = document.body.className.replace(/zoom-\w+/g, '').trim()
       document.body.classList.add(zoomClasses[this.zoomLevel] || 'zoom-normal')

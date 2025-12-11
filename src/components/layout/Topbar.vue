@@ -147,27 +147,6 @@ body.dark .topbar {
   color: var(--dark-text-primary);
 }
 
-body.dark .app-title {
-  color: var(--dark-text-primary);
-}
-
-body.dark .menu-toggle {
-  color: var(--dark-text-primary);
-}
-
-body.dark .menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-body.dark .dark-mode-toggle {
-  background: rgba(52, 152, 219, 0.6);
-  color: var(--dark-text-primary);
-}
-
-body.dark .dark-mode-toggle:hover {
-  background: rgba(52, 152, 219, 0.8);
-}
-
 /* Fix content overlap with fixed topbar */
 body {
   padding-top: 80px;

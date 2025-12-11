@@ -27,7 +27,42 @@ export const useCounterStore = defineStore('counter', () => {
   // بيانات خارجية (تأتي من صفحات أخرى عبر LocalStorage)
   const masterLimit = ref(Number(localStorage.getItem('masterLimit')) || 0);
   const currentBalance = ref(Number(localStorage.getItem('currentBalance')) || 0);
-  const totalCollected = ref(Number(localStorage.getItem('totalCollected')) || 0);
+  
+  // إجمالي المحصل يتم مزامنته مع صفحة التحصيلات
+  const totalCollected = ref(0);
+  
+  // دالة لتحميل إجمالي المحصل من صفحة التحصيلات
+  function syncTotalCollectedFromHarvest() {
+    try {
+      // جرب الحصول على القيمة المحفوظة مباشرة أولاً
+      const savedTotal = localStorage.getItem('totalCollected');
+      let newTotal = 0;
+      
+      if (savedTotal) {
+        newTotal = Number(savedTotal) || 0;
+      } else {
+        // إذا لم توجد قيمة محفوظة، احسب من البيانات الخام
+        const harvestRows = JSON.parse(localStorage.getItem('harvest_rows') || '[]');
+        newTotal = harvestRows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0);
+      }
+      
+      // تحديث القيمة فقط إذا كانت مختلفة
+      if (totalCollected.value !== newTotal) {
+        totalCollected.value = newTotal;
+        console.log('🔄 تم مزامنة إجمالي المحصل:', newTotal);
+      } else {
+        console.log('✅ إجمالي المحصل محدث بالفعل:', newTotal);
+      }
+      
+    } catch (error) {
+      console.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
+      // محاولة استخدام القيمة القديمة
+      const fallback = Number(localStorage.getItem('totalCollected')) || 0;
+      if (totalCollected.value !== fallback) {
+        totalCollected.value = fallback;
+      }
+    }
+  }
 
   // --- الحسابات (Getters/Computed) ---
 
@@ -79,14 +114,12 @@ export const useCounterStore = defineStore('counter', () => {
   // --- الإجراءات (Actions) ---
 
   function resetAll() {
-    if (confirm('سيتم تفريغ جميع حقول العدادات! هل أنت متأكد؟')) {
-      denominations.forEach(val => {
-        counter1.value[val] = 0;
-        counter2.value[val] = 0;
-      });
-      // حفظ الحالة الفارغة
-      saveToStorage();
-    }
+    denominations.forEach(val => {
+      counter1.value[val] = 0;
+      counter2.value[val] = 0;
+    });
+    // حفظ الحالة الفارغة
+    saveToStorage();
   }
 
   function saveToStorage() {
@@ -103,10 +136,45 @@ export const useCounterStore = defineStore('counter', () => {
     return Number(num).toLocaleString('en-US');
   }
 
+  // دالة لتحديث إجمالي المحصل من صفحة التحصيلات
+  function updateTotalCollected() {
+    syncTotalCollectedFromHarvest();
+  }
+
   // --- المراقبة (Auto-Save) ---
   watch([counter1, counter2], () => {
     saveToStorage();
   }, { deep: true });
+
+  // مراقبة تغييرات localStorage لمزامنة إجمالي المحصل
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'harvest_rows' || e.key === 'totalCollected') {
+      syncTotalCollectedFromHarvest();
+    }
+  });
+
+  // مراقبة تغييرات الصفحة النشطة لإعادة المزامنة
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // عندما تصبح الصفحة نشطة، قم بالمزامنة
+      setTimeout(() => {
+        syncTotalCollectedFromHarvest();
+      }, 100);
+    }
+  });
+
+  // مراقبة تنقل الصفحة (page navigation) لمزامنة البيانات
+  window.addEventListener('focus', () => {
+    syncTotalCollectedFromHarvest();
+  });
+
+  // إضافة مستمع للأحداث المخصصة من harvest store
+  window.addEventListener('harvestDataUpdated', (e) => {
+    if (e.detail && e.detail.totalCollected !== undefined) {
+      totalCollected.value = e.detail.totalCollected;
+      console.log('✅ تم تحديث إجمالي المحصل عبر الحدث المخصص:', e.detail.totalCollected);
+    }
+  });
 
   return {
     denominations,
@@ -124,6 +192,8 @@ export const useCounterStore = defineStore('counter', () => {
     statusDiff,
     status,
     resetAll,
-    formatNumber
+    formatNumber,
+    updateTotalCollected,
+    syncTotalCollectedFromHarvest
   };
 });

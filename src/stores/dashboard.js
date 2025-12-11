@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
+import api from '@/services/api';
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // --- الحالة (State) ---
   const clientData = ref('');
+  const subscriptionStatus = ref(null);
+  const isLoadingSubscription = ref(false);
   let saveTimeout = null;
 
   // استعادة البيانات عند التحميل (ما لم يتم مسحها في نفس الجلسة)
@@ -62,7 +65,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   function clearData() {
     clientData.value = "";
     localStorage.removeItem("clientData");
-    localStorage.removeItem("harvestData"); // مسح البيانات المرتبطة في الصفحة الأخرى
     sessionStorage.setItem("dataCleared", "true"); // وضع علامة لمنع الاستعادة
   }
 
@@ -106,13 +108,32 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }, 1000);
   });
 
+  // 4. تحميل حالة الاشتراك (اختياري)
+  async function loadSubscriptionStatus() {
+    try {
+      isLoadingSubscription.value = true;
+      const { user } = await api.auth.getUser();
+      if (user) {
+        const { subscription } = await api.subscriptions.getSubscription(user.id);
+        subscriptionStatus.value = subscription;
+      }
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    } finally {
+      isLoadingSubscription.value = false;
+    }
+  }
+
   // استدعاء التهيئة
   init();
 
   return {
     clientData,
+    subscriptionStatus,
+    isLoadingSubscription,
     pasteData,
     clearData,
-    processAndSave
+    processAndSave,
+    loadSubscriptionStatus
   };
 });

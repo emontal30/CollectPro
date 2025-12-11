@@ -3,9 +3,9 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './assets/css/main.css'
-import './assets/css/dark-mode.css'
-import './assets/css/sidebar-dark-mode.css'
-import './assets/css/unified-dark-mode.css'
+import './assets/css/unified-dark-mode.css' /* Single source of truth for dark mode */
+import { startAutoCleaning } from './services/cacheManager'
+import { setupCacheMonitor } from './services/cacheMonitor'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -20,5 +20,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault(); // Prevent the default browser prompt
   window.deferredPrompt = e; // Store the event globally for components to use
 });
+
+// 🚀 بدء نظام إدارة الكاش الذكي
+console.log('🧠 تفعيل نظام إدارة الكاش الذكي');
+startAutoCleaning(5 * 60 * 1000); // تنظيف كل 5 دقائق
+
+// 🧪 تفعيل مراقب الكاش (للتطوير)
+if (import.meta.env.DEV) {
+  setupCacheMonitor();
+}
 
 app.mount('#app')

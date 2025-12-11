@@ -2,13 +2,27 @@ import { authService } from './authService.js'
 
 export const archiveService = {
   async getAvailableDates(userId) {
-    const { data, error } = await authService.supabase
-      .from('archive_data')
-      .select('archive_date')
-      .eq('user_id', userId)
-      .order('archive_date', { ascending: true })
+    try {
+      console.log('🔍 Fetching available archive dates for user:', userId);
+      
+      const { data, error } = await authService.supabase
+        .from('archive_data')
+        .select('archive_date')
+        .eq('user_id', userId)
+        .order('archive_date', { ascending: false });
 
-    return { dates: data?.map(item => item.archive_date) || [], error }
+      if (error) {
+        console.error('❌ Error fetching archive dates:', error);
+        return { dates: [], error };
+      }
+
+      const dates = [...new Set(data?.map(item => item.archive_date) || [])];
+      console.log('✅ Archive dates fetched:', dates);
+      return { dates, error };
+    } catch (err) {
+      console.error('❌ Exception in getAvailableDates:', err);
+      return { dates: [], error: err };
+    }
   },
 
   async getArchiveByDate(userId, date) {

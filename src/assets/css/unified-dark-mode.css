@@ -1,38 +1,67 @@
 /* ====== UNIFIED DARK MODE SYSTEM ====== */
-/* This file provides a centralized dark mode system for all components */
+/* Single source of truth - Consolidated from dark-mode.css & sidebar-dark-mode.css */
+/* NO DUPLICATES. Optimized for performance and maintainability */
 
-/* CSS Variables for Dark Mode */
 :root {
-  /* Dark Mode Color Palette */
+  /* Color Palette */
   --dark-bg: #0f0f0f;
   --dark-surface: #1a1a1a;
   --dark-surface-hover: #252525;
   --dark-surface-light: #2a2a2a;
   --dark-border: #333333;
-  --dark-border-light: #444444;
   --dark-text-primary: #ffffff;
   --dark-text-secondary: #b0b0b0;
   --dark-text-muted: #808080;
+  /* Accent & Status */
   --dark-accent: #007965;
   --dark-accent-hover: #005a4b;
   --dark-success: #27ae60;
   --dark-warning: #f39c12;
   --dark-danger: #e74c3c;
   --dark-info: #3498db;
+  /* Effects */
   --dark-overlay: rgba(0, 0, 0, 0.6);
   --dark-shadow: rgba(0, 0, 0, 0.3);
   --dark-shadow-hover: rgba(0, 0, 0, 0.4);
 }
 
-/* Global Dark Mode Base Styles */
+/* ====== GLOBAL BASE ====== */
 body.dark {
+  background-color: var(--dark-bg);
+  color: var(--dark-text-primary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* ====== LAYOUT & CONTAINERS ====== */
+body.dark .main-container,
+body.dark .container,
+body.dark .content,
+body.dark .admin-page,
+body.dark .admin-dashboard,
+body.dark .harvest-page,
+body.dark .dashboard-page,
+body.dark .archive-page {
   background-color: var(--dark-bg);
   color: var(--dark-text-primary);
 }
 
-/* ====== UNIFIED COMPONENT STYLES ====== */
+body.dark .page-header {
+   background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover)) !important;
+   border-color: var(--dark-border);
+}
 
-/* Cards and Containers */
+body.dark .sidebar {
+  background: #004d3d !important;
+  border-right: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .sidebar-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--dark-border) !important;
+}
+
+/* ====== CARDS & SURFACES ====== */
 body.dark .card,
 body.dark .summary-card,
 body.dark .stats-card,
@@ -42,13 +71,14 @@ body.dark .subscription-card,
 body.dark .payment-card,
 body.dark .admin-section,
 body.dark .counter-card,
-body.dark .summary-section,
 body.dark .input-container,
-body.dark .help-card {
+body.dark .help-card,
+body.dark .summary-item {
   background-color: var(--dark-surface) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text-primary) !important;
   box-shadow: 0 4px 12px var(--dark-shadow) !important;
+  transition: all 0.15s ease;
 }
 
 body.dark .card:hover,
@@ -59,7 +89,7 @@ body.dark .stats-card:hover {
   box-shadow: 0 6px 20px var(--dark-shadow-hover);
 }
 
-/* Tables */
+/* ====== TABLES ====== */
 body.dark table {
   background-color: var(--dark-surface);
   border-color: var(--dark-border);
@@ -70,6 +100,7 @@ body.dark th {
   background-color: var(--dark-accent);
   color: var(--dark-text-primary);
   border-color: var(--dark-border);
+  font-weight: 600;
 }
 
 body.dark td {
@@ -86,20 +117,62 @@ body.dark tr:nth-child(even) td {
   background-color: var(--dark-surface);
 }
 
-/* Form Elements */
+body.dark .collections-table,
+body.dark .archive-table,
+body.dark .counter-table,
+body.dark .categories-table {
+  background-color: var(--dark-surface);
+  border-color: var(--dark-border) !important;
+}
+
+body.dark .collections-table th,
+body.dark .archive-table th,
+body.dark .counter-table th,
+body.dark .categories-table th {
+  background-color: var(--dark-accent);
+  color: var(--dark-text-primary) !important;
+  border-color: var(--dark-border) !important;
+}
+
+body.dark .counter-table td,
+body.dark .categories-table td {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text-primary) !important;
+  border-color: var(--dark-border) !important;
+}
+
+body.dark .total-row {
+  background: var(--dark-accent);
+  color: var(--dark-text-primary);
+  font-weight: 600;
+}
+
+body.dark .total-row td {
+  background-color: var(--dark-accent);
+  border-color: rgba(255,255,255,0.3);
+}
+
+body.dark .date-cell {
+  color: var(--dark-text-secondary);
+}
+
+/* ====== FORM ELEMENTS ====== */
 body.dark input,
 body.dark textarea,
 body.dark select,
-body.dark .data-input {
+body.dark .data-input,
+body.dark .input-field {
   background-color: var(--dark-surface) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text-primary) !important;
+  transition: all 0.15s ease;
 }
 
 body.dark input:focus,
 body.dark textarea:focus,
 body.dark select:focus,
-body.dark .data-input:focus {
+body.dark .data-input:focus,
+body.dark .input-field:focus {
   border-color: var(--dark-accent) !important;
   box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2) !important;
   background-color: var(--dark-surface) !important;
@@ -112,34 +185,24 @@ body.dark .input-field::placeholder {
   color: var(--dark-text-muted) !important;
 }
 
-body.dark .input-field {
-  background-color: var(--dark-surface) !important;
-  border-color: var(--dark-border) !important;
-  color: var(--dark-text-primary) !important;
-}
-
-body.dark .input-field:focus {
-  border-color: var(--dark-accent) !important;
-  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2) !important;
-}
-
 body.dark .readonly-input {
   background-color: var(--dark-surface-light) !important;
   color: var(--dark-text-secondary) !important;
+  cursor: not-allowed;
 }
 
-/* Buttons */
+/* ====== BUTTONS ====== */
 body.dark .btn,
 body.dark button {
   background-color: var(--dark-accent);
   color: var(--dark-text-primary);
   border-color: var(--dark-accent);
+  transition: all 0.15s ease;
 }
 
 body.dark .btn:hover,
 body.dark button:hover {
   background-color: var(--dark-accent-hover);
-  color: var(--dark-text-primary);
 }
 
 body.dark .btn-primary {
@@ -155,6 +218,7 @@ body.dark .btn-success {
 body.dark .btn-warning {
   background-color: var(--dark-warning);
   border-color: var(--dark-warning);
+  color: var(--dark-bg);
 }
 
 body.dark .btn-danger {
@@ -167,7 +231,26 @@ body.dark .btn-info {
   border-color: var(--dark-info);
 }
 
-/* Status and Badges */
+body.dark .logout-btn {
+  background: var(--dark-danger) !important;
+  color: var(--dark-text-primary) !important;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4) !important;
+}
+
+body.dark .logout-btn:hover {
+  background: #c82333 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.6) !important;
+}
+
+body.dark .logout-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5) !important;
+}
+
+/* ====== BADGES & STATUS ====== */
 body.dark .badge,
 body.dark .status-badge,
 body.dark .tag {
@@ -195,7 +278,22 @@ body.dark .status-cancelled {
   color: var(--dark-text-primary);
 }
 
-/* Headers and Titles */
+body.dark .status-zero {
+  background-color: var(--dark-success);
+  color: var(--dark-text-primary);
+}
+
+body.dark .status-positive {
+  background-color: var(--dark-info);
+  color: var(--dark-text-primary);
+}
+
+body.dark .status-negative {
+  background-color: var(--dark-danger);
+  color: var(--dark-text-primary);
+}
+
+/* ====== TYPOGRAPHY ====== */
 body.dark h1,
 body.dark h2,
 body.dark h3,
@@ -204,16 +302,30 @@ body.dark h5,
 body.dark h6,
 body.dark .counter-title,
 body.dark .summary-title,
-body.dark .categories-title {
-  color: var(--dark-text-primary) !important;
-}
-
+body.dark .categories-title,
 body.dark .page-title,
 body.dark .section-title {
   color: var(--dark-text-primary) !important;
+  transition: color 0.15s ease;
 }
 
-/* Navigation */
+body.dark .counter-title,
+body.dark .summary-title,
+body.dark .categories-title,
+body.dark .plan-header {
+  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover)) !important;
+}
+
+body.dark .summary-value,
+body.dark .stats-value {
+  color: var(--dark-accent) !important;
+}
+
+body.dark .stats-label {
+  color: var(--dark-text-secondary) !important;
+}
+
+/* ====== NAVIGATION ====== */
 body.dark .nav,
 body.dark .navbar {
   background-color: var(--dark-surface);
@@ -223,6 +335,7 @@ body.dark .navbar {
 body.dark .nav-link,
 body.dark .navbar-link {
   color: var(--dark-text-secondary);
+  transition: all 0.15s ease;
 }
 
 body.dark .nav-link:hover,
@@ -232,7 +345,22 @@ body.dark .nav-link.active {
   background-color: var(--dark-surface-hover);
 }
 
-/* Modals and Overlays */
+body.dark .nav-links a {
+  color: var(--dark-text-primary) !important;
+  transition: all 0.15s ease;
+}
+
+body.dark .nav-links a:hover,
+body.dark .nav-links a.active {
+  background: rgba(0,200,150,0.2) !important;
+  border-left-color: var(--dark-accent) !important;
+}
+
+body.dark .nav-links a::before {
+  background: rgba(255,255,255,0.1) !important;
+}
+
+/* ====== MODALS & OVERLAYS ====== */
 body.dark .modal,
 body.dark .modal-content {
   background-color: var(--dark-surface);
@@ -250,7 +378,7 @@ body.dark .overlay {
   background-color: var(--dark-overlay);
 }
 
-/* Alerts and Notifications */
+/* ====== ALERTS & NOTIFICATIONS ====== */
 body.dark .alert,
 body.dark .notification,
 body.dark .toast {
@@ -284,7 +412,7 @@ body.dark .alert-info {
   color: var(--dark-info);
 }
 
-/* Progress Bars */
+/* ====== PROGRESS BARS ====== */
 body.dark .progress {
   background-color: var(--dark-surface);
 }
@@ -293,7 +421,7 @@ body.dark .progress-bar {
   background-color: var(--dark-accent);
 }
 
-/* Dropdowns and Menus */
+/* ====== DROPDOWNS & MENUS ====== */
 body.dark .dropdown,
 body.dark .dropdown-menu {
   background-color: var(--dark-surface);
@@ -303,6 +431,7 @@ body.dark .dropdown-menu {
 
 body.dark .dropdown-item {
   color: var(--dark-text-secondary);
+  transition: all 0.15s ease;
 }
 
 body.dark .dropdown-item:hover {
@@ -310,7 +439,7 @@ body.dark .dropdown-item:hover {
   color: var(--dark-text-primary);
 }
 
-/* Pagination */
+/* ====== PAGINATION ====== */
 body.dark .pagination {
   background-color: var(--dark-surface);
 }
@@ -319,6 +448,7 @@ body.dark .page-link {
   background-color: var(--dark-surface);
   color: var(--dark-text-secondary);
   border-color: var(--dark-border);
+  transition: all 0.15s ease;
 }
 
 body.dark .page-link:hover {
@@ -329,15 +459,15 @@ body.dark .page-link:hover {
 body.dark .page-item.active .page-link {
   background-color: var(--dark-accent);
   border-color: var(--dark-accent);
-  color: var(--dark-text-primary);
 }
 
-/* Search and Filter Elements */
+/* ====== SEARCH & FILTERS ====== */
 body.dark .search-input,
 body.dark .filter-input {
   background-color: var(--dark-surface);
   border-color: var(--dark-border);
   color: var(--dark-text-primary);
+  transition: all 0.15s ease;
 }
 
 body.dark .search-input:focus,
@@ -346,7 +476,7 @@ body.dark .filter-input:focus {
   box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2);
 }
 
-/* Scrollbars */
+/* ====== SCROLLBARS ====== */
 body.dark ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -359,18 +489,710 @@ body.dark ::-webkit-scrollbar-track {
 body.dark ::-webkit-scrollbar-thumb {
   background-color: var(--dark-border);
   border-radius: 4px;
+  transition: background-color 0.15s ease;
 }
 
 body.dark ::-webkit-scrollbar-thumb:hover {
   background-color: var(--dark-text-muted);
 }
 
-/* Transitions */
-body.dark * {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+/* ====== SIDEBAR USER COMPONENTS ====== */
+body.dark .user-box {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: var(--dark-border) !important;
+  transition: all 0.15s ease;
 }
 
-/* Print Styles for Dark Mode */
+body.dark .user-box:hover {
+  background: rgba(255,255,255,0.08) !important;
+}
+
+body.dark .user-data-container {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--dark-border) !important;
+  transition: all 0.15s ease;
+}
+
+body.dark .user-data-container:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: var(--dark-accent) !important;
+}
+
+body.dark .user-name {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .user-email {
+  color: var(--dark-text-secondary) !important;
+}
+
+body.dark .user-id {
+  background: rgba(39, 174, 96, 0.2) !important;
+  color: #fff !important;
+  border: 1px solid rgba(39, 174, 96, 0.4) !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-weight: 500;
+}
+
+/* ====== SUBSCRIPTION COMPONENTS ====== */
+
+/* إصلاح الوضع الليلي في صفحة اشتراكي */
+body.dark .subscription-card {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .subscription-details {
+  background: var(--dark-surface-light) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .detail-row {
+  border-bottom: 1px solid var(--dark-border) !important;
+}
+
+body.dark .detail-label {
+  color: var(--dark-text-secondary) !important;
+}
+
+body.dark .detail-value {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text-primary) !important;
+  border: 1px solid var(--dark-border) !important;
+}
+
+body.dark .subscription-history {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .history-header {
+  background: var(--dark-surface-light) !important;
+  border-bottom: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .table-container {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .modern-table {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .modern-table th {
+  background: var(--dark-surface-light) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .modern-table td {
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .plan-name {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .plan-duration {
+  background: rgba(0, 121, 101, 0.2) !important;
+  color: var(--dark-accent) !important;
+}
+
+body.dark .date-cell {
+  color: var(--dark-text-secondary) !important;
+}
+
+body.dark .modal-content {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text-primary) !important;
+  border: 1px solid var(--dark-border) !important;
+}
+
+body.dark .modal-header {
+  background: var(--dark-surface-light) !important;
+  border-bottom: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .modal-footer {
+  border-top: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .renew-plan {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .renew-plan:hover {
+  border-color: var(--dark-accent) !important;
+  box-shadow: 0 5px 15px var(--dark-shadow) !important;
+}
+
+/* تحسينات خطط الأسعار في الوضع الليلي */
+body.dark .plan-price {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .price {
+  color: var(--dark-accent) !important;
+  text-shadow: 0 0 5px rgba(0, 121, 101, 0.3);
+}
+
+body.dark .currency,
+body.dark .period {
+  color: var(--dark-text-secondary) !important;
+}
+
+/* تحسينات وضوح النص في صفحة الاشتراكات */
+body.dark .plan-features li {
+  color: var(--dark-text-primary) !important;
+  font-weight: 500 !important;
+}
+
+body.dark .plan-features i {
+  color: var(--dark-accent) !important;
+  opacity: 0.9;
+}
+
+body.dark .featured-badge {
+  background: var(--dark-accent) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+/* تحسينات خلفية ملخص البيان في صفحة التحصيلات */
+
+/* إصلاح التكرار في حاويات ملخص إجمالي وملخص البيان */
+body.dark .summary-grid {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  color: var(--dark-text-primary) !important;
+}
+
+
+body.dark .field-header {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .field-icon {
+  color: var(--dark-accent) !important;
+}
+
+body.dark .calc-field {
+  background: var(--dark-surface-light) !important;
+  color: var(--dark-text-primary) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  display: inline-block !important;
+  min-width: 100px !important;
+  text-align: center !important;
+}
+
+
+body.dark .summary-divider {
+  background: linear-gradient(90deg, transparent, var(--dark-border), transparent) !important;
+}
+body.dark .summary-container {
+  background: var(--dark-surface) !important;
+  color: var(--dark-text-primary) !important;
+  border: 1px solid var(--dark-border) !important;
+}
+
+body.dark .master-limit-field,
+body.dark .current-balance-field,
+body.dark .reset-amount-field,
+body.dark .total-collected-field,
+body.dark .reset-status-field {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+/* تحسينات خلفية ملخص إجمالي في صفحة الكاونتر */
+
+/* تعديل مربعات ملخص إجمالي لتكون بجانب بعضها البعض مع أخذ حيز الصف بالكامل */
+body.dark .summary-section {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 0 !important;
+  padding: 25px !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .summary-title {
+  color: var(--dark-text-primary) !important;
+  background: var(--dark-accent) !important;
+  text-align: center !important;
+  font-size: 1.1rem !important;
+  margin: 0 0 20px 0 !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+}
+
+/* تعديل صفوف الملخص لتكون بعرض الصف بالكامل */
+body.dark .summary-row {
+  display: flex !important;
+  width: 100% !important;
+  gap: 15px !important;
+  margin-bottom: 20px !important;
+  background: transparent !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .summary-row-3 {
+  justify-content: space-between !important;
+}
+
+body.dark .summary-row-3 .summary-item {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* تحسين شكل المربعات */
+body.dark .summary-item {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 8px !important;
+  padding: 15px !important;
+  text-align: center !important;
+  box-shadow: 0 2px 8px var(--dark-shadow) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .summary-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .summary-label {
+  color: var(--dark-text-secondary) !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+body.dark .summary-value {
+  color: var(--dark-text-primary) !important;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+}
+
+/* تحسين التناسق في مربعات ملخص إجمالي */
+
+body.dark .summary-item-total {
+  background: linear-gradient(135deg, var(--dark-surface), rgba(0,121,101,0.2)) !important;
+  border: 2px solid var(--dark-accent) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .summary-item-collected {
+  background: linear-gradient(135deg, var(--dark-surface), rgba(0,121,101,0.2)) !important;
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .summary-item-clearance {
+  background: linear-gradient(135deg, var(--dark-surface), rgba(0,121,101,0.2)) !important;
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .summary-item-status {
+  background: linear-gradient(to top, rgba(243,156,18,0.15), var(--dark-surface)) !important;
+  border: 1px solid rgba(243,156,18,0.3) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+/* تحسين التكرار في بنية العداد الأول والثاني */
+body.dark .second-counter-container {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .total-cell {
+  background: var(--dark-surface-light) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .highlight-text {
+  color: var(--dark-accent) !important;
+}
+
+body.dark .category-label {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .num {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .currency-label {
+  color: var(--dark-accent) !important;
+  font-weight: 600 !important;
+}
+
+/* تحسين التكرار في صفحة عداد الأموال */
+body.dark .counter-card {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .input-field,
+body.dark .settings-input {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .input-field:focus,
+body.dark .settings-input:focus {
+  border-color: var(--dark-accent) !important;
+  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2) !important;
+}
+
+body.dark .categories-section {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 10px 30px var(--dark-shadow) !important;
+}
+
+body.dark .categories-summary {
+  background: transparent !important;
+}
+
+body.dark .categories-title {
+  color: var(--dark-text-primary) !important;
+  background: var(--dark-accent) !important;
+}
+
+body.dark .categories-totals {
+  background: var(--dark-surface-light) !important;
+  border-top: 2px solid var(--dark-accent) !important;
+}
+
+/* إصلاح التكرار في حاويات وجداول صفحة عداد الأموال */
+body.dark .cp-table {
+  background: var(--dark-surface) !important;
+}
+
+body.dark .table-wrap {
+  background: var(--dark-surface) !important;
+}
+
+/* إصلاح الخلفية البيضاء أسفل العداد الأول والثاني */
+body.dark .counter-totals {
+  background: var(--dark-surface-light) !important;
+  border-top: 2px solid var(--dark-accent) !important;
+}
+
+body.dark .counter-total {
+  background: transparent !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .counter-total-label {
+  color: var(--dark-text-secondary) !important;
+}
+
+body.dark .counter-total-value {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .secondary-val {
+  color: var(--dark-text-secondary) !important;
+}
+
+/* تحسينات مربع الحالة في صفحة الكاونتر */
+
+/* تحسينات لوحة التحكم */
+
+/* إصلاح مشكلة البحث في صفحة لوحة التحكم */
+body.dark .table-header-info {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 8px !important;
+  padding: 15px !important;
+  margin-bottom: 15px !important;
+}
+
+body.dark .table-actions {
+  background: transparent !important;
+}
+
+body.dark .users-search-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+body.dark .users-bulk-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+
+body.dark .users-header-stats {
+  background: var(--dark-accent) !important;
+  color: var(--dark-text-primary) !important;
+  padding: 5px 10px !important;
+  border-radius: 15px !important;
+  font-size: 0.9rem !important;
+}
+body.dark .admin-dashboard {
+  background: var(--dark-bg) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .admin-section {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .section-header {
+  background: var(--dark-surface-light) !important;
+  border-bottom: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .stat-card {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+body.dark .chart-container {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+}
+
+body.dark .table-container {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+}
+
+body.dark .chart-toggle {
+  background: var(--dark-surface-light) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .chart-toggle:hover {
+  background: var(--dark-surface-hover) !important;
+}
+
+body.dark .chart-toggle.active {
+  background: var(--dark-accent) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .subscription-days-input {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .users-search-input {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .filter-select {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text-primary) !important;
+}
+body.dark .subscription-container {
+  background: rgba(0, 121, 101, 0.2) !important;
+  border-color: var(--dark-accent) !important;
+  transition: all 0.15s ease;
+}
+
+body.dark .subscription-container:hover {
+  background: rgba(0, 121, 101, 0.3) !important;
+  border-color: var(--dark-accent-hover) !important;
+}
+
+body.dark .subscription-title {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .subscription-days-simple {
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .subscription-days-simple i {
+  color: var(--dark-text-primary) !important;
+}
+
+/* ====== LOGOUT COMPONENTS ====== */
+body.dark .logout-container {
+  background: rgba(220, 53, 69, 0.1) !important;
+  border-color: var(--dark-border) !important;
+  transition: all 0.15s ease;
+}
+
+body.dark .logout-container:hover {
+  background: rgba(220, 53, 69, 0.2) !important;
+  border-color: var(--dark-danger) !important;
+}
+
+/* ====== DARK MODE TOGGLE ====== */
+body.dark .dark-mode-toggle,
+body.dark .dark-mode-toggle-small {
+  color: var(--dark-text-primary) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+body.dark .dark-mode-toggle:hover,
+body.dark .dark-mode-toggle-small:hover {
+  background: transparent !important;
+  border: none !important;
+}
+
+body.dark .dark-mode-toggle:active,
+body.dark .dark-mode-toggle-small:active {
+  background: transparent !important;
+}
+
+/* Light mode toggle styling */
+.dark-mode-toggle-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  transition: none;
+  font-size: 18px;
+  box-shadow: none;
+  padding: 0;
+}
+
+.dark-mode-toggle-small:hover {
+  border: none;
+  box-shadow: none;
+  transform: none;
+  background: transparent;
+}
+
+.dark-mode-toggle-small:active {
+  transform: none;
+  background: transparent;
+}
+
+/* ====== FAQ & ACCORDION ====== */
+body.dark .faq-section {
+  background-color: var(--dark-surface);
+}
+
+body.dark .faq-section h2 {
+  color: var(--dark-text-primary);
+}
+
+body.dark .faq-item,
+body.dark .faq-question {
+  background-color: var(--dark-surface);
+  transition: all 0.15s ease;
+}
+
+body.dark .faq-question:hover {
+  background-color: var(--dark-surface-hover);
+}
+
+body.dark .faq-question h3 {
+  color: var(--dark-text-primary);
+}
+
+body.dark .faq-answer {
+  background-color: var(--dark-surface);
+  color: var(--dark-text-secondary);
+}
+
+body.dark .faq-icon {
+  color: var(--dark-accent);
+}
+
+/* ====== PAYMENT ELEMENTS ====== */
+body.dark .payment-option {
+  background-color: var(--dark-surface-light);
+  transition: all 0.15s ease;
+}
+
+body.dark .payment-option:hover,
+body.dark .payment-option.active {
+  border-color: var(--dark-accent);
+  background-color: var(--dark-surface);
+}
+
+body.dark .payment-steps {
+  background-color: var(--dark-surface-light);
+}
+
+body.dark .payment-steps li,
+body.dark .payment-details p {
+  color: var(--dark-text-secondary);
+}
+
+/* ====== COUNTERS & STATS ====== */
+body.dark .counter-totals {
+  background-color: var(--dark-surface-light);
+}
+
+body.dark .counter-total-value {
+  color: var(--dark-text-primary);
+}
+
+/* ====== HARVEST COMPONENTS ====== */
+body.dark .negative-net {
+  background: rgba(231, 76, 60, 0.2) !important;
+}
+
+/* ====== SMOOTH TRANSITIONS ====== */
+body.dark * {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+}
+
+/* ====== PRINT STYLES ====== */
 @media print {
   body.dark {
     background-color: white !important;
@@ -384,179 +1206,11 @@ body.dark * {
   }
 }
 
-/* ====== COMPONENT-SPECIFIC UNIFIED STYLES ====== */
-
-/* Specific Components */
-body.dark .counter-card,
-body.dark .summary-section,
-body.dark .help-card,
-body.dark .collections-table,
-body.dark .archive-table,
-body.dark .counter-table,
-body.dark .summary-item {
-  background-color: var(--dark-surface) !important;
-  border-color: var(--dark-border) !important;
-}
-
-body.dark .counter-title,
-body.dark .summary-title,
-body.dark .categories-title,
-body.dark .plan-header {
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-hover)) !important;
-  color: var(--dark-text-primary) !important;
-}
-
-body.dark .summary-value {
-  color: var(--dark-accent) !important;
-}
-
-body.dark .total-row {
-  background: var(--dark-accent);
-  color: var(--dark-text-primary);
-}
-
-body.dark .total-row td {
-  border-color: rgba(255,255,255,0.3);
-}
-
-body.dark .status-zero {
-  background-color: var(--dark-success);
-  color: var(--dark-text-primary);
-}
-
-body.dark .status-positive {
-  background-color: var(--dark-info);
-  color: var(--dark-text-primary);
-}
-
-body.dark .status-negative {
-  background-color: var(--dark-danger);
-  color: var(--dark-text-primary);
-}
-
-/* Layout Elements */
-body.dark .admin-dashboard {
-  background: var(--dark-bg);
-  color: var(--dark-text-primary);
-}
-
-body.dark .admin-page,
-body.dark .harvest-page,
-body.dark .dashboard-page,
-body.dark .archive-page {
-  background-color: var(--dark-bg);
-  color: var(--dark-text-primary);
-}
-
-body.dark .topbar {
-  background: linear-gradient(135deg, var(--dark-surface), var(--dark-surface-hover));
-}
-
-body.dark .sidebar {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-/* Date and Time Elements */
-body.dark .date-cell {
-  color: var(--dark-text-secondary);
-}
-
-/* FAQ and Accordion Elements */
-body.dark .faq-section {
-  background-color: var(--dark-surface);
-}
-
-body.dark .faq-section h2 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .faq-item {
-  background-color: var(--dark-surface);
-}
-
-body.dark .faq-question {
-  background-color: var(--dark-surface);
-}
-
-body.dark .faq-question:hover {
-  background-color: var(--dark-surface-hover);
-}
-
-body.dark .faq-question h3 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .faq-answer {
-  background-color: var(--dark-surface);
-}
-
-body.dark .faq-answer p {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .faq-icon {
-  color: var(--dark-accent);
-}
-
-/* Payment and Subscription Elements */
-body.dark .payment-option {
-  background-color: var(--dark-surface-light);
-}
-
-body.dark .payment-option:hover,
-body.dark .payment-option.active {
-  border-color: var(--dark-accent);
-}
-
-body.dark .payment-steps {
-  background-color: var(--dark-surface-light);
-}
-
-body.dark .payment-steps li,
-body.dark .payment-details p {
-  color: var(--dark-text-secondary);
-}
-
-/* Stats and Metrics */
-body.dark .stats-card {
-  background-color: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-body.dark .stats-value {
-  color: var(--dark-accent);
-}
-
-body.dark .stats-label {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .counter-totals {
-  background-color: var(--dark-surface-light);
-}
-
-body.dark .counter-total-value {
-  color: var(--dark-text-primary);
-}
-
-/* Status Messages */
-body.dark .status-message {
-  color: var(--dark-text-primary);
-}
-
-body.dark .status-success {
-  background-color: var(--dark-success);
-  color: var(--dark-text-primary);
-}
-
-body.dark .status-warning {
-  background-color: var(--dark-warning);
-  color: var(--dark-bg);
-}
-
-body.dark .status-error {
-  background-color: var(--dark-danger);
-  color: var(--dark-text-primary);
+/* ====== RESPONSIVE ====== */
+@media (max-width: 768px) {
+  body.dark input,
+  body.dark textarea,
+  body.dark select {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
 }

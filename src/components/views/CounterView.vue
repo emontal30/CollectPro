@@ -12,7 +12,7 @@
         <div class="counter-card">
           <h2 class="counter-title"><span>العداد الأول</span></h2>
           <div class="cp-table">
-            <div class="overflow-x-auto w-full">
+            <div class="table-wrap w-full">
               <table class="counter-table w-full">
                 <thead>
                   <tr>
@@ -27,13 +27,15 @@
                       {{ store.formatNumber(val * (store.counter1[val] || 0)) }}
                     </td>
                     <td>
-                      <input 
-                        v-model.number="store.counter1[val]" 
-                        type="number" 
-                        class="input-field" 
-                        min="0" 
-                        placeholder="0"
-                      >
+                      <input
+                        :value="formatWithCommas(store.counter1[val])"
+                        @input="onRawInput($event, val, 1)"
+                        @blur="onBlurFormat(val, 1)"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9,]*"
+                        class="input-field centered-number"
+                      />
                     </td>
                     <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
                   </tr>
@@ -41,25 +43,26 @@
               </table>
             </div>
           </div>
+          <!-- شريط إجمالي العداد الأول -->
           <div class="counter-totals">
             <div class="counter-total">
-              <div class="counter-total-label">إجمالي العداد الأول</div>
+              <div class="counter-total-label"><i class="fas fa-calculator"></i> الإجمالي</div>
               <div class="counter-total-value">{{ store.formatNumber(store.total1) }} <span class="currency-label">EG</span></div>
             </div>
             <div class="counter-total">
-              <div class="counter-total-label">اجمالى الفكه :</div>
-              <div class="counter-total-value secondary-val">{{ store.formatNumber(store.smallCount1) }} <span class="currency-label">EG</span></div>
+              <div class="counter-total-label"><i class="fas fa-coins"></i> الفكة</div>
+              <div class="counter-total-value small-text">{{ store.formatNumber(store.smallCount1) }} <span class="currency-label">EG</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="counter-container second-counter-container">
+      <div class="second-counter-container">
         <div class="counters-wrapper">
           <div class="counter-card">
             <h2 class="counter-title"><span>العداد الثاني</span></h2>
             <div class="cp-table">
-              <div class="overflow-x-auto w-full">
+              <div class="table-wrap w-full">
                 <table class="counter-table w-full">
                   <thead>
                     <tr>
@@ -74,13 +77,15 @@
                         {{ store.formatNumber(val * (store.counter2[val] || 0)) }}
                       </td>
                       <td>
-                        <input 
-                          v-model.number="store.counter2[val]" 
-                          type="number" 
-                          class="input-field" 
-                          min="0" 
-                          placeholder="0"
-                        >
+                        <input
+                          :value="formatWithCommas(store.counter2[val])"
+                          @input="onRawInput($event, val, 2)"
+                          @blur="onBlurFormat(val, 2)"
+                          type="text"
+                          inputmode="numeric"
+                          pattern="[0-9,]*"
+                          class="input-field centered-number"
+                        />
                       </td>
                       <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
                     </tr>
@@ -88,14 +93,15 @@
                 </table>
               </div>
             </div>
+            <!-- شريط إجمالي العداد الثاني -->
             <div class="counter-totals">
               <div class="counter-total">
-                <div class="counter-total-label">إجمالي العداد الثاني</div>
+                <div class="counter-total-label"><i class="fas fa-calculator"></i> الإجمالي</div>
                 <div class="counter-total-value">{{ store.formatNumber(store.total2) }} <span class="currency-label">EG</span></div>
               </div>
               <div class="counter-total">
-                <div class="counter-total-label">اجمالى الفكه :</div>
-                <div class="counter-total-value secondary-val">{{ store.formatNumber(store.smallCount2) }} <span class="currency-label">EG</span></div>
+                <div class="counter-total-label"><i class="fas fa-coins"></i> الفكة</div>
+                <div class="counter-total-value small-text">{{ store.formatNumber(store.smallCount2) }} <span class="currency-label">EG</span></div>
               </div>
             </div>
           </div>
@@ -104,8 +110,8 @@
 
       <div class="summary-section">
         <h2 class="summary-title">ملخص إجمالي</h2>
-
-        <div class="summary-grid summary-grid-top">
+        <!-- أول سطر: ثلاثة إجماليات في صف واحد بعرض الحاوية بالكامل -->
+        <div class="summary-row summary-row-3">
           <div class="summary-item">
             <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الأول</div>
             <div class="summary-value">{{ store.formatNumber(store.total1) }} <span class="currency-label">EG</span></div>
@@ -114,22 +120,22 @@
             <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الثاني</div>
             <div class="summary-value">{{ store.formatNumber(store.total2) }} <span class="currency-label">EG</span></div>
           </div>
-          <div class="summary-item summary-item-small">
+          <div class="summary-item">
             <div class="summary-label"><i class="fas fa-coins"></i> اجمالى الفكه </div>
-            <div class="summary-value">{{ store.formatNumber(store.totalSmall) }}</div>
+            <div class="summary-value">{{ store.formatNumber(store.totalSmall) }} <span class="currency-label">EG</span></div>
           </div>
         </div>
-
-        <div class="summary-row summary-row-grand">
+        <!-- ثاني سطر: المجموع الكلي بعرض الحاوية بالكامل -->
+        <div class="summary-row">
           <div class="summary-item summary-item-total">
             <div class="summary-label"><i class="fas fa-plus-circle"></i> المجموع الكلي</div>
             <div class="summary-value">{{ store.formatNumber(store.grandTotal) }} <span class="currency-label">EG</span></div>
           </div>
         </div>
-
+        <!-- فاصل -->
         <div class="summary-divider"></div>
-
-        <div class="summary-row summary-row-middle">
+        <!-- ثالث سطر: إجمالي المحصل ومبلغ التصفيرة في صف واحد بعرض الحاوية بالكامل -->
+        <div class="summary-row summary-row-2">
           <div class="summary-item summary-item-collected">
             <div class="summary-label"><i class="fas fa-hand-holding-usd"></i> إجمالي المحصل</div>
             <div class="summary-value">{{ store.formatNumber(store.totalCollected) }} <span class="currency-label">EG</span></div>
@@ -139,8 +145,8 @@
             <div class="summary-value">{{ store.formatNumber(store.clearanceAmount) }} <span class="currency-label">EG</span></div>
           </div>
         </div>
-
-        <div class="summary-row summary-row-status">
+        <!-- رابع سطر: مربع الحالة بعرض الحاوية بالكامل -->
+        <div class="summary-row">
           <div class="summary-item summary-item-status">
             <div class="summary-label"><i class="fas fa-info-circle"></i> الحاله</div>
             <div class="summary-value" :class="store.status.class">
@@ -154,7 +160,7 @@
         <div class="categories-summary">
           <h3 class="categories-title">ملخص الفئات</h3>
           <div class="cp-table">
-            <div class="overflow-x-auto w-full">
+              <div class="table-wrap w-full">
               <table class="categories-table w-full">
                 <thead>
                   <tr>
@@ -176,21 +182,22 @@
               </table>
             </div>
           </div>
-          <div class="counter-totals categories-totals">
+          <!-- شريط اجمالي لملخص الفئات -->
+          <div class="counter-totals">
             <div class="counter-total">
-              <div class="counter-total-label">إجمالي ملخص الفئات</div>
+              <div class="counter-total-label"><i class="fas fa-calculator"></i> إجمالي الفئات</div>
               <div class="counter-total-value">{{ store.formatNumber(store.grandTotal) }} <span class="currency-label">EG</span></div>
             </div>
             <div class="counter-total">
-              <div class="counter-total-label">اجمالى الفكه :</div>
-              <div class="counter-total-value secondary-val">{{ store.formatNumber(store.totalSmall) }} <span class="currency-label">EG</span></div>
+              <div class="counter-total-label"><i class="fas fa-coins"></i> إجمالى الفكه</div>
+              <div class="counter-total-value small-text">{{ store.formatNumber(store.totalSmall) }} <span class="currency-label">EG</span></div>
             </div>
           </div>
         </div>
       </div>
 
       <div class="action-buttons">
-        <button class="btn" @click="store.resetAll">
+        <button class="btn" @click="handleResetAll">
           <i class="fas fa-undo"></i>
           <span>إعادة تعيين الكل</span>
         </button>
@@ -205,10 +212,38 @@
 </template>
 
 <script setup>
+import { inject, onMounted, onUnmounted } from 'vue';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import '@/assets/css/_unified-components.css';
 
 const store = useCounterStore();
+
+// دالة لمزامنة إجمالي المحصل من صفحة التحصيلات
+const syncTotalCollected = () => {
+  store.updateTotalCollected();
+  console.log('🔄 تم تشغيل مزامنة إجمالي المحصل');
+};
+
+// مزامنة عند تحميل الصفحة
+onMounted(() => {
+  syncTotalCollected();
+  
+  // مراقبة عودة التركيز للصفحة
+  const handleFocus = () => {
+    syncTotalCollected();
+  };
+  
+  window.addEventListener('focus', handleFocus);
+  
+  // تخزين المرجع لإزالته عند إلغاء التحميل
+  window.addEventListener('beforeunload', () => {
+    window.removeEventListener('focus', handleFocus);
+  });
+});
+
+// نظام الإشعارات الموحد
+const { confirm, error, messages, addNotification } = inject('notifications');
 
 // وظيفة التصدير (تتطلب html2canvas)
 // ملاحظة: يجب تثبيت html2canvas أولاً: npm install html2canvas
@@ -216,7 +251,10 @@ import html2canvas from 'html2canvas';
 
 const exportData = async () => {
   const element = document.querySelector('.categories-summary'); // أو أي عنصر تريد تصديره
-  if (!element) return;
+  if (!element) {
+    addNotification('لم يتم العثور على عنصر ملخص الفئات', 'error');
+    return;
+  }
 
   try {
     const canvas = await html2canvas(element, {
@@ -224,25 +262,47 @@ const exportData = async () => {
       scale: 2,
       useCORS: true
     });
-    
+
     canvas.toBlob(blob => {
       if (navigator.share && navigator.canShare) {
-         const file = new File([blob], `money-counter-${Date.now()}.png`, { type: 'image/png' });
-         navigator.share({
-           title: 'ملخص عداد الأموال',
-           files: [file]
-         }).catch(console.error);
+        const file = new File([blob], `money-counter-${Date.now()}.png`, { type: 'image/png' });
+        navigator.share({
+          title: 'ملخص عداد الأموال',
+          files: [file]
+        }).then(() => {
+          // تم حذف رسالة النجاح
+        }).catch(error => {
+          console.error('Share failed:', error);
+          addNotification('❌ فشل المشاركة', 'error', 3000);
+        });
       } else {
         // Fallback للتحميل المباشر
         const link = document.createElement('a');
-        link.download = 'money-counter.png';
+        link.download = `money-counter-${Date.now()}.png`;
         link.href = canvas.toDataURL();
         link.click();
+        addNotification('✅ تم التحميل بنجاح', 'success', 3000);
       }
     });
   } catch (error) {
     console.error('Export failed:', error);
-    alert('فشل تصدير الصورة');
+    addNotification('❌ فشل التصدير', 'error', 3000);
+  }
+};
+
+// دالة إعادة التعيين مع تأكيد
+const handleResetAll = async () => {
+  const result = await confirm({
+    title: 'تأكيد إعادة التعيين',
+    text: 'هل أنت متأكد من إعادة تعيين جميع العدادات؟ هذا الإجراء لا يمكن التراجع عنه.',
+    icon: 'warning',
+    confirmButtonText: 'إعادة التعيين',
+    confirmButtonColor: '#dc3545'
+  });
+
+  if (result.isConfirmed) {
+    store.resetAll();
+    addNotification('تم إعادة تعيين جميع العدادات بنجاح', 'success');
   }
 };
 
@@ -261,418 +321,395 @@ watch(() => store.currentBalance, (newVal) => {
 watch(() => store.totalCollected, (newVal) => {
   localStorage.setItem('totalCollected', newVal.toString());
 });
+
+// -----------------------
+// Formatting helpers for numeric inputs (thousand separators)
+// -----------------------
+const formatWithCommas = (value) => {
+  if (value === null || value === undefined || value === '') return '';
+  const num = Number(value);
+  if (Number.isNaN(num)) return '';
+  // Show empty string for zero so inputs appear empty by default
+  if (num === 0) return '';
+  // use en-US to get comma separators
+  return new Intl.NumberFormat('en-US').format(num);
+};
+
+const parseNumber = (str) => {
+  if (str === null || str === undefined) return 0;
+  // remove commas and non-digit (allow minus)
+  const cleaned = String(str).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+  const n = Number(cleaned);
+  return Number.isNaN(n) ? 0 : n;
+};
+
+const onRawInput = (event, val, counterIdx) => {
+  // keep underlying model numeric while allowing user typing
+  const raw = event.target.value;
+  const parsed = parseNumber(raw);
+  if (counterIdx === 1) {
+    store.counter1[val] = parsed;
+  } else {
+    store.counter2[val] = parsed;
+  }
+};
+
+const onBlurFormat = (val, counterIdx) => {
+  // Force re-render of formatted value (value binding uses formatWithCommas)
+  if (counterIdx === 1) {
+    store.counter1[val] = Number(store.counter1[val]) || 0;
+  } else {
+    store.counter2[val] = Number(store.counter2[val]) || 0;
+  }
+};
 </script>
 
 <style scoped>
-/* Dark Mode styles are now handled by unified-dark-mode.css */
+/* All styles imported from _unified-components.css */
 
-/* تم استخراج هذه الأنماط من counter-table.css و style.css
-   لضمان نفس المظهر تماماً
-*/
-
-.counter-page {
-  width: 100%;
-  animation: fadeIn 0.5s ease-in-out;
-  padding-bottom: 50px;
-}
-
-.counter-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 10px;
-}
-
-.counters-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  margin-bottom: 30px;
-}
-
-.counter-card, .summary-section {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 12px;
-  padding: 0;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-}
-
-.summary-section {
-  padding: 25px;
-  margin-bottom: 30px;
-}
-
-.counter-title, .summary-title, .categories-title {
-  text-align: center;
-  color: white;
-  font-size: 1.1rem;
-  margin: 0;
-  padding: 12px;
-  background: linear-gradient(45deg, var(--primary, #007965), #005a4b);
-  border-radius: 12px 12px 0 0;
-}
-
-/* جداول */
-.cp-table .table-container {
-  margin: 0;
-  padding: 0;
-  border: none;
-  box-shadow: none;
-  background: transparent;
-  width: 100%;
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  min-width: 100%;
-  max-width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-  background: white;
-  table-layout: auto;
-}
-
+/* Center all table headers */
 th {
-  background: linear-gradient(135deg, var(--primary, #007965), #005a4b);
-  color: white;
-  padding: 12px;
-  font-weight: 700;
-  border-bottom: 2px solid var(--primary, #007965);
-  border-right: 1px solid rgba(255,255,255,0.2);
-}
-
-td {
-  padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  vertical-align: middle;
-}
-
-/* ألوان الفئات (مأخوذة من style.css الأصلي) */
-td.category-label[data-val="200"] { color: #e91e63; }
-td.category-label[data-val="100"] { color: #fbbf24; }
-td.category-label[data-val="50"] { color: #a855f7; }
-td.category-label[data-val="20"] { color: #f97316; }
-td.category-label[data-val="10"] { color: #22c55e; }
-td.category-label[data-val="5"] { color: #3b82f6; }
-td.category-label[data-val="1"] { color: #ef4444; }
-
-.highlight-text {
-  color: var(--primary, #007965);
-  font-weight: 700;
-}
-
-/* حقول الإدخال */
-.input-field {
-  width: 100%;
-  padding: 8px;
   text-align: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: #f8fafc;
-  font-family: 'Cairo', sans-serif;
-  font-weight: bold;
 }
 
-.input-field:focus {
-  outline: none;
-  border-color: var(--primary, #007965);
-  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2);
+/* Center all three columns */
+td:nth-child(1), td:nth-child(2), td:nth-child(3) {
+  text-align: center;
 }
 
-/* ملخص الإجماليات أسفل الجدول */
+/* Make table header icons very light gray */
+th i {
+  color: #f5f5f5;
+}
+
+/* ====== COUNTER TOTALS STYLING ====== */
 .counter-totals {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 15px 20px;
   background: #f9fafb;
   border-top: 2px solid rgba(0, 121, 101, 0.3);
-  align-items: center;
+}
+
+.counter-total {
+  text-align: center;
 }
 
 .counter-total-label {
-  color: #6b7280;
   font-size: 0.9rem;
-  margin-bottom: 4px;
+  color: #666;
+}
+
+.counter-total-label.small-text {
+  font-size: 0.75rem !important;
+  color: #999;
 }
 
 .counter-total-value {
   font-size: 1.2rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.secondary-val {
-  color: #6b7280;
-}
-
-/* قسم الملخص الشامل */
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.summary-item {
-  text-align: center;
-  padding: 15px;
-  background: linear-gradient(45deg, rgba(0,121,101,0.05), rgba(243,156,18,0.05));
-  border-radius: 12px;
-  border: 1px solid rgba(0,121,101,0.1);
-}
-
-.summary-label {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 5px;
-}
-
-.summary-value {
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #333;
 }
 
-/* ألوان الحالة */
-.status-deficit { color: #dc3545 !important; }
-.status-surplus { color: #007bff !important; }
-.status-zero { color: #28a745 !important; }
-
-/* تنسيق صفوف الملخص */
-.summary-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 15px;
-  margin-bottom: 20px;
+.counter-total-value.small-text {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
 }
 
-.summary-row-middle {
-  grid-template-columns: 1fr;
+/* ====== DARK MODE FOR COUNTER VIEW ====== */
+
+/* الجداول في الوضع الليلي */
+:deep(body.dark) .counter-table,
+:deep(body.dark) .categories-table {
+  background: var(--dark-surface);
+  color: var(--dark-text-primary);
 }
 
-.summary-row-grand {
-  grid-template-columns: 1fr;
+/* رؤوس الجداول في الوضع الليلي */
+:deep(body.dark) .counter-table thead,
+:deep(body.dark) .categories-table thead {
+  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
 }
 
-.summary-row-status {
-  grid-template-columns: 1fr;
+:deep(body.dark) .counter-table th,
+:deep(body.dark) .categories-table th {
+  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
+  color: var(--dark-text-primary);
+  border-color: var(--dark-border);
 }
 
-.summary-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-  margin: 20px 0;
+/* صفوف الجدول في الوضع الليلي */
+:deep(body.dark) .counter-table tbody tr,
+:deep(body.dark) .categories-table tbody tr {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
 }
 
-/* حقول الإعدادات */
-.settings-input {
-  width: 100%;
-  padding: 8px;
-  text-align: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  background: #f8fafc;
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-  margin-top: 5px;
+:deep(body.dark) .counter-table tbody tr:hover,
+:deep(body.dark) .categories-table tbody tr:hover {
+  background: var(--dark-surface-hover);
 }
 
-.settings-input:focus {
-  outline: none;
-  border-color: var(--primary, #007965);
-  box-shadow: 0 0 0 2px rgba(0, 121, 101, 0.2);
+:deep(body.dark) .counter-table td,
+:deep(body.dark) .categories-table td {
+  background: var(--dark-surface);
+  color: var(--dark-text-primary);
+  border-color: var(--dark-border);
 }
 
-/* أزرار */
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 30px;
+/* النصوص المميزة في الوضع الليلي */
+:deep(body.dark) .highlight-text {
+  color: var(--dark-accent);
+  font-weight: 700;
 }
 
-.btn {
-  padding: 12px 25px;
-  background: linear-gradient(45deg, var(--primary, #007965), #005a4b);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: transform 0.2s;
+/* حقول الإدخال في الجداول */
+:deep(body.dark) .input-field {
+  background: var(--dark-surface-hover);
+  border-color: var(--dark-border);
+  color: var(--dark-text-primary);
 }
 
-.btn:hover {
-  transform: translateY(-2px);
+:deep(body.dark) .input-field:focus {
+  background: rgba(0, 121, 101, 0.2);
+  border-color: var(--dark-accent);
+  color: var(--dark-text-primary);
 }
 
-.no-data-msg {
-  padding: 20px;
-  color: #888;
-  font-style: italic;
-  text-align: center;
-  width: 100%;
+/* إجمالي العداد في الوضع الليلي */
+:deep(body.dark) .counter-totals {
+  background: linear-gradient(135deg, var(--dark-surface), rgba(0, 121, 101, 0.1));
+  border-color: var(--dark-border);
 }
 
-/* Responsive column widths */
-.counter-table th:nth-child(1),
-.counter-table td:nth-child(1) {
-  width: 35%;
-  min-width: 120px;
+:deep(body.dark) .counter-total {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
 }
 
-.counter-table th:nth-child(2),
-.counter-table td:nth-child(2) {
-  width: 30%;
-  min-width: 100px;
+:deep(body.dark) .counter-total-label {
+  color: var(--dark-text-secondary);
 }
 
-.counter-table th:nth-child(3),
-.counter-table td:nth-child(3) {
-  width: 35%;
-  min-width: 80px;
+:deep(body.dark) .counter-total-value {
+  color: var(--dark-accent);
 }
 
-.categories-table th:nth-child(1),
-.categories-table td:nth-child(1) {
-  width: 40%;
-  min-width: 120px;
+/* رسالة بدون بيانات في الوضع الليلي */
+:deep(body.dark) .no-data-msg {
+  color: var(--dark-text-secondary);
+  background: var(--dark-surface-hover);
 }
 
-.categories-table th:nth-child(2),
-.categories-table td:nth-child(2) {
-  width: 30%;
-  min-width: 100px;
+/* البطاقات في الوضع الليلي */
+:deep(body.dark) .counter-card,
+:deep(body.dark) .summary-section {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+  color: var(--dark-text-primary);
 }
 
-.categories-table th:nth-child(3),
-.categories-table td:nth-child(3) {
-  width: 30%;
-  min-width: 80px;
+/* العنوانيات في الوضع الليلي */
+:deep(body.dark) .counter-title,
+:deep(body.dark) .summary-title,
+:deep(body.dark) .categories-title {
+  background: linear-gradient(45deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
+  color: var(--dark-text-primary);
 }
 
-/* Responsive adjustments */
+/* ألوان الفئات في الوضع الليلي - معرفة في _unified-components.css */
+/* لا تحتاج لتعريف هنا */
+
+/* الأزرار في الوضع الليلي */
+:deep(body.dark) .btn {
+  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
+  color: var(--dark-text-primary);
+}
+
+:deep(body.dark) .btn:hover {
+  background: linear-gradient(135deg, rgba(0, 121, 101, 0.8), var(--dark-accent));
+}
+
+/* جدول الملخص في الوضع الليلي */
+:deep(body.dark) .categories-summary {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+}
+
+/* Center numeric text inside counter inputs for both modes */
+.counter-table .centered-number,
+.categories-table .centered-number {
+  text-align: center !important;
+  direction: ltr !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* حواف دائرية لشريط الملخص الإجمالي في الوضع النهاري فقط */
+.summary-section {
+  border-radius: 12px;
+}
+
+:deep(body.dark) .summary-section {
+  border-radius: 0 !important;
+}
+
+/* ====== RESPONSIVE DESIGN FOR SMALL SCREENS ====== */
+
+/* إصلاح مشكلة الفراغ في جدول ملخص الفئات للشاشات الصغيرة */
 @media (max-width: 768px) {
+  .counter-page {
+    padding: 10px;
+  }
+  
   .counter-container {
-    padding: 5px;
+    padding: 10px;
   }
   
-  .summary-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .summary-row {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .summary-row-middle {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .summary-item-collected,
-  .summary-item-clearance {
+  /* تحسين عرض الجداول على الشاشات الصغيرة */
+  .cp-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
   }
   
-  .counter-table th:nth-child(1),
-  .counter-table td:nth-child(1),
-  .categories-table th:nth-child(1),
-  .categories-table td:nth-child(1) {
-    width: 35%;
-    min-width: 90px;
-  }
-  
-  .counter-table th:nth-child(2),
-  .counter-table td:nth-child(2),
-  .categories-table th:nth-child(2),
-  .categories-table td:nth-child(2) {
-    width: 35%;
-    min-width: 70px;
-  }
-  
-  .counter-table th:nth-child(3),
-  .counter-table td:nth-child(3),
-  .categories-table th:nth-child(3),
-  .categories-table td:nth-child(3) {
-    width: 30%;
-    min-width: 50px;
-  }
-  
-  th, td {
-    padding: 8px;
+  .counter-table,
+  .categories-table {
+    min-width: 100%;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.9rem;
   }
   
+  /* تقليل حجم الخطوط في الشاشات الصغيرة */
+  .counter-table th,
+  .categories-table th {
+    padding: 8px 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .counter-table td,
+  .categories-table td {
+    padding: 6px 4px;
+    font-size: 0.8rem;
+    word-break: break-word;
+  }
+  
+  /* تحسين عرض الأعمدة الثلاثة */
+  .counter-table th,
+  .counter-table td {
+    width: 33.33%;
+  }
+  
+  /* تحسين عرض ملخص الفئات */
+  .categories-section {
+    margin-top: 20px;
+  }
+  
+  .categories-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  /* إصلاح مشكلة الفراغ في الشاشات الصغيرة جداً */
+  .categories-table th,
+  .categories-table td {
+    min-width: auto;
+    text-align: center;
+  }
+  
+  .categories-table .category-label {
+    white-space: normal;
+  }
+  
+  /* تحسين عرض المدخلات في الشاشات الصغيرة */
   .input-field {
-    font-size: 0.9rem;
-    padding: 6px;
+    width: 100% !important;
+    font-size: 0.8rem !important;
+    padding: 4px 2px !important;
+    box-sizing: border-box;
   }
 }
 
+/* إصلاح للشاشات الصغيرة جداً */
 @media (max-width: 480px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
+  .counter-table,
+  .categories-table {
+    min-width: 100%;
+    width: 100%;
+    font-size: 0.75rem;
   }
   
-  .summary-row {
-    grid-template-columns: 1fr;
-    gap: 15px;
+  .counter-table th,
+  .categories-table th {
+    padding: 6px 2px;
+    font-size: 0.7rem;
   }
   
-  .summary-row-middle {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .counter-table th:nth-child(1),
-  .counter-table td:nth-child(1),
-  .categories-table th:nth-child(1),
-  .categories-table td:nth-child(1) {
-    width: 35%;
-    min-width: 70px;
-  }
-  
-  .counter-table th:nth-child(2),
-  .counter-table td:nth-child(2),
-  .categories-table th:nth-child(2),
-  .categories-table td:nth-child(2) {
-    width: 35%;
-    min-width: 50px;
-  }
-  
-  .counter-table th:nth-child(3),
-  .counter-table td:nth-child(3),
-  .categories-table th:nth-child(3),
-  .categories-table td:nth-child(3) {
-    width: 30%;
-    min-width: 40px;
-  }
-  
-  th, td {
-    padding: 6px;
-    font-size: 0.8rem;
+  .counter-table td,
+  .categories-table td {
+    padding: 4px 2px;
+    font-size: 0.7rem;
   }
   
   .input-field {
-    font-size: 0.8rem;
-    padding: 4px;
+    width: 100% !important;
+    font-size: 0.7rem !important;
+    padding: 3px 1px !important;
+  }
+  
+  /* إخفاء النصوص الطويلة في الشاشات الصغيرة */
+  .summary-label {
+    font-size: 0.8rem !important;
+  }
+  
+  .summary-value {
+    font-size: 1rem !important;
   }
 }
 
-/* All dark mode styles are now handled by unified-dark-mode.css */
+/* تحسين عرض الجداول بشكل عام */
+.table-wrap {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.cp-table {
+  position: relative;
+  width: 100%;
+}
+
+/* إصلاح مشكلة overflow للشاشات الصغيرة */
+@media (max-width: 768px) {
+  .categories-summary {
+    overflow-x: auto;
+  }
+  
+  .counter-table,
+  .categories-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  /* ضمان عرض المحتوى بدون فراغ */
+  .categories-table th:nth-child(1),
+  .categories-table td:nth-child(1) {
+    width: 33.33%;
+  }
+  
+  .categories-table th:nth-child(2),
+  .categories-table td:nth-child(2) {
+    width: 33.33%;
+  }
+  
+  .categories-table th:nth-child(3),
+  .categories-table td:nth-child(3) {
+    width: 33.34%;
+  }
+}
 </style>

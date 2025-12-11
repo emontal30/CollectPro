@@ -28,6 +28,7 @@ BEGIN
             full_name TEXT,
             email TEXT UNIQUE,
             phone TEXT,
+            provider JSONB DEFAULT '[]'::jsonb, -- قائمة بطرق المصادقة (مثل ["google"])
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
@@ -39,8 +40,11 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
             ALTER TABLE public.users ADD COLUMN email TEXT UNIQUE;
         END IF;
-         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'phone') THEN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'phone') THEN
             ALTER TABLE public.users ADD COLUMN phone TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'provider') THEN
+            ALTER TABLE public.users ADD COLUMN provider JSONB DEFAULT '[]'::jsonb;
         END IF;
     END IF;
 END $$;
@@ -385,6 +389,9 @@ BEGIN
     ) THEN
         ALTER TABLE public.archive_data RENAME COLUMN "date" TO archive_date;
     END IF;
+
+    -- تحديث المستخدمين الحاليين لحفظ provider كـ ["google"] (افتراضياً للمستخدمين الحاليين)
+    UPDATE public.users SET provider = '["google"]'::jsonb WHERE provider IS NULL OR provider = '[]'::jsonb;
 
     -- تنظيف الاشتراكات اليتيمة
     DELETE FROM public.subscriptions s WHERE s.user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = s.user_id);

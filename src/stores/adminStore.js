@@ -2,7 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/services/api';
 import { supabase } from '@/services/api';
-import Swal from 'sweetalert2';
+import { useNotifications } from '@/composables/useNotifications';
+import eventBus from '@/utils/eventBus';
 
 export const useAdminStore = defineStore('admin', () => {
   // --- الحالة (State) ---
@@ -17,6 +18,9 @@ export const useAdminStore = defineStore('admin', () => {
     completionRate: 0,
     pendingRate: 0
   });
+
+  // نظام الإشعارات الموحد
+  const { error, success, confirm, addNotification } = useNotifications();
 
   const chartsData = ref({
     activeUsersPercent: 0,
@@ -57,7 +61,7 @@ export const useAdminStore = defineStore('admin', () => {
       ]);
     } catch (error) {
       console.error('Error loading admin data:', error);
-      Swal.fire('خطأ', 'فشل تحميل البيانات', 'error');
+      error('فشل تحميل البيانات');
     } finally {
       isLoading.value = false;
     }
@@ -89,12 +93,28 @@ export const useAdminStore = defineStore('admin', () => {
       ];
     }
 
-    // جلب بيانات المستخدمين النشطين (RPC call)
+    // جلب بيانات المستخدمين النشطين (حساب يدوي)
     try {
-      const { data } = await supabase.rpc('get_active_users_last_n_days', { days: filters.value.activeUsersPeriod });
-      stats.value.activeUsers = data || 0;
+      const daysAgo = new Date();
+      daysAgo.setDate(daysAgo.getDate() - filters.value.activeUsersPeriod);
+
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('status', 'active')
+        .gte('updated_at', daysAgo.toISOString());
+
+      if (error) {
+        console.warn('Failed to fetch active users:', error);
+        stats.value.activeUsers = 0;
+      } else {
+        // حساب المستخدمين الفريدين
+        const uniqueUsers = new Set(data?.map(sub => sub.user_id) || []);
+        stats.value.activeUsers = uniqueUsers.size;
+      }
     } catch (e) {
       console.warn('Failed to fetch active users', e);
+      stats.value.activeUsers = 0;
     }
 
     // تحضير بيانات المخطط الخطي (آخر 5 شهور)
@@ -119,27 +139,15 @@ export const useAdminStore = defineStore('admin', () => {
       const data = await api.admin.getAllSubscriptions(filters.value);
       
       // تحديث البيانات دائمًا عند التحديث
-      allSubscriptions.value = data || [];
-      
-      // فلترة "قرب الانتهاء" في الذاكرة إذا لزم الأمر
-      if (filters.value.expiry === 'expiring_soon' && data) {
-        const now = new Date();
-        const dayMs = 86400000;
-        allSubscriptions.value = data.filter(sub => {
-          if (!sub.end_date) return false;
-          const end = new Date(sub.end_date);
-          const diff = Math.ceil((end - now) / dayMs);
-          return diff > 0 && diff <= 7;
-        });
-      }
+      allSubscriptions.value = data || []; // يتم الآن الفلترة من جهة الخادم
 
       if (showFeedback) {
-        Swal.fire('نجاح', 'تم تحديث قائمة الاشتراكات', 'success');
+        success('تم تحديث قائمة الاشتراكات');
       }
     } catch (error) {
       console.error('Error fetching all subscriptions:', error);
       if (showFeedback) {
-        Swal.fire('خطأ', 'فشل في تحديث قائمة الاشتراكات', 'error');
+        error('فشل في تحديث قائمة الاشتراكات');
       }
     }
   }
@@ -149,12 +157,12 @@ export const useAdminStore = defineStore('admin', () => {
     try {
       usersList.value = await api.admin.getUsers();
       if (showFeedback) {
-        Swal.fire('نجاح', 'تم تحديث قائمة المستخدمين', 'success');
+        success('تم تحديث قائمة المستخدمين');
       }
     } catch (error) {
       console.error('Error fetching users:', error);
       if (showFeedback) {
-        Swal.fire('خطأ', 'فشل في تحديث قائمة المستخدمين', 'error');
+        error('فشل في تحديث قائمة المستخدمين');
       }
     }
   }
@@ -181,25 +189,33 @@ export const useAdminStore = defineStore('admin', () => {
         break;
     }
 
-    const result = await Swal.fire({
+    const result = await confirm({
       title: 'تأكيد',
       text: confirmMsg,
       icon: 'warning',
-      showCancelButton: true,
       confirmButtonText: 'نعم',
-      cancelButtonText: 'لا',
-      confirmButtonColor: '#007965'
+      cancelButtonText: 'لا'
     });
 
     if (!result.isConfirmed) return;
 
     try {
+      // Get the subscription before action to know the user_id
+      const { data: subBefore } = await supabase.from('subscriptions').select('user_id').eq('id', id).single();
+
       await api.admin.handleSubscriptionAction(id, action);
       await loadDashboardData(); // تحديث البيانات
-      Swal.fire('نجاح', 'تم تنفيذ الإجراء بنجاح', 'success');
+
+      // Update sidebar if this affects the current user's subscription
+      if (subBefore?.user_id) {
+        const { subscription } = await api.subscriptions.getSubscription(subBefore.user_id);
+        eventBus.emit('subscription-updated', subscription);
+      }
+
+      success('تم تنفيذ الإجراء بنجاح');
     } catch (error) {
       console.error('Error handling subscription action:', error);
-      Swal.fire('خطأ', 'حدث خطأ أثناء تنفيذ الإجراء', 'error');
+      error('حدث خطأ أثناء تنفيذ الإجراء');
     }
   }
 
@@ -209,10 +225,15 @@ export const useAdminStore = defineStore('admin', () => {
       const { error } = await api.admin.activateManualSubscription(userId, days);
       if (error) throw error;
       await loadDashboardData();
-      Swal.fire('نجاح', 'تم تفعيل الاشتراك بنجاح', 'success');
+
+      // Update sidebar for the affected user
+      const { subscription } = await api.subscriptions.getSubscription(userId);
+      eventBus.emit('subscription-updated', subscription);
+
+      success('تم تفعيل الاشتراك بنجاح');
     } catch (error) {
       console.error('Error activating manual subscription:', error);
-      Swal.fire('خطأ', 'حدث خطأ أثناء تفعيل الاشتراك', 'error');
+      error('حدث خطأ أثناء تفعيل الاشتراك');
     }
   }
 

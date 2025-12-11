@@ -28,6 +28,7 @@
     "@supabase/supabase-js": "^2.86.0",
     "dotenv": "^17.2.3",
     "html2canvas": "^1.4.1",
+    "localforage": "^1.10.0",
     "mitt": "^3.0.1",
     "pinia": "^3.0.4",
     "sweetalert2": "^11.26.3",

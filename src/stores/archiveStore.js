@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/services/api';
+import { getPendingSyncItems } from '@/services/archiveSyncQueue';
+import { getSmartCache, setSmartCache, removeFromAllCaches } from '@/services/cacheManager';
+import { useNotifications } from '@/composables/useNotifications';
 
 export const useArchiveStore = defineStore('archive', () => {
   // --- الحالة (State) ---
@@ -9,6 +12,9 @@ export const useArchiveStore = defineStore('archive', () => {
   const selectedDate = ref('');
   const searchQuery = ref('');
   const isLoading = ref(false);
+
+  // نظام الإشعارات الموحد
+  const { addNotification } = useNotifications();
 
   // --- الحسابات (Getters/Computed) ---
   
@@ -34,27 +40,55 @@ export const useArchiveStore = defineStore('archive', () => {
 
   // --- الإجراءات (Actions) ---
 
-  // 1. تحميل التواريخ المتاحة (من LocalStorage و Supabase)
+  // 1. تحميل التواريخ المتاحة (من LocalStorage و Supabase والـ Sync Queue)
   async function loadAvailableDates() {
     const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
     const localDates = Object.keys(localArchive);
     let dbDates = [];
+    let queueDates = [];
+
+    console.log('📅 Loading available archive dates...');
+    console.log('📌 Local dates found:', localDates);
+
+    // تحديث فوري بالتواريخ المحلية أولاً
+    const initialMerged = [...new Set([...localDates, ...queueDates])].sort().reverse();
+    availableDates.value = initialMerged;
+    console.log('📅 Initial available dates (local only):', initialMerged);
+
+    try {
+      // Get pending sync queue dates
+      const pendingItems = await getPendingSyncItems();
+      queueDates = [...new Set(pendingItems.map(item => item.data?.archive_date).filter(Boolean))];
+      console.log('📋 Sync queue dates found:', queueDates);
+    } catch (err) {
+      console.warn('⚠️ Could not read sync queue:', err);
+    }
 
     try {
       const { user } = await api.auth.getUser();
       if (user) {
-        const { dates } = await api.archive.getAvailableDates(user.id);
-        dbDates = dates;
+        console.log('👤 User found:', user.id);
+        const { dates, error } = await api.archive.getAvailableDates(user.id);
+        if (error) {
+          console.error('❌ Error fetching DB dates:', error);
+        } else {
+          console.log('📊 DB dates found:', dates);
+          dbDates = dates || [];
+        }
+      } else {
+        console.warn('⚠️ No user found for loading archive dates');
       }
     } catch (e) {
-      console.error("خطأ في جلب التواريخ من قاعدة البيانات", e);
+      console.error("❌ خطأ في جلب التواريخ من قاعدة البيانات", e);
     }
 
-    // دمج التواريخ وإزالة التكرار
-    availableDates.value = [...new Set([...localDates, ...dbDates])].sort().reverse();
+    // دمج التواريخ وإزالة التكرار وتحديث القائمة
+    const merged = [...new Set([...localDates, ...dbDates, ...queueDates])].sort().reverse();
+    availableDates.value = merged;
+    console.log('✅ Available dates merged and updated:', merged);
   }
 
-  // 2. تحميل بيانات تاريخ معين
+  // 2. تحميل بيانات تاريخ معين (من LocalStorage, Sync Queue, ثم Supabase)
   async function loadArchiveByDate(dateStr) {
     if (!dateStr) {
       rows.value = [];
@@ -69,6 +103,7 @@ export const useArchiveStore = defineStore('archive', () => {
     const localData = localArchive[dateStr];
 
     if (localData) {
+      console.log('📌 Loading from localStorage:', dateStr);
       // تحليل النص (مفصول بـ Tabs)
       const lines = localData.split("\n");
       rows.value = lines.map(line => {
@@ -96,10 +131,35 @@ export const useArchiveStore = defineStore('archive', () => {
       return;
     }
 
-    // ب) التحميل من Supabase إذا لم يوجد محلياً
+    // ب) التحقق من الـ Sync Queue
+    try {
+      console.log('📋 Checking sync queue for date:', dateStr);
+      const pendingItems = await getPendingSyncItems();
+      const queueItem = pendingItems.find(item => item.data?.archive_date === dateStr);
+      
+      if (queueItem && queueItem.data?.rows) {
+        console.log('✅ Found in sync queue:', dateStr, queueItem.data.rows);
+        rows.value = queueItem.data.rows.map(row => ({
+          date: dateStr,
+          shop: row.shop || "",
+          code: row.code || "",
+          amount: Number(row.amount) || 0,
+          extra: Number(row.extra) || 0,
+          collector: Number(row.collector) || 0,
+          net: Number(row.net) || 0
+        }));
+        isLoading.value = false;
+        return;
+      }
+    } catch (err) {
+      console.warn('⚠️ Error checking sync queue:', err);
+    }
+
+    // ج) التحميل من Supabase إذا لم يوجد محلياً أو في الـ queue
     try {
       const { user } = await api.auth.getUser();
       if (user) {
+        console.log('🔍 Loading from database:', dateStr);
         const { data } = await api.archive.getArchiveByDate(user.id, dateStr);
 
         if (data && data.length > 0) {
@@ -129,7 +189,7 @@ export const useArchiveStore = defineStore('archive', () => {
       }
     } catch (e) {
       console.error("فشل تحميل الأرشيف", e);
-      alert("حدث خطأ أثناء جلب البيانات من السحابة.");
+      addNotification("حدث خطأ أثناء جلب البيانات من السحابة.", 'error');
     } finally {
       isLoading.value = false;
     }
@@ -213,14 +273,14 @@ export const useArchiveStore = defineStore('archive', () => {
          const { error } = await api.archive.deleteArchiveByDate(user.id, selectedDate.value);
          if (error) throw error;
        }
-       alert("تم الحذف بنجاح!");
+       addNotification("تم الحذف بنجاح!", 'success');
        // إعادة تعيين
        selectedDate.value = "";
        rows.value = [];
        await loadAvailableDates();
-    } catch (e) {
-      alert("تم الحذف محلياً ولكن حدث خطأ في المزامنة السحابية.");
-    }
+   } catch (e) {
+     addNotification("تم الحذف محلياً ولكن حدث خطأ في المزامنة السحابية.", 'warning');
+   }
   }
 
   return {

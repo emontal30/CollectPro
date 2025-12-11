@@ -22,10 +22,12 @@ export const userService = {
       // If user doesn't exist, add them
       if (error && error.code === 'PGRST116') {
         const fullName = userData.user_metadata?.full_name || userData.email;
+        const providers = userData.app_metadata?.providers || [];
         const { error: insertError } = await authService.supabase.from('users').insert({
           id: userData.id,
           full_name: fullName,
           email: userData.email,
+          provider: providers,
           password_hash: '' // Required field in your old database
         });
         return { error: insertError };

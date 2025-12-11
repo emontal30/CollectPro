@@ -1,27 +1,32 @@
 <template>
   <div id="app">
+    <OfflineBanner />
     <router-view />
   </div>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, watch } from 'vue';
+import OfflineBanner from '@/components/ui/OfflineBanner.vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSessionManager } from '@/composables/useSessionManager';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
+import { processPendingSyncQueue } from '@/services/archiveSyncQueue';
 
 const authStore = useAuthStore();
 const sessionManager = useSessionManager();
+const router = useRouter();
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const route = useRoute();
-const router = useRouter();
 
 // Cleanup handlers
 let visibilityCleanup = null;
 let activityCleanup = null;
+let onlineCleanup = null;
 
 // Throttling for visibility checks
 let lastVisibilityCheck = 0;
@@ -42,13 +47,17 @@ watch(() => route.name, (newName) => {
   updateBodyClass(newName);
 });
 
-// Fallback: Watch for authentication state and redirect if needed
+// Watch auth changes for diagnostics (no redirects here)
 watch(() => authStore.user, (newUser, oldUser) => {
-  if (newUser && !oldUser && (route.path === '/' || route.path === '/login')) {
-    console.log('User authenticated, performing redirect...');
-    router.push('/app/dashboard');
+  try {
+    console.log('🔁 authStore.user changed (diagnostic):', { hadUser: !!oldUser, hasUser: !!newUser });
+  } catch (e) {
+    console.warn('Error logging auth change:', e);
   }
 });
+
+// Removed conflicting watcher that was redirecting to dashboard on auth restore
+// Routing logic is now handled exclusively by Router Guard
 
 onMounted(() => {
   console.log('🚀 App mounted, initializing session management and stores...');
@@ -58,6 +67,62 @@ onMounted(() => {
   
   // Setup activity listeners for session tracking
   activityCleanup = sessionManager.setupActivityListeners();
+
+  // Enable performance monitor temporarily to capture freezes
+  try {
+    if (window.performanceMonitor && typeof window.performanceMonitor.enable === 'function') {
+      window.performanceMonitor.enable();
+      console.log('📈 Performance monitor enabled (debug)');
+    }
+  } catch (err) {
+    console.warn('Failed to enable performance monitor:', err);
+  }
+
+  // Wrap router.push/replace to log timings and errors for diagnostics
+  try {
+    const origPush = router.push.bind(router);
+    router.push = (...args) => {
+      console.log('➡️ router.push called', args);
+      const t0 = performance.now();
+      const result = origPush(...args);
+      Promise.resolve(result)
+        .then(() => console.log('✅ router.push resolved', args, Math.round(performance.now() - t0), 'ms'))
+        .catch(err => console.error('❌ router.push error', err, args));
+      return result;
+    };
+
+    const origReplace = router.replace.bind(router);
+    router.replace = (...args) => {
+      console.log('➡️ router.replace called', args);
+      const t0 = performance.now();
+      const result = origReplace(...args);
+      Promise.resolve(result)
+        .then(() => console.log('✅ router.replace resolved', args, Math.round(performance.now() - t0), 'ms'))
+        .catch(err => console.error('❌ router.replace error', err, args));
+      return result;
+    };
+  } catch (err) {
+    console.warn('Router instrumentation failed:', err);
+  }
+
+  // Optional: allow disabling Service Worker via localStorage for debugging
+  // Set `localStorage.setItem('collectpro_disable_sw', '1')` to unregister SW on startup
+  if ('serviceWorker' in navigator) {
+    try {
+      const disableSW = localStorage.getItem('collectpro_disable_sw')
+      if (disableSW === '1') {
+        navigator.serviceWorker.getRegistrations()
+          .then(regs => {
+            regs.forEach(reg => {
+              reg.unregister().then(ok => console.log('ServiceWorker unregistered (debug):', ok, reg));
+            });
+          })
+          .catch(err => console.error('ServiceWorker unregister error:', err));
+      }
+    } catch (err) {
+      console.warn('ServiceWorker debug toggle check failed:', err)
+    }
+  }
 
   // Initialize auth asynchronously (non-blocking)
   authStore.initializeAuth().catch(error => {
@@ -87,12 +152,10 @@ onMounted(() => {
         authStore.getUser().catch(console.error);
       }
 
-      // Check session validity with throttling (max once per 30 seconds)
-      const now = Date.now();
-      if (now - lastVisibilityCheck > VISIBILITY_CHECK_THROTTLE) {
-        lastVisibilityCheck = now;
-        sessionManager.checkSessionValidity().catch(console.error);
-      }
+      // NOTE: Removed periodic session validity checks here to avoid
+      // network-driven navigation freezes. Session validity is now
+      // checked only on-demand (e.g., when user is missing) or for
+      // admin-protected routes in the router guard.
     }
   };
 
@@ -100,6 +163,15 @@ onMounted(() => {
   visibilityCleanup = () => {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
+
+  // Setup online/offline listeners for Background Sync
+  const handleOnline = () => {
+    console.log('🌐 Connection restored — processing pending sync queue...');
+    processPendingSyncQueue().catch(console.error);
+  };
+
+  window.addEventListener('online', handleOnline);
+  onlineCleanup = () => window.removeEventListener('online', handleOnline);
 
   document.body.classList.add('loaded');
   console.log('✅ App initialization complete');
@@ -111,6 +183,9 @@ onUnmounted(() => {
   // Cleanup event listeners
   if (visibilityCleanup) {
     visibilityCleanup();
+  }
+  if (onlineCleanup) {
+    onlineCleanup();
   }
 
   // Cleanup activity listeners

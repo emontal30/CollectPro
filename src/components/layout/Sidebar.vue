@@ -48,9 +48,15 @@
         </div>
 
         <div class="logout-container">
-          <button id="logout-btn" class="logout-btn" @click="store.logout">
+          <button
+            id="logout-btn"
+            class="logout-btn"
+            type="button"
+            :disabled="authStore.isLoading"
+            @click.stop="handleLogout"
+          >
             <i class="fas fa-sign-out-alt"></i>
-            <span>تسجيل الخروج</span>
+            <span>{{ authStore.isLoading ? 'جاري الخروج...' : 'تسجيل الخروج' }}</span>
           </button>
         </div>
 
@@ -101,17 +107,48 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, inject } from 'vue';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
+import { useAuthStore } from '@/stores/auth';
 
 const store = useSidebarStore();
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
+
+// نظام الإشعارات الموحد
+const { confirm, addNotification } = inject('notifications');
 
 const isDarkMode = computed(() => settingsStore.darkMode);
 
 const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
+}
+
+const handleLogout = async () => {
+  const result = await confirm({
+    title: 'تأكيد تسجيل الخروج',
+    text: 'هل أنت متأكد من تسجيل الخروج من حسابك؟',
+    icon: 'question',
+    confirmButtonText: 'تسجيل الخروج',
+    confirmButtonColor: '#dc3545'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await store.logout();
+    addNotification('تم تسجيل الخروج بنجاح', 'success');
+  } catch (error) {
+    console.error('Logout failed:', error);
+    addNotification('حدث خطأ أثناء تسجيل الخروج', 'error', {
+      suggestion: 'تحقق من اتصال الإنترنت أو أعد تحميل الصفحة'
+    });
+    // Fallback: force reload if logout fails
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 2000);
+  }
 }
 
 // تحميل البيانات عند فتح الشريط الجانبي
@@ -318,12 +355,52 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   width: 100%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
 .logout-btn:hover {
   background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.5);
+}
+
+.logout-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+}
+
+.logout-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.logout-btn:active::after {
+  animation: logoutPulse 0.6s ease-out;
+}
+
+.logout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.logout-btn:disabled:hover {
+  background: #dc3545;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 /* Dark mode toggle button - Classic Style */
@@ -348,6 +425,7 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
+/* Light mode styles only - Dark mode handled by unified-dark-mode.css */
 /* Navigation Links */
 .sidebar-content { flex: 1; overflow-y: auto; }
 .nav-links { list-style: none; padding: 0 15px; }
@@ -361,7 +439,7 @@ onMounted(() => {
     border-radius: 12px;
     color: #fff;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     font-size: 18px;
     font-weight: 500;
     position: relative;
@@ -376,7 +454,7 @@ onMounted(() => {
     width: 100%;
     height: 100%;
     background: rgba(255,255,255,0.1);
-    transition: right 0.3s ease;
+    transition: right 0.15s ease;
 }
 
 .nav-links a:hover {
@@ -386,7 +464,6 @@ onMounted(() => {
 
 .nav-links a:hover::before { right: 100%; }
 
-/* الرابط النشط (Vue Router يضيف كلاس active) */
 .nav-links a.active {
     background: rgba(255, 255, 255, 0.2);
     border-left: 4px solid #f39c12;
@@ -409,7 +486,7 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.4);
   opacity: 0;
   visibility: hidden;
-  transition: 0.3s ease;
+  transition: 0.15s ease;
   z-index: 1008;
 }
 
@@ -423,125 +500,18 @@ onMounted(() => {
   50% { opacity: 1; }
 }
 
-/* Dark Mode Styles - Cleaned Up */
-:global(body.dark) .sidebar {
-    background: #004d3d !important;
-    color: var(--dark-text-primary) !important;
-    border-right: 1px solid var(--dark-border) !important;
-}
-
-:global(body.dark) .sidebar-header {
-    background: transparent !important;
-    border-bottom: 1px solid var(--dark-border) !important;
-}
-
-:global(body.dark) .user-box {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: var(--dark-border) !important;
-}
-
-:global(body.dark) .user-box:hover {
-    background: rgba(255,255,255,0.08) !important;
-}
-
-:global(body.dark) .user-data-container {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: var(--dark-border) !important;
-}
-
-:global(body.dark) .user-data-container:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    border-color: var(--dark-accent) !important;
-}
-
-:global(body.dark) .user-name {
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .user-email {
-    color: var(--dark-text-secondary) !important;
-}
-
-:global(body.dark) .user-id {
-    background: rgba(255,255,255,0.1) !important;
-    color: var(--dark-text-muted) !important;
-}
-
-:global(body.dark) .subscription-container {
-    background: rgba(0, 121, 101, 0.2) !important;
-    border-color: var(--dark-accent) !important;
-}
-
-:global(body.dark) .subscription-container:hover {
-    background: rgba(0, 121, 101, 0.3) !important;
-    border-color: var(--dark-accent-hover) !important;
-}
-
-:global(body.dark) .subscription-title {
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .subscription-days-simple {
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .subscription-days-simple i {
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .logout-container {
-    background: rgba(220, 53, 69, 0.1) !important;
-    border-color: var(--dark-border) !important;
-}
-
-:global(body.dark) .logout-container:hover {
-    background: rgba(220, 53, 69, 0.2) !important;
-    border-color: var(--dark-danger) !important;
-}
-
-:global(body.dark) .dark-mode-toggle {
-    background: none !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-}
-
-:global(body.dark) .dark-mode-toggle:hover {
-    color: white !important;
-}
-
-:global(body.dark) .dark-mode-toggle-small {
-    background: none !important;
-    color: rgba(255, 255, 255, 0.6) !important;
-}
-
-:global(body.dark) .dark-mode-toggle-small:hover {
-    color: white !important;
-}
-
-:global(body.dark) .logout-btn {
-    background: var(--dark-danger) !important;
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .logout-btn:hover {
-    background: #c82333 !important;
-}
-
-:global(body.dark) .nav-links a {
-    color: var(--dark-text-primary) !important;
-}
-
-:global(body.dark) .nav-links a:hover,
-:global(body.dark) .nav-links a.active {
-    background: rgba(0,200,150,0.2) !important;
-    border-left-color: var(--dark-accent) !important;
-}
-
-:global(body.dark) .nav-links a::before {
-    background: rgba(255,255,255,0.1) !important;
-}
-
-:global(body.dark) .overlay {
-    background: rgba(0, 0, 0, 0.6) !important;
+@keyframes logoutPulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
 }
 
 /* Responsive */

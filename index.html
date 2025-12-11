@@ -17,23 +17,19 @@
   <title>CollectPro - نظام إدارة التحصيلات</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
   
-  <!-- Simple dark mode prevention -->
+  <!-- Dark mode initialization (managed by Pinia store) -->
   <script>
-    // Check and apply dark mode immediately
-    var isDarkMode = false;
+    // Minimal script - just read localStorage and apply class quickly
     try {
-      var settings = localStorage.getItem('settings');
+      const settings = localStorage.getItem('settings');
       if (settings) {
-        var parsed = JSON.parse(settings);
-        isDarkMode = parsed.darkMode === true;
+        const parsed = JSON.parse(settings);
+        if (parsed.darkMode === true) {
+          document.documentElement.className = 'dark';
+        }
       }
     } catch (e) {
-      console.error('Settings error:', e);
-    }
-    
-    // Apply dark mode to documentElement immediately
-    if (isDarkMode) {
-      document.documentElement.className = 'dark';
+      // Silently fail - Pinia store will handle it
     }
   </script>
   

@@ -3,6 +3,9 @@
     <!-- حاوية التنبيهات -->
     <div id="alert-container" class="alert-container"></div>
 
+    <!-- حاوية الإشعارات الموحدة -->
+    <NotificationContainer />
+
     <!-- الهيدر -->
     <header>
       <Topbar :page-title="pageTitle" />
@@ -25,13 +28,21 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import Topbar from '@/components/layout/Topbar.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Footer from '@/components/layout/Footer.vue'
+import NotificationContainer from '@/components/ui/NotificationContainer.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const route = useRoute()
+
+// نظام الإشعارات الموحد
+const notifications = useNotifications()
+
+// توفير نظام الإشعارات للمكونات الفرعية
+provide('notifications', notifications)
 
 // Dynamic page titles
 const pageTitle = computed(() => {

@@ -24,16 +24,34 @@ export const subscriptionService = {
   },
 
   async getSubscription(userId) {
-    const { data, error } = await authService.supabase
+    // First try to get active subscription
+    let { data, error } = await authService.supabase
       .from('subscriptions')
       .select(`
         *,
         subscription_plans:plan_id (name, name_ar)
       `)
       .eq('user_id', userId)
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    // If no active subscription, get the latest one
+    if (!data) {
+      const result = await authService.supabase
+        .from('subscriptions')
+        .select(`
+          *,
+          subscription_plans:plan_id (name, name_ar)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      data = result.data;
+      error = result.error;
+    }
 
     return { subscription: data, error }
   },

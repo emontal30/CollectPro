@@ -75,7 +75,7 @@ const routes = [
         path: 'admin',
         name: 'Admin',
         component: AdminView,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiresAdmin: true }
       }
     ]
   },
@@ -98,14 +98,25 @@ const router = createRouter({
 // --- Enhanced Navigation Guard ---
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
-  // Remove shouldRestorePage, only keep getLastPage
   const { checkSessionValidity, getLastPage } = useSessionManager();
+
+  console.log('🔍 Router Guard: Checking route:', to.path, 'from:', from.path);
+  console.log('🔍 Auth initialized:', authStore.isInitialized, 'User:', authStore.user ? 'present' : 'null');
 
   // 1. Ensure Auth is Initialized
   // ننتظر التهيئة مرة واحدة فقط إذا لم تكن مكتملة
   if (!authStore.isInitialized) {
+    console.log('🔄 Initializing auth in router guard (with timeout)...');
+    // Avoid blocking navigation indefinitely: wait at most 2000ms for init
+    const initPromise = authStore.initializeAuth();
+    const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
     try {
-      await authStore.initializeAuth();
+      const result = await Promise.race([initPromise, timeout]);
+      if (result === 'timeout') {
+        console.warn('⏱️ Auth init timed out in router guard — continuing without full init');
+      } else {
+        console.log('✅ Auth init completed. User after init:', authStore.user ? 'present' : 'null');
+      }
     } catch (error) {
       console.error('❌ Auth init failed in router:', error);
     }
@@ -114,18 +125,19 @@ router.beforeEach(async (to, from, next) => {
   const isLoggedIn = !!authStore.user;
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
 
+  console.log('🔍 isLoggedIn:', isLoggedIn, 'requiresAuth:', requiresAuth);
+
   // 2. Logic for Logged-In Users trying to access Login page
-  // This usually happens on reload if the app momentarily thinks it's at '/' or if user visits Login
   if (isLoggedIn && to.name === 'Login') {
     console.log('👤 User already logged in, redirecting...');
-
-    // DIRECT FIX: Check lastPage directly without shouldRestorePage() restrictions
+    
+    // Restore the last page if available
     const lastPage = getLastPage();
-    if (lastPage && lastPage !== '/' && !lastPage.includes('login') && lastPage !== to.path) {
+    if (lastPage && lastPage !== '/' && !lastPage.includes('login')) {
       console.log('📍 Restoring last page:', lastPage);
       return next(lastPage);
     }
-
+    
     return next({ name: 'Dashboard' });
   }
 
@@ -136,12 +148,26 @@ router.beforeEach(async (to, from, next) => {
       return next({ name: 'Login' });
     }
 
-    // Check session validity only for protected routes
-    const isSessionValid = await checkSessionValidity();
-    if (!isSessionValid) {
-      console.log('⌛ Session expired. Redirecting to Login.');
-      // ملاحظة: authStore.logout() قد يتم استدعاؤه داخل checkSessionValidity أو هنا
-      return next({ name: 'Login' });
+    // If user is logged in, avoid calling network-based session validity checks
+    // on every navigation — this prevents navigation freezes when network/DNS
+    // is flaky. We only perform explicit validity checks when user is missing
+    // or when admin-only routes require an extra check below.
+
+    // Admin-only route check
+    const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
+    if (requiresAdmin) {
+      try {
+        const user = authStore.user;
+        const adminEmails = ['emontal.33@gmail.com'];
+        const isAdmin = user && adminEmails.includes(user.email);
+        if (!isAdmin) {
+          console.warn('⚠️ Access to admin route denied for user:', user?.email);
+          return next({ name: 'Dashboard' });
+        }
+      } catch (err) {
+        console.error('Error checking admin permission:', err);
+        return next({ name: 'Dashboard' });
+      }
     }
   }
 

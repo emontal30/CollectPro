@@ -71,32 +71,18 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
   // 2. جلب بيانات المستخدم والاشتراك (قاعدة البيانات)
   async function fetchSidebarData() {
+    // Always fetch fresh data to ensure consistency
+    if (!navigator.onLine) return;
+
     try {
       const { user: currentUser } = await api.auth.getUser();
-
-      if (!currentUser) {
-        user.value = null;
-        return;
-      }
+      if (!currentUser) return;
 
       user.value = currentUser;
-
-      // التحقق من صلاحية المدير (نفس المنطق: القائمة الثابتة)
-      const adminEmails = ['emontal.33@gmail.com'];
-      isAdmin.value = adminEmails.includes(currentUser.email);
-
-      // جلب آخر اشتراك
+      isAdmin.value = ['emontal.33@gmail.com'].includes(currentUser.email); // Check logic
       const { subscription: subData } = await api.subscriptions.getSubscription(currentUser.id);
       subscription.value = subData;
-
-      // حفظ الأيام المتبقية في LocalStorage (للتوافق مع الكود القديم إذا لزم الأمر)
-      if (daysDisplay.value !== 'اشتراك منتهي' && daysDisplay.value !== 'قيد المراجعة' && daysDisplay.value !== 'لا يوجد اشتراك' && daysDisplay.value !== 'ملغي') {
-        localStorage.setItem('sidebarDaysLeft', daysDisplay.value);
-      }
-
-    } catch (error) {
-      console.error('Error fetching sidebar data:', error);
-    }
+    } catch (err) { console.error('Error fetching sidebar data:', err); }
   }
 
   // 4. تحديث بيانات الاشتراك من event bus
@@ -117,12 +103,16 @@ export const useSidebarStore = defineStore('sidebar', () => {
   async function logout() {
     try {
       const authStore = useAuthStore();
+      isOpen.value = false; // إغلاق الشريط الجانبي قبل الخروج
       await authStore.logout();
-      isOpen.value = false; // إغلاق الشريط الجانبي بعد الخروج
     } catch (error) {
       console.error('Logout error:', error);
       // في حالة الخطأ، وجه لصفحة الدخول مباشرة
-      router.push('/');
+      try {
+        await router.replace('/');
+      } catch (routeError) {
+        window.location.href = '/';
+      }
     }
   }
 

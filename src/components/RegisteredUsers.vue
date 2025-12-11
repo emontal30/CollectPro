@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="table-wrap">
       <table class="w-full text-right border-collapse">
         <thead>
           <tr class="bg-gradient-to-r from-teal-700 to-teal-600 text-white">
@@ -115,8 +115,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, inject } from 'vue';
 import { supabase } from '../supabase'; // تأكد من مسار ملف supabase.js
+
+// نظام الإشعارات الموحد
+const { confirm, success, error, addNotification } = inject('notifications');
 
 // --- الحالة (State) ---
 const users = ref([]);
@@ -173,7 +176,9 @@ const fetchUsers = async () => {
 
   } catch (error) {
     console.error('Error loading users:', error);
-    alert('فشل تحميل قائمة المستخدمين: ' + error.message);
+    addNotification('فشل تحميل قائمة المستخدمين: ' + error.message, 'error', {
+      suggestion: 'تحقق من اتصال الإنترنت وحاول مرة أخرى'
+    });
   } finally {
     loading.value = false;
     checkedUserIds.value = [];
@@ -186,12 +191,19 @@ const activateUserSubscription = async (user) => {
   const days = user.manualDays;
 
   if (!days || days <= 0) {
-    alert('يرجى إدخال عدد أيام صحيح (أكبر من 0).');
+    addNotification('يرجى إدخال عدد أيام صحيح (أكبر من 0).', 'warning');
     return;
   }
 
-  const confirmMsg = `هل أنت متأكد من تفعيل اشتراك لمدة ${days} يوم للمستخدم ${user.full_name || user.email}؟`;
-  if (!confirm(confirmMsg)) return;
+  const result = await confirm({
+    title: 'تأكيد تفعيل الاشتراك',
+    text: `هل أنت متأكد من تفعيل اشتراك لمدة ${days} يوم للمستخدم ${user.full_name || user.email}؟`,
+    icon: 'question',
+    confirmButtonText: 'تفعيل',
+    confirmButtonColor: '#007965'
+  });
+
+  if (!result.isConfirmed) return;
 
   await performActivation(user.id, days);
 };
@@ -199,17 +211,24 @@ const activateUserSubscription = async (user) => {
 // 3. التفعيل الجماعي (منطق handleBulkActivateUsers)
 const handleBulkActivate = async () => {
   if (!bulkDays.value || bulkDays.value <= 0) {
-    alert('يرجى إدخال عدد أيام صحيح للتفعيل الجماعي.');
+    addNotification('يرجى إدخال عدد أيام صحيح للتفعيل الجماعي.', 'warning');
     return;
   }
 
   if (checkedUserIds.value.length === 0) {
-    alert('يرجى تحديد مستخدم واحد على الأقل.');
+    addNotification('يرجى تحديد مستخدم واحد على الأقل.', 'warning');
     return;
   }
 
-  const confirmMsg = `سيتم تفعيل الاشتراك لمدة ${bulkDays.value} يوم لعدد ${checkedUserIds.value.length} مستخدم. هل أنت متأكد؟`;
-  if (!confirm(confirmMsg)) return;
+  const result = await confirm({
+    title: 'تأكيد التفعيل الجماعي',
+    text: `سيتم تفعيل الاشتراك لمدة ${bulkDays.value} يوم لعدد ${checkedUserIds.value.length} مستخدم. هل أنت متأكد؟`,
+    icon: 'question',
+    confirmButtonText: 'تفعيل الجميع',
+    confirmButtonColor: '#007965'
+  });
+
+  if (!result.isConfirmed) return;
 
   loading.value = true;
   try {
@@ -220,12 +239,14 @@ const handleBulkActivate = async () => {
 
     await Promise.all(promises);
 
-    alert('تم تنفيذ العملية بنجاح!');
+    addNotification('تم تنفيذ التفعيل الجماعي بنجاح!', 'success');
     bulkDays.value = null;
     await fetchUsers(); // تحديث البيانات
   } catch (error) {
     console.error('Bulk activation error:', error);
-    alert('حدث خطأ أثناء التفعيل الجماعي.');
+    addNotification('حدث خطأ أثناء التفعيل الجماعي.', 'error', {
+      suggestion: 'تحقق من صحة البيانات وحاول مرة أخرى'
+    });
   } finally {
     loading.value = false;
   }
@@ -292,15 +313,17 @@ const performActivation = async (userId, days, silent = false) => {
     }
 
     if (!silent) {
-      alert('تم تفعيل/تمديد الاشتراك بنجاح!');
+      addNotification('تم تفعيل/تمديد الاشتراك بنجاح!', 'success');
       await fetchUsers(); // تحديث الواجهة
     }
 
-  } catch (error) {
-    console.error('Activation failed:', error);
-    if (!silent) alert('فشل تفعيل الاشتراك: ' + error.message);
-    throw error; // لكي يمسكه Promise.all في التفعيل الجماعي
-  }
+   } catch (error) {
+     console.error('Activation failed:', error);
+     if (!silent) addNotification('فشل تفعيل الاشتراك: ' + error.message, 'error', {
+       suggestion: 'تحقق من صحة البيانات وحاول مرة أخرى'
+     });
+     throw error; // لكي يمسكه Promise.all في التفعيل الجماعي
+   }
 };
 
 // أدوات مساعدة
@@ -331,6 +354,7 @@ watch(checkedUserIds, (newVal) => {
 // عند تحميل المكون
 onMounted(() => {
   fetchUsers();
+  // بدون إشعارات عند الدخول - تحميل صامت
 });
 </script>
 

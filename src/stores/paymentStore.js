@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import api from '@/services/api';
 import { supabase } from '@/services/api';
 import { useRouter } from 'vue-router';
-import Swal from 'sweetalert2'; // تأكد من تثبيت المكتبة: npm install sweetalert2
+import { useNotifications } from '@/composables/useNotifications';
 
 export const usePaymentStore = defineStore('payment', () => {
   // --- الحالة (State) ---
@@ -17,6 +17,9 @@ export const usePaymentStore = defineStore('payment', () => {
   const paymentMethod = ref('vodafone-cash'); // القيمة الافتراضية
   const isLoading = ref(false);
   const router = useRouter();
+
+  // نظام الإشعارات الموحد
+  const { error, success, confirm, addNotification } = useNotifications();
 
   // --- الإجراءات (Actions) ---
 
@@ -87,7 +90,7 @@ export const usePaymentStore = defineStore('payment', () => {
   // 5. إرسال طلب الدفع
   async function submitPayment() {
     if (!transactionId.value.trim()) {
-      Swal.fire('خطأ', 'رقم عملية التحويل مطلوب', 'error');
+      error('رقم عملية التحويل مطلوب');
       return;
     }
 
@@ -104,24 +107,21 @@ export const usePaymentStore = defineStore('payment', () => {
         .eq('status', 'active');
 
       if (activeSubs && activeSubs.length > 0) {
-        const confirm = await Swal.fire({
+        const confirmResult = await confirm({
           title: 'تحذير!',
           text: 'لديك اشتراك نشط بالفعل. هل أنت متأكد من رغبتك في المتابعة وإلغاء الاشتراك الحالي؟',
           icon: 'warning',
-          showCancelButton: true,
           confirmButtonText: 'نعم، متابعة',
-          cancelButtonText: 'إلغاء',
-          confirmButtonColor: '#007965',
-          cancelButtonColor: '#6c757d'
+          cancelButtonText: 'إلغاء'
         });
 
-        if (!confirm.isConfirmed) {
+        if (!confirmResult.isConfirmed) {
           isLoading.value = false;
           return;
         }
       }
 
-      const { error } = await api.payment.submitPayment(
+      const { error: paymentError } = await api.payment.submitPayment(
         user.id,
         selectedPlan.value.id.length > 10 ? selectedPlan.value.id : null,
         transactionId.value,
@@ -129,21 +129,16 @@ export const usePaymentStore = defineStore('payment', () => {
         selectedPlan.value
       );
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
 
-      await Swal.fire({
-        title: 'تم بنجاح!',
-        text: 'تم إرسال طلب اشتراكك بنجاح. سيتم مراجعته وتفعيله خلال 24 ساعة.',
-        icon: 'success',
-        confirmButtonColor: '#007965'
-      });
+      await success('تم إرسال طلب اشتراكك بنجاح. سيتم مراجعته وتفعيله خلال 24 ساعة.', 'تم بنجاح');
 
       localStorage.removeItem('selectedPlanId');
       router.push('/app/my-subscription');
 
-    } catch (error) {
-      console.error(error);
-      Swal.fire('خطأ', `حدث خطأ أثناء إرسال الطلب: ${error.message}`, 'error');
+    } catch (err) {
+      console.error(err);
+      error(`حدث خطأ أثناء إرسال الطلب: ${err.message}`);
     } finally {
       isLoading.value = false;
     }

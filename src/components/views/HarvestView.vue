@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <div class="harvest-page">
     
     <PageHeader 
       title="التحصيلات" 
       subtitle="إدارة وتتبع جميع تحصيلات العملاء"
-      icon="💸"
+      icon="💰"
     />
 
     <div class="date-display">
@@ -17,85 +17,89 @@
     </div>
 
     <div class="search-container">
-      <input 
-        v-model="store.searchQuery" 
-        type="text" 
-        placeholder="🔍 ابحث في المحل أو الكود..." 
-        class="search-input" 
-      />
+      <div class="search-input-wrapper">
+        <i class="fas fa-search search-icon"></i>
+        <input
+          v-model="store.searchQuery"
+          type="text"
+          placeholder=" ...ابحث في المحل أو الكود"
+          class="search-input"
+        />
+      </div>
     </div>
 
-    <div class="overflow-x-auto w-full">
+    <div class="table-wrap w-full">
       <table class="collections-table w-full">
         <thead>
           <tr>
-            <th class="serial whitespace-nowrap">#️⃣</th>
             <th class="shop whitespace-nowrap">🏪 المحل</th>
             <th class="code whitespace-nowrap">🔢 الكود</th>
-            <th class="amount whitespace-nowrap">💸 مبلغ التحويل</th>
-            <th class="extra whitespace-nowrap">🔄 اخرى</th>
-            <th class="collector highlight whitespace-nowrap">💰 المحصّل</th>
-            <th class="net highlight whitespace-nowrap">⚖️ الصافي</th>
+            <th class="amount whitespace-nowrap">💵 مبلغ التحويل</th>
+            <th class="extra whitespace-nowrap">📌 اخرى</th>
+            <th class="collector whitespace-nowrap">👤 المحصل</th>
+            <th class="net highlight whitespace-nowrap">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(row, index) in store.filteredRows" :key="row.id">
-            <td class="serial">{{ index + 1 }}</td>
-            <td class="shop">
-              <input v-model="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="store.ensureEmptyRow" />
+            <td class="shop" :class="{ 'negative-net': (row.collector - (row.amount + row.extra)) < 0 }">
+              <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
+              <span v-else class="readonly-field">{{ row.shop }}</span>
             </td>
-            <td class="code">
-              <input v-model="row.code" type="text" placeholder="الكود" class="editable-input" @input="store.ensureEmptyRow" />
+            <td class="code" :class="{ 'negative-net': (row.collector - (row.amount + row.extra)) < 0 }">
+              <input v-if="!row.isImported" :value="row.code" type="text" placeholder="الكود" class="editable-input" @input="updateCode(row, index, $event)" />
+              <span v-else class="readonly-field">{{ row.code }}</span>
             </td>
             <td class="amount">
-              <input 
-                type="text" 
-                :value="formatInputNumber(row.amount)" 
-                class="amount-input centered-input" 
+              <input
+                v-if="!row.isImported"
+                type="text"
+                :value="formatInputNumber(row.amount)"
+                class="amount-input centered-input"
                 lang="en"
-                style="text-align: center; direction: ltr;" 
-                @input="row.amount = parseFloat($event.target.value.replace(/,/g, '')) || 0" 
-                @blur="row.amount = parseFloat($event.target.value.replace(/,/g, '')) || 0"
+                style="text-align: center; direction: ltr;"
+                @input="updateAmount(row, index, $event)"
+                @blur="updateAmount(row, index, $event)"
               />
+              <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
             </td>
             <td class="extra">
-              <input 
-                type="text" 
-                :value="formatInputNumber(row.extra)" 
-                class="centered-input" 
+              <input
+                type="text"
+                :value="formatInputNumber(row.extra)"
+                class="centered-input"
                 lang="en"
-                style="text-align: center; direction: ltr;" 
-                @input="row.extra = parseFloat($event.target.value.replace(/,/g, '')) || 0" 
-                @blur="row.extra = parseFloat($event.target.value.replace(/,/g, '')) || 0"
+                style="text-align: center; direction: ltr;"
+                @input="updateExtra(row, index, $event)"
+                @blur="updateExtra(row, index, $event)"
               />
             </td>
-            <td class="highlight collector">
-              <input 
-                type="text" 
-                :value="formatInputNumber(row.collector)" 
-                class="centered-input" 
+            <td class="collector">
+              <input
+                type="text"
+                :value="formatInputNumber(row.collector)"
+                class="centered-input"
                 lang="en"
-                style="text-align: center; direction: ltr;" 
-                @input="row.collector = parseFloat($event.target.value.replace(/,/g, '')) || 0" 
-                @blur="row.collector = parseFloat($event.target.value.replace(/,/g, '')) || 0"
+                style="text-align: center; direction: ltr;"
+                @input="updateCollector(row, index, $event)"
+                @blur="updateCollector(row, index, $event)"
               />
             </td>
             
             <td class="net numeric centered-text" :class="getNetClass(row)">
-              {{ store.formatNumber(row.collector - (row.amount + row.extra)) }}
+              {{ store.formatNumber((parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) ) }}
               <i :class="getNetIcon(row)"></i>
             </td>
           </tr>
 
           <tr id="totalRow" class="total-row summary-row">
-            <td class="serial"></td>
             <td class="shop">الإجمالي</td>
             <td class="code"></td>
             <td class="amount centered-text">{{ store.formatNumber(store.totals.amount) }}</td>
             <td class="extra centered-text">{{ store.formatNumber(store.totals.extra) }}</td>
             <td class="collector centered-text">{{ store.formatNumber(store.totals.collector) }}</td>
             <td class="net numeric centered-text" :class="getTotalNetClass">
-              {{ store.formatNumber(store.totalNet) }}
+              {{ store.formatNumber((parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0)) ) }}
               <i :class="getTotalNetIcon"></i>
             </td>
           </tr>
@@ -111,16 +115,17 @@
             <label class="master-limit-field">
               <div class="field-header">
                 <i class="fas fa-crown field-icon"></i>
-                <strong>ليمِت الماستر:</strong>
+                <strong>ليمت الماستر:</strong>
               </div>
-              <input 
-                type="text" 
-                :value="formatInputNumber(store.masterLimit)" 
-                class="bold-input" 
+              <input
+                type="text"
+                :value="store.masterLimit !== 100000 ? formatInputNumber(store.masterLimit) : ''"
+                class="bold-input"
                 lang="en"
-                style="text-align: center; direction: ltr;" 
-                @input="store.masterLimit = parseFloat($event.target.value.replace(/,/g, '')) || 0" 
-                @blur="store.masterLimit = parseFloat($event.target.value.replace(/,/g, '')) || 0"
+                style="text-align: center; direction: ltr;"
+                placeholder="ادخل ليمت الماستر"
+                @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
+                @blur="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
               />
             </label>
             <label class="current-balance-field">
@@ -128,14 +133,15 @@
                 <i class="fas fa-wallet field-icon"></i>
                 <strong>رصيد الماستر الحالي:</strong>
               </div>
-              <input 
-                type="text" 
-                :value="formatInputNumber(store.currentBalance)" 
-                class="bold-input" 
+              <input
+                type="text"
+                :value="store.currentBalance ? formatInputNumber(store.currentBalance) : ''"
+                class="bold-input"
                 lang="en"
-                style="text-align: center; direction: ltr;" 
-                @input="store.currentBalance = parseFloat($event.target.value.replace(/,/g, '')) || 0" 
-                @blur="store.currentBalance = parseFloat($event.target.value.replace(/,/g, '')) || 0"
+                style="text-align: center; direction: ltr;"
+                placeholder="ادخل رصيد الماستر الحالي"
+                @input="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @blur="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
               />
             </label>
           </div>
@@ -162,7 +168,7 @@
           <label class="reset-status-field">
             <div class="field-header">
               <i class="fas fa-check-circle field-icon"></i>
-              <strong>حالة التصفير:</strong>
+              <strong>حالة التصفيرة:</strong>
             </div>
             <span class="calc-field" :style="{ color: store.resetStatus.color }">
               {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }} 
@@ -174,25 +180,27 @@
     </div>
 
     <div class="buttons-container">
-      <div class="buttons">
+      <div class="buttons-row">
         <router-link to="/app/dashboard" class="btn">
           <i class="fas fa-home" style="color: #90EE90"></i>
           <span>صفحة الإدخال</span>
         </router-link>
-        
+
         <router-link to="/app/archive" class="btn">
           <i class="fas fa-archive" style="color: #D3D3D3"></i>
           <span>الذهاب للأرشيف</span>
         </router-link>
-        
+      </div>
+
+      <div class="buttons-row">
         <button id="clearHarvestBtn" class="btn" @click="store.clearFields">
           <i class="fas fa-broom" style="color: #DC143C"></i>
           <span>تفريغ الحقول</span>
         </button>
-        
+
         <button id="archiveTodayBtn" class="btn" :disabled="store.rows.length === 0" @click="archiveToday">
           <i class="fas fa-box-archive" style="color: #FFA500"></i>
-          <span>أرشفه اليوم</span>
+          <span>أرشفة اليوم</span>
         </button>
       </div>
     </div>
@@ -201,24 +209,145 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, onActivated, watch, inject } from 'vue';
+import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
+import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import '@/assets/css/_unified-components.css';
 
 const store = useHarvestStore();
+const route = useRoute();
+const counterStore = useCounterStore();
 
-// Initialize the store
-store.initialize()
+// نظام الإشعارات الموحد
+const { confirm, success, error, messages, addNotification } = inject('notifications');
 
+// Initialize the store when the view mounts or becomes active
 onMounted(() => {
-  // محاولة تحميل بيانات جديدة عند فتح الصفحة
-  const dataLoaded = store.loadDataFromStorage();
-  
-  if (dataLoaded) {
-    // يمكنك إظهار رسالة نجاح هنا إذا أردت
-    console.log('تم استيراد بيانات جديدة من صفحة الإدخال');
+  store.initialize && store.initialize();
+});
+
+onActivated(() => {
+  console.log('Harvest view activated — initializing store');
+  store.initialize && store.initialize();
+});
+
+// Watch route changes to re-initialize when navigating to Harvest
+watch(() => route.name, (newName) => {
+  if (newName === 'Harvest') {
+    console.log('Route changed to Harvest — initialize store');
+    store.initialize && store.initialize();
   }
 });
+
+// مزامنة إجمالي المحصل مع صفحة عداد الأموال عند تحميل الصفحة وعند التركيز
+const syncWithCounterStore = () => {
+  try {
+    const totalCollected = store.totals.collector;
+    localStorage.setItem('totalCollected', totalCollected.toString());
+    
+    // إشعار counter store بالتحديث
+    window.dispatchEvent(new CustomEvent('harvestDataUpdated', { 
+      detail: { totalCollected } 
+    }));
+    
+    console.log('🔄 تم مزامنة إجمالي المحصل مع صفحة عداد الأموال:', totalCollected);
+  } catch (error) {
+    console.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
+  }
+};
+
+onMounted(() => {
+  // محاولة تحميل بيانات جديدة عند فتح الصفحة (بدون إشعارات)
+  const dataLoaded = store.loadDataFromStorage();
+  if (dataLoaded) {
+    console.log('✅ تم تحميل البيانات من صفحة الإدخال');
+  }
+  
+  // مزامنة إجمالي المحصل مع صفحة عداد الأموال
+  syncWithCounterStore();
+  
+  // مراقبة عودة التركيز للصفحة
+  const handleFocus = () => {
+    syncWithCounterStore();
+  };
+  
+  window.addEventListener('focus', handleFocus);
+  
+  // تنظيف المراجع عند إلغاء تحميل الصفحة
+  window.addEventListener('beforeunload', () => {
+    window.removeEventListener('focus', handleFocus);
+  });
+});
+
+// Check and add empty row if last row has data
+const checkAndAddEmptyRow = (index) => {
+   if (index === store.rows.length - 1) {
+     const lastRow = store.rows[index];
+     if (lastRow.shop || lastRow.code || lastRow.amount || lastRow.extra || lastRow.collector) {
+       store.rows.push({
+         id: Date.now(),
+         shop: '',
+         code: '',
+         amount: 0,
+         extra: 0,
+         collector: 0,
+         net: 0,
+         isImported: false
+       });
+       store.saveRowsToLocalStorage();
+     }
+   }
+};
+
+// Update shop and save
+const updateShop = (row, index, event) => {
+   row.shop = event.target.value;
+   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+   store.saveRowsToLocalStorage();
+   checkAndAddEmptyRow(index);
+};
+
+// Update code and save
+const updateCode = (row, index, event) => {
+   row.code = event.target.value;
+   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+   store.saveRowsToLocalStorage();
+   checkAndAddEmptyRow(index);
+};
+
+// Update amount and save
+const updateAmount = (row, index, event) => {
+   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
+   row.amount = value;
+   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+   store.saveRowsToLocalStorage();
+   checkAndAddEmptyRow(index);
+};
+
+// Update extra and save
+const updateExtra = (row, index, event) => {
+   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
+   row.extra = value;
+   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+   store.saveRowsToLocalStorage();
+   checkAndAddEmptyRow(index);
+};
+
+// Update collector and save
+const updateCollector = (row, index, event) => {
+   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
+   row.collector = value;
+   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+   store.saveRowsToLocalStorage();
+   checkAndAddEmptyRow(index);
+   
+   // مزامنة فورية مع صفحة عداد الأموال
+   setTimeout(() => {
+     syncWithCounterStore();
+   }, 50);
+};
 
 // Date formatting
 const currentDate = computed(() => {
@@ -233,12 +362,13 @@ const currentDay = computed(() => {
 
 // Helper functions for colors and icons
 const formatInputNumber = (num) => {
-  if (!num && num !== 0) return ''
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(num)
+   if (!num && num !== 0) return ''
+   return new Intl.NumberFormat('en-US', {
+     minimumFractionDigits: 0,
+     maximumFractionDigits: 2
+   }).format(num)
 }
+
 
 const getNetClass = (row) => {
   const net = row.collector - (row.amount + row.extra);
@@ -268,526 +398,58 @@ const getTotalNetIcon = computed(() => {
 
 // Archive today's data
 const archiveToday = async () => {
-  // 1. تحقق سريع قبل الاستدعاء (اختياري)
   const todayStr = new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' });
   const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
 
-  if (localArchive[todayStr]) {
-    if (!confirm(`يوجد أرشيف سابق ليوم ${todayStr}. هل تريد استبداله بالبيانات الحالية؟`)) {
-      return;
+  // رسالة تأكيد باستخدام النظام الموحد
+  const confirmResult = await confirm({
+    title: localArchive[todayStr] ? 'تأكيد استبدال الأرشيف' : 'تأكيد الأرشفة',
+    text: localArchive[todayStr]
+      ? `توجد أرشيف سابق ليوم ${todayStr}. هل تريد استبداله بالبيانات الحالية؟`
+      : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
+    icon: 'question',
+    confirmButtonText: 'أرشفة',
+    confirmButtonColor: '#007965'
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  try {
+    const result = await store.archiveTodayData();
+
+    if (result.success) {
+      addNotification(result.message, 'success');
+      // تصفير الحقول بعد الأرشفة الناجحة
+      store.clearFields();
+    } else {
+      addNotification(result.message || 'فشل في الأرشفة', 'error');
     }
-  } else {
-    if (!confirm('هل أنت متأكد من أرشفة البيانات الحالية؟')) return;
-  }
-
-  // 2. استدعاء دالة المتجر الجديدة
-  // يمكنك إضافة حالة تحميل هنا (loading spinner)
-  const result = await store.archiveTodayData();
-
-  // 3. عرض النتيجة
-  if (result.success) {
-    alert(result.message);
-    // اختياري: هل تريد تفريغ الجدول بعد الأرشفة؟
-    store.clearFields(); 
-  } else {
-    alert(result.message);
+  } catch (error) {
+    console.error('Archive error:', error);
+    addNotification('حدث خطأ غير متوقع أثناء الأرشفة', 'error', {
+      suggestion: 'تأكد من وجود بيانات صحيحة وحاول مرة أخرى'
+    });
   }
 };
 </script>
 
 <style scoped>
-.harvest-page {
-  width: 100%;
-  animation: fadeIn 0.5s ease-in-out;
-}
+/* All styles imported from _unified-components.css */
 
-/* Ensure English numbers throughout the page */
-input[type="number"] {
-  direction: ltr;
-  text-align: right;
-  font-family: 'Courier New', monospace;
-}
-
-.calc-field {
-  direction: ltr;
-  text-align: right;
-  font-family: 'Courier New', monospace;
-}
-
-.editable-input, .amount-input, input[type="text"] {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-family: 'Courier New', monospace;
-  font-size: 1rem;
-  padding: 5px;
-}
-
-.centered-input {
-  text-align: center;
-  direction: ltr;
-}
-
-input[type="text"] {
-  text-align: center;
-  direction: ltr;
-}
-
-.editable-input {
-  text-align: center;
-  font-family: 'Cairo', sans-serif;
-  direction: rtl;
-}
-
-.centered-text {
+/* Center the "✅ الصافي" header */
+th.net {
   text-align: center;
 }
 
-.editable-input:focus, .amount-input:focus {
-  outline: 2px solid var(--secondary);
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-}
-
-.positive { color: #007bff; font-weight: bold; }
-.negative { color: #dc3545; font-weight: bold; }
-.zero { color: #28a745; font-weight: bold; }
-
-.total-row {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  background: #00897B;
-  color: white;
-  font-weight: bold;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-}
-
-
-
-.total-row td {
-  border-top: 2px solid white;
-}
-
-/* Date display styles */
-.date-display {
+/* تنسيق صفوف الأزرار */
+.buttons-row {
   display: flex;
-  align-items: center;
+  gap: 12px;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f8f9fa;
-  color: #333;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  margin-bottom: 12px;
 }
 
-.date-icon {
-  font-size: 1.2rem;
-}
-
-.date-label {
-  font-weight: 600;
-}
-
-.date-value {
-  font-weight: bold;
-  background: rgba(255,255,255,0.2);
-  padding: 5px 10px;
-  border-radius: 4px;
-}
-
-.date-separator {
-  margin: 0 10px;
-  opacity: 0.7;
-}
-
-/* All dark mode styles are now handled by unified-dark-mode.css */
-
-/* Search container */
-.search-container {
-  margin-bottom: 20px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-family: 'Cairo', sans-serif;
-  background: white;
-  transition: border-color 0.3s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.1);
-}
-
-/* Collections table */
-.collections-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.collections-table th {
-  background: var(--primary);
-  color: white;
-  padding: 15px 10px;
-  text-align: center;
-  font-weight: 600;
-  border-bottom: 2px solid #00695c;
-}
-
-
-
-.collections-table td {
-  padding: 12px 10px;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  vertical-align: middle;
-}
-
-.collections-table .code,
-.collections-table .amount,
-.collections-table .extra,
-.collections-table .collector,
-.collections-table .net {
-  text-align: center;
-}
-
-
-
-.collections-table tbody tr:hover {
-  background: rgba(0, 137, 123, 0.05);
-}
-
-.collections-table .highlight {
-  background: rgba(255, 193, 7, 0.1);
-  font-weight: bold;
-}
-
-.collections-table .numeric {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  direction: ltr;
-  text-align: center;
-}
-
-/* Summary container */
-.summary-container {
-  margin: 30px 0;
-  background: white;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.summary-container h2 {
-  text-align: center;
-  color: var(--primary);
-  margin-bottom: 20px;
-  font-size: 1.4rem;
-}
-
-.summary-grid {
-  display: grid;
-  gap: 20px;
-}
-
-.summary-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.master-limit-field,
-.current-balance-field,
-.reset-amount-field,
-.total-collected-field,
-.reset-status-field {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  border: 2px solid #e0e0e0;
-  transition: border-color 0.3s ease;
-}
-
-.master-limit-field:focus-within,
-.current-balance-field:focus-within {
-  border-color: var(--primary);
-}
-
-.field-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.field-icon {
-  color: var(--primary);
-}
-
-.bold-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: 'Courier New', monospace;
-  direction: ltr;
-  text-align: center;
-  background: white;
-}
-
-.calc-field {
-  font-size: 1.1rem;
-  font-weight: bold;
-  direction: ltr;
-  text-align: center;
-  font-family: 'Courier New', monospace;
-  color: var(--primary);
-}
-
-.calc-field.positive {
-  color: #007bff;
-}
-
-.calc-field.negative {
-  color: #dc3545;
-}
-
-/* Buttons container */
-.buttons-container {
-  margin-top: 30px;
-}
-
-.buttons {
-  display: flex;
-  gap: 15px;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-items: center;
-}
-
-.btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--primary);
-  color: white;
-  text-decoration: none;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: 'Cairo', sans-serif;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn:hover {
-  background: #00695c;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-.btn i {
-  font-size: 1.1rem;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 1024px) {
-  .collections-table th {
-    padding: 12px 8px;
-    font-size: 0.9rem;
-  }
-  
-  .collections-table td {
-    padding: 10px 8px;
-    font-size: 0.9rem;
-  }
-  
-  .editable-input, .amount-input {
-    font-size: 0.9rem;
-    padding: 4px;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Keep desktop layout - no responsive changes */
-  .harvest-page {
-    padding: 0;
-    min-width: 768px;
-  }
-  
-  .date-display {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px;
-    min-height: auto;
-  }
-  
-  .date-display > * {
-    white-space: nowrap;
-  }
-  
-  .date-separator {
-    display: none;
-  }
-  
-  .search-input {
-    padding: 10px 12px;
-    font-size: 0.95rem;
-  }
-  
-  .table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .collections-table {
-    min-width: 700px;
-    font-size: 0.85rem;
-  }
-  
-  .collections-table th {
-    padding: 10px 6px;
-    font-size: 0.8rem;
-  }
-  
-  .collections-table td {
-    padding: 8px 6px;
-    font-size: 0.8rem;
-  }
-  
-  .editable-input, .amount-input {
-    font-size: 0.8rem;
-    padding: 3px;
-  }
-  
-  .summary-row {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .summary-container {
-    padding: 20px 15px;
-  }
-  
-  .bold-input {
-    padding: 8px 10px;
-    font-size: 0.95rem;
-  }
-  
-  .calc-field {
-    font-size: 1rem;
-  }
-  
-  .buttons {
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  .btn {
-    width: 100%;
-    max-width: 280px;
-    justify-content: center;
-    padding: 12px 16px;
-    font-size: 0.95rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .harvest-page {
-    padding: 0 5px;
-  }
-  
-  .date-display {
-    padding: 10px;
-  }
-  
-  .date-value {
-    padding: 3px 8px;
-    font-size: 0.9rem;
-  }
-  
-  .search-input {
-    padding: 8px 10px;
-    font-size: 0.9rem;
-  }
-  
-  .collections-table {
-    min-width: 650px;
-    font-size: 0.75rem;
-  }
-  
-  .collections-table th {
-    padding: 8px 4px;
-    font-size: 0.75rem;
-  }
-  
-  .collections-table td {
-    padding: 6px 4px;
-    font-size: 0.75rem;
-  }
-  
-  .editable-input, .amount-input {
-    font-size: 0.75rem;
-    padding: 2px;
-  }
-  
-  .summary-container {
-    padding: 15px 10px;
-    margin: 20px 0;
-  }
-  
-  .summary-container h2 {
-    font-size: 1.2rem;
-  }
-  
-  .bold-input {
-    padding: 6px 8px;
-    font-size: 0.9rem;
-  }
-  
-  .calc-field {
-    font-size: 0.9rem;
-  }
-  
-  .field-header {
-    font-size: 0.9rem;
-    gap: 6px;
-  }
-  
-  .btn {
-    flex: 1;
-    min-width: 90px;
-    max-width: 120px;
-    justify-content: center;
-    padding: 8px 10px;
-    font-size: 0.75rem;
-  }
-  
-  .buttons {
-    gap: 8px;
-  }
+.buttons-row:last-child {
+  margin-bottom: 0;
 }
 </style>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard-page">
     
     <PageHeader 
@@ -25,26 +25,48 @@
           <span class="char-count">{{ store.clientData.length }} حرف</span>
           <span class="line-count">{{ store.clientData.split('\n').length }} سطر</span>
         </div>
+        
+        <!-- شريط الحالة السفلي -->
+        <transition name="slide-status">
+          <div v-if="statusMessage" :class="['status-bar', statusMessage.type]">
+            <!-- أيقونة ديناميكية مع تأثيرات -->
+            <div class="status-icon-wrapper">
+              <i v-if="statusMessage.type === 'paste'" class="fas fa-paste animate-pulse"></i>
+              <i v-if="statusMessage.type === 'saving'" class="fas fa-hourglass-half animate-spin"></i>
+              <i v-if="statusMessage.type === 'success'" class="fas fa-check-circle animate-bounce"></i>
+              <i v-if="statusMessage.type === 'error'" class="fas fa-exclamation-circle animate-shake"></i>
+            </div>
+            <!-- النص مع النص الفرعي -->
+            <div class="status-content">
+              <span class="status-text">{{ statusMessage.message }}</span>
+              <span v-if="statusMessage.subtext" class="status-subtext">{{ statusMessage.subtext }}</span>
+            </div>
+            <!-- خط التقدم -->
+            <div v-if="statusMessage.type === 'success'" class="progress-line"></div>
+          </div>
+        </transition>
       </div>
     </div>
 
     <div class="buttons-section">
-      <div class="buttons">
+      <div class="buttons-row">
         <button id="pasteBtn" class="btn" type="button" @click="handlePaste">
           <i class="fas fa-paste"></i>
           <span>لصق البيانات</span>
         </button>
-        
+
         <button id="saveGoBtn" class="btn" type="button" @click="handleSaveAndGo">
           <i class="fas fa-save"></i>
           <span>حفظ وانتقال لصفحة التحصيل</span>
         </button>
-        
+      </div>
+
+      <div class="buttons-row">
         <router-link id="goToArchiveBtn" to="/app/archive" class="btn">
           <i class="fas fa-archive"></i>
           <span>الذهاب للأرشيف</span>
         </router-link>
-        
+
         <button id="clearBtn" class="btn" type="button" @click="handleClear">
           <i class="fas fa-trash-alt"></i>
           <span>مسح البيانات</span>
@@ -52,12 +74,6 @@
       </div>
     </div>
 
-    <div v-if="statusMessage" class="status-section">
-      <div class="status-message" :class="statusType">
-        <i :class="getStatusIcon()"></i>
-        <span>{{ statusMessage }}</span>
-      </div>
-    </div>
 
     <div v-if="!store.clientData" class="help-section">
       <div class="help-card">
@@ -65,7 +81,7 @@
         <ul>
           <li>نسخ البيانات من الملف المطلوب (يجب أن تبدأ بـ "المسلسل")</li>
           <li>استخدام زر "لصق البيانات" للصق من الحافظة تلقائياً</li>
-          <li>أو نسخ البيانات يدوياً ولصقها في مربع النص</li>
+          <li>أو نسخ البيانات يدويًا والصقها في مربع النص</li>
           <li>مراجعة البيانات في مربع النص قبل الحفظ</li>
           <li>استخدام "حفظ وانتقال" للانتقال لصفحة التحصيل</li>
         </ul>
@@ -76,73 +92,115 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { inject, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardStore } from '@/stores/dashboard';
-import BaseButton from '@/components/ui/BaseButton.vue';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import '@/assets/css/_unified-components.css';
 
 const router = useRouter();
 const store = useDashboardStore();
 
-const isProcessing = ref(false);
-const statusMessage = ref('');
-const statusType = ref('info'); // info, success, error, warning
+// نظام الإشعارات الموحد
+const { confirm, addNotification, messages, closeLoading } = inject('notifications');
+
+// حالة شريط الحالة
+const statusMessage = ref(null);
+let statusTimeout = null;
+
+const showStatusMessage = (type, message, subtext = null, duration = 4000) => {
+  // إلغاء أي timeout سابق
+  if (statusTimeout) clearTimeout(statusTimeout);
+  
+  statusMessage.value = {
+    type,
+    message,
+    subtext
+  };
+  
+  // إخفاء الرسالة بعد المدة المحددة
+  statusTimeout = setTimeout(() => {
+    statusMessage.value = null;
+  }, duration);
+};
 
 const handlePaste = async () => {
-  isProcessing.value = true;
-  statusMessage.value = '';
-  
   try {
     await store.pasteData();
-    statusMessage.value = 'تم لصق البيانات بنجاح!';
-    statusType.value = 'success';
+    // عرض شريط الحالة مع تأثير النبض
+    showStatusMessage(
+      'paste',
+      '✅ تم لصق البيانات بنجاح!',
+      `${store.clientData.length} حرف - ${store.clientData.split('\n').length} سطر`,
+      3500
+    );
   } catch (error) {
-    statusMessage.value = 'فشل لصق البيانات: ' + error.message;
-    statusType.value = 'error';
-  } finally {
-    isProcessing.value = false;
+    // عرض خطأ في الشريط
+    showStatusMessage(
+      'error',
+      '❌ فشل لصق البيانات',
+      'تأكد من نسخ البيانات بشكل صحيح من الملف المطلوب',
+      5000
+    );
   }
 };
 
-const handleClear = () => {
-  if(confirm("هل أنت متأكد من مسح البيانات؟")) {
+const handleClear = async () => {
+  const result = await confirm({
+    title: 'تأكيد مسح البيانات',
+    text: 'هل أنت متأكد من مسح جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه.',
+    icon: 'warning',
+    confirmButtonText: 'مسح البيانات',
+    confirmButtonColor: '#dc3545'
+  });
+
+  if (result.isConfirmed) {
     store.clearData();
-    statusMessage.value = 'تم مسح البيانات بنجاح';
-    statusType.value = 'info';
+    addNotification('تم مسح البيانات بنجاح', 'info');
   }
 };
 
-const handleSaveAndGo = () => {
-  const result = store.processAndSave();
-  if (result.status === 'success') {
-    statusMessage.value = 'تم حفظ البيانات بنجاح!';
-    statusType.value = 'success';
-    setTimeout(() => {
-      router.push('/app/harvest');
-    }, 1000);
-  } else if (result.status === 'error') {
-    statusMessage.value = result.message;
-    statusType.value = 'error';
-  }
-};
+const handleSaveAndGo = async () => {
+  try {
+    // عرض حالة الحفظ في الشريط
+    showStatusMessage(
+      'saving',
+      '⏳ جاري حفظ البيانات...',
+      'يرجى الانتظار',
+      10000
+    );
+    
+    const result = await store.processAndSave();
 
-const showStatus = (message, type) => {
-  statusMessage.value = message;
-  statusType.value = type;
-  
-  // Auto hide status message after 5 seconds
-  setTimeout(() => {
-    statusMessage.value = '';
-  }, 5000);
-};
-
-const getStatusIcon = () => {
-  switch (statusType.value) {
-    case 'success': return 'fas fa-check-circle';
-    case 'error': return 'fas fa-exclamation-circle';
-    case 'warning': return 'fas fa-exclamation-triangle';
-    default: return 'fas fa-info-circle';
+    if (result.status === 'success') {
+      // عرض رسالة النجاح مع التأثير البديع
+      showStatusMessage(
+        'success',
+        '✅ تم حفظ البيانات بنجاح!',
+        'جاري الانتقال لصفحة التحصيلات...',
+        3000
+      );
+      
+      // التوجه بدون تأخير
+      setTimeout(() => {
+        router.push('/app/harvest');
+      }, 2500);
+    } else if (result.status === 'error') {
+      showStatusMessage(
+        'error',
+        '❌ فشل في حفظ البيانات',
+        result.message || 'حدث خطأ أثناء العملية',
+        5000
+      );
+    }
+  } catch (error) {
+    console.error('Save error:', error);
+    showStatusMessage(
+      'error',
+      '❌ حدث خطأ أثناء الحفظ',
+      'تأكد من البيانات ثم حاول مرة أخرى',
+      5000
+    );
   }
 };
 
@@ -152,492 +210,182 @@ onMounted(() => {
   if (textarea) {
     textarea.focus();
   }
+  // بدون إشعارات عند الدخول - تحميل صامت
 });
 </script>
 
 <style scoped>
-.dashboard-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  animation: fadeIn 0.5s ease-in-out;
-  font-family: 'Cairo', sans-serif;
-  overflow-x: hidden;
-  width: 100%;
-  box-sizing: border-box;
+/* All styles imported from _unified-components.css */
+
+/* تنسيق صفوف الأزرار */
+.buttons-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
-/* Input Section */
-.input-section {
-  margin-bottom: 40px;
+.buttons-row:last-child {
+  margin-bottom: 0;
 }
 
-.input-container {
-  background: white;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 121, 101, 0.1);
-  transition: all 0.3s ease;
-}
-
-.input-container:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.input-label {
+/* شريط الحالة السفلي - تصميم احترافي حديث */
+.status-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-weight: 700;
-  font-size: 1.3rem;
-  color: var(--primary, #007965);
-  margin-bottom: 20px;
-  direction: rtl;
-}
-
-.input-label i {
-  background: rgba(0, 121, 101, 0.1);
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 1.2rem;
-}
-
-.data-input {
-  width: 100%;
-  padding: 25px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-family: 'Courier New', monospace;
-  direction: rtl;
-  text-align: right;
-  resize: vertical;
-  min-height: 350px;
-  transition: all 0.3s ease;
-  background: #f8f9fa;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  box-sizing: border-box;
-}
-
-.data-input:focus {
-  outline: none;
-  border-color: var(--primary, #007965);
-  box-shadow: 0 0 0 4px rgba(0, 121, 101, 0.1);
-  background: white;
-}
-
-.input-info {
-  display: flex;
-  gap: 20px;
-  margin-top: 15px;
-  font-size: 0.95rem;
-  color: #666;
-  direction: rtl;
-}
-
-.char-count, .line-count {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 8px 15px;
+  padding: 14px 18px;
+  margin-top: 12px;
   border-radius: 8px;
-  border: 1px solid #dee2e6;
-  font-weight: 600;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-/* Buttons Section */
-.buttons-section {
-  margin-bottom: 40px;
-}
-
-.buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-top: 25px;
-}
-
-/* --- التنسيق الأساسي للأزرار (.btn) --- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 24px;
-  border: none;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #007965, #005a4b); /* التدرج الأخضر الأصلي */
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
-  text-decoration: none;
-  font-family: 'Cairo', sans-serif;
-  box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3);
-  position: relative;
-  overflow: hidden;
-  min-height: 50px;
-  /* تنسيق الأيقونة والنص عمودياً كما في التصميم */
-  flex-direction: column; 
-  text-align: center;
-  margin: 8px;
-  min-width: 150px; /* لضمان عرض مناسب */
 }
 
-/* تأثير اللمعان عند التحويم */
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.btn:hover {
-  background: linear-gradient(135deg, #f39c12, #d68910); /* يتحول للبرتقالي عند التحويم */
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
-}
-
-.btn:hover::before {
-  left: 100%;
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-/* تنسيق الأيقونة داخل الزر */
-.btn i {
-  font-size: 1.4em;
-  margin-bottom: 4px;
-  transition: color 0.3s ease;
-}
-
-/* تنسيق النص داخل الزر */
-.btn span {
-  font-size: 0.9em;
-  line-height: 1.2;
-}
-
-/* --- تخصيص ألوان الأيقونات لكل زر (نقل دقيق من style.css) --- */
-
-/* زر اللصق (أخضر فاتح) */
-#pasteBtn i {
-  color: #90EE90 !important; 
-}
-
-/* زر الحفظ (برتقالي) */
-#saveGoBtn i {
-  color: #FFA500 !important; 
-}
-
-/* زر الأرشيف (رمادي فاتح) */
-#goToArchiveBtn i {
-  color: #D3D3D3 !important; 
-}
-
-/* زر المسح (أحمر) */
-#clearBtn i {
-  color: #DC143C !important; 
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* Status Section */
-.status-section {
-  margin-bottom: 40px;
-}
-
-.status-message {
+/* الأيقونة مع التأثيرات */
+.status-icon-wrapper {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 20px 25px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1.1rem;
-  direction: rtl;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  animation: slideIn 0.3s ease;
+  justify-content: center;
+  min-width: 24px;
+  font-size: 18px;
 }
 
-.status-message.success {
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-  color: #155724;
-  border: 1px solid #b8daff;
+.status-icon-wrapper i {
+  display: block;
 }
 
-.status-message.error {
-  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-  color: #721c24;
-  border: 1px solid #f1b0b7;
+/* المحتوى */
+.status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
-.status-message.warning {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  color: #856404;
-  border: 1px solid #ffd394;
+.status-text {
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
-.status-message.info {
-  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-  color: #0c5460;
-  border: 1px solid #abdde5;
+.status-subtext {
+  font-size: 12px;
+  opacity: 0.85;
 }
 
-.status-message i {
-  font-size: 1.3rem;
-}
-
-/* All dark mode styles are now handled by unified-dark-mode.css */
-
-/* Help Section */
-.help-section {
-  margin-top: 40px;
-}
-
-.help-card {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 30px;
-  border-radius: 16px;
-  border: 2px solid #dee2e6;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.help-card h3 {
-  color: var(--primary, #007965);
-  margin-bottom: 20px;
-  text-align: center;
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.help-card ul {
-  list-style: none;
-  padding: 0;
-  direction: rtl;
-}
-
-.help-card li {
-  padding: 12px 0;
-  border-bottom: 1px solid #dee2e6;
-  position: relative;
-  padding-right: 25px;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: #495057;
-}
-
-.help-card li:before {
-  content: "🎯";
+/* خط التقدم المتحرك */
+.progress-line {
   position: absolute;
-  right: 0;
-  font-size: 1rem;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  animation: progressMove 2s ease-in-out infinite;
 }
 
-.help-card li:last-child {
-  border-bottom: none;
+/* نوع اللصق - أزرق فاتح */
+.status-bar.paste {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.12), rgba(0, 123, 255, 0.12));
+  color: #17a2b8;
+  border-color: rgba(23, 162, 184, 0.3);
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* نوع الحفظ - برتقالي */
+.status-bar.saving {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.12), rgba(255, 152, 0, 0.12));
+  color: #ff9800;
+  border-color: rgba(255, 152, 0, 0.3);
 }
 
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+/* نوع النجاح - أخضر */
+.status-bar.success {
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.12), rgba(32, 201, 151, 0.12));
+  color: #28a745;
+  border-color: rgba(40, 167, 69, 0.3);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+/* نوع الخطأ - أحمر */
+.status-bar.error {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.12), rgba(255, 107, 107, 0.12));
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 1024px) {
-  .dashboard-page {
-    padding: 20px;
-  }
-  
-  .header-section h1 {
-    font-size: 2.2rem;
-  }
-  
-  .data-input {
-    padding: 22px;
-    font-size: 1.05rem;
-  }
-  
-  .buttons {
-    gap: 15px;
-  }
+/* الوضع الليلي */
+body.dark .status-bar.paste {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.25), rgba(0, 123, 255, 0.25));
+  color: #5ddef4;
+  border-color: rgba(23, 162, 184, 0.5);
 }
 
-@media (max-width: 768px) {
-  .dashboard-page {
-    padding: 15px;
-    overflow-x: hidden;
-  }
-  
-  .header-section {
-    padding: 20px;
-    overflow: hidden;
-  }
-  
-  .header-section h1 {
-    font-size: 2rem;
-  }
-  
-  .subtitle {
-    font-size: 1rem;
-  }
-  
-  .buttons {
-    flex-direction: row;
-    gap: 15px;
-  }
-
-  .btn {
-    width: auto;
-    padding: 12px 16px;
-    font-size: 14px;
-    flex-direction: row; /* في الموبايل تصبح الأيقونة بجانب النص */
-    min-height: 48px;
-  }
-  
-  .btn i {
-    margin-bottom: 0;
-    font-size: 1.2em;
-  }
-  
-  .input-info {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .data-input {
-    min-height: 250px;
-    padding: 20px;
-    font-size: 1rem;
-  }
-  
-  .input-container {
-    padding: 20px;
-    overflow: hidden;
-  }
+body.dark .status-bar.saving {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 152, 0, 0.25));
+  color: #ffd54f;
+  border-color: rgba(255, 152, 0, 0.5);
 }
 
-@media (max-width: 480px) {
-  .dashboard-page {
-    padding: 10px;
-  }
-  
-  .header-section {
-    padding: 15px;
-  }
-  
-  .header-section h1 {
-    font-size: 1.5rem;
-  }
-  
-  .subtitle {
-    font-size: 0.9rem;
-  }
-  
-  .buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .btn {
-    width: 100%;
-    margin: 5px 0;
-  }
-  
-  .input-container {
-    padding: 15px;
-    overflow: hidden;
-  }
-  
-  .data-input {
-    padding: 15px;
-    min-height: 200px;
-    font-size: 0.95rem;
-  }
-  
-  .help-card {
-    padding: 20px;
-    overflow: hidden;
-  }
-  
-  .help-card li {
-    font-size: 0.95rem;
-  }
+body.dark .status-bar.success {
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.25), rgba(32, 201, 151, 0.25));
+  color: #5ffe7a;
+  border-color: rgba(40, 167, 69, 0.5);
 }
 
-@media (max-width: 360px) {
-  .dashboard-page {
-    padding: 8px;
-  }
-  
-  .header-section {
-    padding: 12px;
-  }
-  
-  .header-section h1 {
-    font-size: 1.3rem;
-  }
-  
-  .subtitle {
-    font-size: 0.85rem;
-  }
-  
-  .input-container {
-    padding: 12px;
-  }
-  
-  .data-input {
-    padding: 12px;
-    min-height: 180px;
-    font-size: 0.9rem;
-  }
-  
-  .help-card {
-    padding: 15px;
-  }
-  
-  .help-card li {
-    font-size: 0.9rem;
-  }
+body.dark .status-bar.error {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.25), rgba(255, 107, 107, 0.25));
+  color: #ff6b6b;
+  border-color: rgba(220, 53, 69, 0.5);
 }
 
+/* التأثيرات المتحركة */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes progressMove {
+  0% { width: 0%; }
+  50% { width: 100%; }
+  100% { width: 0%; }
+}
+
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-bounce { animation: bounce 0.6s ease-in-out; }
+.animate-shake { animation: shake 0.4s ease-in-out; }
+
+/* انتقال سلس */
+.slide-status-enter-active,
+.slide-status-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-status-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.slide-status-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 </style>
