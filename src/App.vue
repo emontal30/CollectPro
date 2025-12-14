@@ -15,6 +15,7 @@ import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
 import { useRoute } from 'vue-router';
 import { processPendingSyncQueue } from '@/services/archiveSyncQueue';
+import logger from '@/utils/logger.js';
 
 const authStore = useAuthStore();
 const sessionManager = useSessionManager();
@@ -50,9 +51,9 @@ watch(() => route.name, (newName) => {
 // Watch auth changes for diagnostics (no redirects here)
 watch(() => authStore.user, (newUser, oldUser) => {
   try {
-    console.log('🔁 authStore.user changed (diagnostic):', { hadUser: !!oldUser, hasUser: !!newUser });
+    logger.info('🔁 authStore.user changed (diagnostic):', { hadUser: !!oldUser, hasUser: !!newUser });
   } catch (e) {
-    console.warn('Error logging auth change:', e);
+    logger.warn('Error logging auth change:', e);
   }
 });
 
@@ -60,7 +61,7 @@ watch(() => authStore.user, (newUser, oldUser) => {
 // Routing logic is now handled exclusively by Router Guard
 
 onMounted(() => {
-  console.log('🚀 App mounted, initializing session management and stores...');
+  logger.info('🚀 App mounted, initializing session management and stores...');
 
   // Initialize session management first
   sessionManager.initializeSession();
@@ -72,37 +73,37 @@ onMounted(() => {
   try {
     if (window.performanceMonitor && typeof window.performanceMonitor.enable === 'function') {
       window.performanceMonitor.enable();
-      console.log('📈 Performance monitor enabled (debug)');
+      logger.info('📈 Performance monitor enabled (debug)');
     }
   } catch (err) {
-    console.warn('Failed to enable performance monitor:', err);
+    logger.warn('Failed to enable performance monitor:', err);
   }
 
   // Wrap router.push/replace to log timings and errors for diagnostics
   try {
     const origPush = router.push.bind(router);
     router.push = (...args) => {
-      console.log('➡️ router.push called', args);
+      logger.info('➡️ router.push called', args);
       const t0 = performance.now();
       const result = origPush(...args);
       Promise.resolve(result)
-        .then(() => console.log('✅ router.push resolved', args, Math.round(performance.now() - t0), 'ms'))
-        .catch(err => console.error('❌ router.push error', err, args));
+        .then(() => logger.info('✅ router.push resolved', args, Math.round(performance.now() - t0), 'ms'))
+        .catch(err => logger.error('❌ router.push error', err, args));
       return result;
     };
 
     const origReplace = router.replace.bind(router);
     router.replace = (...args) => {
-      console.log('➡️ router.replace called', args);
+      logger.info('➡️ router.replace called', args);
       const t0 = performance.now();
       const result = origReplace(...args);
       Promise.resolve(result)
-        .then(() => console.log('✅ router.replace resolved', args, Math.round(performance.now() - t0), 'ms'))
-        .catch(err => console.error('❌ router.replace error', err, args));
+        .then(() => logger.info('✅ router.replace resolved', args, Math.round(performance.now() - t0), 'ms'))
+        .catch(err => logger.error('❌ router.replace error', err, args));
       return result;
     };
   } catch (err) {
-    console.warn('Router instrumentation failed:', err);
+    logger.warn('Router instrumentation failed:', err);
   }
 
   // Optional: allow disabling Service Worker via localStorage for debugging
@@ -111,22 +112,24 @@ onMounted(() => {
     try {
       const disableSW = localStorage.getItem('collectpro_disable_sw')
       if (disableSW === '1') {
-        navigator.serviceWorker.getRegistrations()
-          .then(regs => {
-            regs.forEach(reg => {
-              reg.unregister().then(ok => console.log('ServiceWorker unregistered (debug):', ok, reg));
-            });
-          })
-          .catch(err => console.error('ServiceWorker unregister error:', err));
-      }
+          navigator.serviceWorker.getRegistrations()
+            .then(regs => {
+              regs.forEach(reg => {
+                reg.unregister()
+                  .then(ok => logger.info('ServiceWorker unregistered (debug):', ok, reg))
+                  .catch(err => logger.error('ServiceWorker unregister error:', err));
+              });
+            })
+            .catch(err => logger.error('ServiceWorker unregister error:', err));
+        }
     } catch (err) {
-      console.warn('ServiceWorker debug toggle check failed:', err)
+      logger.warn('ServiceWorker debug toggle check failed:', err)
     }
   }
 
   // Initialize auth asynchronously (non-blocking)
-  authStore.initializeAuth().catch(error => {
-    console.error('Auth initialization failed:', error);
+    authStore.initializeAuth().catch(error => {
+    logger.error('Auth initialization failed:', error);
     // Don't block UI for auth errors
   });
 
@@ -149,7 +152,7 @@ onMounted(() => {
 
       // Check auth state when actually needed
       if (authStore.user === null && authStore.isLoading === false) {
-        authStore.getUser().catch(console.error);
+        authStore.getUser().catch(err => logger.error(err));
       }
 
       // NOTE: Removed periodic session validity checks here to avoid
@@ -166,19 +169,19 @@ onMounted(() => {
 
   // Setup online/offline listeners for Background Sync
   const handleOnline = () => {
-    console.log('🌐 Connection restored — processing pending sync queue...');
-    processPendingSyncQueue().catch(console.error);
+    logger.info('🌐 Connection restored — processing pending sync queue...');
+    processPendingSyncQueue().catch(err => logger.error(err));
   };
 
   window.addEventListener('online', handleOnline);
   onlineCleanup = () => window.removeEventListener('online', handleOnline);
 
   document.body.classList.add('loaded');
-  console.log('✅ App initialization complete');
+  logger.info('✅ App initialization complete');
 });
 
 onUnmounted(() => {
-  console.log('🧹 App unmounting, cleaning up...');
+  logger.info('🧹 App unmounting, cleaning up...');
 
   // Cleanup event listeners
   if (visibilityCleanup) {
@@ -205,7 +208,7 @@ onUnmounted(() => {
     window.pageTracker.cleanup();
   }
 
-  console.log('✅ Cleanup complete');
+  logger.info('✅ Cleanup complete');
 });
 </script>
 

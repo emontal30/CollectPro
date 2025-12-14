@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import logger from '@/utils/logger.js'
 
 export const useSubscriptionsStore = defineStore('subscriptions', () => {
   const plans = ref([]);
@@ -47,7 +48,7 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       plans.value = formattedPlans;
 
     } catch (err) {
-      console.error("Error loading plans:", err);
+      logger.error("Error loading plans:", err);
       error.value = "حدث خطأ أثناء تحميل الخطط.";
     } finally {
       isLoading.value = false;
@@ -62,7 +63,7 @@ export const useSubscriptionsStore = defineStore('subscriptions', () => {
       return true; // نجاح العملية والانتقال للدفع
 
     } catch (err) {
-      console.error('Error selecting plan:', err);
+      logger.error('Error selecting plan:', err);
       // في حالة الخطأ، نحفظ الخطة ونسمح بالمرور
       localStorage.setItem('selectedPlanId', planId);
       return true;

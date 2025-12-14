@@ -4,6 +4,7 @@ import { useSessionManager } from '@/composables/useSessionManager'
 // تمت إزالة استيراد supabase لأنه غير مستخدم هنا مباشرة، نعتمد على authStore
 
 import MainLayout from '@/layouts/MainLayout.vue'
+import logger from '@/utils/logger.js'
 
 // Lazy load components
 const LoginView = () => import('@/components/views/LoginView.vue')
@@ -100,41 +101,35 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   const { checkSessionValidity, getLastPage } = useSessionManager();
 
-  console.log('🔍 Router Guard: Checking route:', to.path, 'from:', from.path);
-  console.log('🔍 Auth initialized:', authStore.isInitialized, 'User:', authStore.user ? 'present' : 'null');
+  logger.debug('🔍 Router Guard: Checking route:', to.path, 'from:', from.path);
+  logger.debug('🔍 Auth initialized:', authStore.isInitialized, 'User:', authStore.user ? 'present' : 'null');
 
   // 1. Ensure Auth is Initialized
   // ننتظر التهيئة مرة واحدة فقط إذا لم تكن مكتملة
   if (!authStore.isInitialized) {
-    console.log('🔄 Initializing auth in router guard (with timeout)...');
-    // Avoid blocking navigation indefinitely: wait at most 2000ms for init
-    const initPromise = authStore.initializeAuth();
-    const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
+    logger.debug('🔄 Awaiting authStore.initializeAuth() in router guard...');
     try {
-      const result = await Promise.race([initPromise, timeout]);
-      if (result === 'timeout') {
-        console.warn('⏱️ Auth init timed out in router guard — continuing without full init');
-      } else {
-        console.log('✅ Auth init completed. User after init:', authStore.user ? 'present' : 'null');
-      }
+      await authStore.initializeAuth();
+      logger.info('✅ Auth init completed. User after init:', authStore.user ? 'present' : 'null');
     } catch (error) {
-      console.error('❌ Auth init failed in router:', error);
+      logger.error('❌ Auth init failed in router guard:', error);
+      // Continue navigation even if auth init fails to avoid blocking the app.
     }
   }
 
   const isLoggedIn = !!authStore.user;
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
 
-  console.log('🔍 isLoggedIn:', isLoggedIn, 'requiresAuth:', requiresAuth);
+  logger.debug('🔍 isLoggedIn:', isLoggedIn, 'requiresAuth:', requiresAuth);
 
   // 2. Logic for Logged-In Users trying to access Login page
   if (isLoggedIn && to.name === 'Login') {
-    console.log('👤 User already logged in, redirecting...');
+    logger.info('👤 User already logged in, redirecting...');
     
     // Restore the last page if available
     const lastPage = getLastPage();
     if (lastPage && lastPage !== '/' && !lastPage.includes('login')) {
-      console.log('📍 Restoring last page:', lastPage);
+      logger.info('📍 Restoring last page:', lastPage);
       return next(lastPage);
     }
     
@@ -144,7 +139,7 @@ router.beforeEach(async (to, from, next) => {
   // 3. Protected Routes Logic
   if (requiresAuth) {
     if (!isLoggedIn) {
-      console.log('🛡️ Access denied. Redirecting to Login.');
+      logger.warn('🛡️ Access denied. Redirecting to Login.');
       return next({ name: 'Login' });
     }
 
@@ -161,11 +156,11 @@ router.beforeEach(async (to, from, next) => {
         const adminEmails = ['emontal.33@gmail.com'];
         const isAdmin = user && adminEmails.includes(user.email);
         if (!isAdmin) {
-          console.warn('⚠️ Access to admin route denied for user:', user?.email);
+          logger.warn('⚠️ Access to admin route denied for user:', user?.email);
           return next({ name: 'Dashboard' });
         }
       } catch (err) {
-        console.error('Error checking admin permission:', err);
+        logger.error('Error checking admin permission:', err);
         return next({ name: 'Dashboard' });
       }
     }
@@ -181,7 +176,7 @@ router.afterEach((to) => {
   if (to.name !== 'Login') {
     const { saveCurrentPage } = useSessionManager();
     saveCurrentPage(to.fullPath);
-    console.log('📍 Page tracked:', to.fullPath);
+    logger.debug('📍 Page tracked:', to.fullPath);
   }
 });
 

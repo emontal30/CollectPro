@@ -280,12 +280,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, onActivated, computed, watch } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import logger from '@/utils/logger.js'
 import { useNotifications } from '@/composables/useNotifications';
 import api from '@/services/api';
-import '@/assets/css/_unified-components.css';
 
 const store = useAdminStore();
 const { error, success, confirm, warning, showDetails } = useNotifications();
@@ -405,7 +405,7 @@ async function refreshSubscriptions() {
     await store.fetchAllSubscriptions(true);
     isRefreshingSubscriptions.value = false;
   } catch (error) {
-    console.error('Error refreshing subscriptions:', error);
+    logger.error('Error refreshing subscriptions:', error);
   }
 }
 
@@ -437,7 +437,7 @@ async function bulkActivate() {
         await store.activateManualSubscription(uid, bulkDays.value);
         successCount++;
       } catch (error) {
-        console.error('Error activating subscription for user:', uid, error);
+        logger.error('Error activating subscription for user:', uid, error);
         errorCount++;
       }
     }
@@ -467,17 +467,17 @@ async function refreshCharts() {
 }
 
 onMounted(async () => {
-  console.log('⚙️ Admin view mounted, loading dashboard data...');
+  logger.debug('Admin view mounted, loading dashboard data...');
 
   try {
     // Subscribe to auth state changes so that if the user session becomes
     // available after navigation, we fetch admin data automatically.
     const res = api.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Admin view detected auth event:', event);
+      logger.debug('Admin view detected auth event:', event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         // تحميل البيانات مرة أخرى عند تحديث الجلسة
         await store.loadDashboardData();
-        console.log('✅ Admin data reloaded after auth');
+        logger.info('Admin data reloaded after auth');
       } else if (event === 'SIGNED_OUT') {
         // تنظيف البيانات عند تسجيل الخروج
         store.stats = {
@@ -500,27 +500,33 @@ onMounted(async () => {
     // supabase returns { data: { subscription } }
     authSubscription = res?.data?.subscription;
   } catch (e) {
-    console.warn('⚠️ Failed to subscribe to auth events in admin view', e);
+    logger.warn('Failed to subscribe to auth events in admin view', e);
   }
 
   // محاولة تحميل البيانات الأولية
   try {
     await store.loadDashboardData();
-    console.log('✅ Admin dashboard data loaded initially');
+    logger.info('Admin dashboard data loaded initially');
   } catch (err) {
-    console.error('❌ Error loading admin data initially:', err);
+    logger.error('Error loading admin data initially:', err);
   }
 
   // محاولة إضافية لتحميل البيانات بعد فترة قصيرة (للتأكد من اكتمال المصادقة)
   setTimeout(async () => {
-    console.log('⏰ Delayed admin data load attempt...');
+    logger.debug('Delayed admin data load attempt...');
     try {
       await store.loadDashboardData();
-      console.log('✅ Admin data loaded after delay');
+      logger.info('Admin data loaded after delay');
     } catch (err) {
-      console.error('❌ Error loading admin data after delay:', err);
+      logger.error('Error loading admin data after delay:', err);
     }
   }, 1500);
+});
+
+// When using <keep-alive> the component may be cached; ensure data reloads
+onActivated(() => {
+  logger.info('Admin view activated — reloading admin data');
+  store.loadDashboardData().catch(err => logger.error('Error reloading admin data on activate:', err));
 });
 
 onUnmounted(() => {
@@ -529,7 +535,7 @@ onUnmounted(() => {
       authSubscription.unsubscribe();
     }
   } catch (e) {
-    console.warn('⚠️ Failed to unsubscribe auth events in admin view', e);
+    logger.warn('Failed to unsubscribe auth events in admin view', e);
   }
 });
 </script>

@@ -117,6 +117,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { supabase } from '../supabase'; // تأكد من مسار ملف supabase.js
+import logger from '@/utils/logger.js'
 
 // نظام الإشعارات الموحد
 const { confirm, success, error, addNotification } = inject('notifications');
@@ -162,7 +163,7 @@ const fetchUsers = async () => {
       .select('user_id')
       .eq('status', 'active');
 
-    if (subsError) console.error('Error fetching active subs:', subsError);
+    if (subsError) logger.error('Error fetching active subs:', subsError);
 
     // إنشاء Set للمشتركين النشطين للبحث السريع
     const activeUserIds = new Set(activeSubs?.map(sub => sub.user_id) || []);
@@ -175,7 +176,7 @@ const fetchUsers = async () => {
     }));
 
   } catch (error) {
-    console.error('Error loading users:', error);
+    logger.error('Error loading users:', error);
     addNotification('فشل تحميل قائمة المستخدمين: ' + error.message, 'error', {
       suggestion: 'تحقق من اتصال الإنترنت وحاول مرة أخرى'
     });
@@ -243,7 +244,7 @@ const handleBulkActivate = async () => {
     bulkDays.value = null;
     await fetchUsers(); // تحديث البيانات
   } catch (error) {
-    console.error('Bulk activation error:', error);
+    logger.error('Bulk activation error:', error);
     addNotification('حدث خطأ أثناء التفعيل الجماعي.', 'error', {
       suggestion: 'تحقق من صحة البيانات وحاول مرة أخرى'
     });
@@ -318,7 +319,7 @@ const performActivation = async (userId, days, silent = false) => {
     }
 
    } catch (error) {
-     console.error('Activation failed:', error);
+     logger.error('Activation failed:', error);
      if (!silent) addNotification('فشل تفعيل الاشتراك: ' + error.message, 'error', {
        suggestion: 'تحقق من صحة البيانات وحاول مرة أخرى'
      });

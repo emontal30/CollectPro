@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { useRouter } from 'vue-router'
 import { useNotifications } from '@/composables/useNotifications'
+import logger from '@/utils/logger.js'
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
@@ -10,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const isInitialized = ref(false)
   const isInitializing = ref(false) // Prevent multiple simultaneous initializations
+  let initPromise = null
   const router = useRouter()
   const authWarning = ref('')
 
@@ -27,14 +29,14 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function setUserSession(session) {
     if (session?.user) {
-      console.debug('✅ Session active for:', session.user.email)
+      logger.debug('✅ Session active for:', session.user.email)
       user.value = session.user
       await syncUserProfile(session.user)
 
       // تحميل مسبق لبيانات الاشتراك لتحسين الأداء
       preloadSubscriptionData(session.user.id)
     } else {
-      console.debug('❌ No active session found')
+      logger.debug('❌ No active session found')
       user.value = null
     }
   }
@@ -46,7 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!userId) return
 
     try {
-      console.debug('📋 Preloading subscription data...')
+    logger.debug('📋 Preloading subscription data...')
       // تحميل البيانات بشكل متزامن في الخلفية
       const [subscriptionResult, historyResult] = await Promise.all([
         api.subscriptions.getSubscription(userId),
@@ -62,9 +64,9 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       sessionStorage.setItem('preloadedSubscriptionData', JSON.stringify(cacheData))
-      console.debug('📋 Subscription data preloaded and cached')
+      logger.debug('📋 Subscription data preloaded and cached')
     } catch (error) {
-      console.error('Error preloading subscription data:', error)
+      logger.error('Error preloading subscription data:', error)
     }
   }
 
@@ -108,61 +110,56 @@ export const useAuthStore = defineStore('auth', () => {
    * 1. تهيئة المصادقة عند بدء التطبيق
    */
   async function initializeAuth() {
-    if (isInitialized.value) return
+    if (isInitialized.value) return Promise.resolve()
 
-    // Prevent multiple simultaneous initializations
-    if (isInitializing.value) {
-      // Wait for ongoing initialization to complete
-      while (isInitializing.value) {
-        await new Promise(resolve => setTimeout(resolve, 50))
-      }
-      return
-    }
+    if (isInitializing.value && initPromise) return initPromise
 
     isInitializing.value = true
     isLoading.value = true
 
-    try {
-      console.debug('🚀 Initializing Auth...')
+    initPromise = (async () => {
+      try {
+        logger.debug('🚀 Initializing Auth...')
 
-      // معالجة العودة من جوجل (OAuth Callback)
-      await handleOAuthCallback()
+        await handleOAuthCallback()
 
-      // جلب الجلسة الحالية
-      console.log('🔍 Fetching session from API...')
-      const { session } = await api.auth.getSession()
-      console.log('🔍 Session fetched:', session ? 'exists' : 'null')
-      await setUserSession(session)
+        logger.info('🔍 Fetching session from API...')
+        const { session } = await api.auth.getSession()
+        logger.info('🔍 Session fetched:', session ? 'exists' : 'null')
+        await setUserSession(session)
 
-      // إعداد مستمع لتغييرات الحالة (يتم تنفيذه مرة واحدة)
-      api.auth.onAuthStateChange(async (event, session) => {
-        try {
-          console.debug('🔔 Auth State Changed:', event, { session })
+        api.auth.onAuthStateChange(async (event, session) => {
+          try {
+            logger.debug('🔔 Auth State Changed:', event, { session })
 
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            await setUserSession(session)
-            // Reset loading state when successfully signed in
-            isLoading.value = false
-          } else if (event === 'SIGNED_OUT') {
-            console.info('🔒 Received SIGNED_OUT event — clearing local artifacts and resetting user state')
-            try { clearLocalArtifacts() } catch (e) { console.warn('Failed to clear local artifacts:', e) }
-            user.value = null
-            isInitialized.value = false
-            isLoading.value = false
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              await setUserSession(session)
+              isLoading.value = false
+            } else if (event === 'SIGNED_OUT') {
+              logger.info('🔒 Received SIGNED_OUT event — clearing local artifacts and resetting user state')
+              try { clearLocalArtifacts() } catch (e) { logger.warn('Failed to clear local artifacts:', e) }
+              user.value = null
+              isInitialized.value = false
+              isLoading.value = false
+            }
+          } catch (err) {
+            logger.error('Error in auth state change handler:', err)
           }
-        } catch (err) {
-          console.error('Error in auth state change handler:', err, { event, session })
-        }
-      })
+        })
 
-      isInitialized.value = true
-    } catch (error) {
-      console.error('💥 Auth Initialization Error:', error)
-      authWarning.value = 'تعذر الاتصال بخدمة المصادقة. قد يتأثر التزامن مع الخادم.'
-    } finally {
-      isLoading.value = false
-      isInitializing.value = false
-    }
+        isInitialized.value = true
+      } catch (error) {
+        logger.error('💥 Auth Initialization Error:', error)
+        authWarning.value = 'تعذر الاتصال بخدمة المصادقة. قد يتأثر التزامن مع الخادم.'
+        throw error
+      } finally {
+        isLoading.value = false
+        isInitializing.value = false
+        initPromise = null
+      }
+    })()
+
+    return initPromise
   }
 
   /**
@@ -176,7 +173,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { session } = await api.auth.getSession()
       await setUserSession(session)
     } catch (error) {
-      console.error('Failed to get user:', error)
+      logger.error('Failed to get user:', error)
       authWarning.value = 'فشل جلب بيانات المستخدم. تحقق من اتصال الشبكة.'
       user.value = null
     } finally {
@@ -198,15 +195,15 @@ export const useAuthStore = defineStore('auth', () => {
     const type = params.get('type')
 
     if (accessToken || refreshToken || type === 'recovery') {
-      console.log('🔄 Processing OAuth Callback...')
+      logger.info('🔄 Processing OAuth Callback...')
       try {
         // نترك Supabase يعالج التوكن تلقائياً، نحن فقط ننظف الرابط
         const { data, error } = await api.auth.getSession()
-        if (!error && data?.session) {
-          console.log('✅ OAuth Login Successful')
+          if (!error && data?.session) {
+          logger.info('✅ OAuth Login Successful')
         }
       } catch (err) {
-        console.error('OAuth Handling Error:', err)
+        logger.error('OAuth Handling Error:', err)
       } finally {
         // تنظيف الرابط من التوكنز للحماية
         window.history.replaceState({}, document.title, window.location.pathname)
@@ -243,7 +240,7 @@ export const useAuthStore = defineStore('auth', () => {
       clearTimeout(loadingTimeout)
 
     } catch (error) {
-      console.error('Login Error:', error)
+      logger.error('Login Error:', error)
       addNotification(error.message, 'error')
       authWarning.value = 'حدث خطأ أثناء تسجيل الدخول. تحقق من اتصال الشبكة.'
       isLoading.value = false
@@ -255,7 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
    * 5. تسجيل الخروج
    */
   async function logout() {
-    console.log('🔒 Starting logout process...')
+    logger.info('🔒 Starting logout process...')
     isLoading.value = true
 
     try {
@@ -269,19 +266,19 @@ export const useAuthStore = defineStore('auth', () => {
       // 3. تسجيل الخروج من Supabase (غير blocking)
       try {
         const { error } = await api.auth.signOut()
-        if (error) console.warn('Supabase SignOut Warning:', error.message)
+        if (error) logger.warn('Supabase SignOut Warning:', error.message)
       } catch (signOutError) {
-        console.warn('SignOut failed, but proceeding with logout:', signOutError)
+        logger.warn('SignOut failed, but proceeding with logout:', signOutError)
       }
 
-      console.log('✅ Logout completed, redirecting...')
+      logger.info('✅ Logout completed, redirecting...')
       // 4. تعيين isLoading إلى false
       isLoading.value = false
       // 5. إعادة التوجيه إلى صفحة الدخول
       router.push('/')
 
     } catch (error) {
-      console.error('❌ Logout Critical Error:', error)
+      logger.error('❌ Logout Critical Error:', error)
       // في حالة الخطأ، نضمن إعادة التحميل
       user.value = null
       isLoading.value = false
@@ -300,9 +297,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (!userData) return
     try {
       const { error } = await api.user.syncUserProfile(userData)
-      if (error) console.error('Profile Sync Error:', error)
+      if (error) logger.error('Profile Sync Error:', error)
     } catch (err) {
-      console.error('Profile Sync Unexpected Error:', err)
+      logger.error('Profile Sync Unexpected Error:', err)
     }
   }
 
@@ -322,7 +319,7 @@ export const useAuthStore = defineStore('auth', () => {
     getUser,
     loginWithGoogle,
     logout,
-    syncUserProfile
-    ,clearAuthWarning
+    syncUserProfile,
+    clearAuthWarning
   }
 })

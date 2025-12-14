@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/services/api';
-import { supabase } from '@/services/api';
 import { useNotifications } from '@/composables/useNotifications';
 import eventBus from '@/utils/eventBus';
+import logger from '@/utils/logger.js'
+import { supabase } from '@/supabase'
 
 export const useAdminStore = defineStore('admin', () => {
   // --- الحالة (State) ---
@@ -60,7 +61,7 @@ export const useAdminStore = defineStore('admin', () => {
         fetchUsers()
       ]);
     } catch (error) {
-      console.error('Error loading admin data:', error);
+      logger.error('Error loading admin data:', error);
       error('فشل تحميل البيانات');
     } finally {
       isLoading.value = false;
@@ -105,7 +106,7 @@ export const useAdminStore = defineStore('admin', () => {
         .gte('updated_at', daysAgo.toISOString());
 
       if (error) {
-        console.warn('Failed to fetch active users:', error);
+        logger.warn('Failed to fetch active users:', error);
         stats.value.activeUsers = 0;
       } else {
         // حساب المستخدمين الفريدين
@@ -113,7 +114,7 @@ export const useAdminStore = defineStore('admin', () => {
         stats.value.activeUsers = uniqueUsers.size;
       }
     } catch (e) {
-      console.warn('Failed to fetch active users', e);
+      logger.warn('Failed to fetch active users', e);
       stats.value.activeUsers = 0;
     }
 
@@ -145,7 +146,7 @@ export const useAdminStore = defineStore('admin', () => {
         success('تم تحديث قائمة الاشتراكات');
       }
     } catch (error) {
-      console.error('Error fetching all subscriptions:', error);
+      logger.error('Error fetching all subscriptions:', error);
       if (showFeedback) {
         error('فشل في تحديث قائمة الاشتراكات');
       }
@@ -160,7 +161,7 @@ export const useAdminStore = defineStore('admin', () => {
         success('تم تحديث قائمة المستخدمين');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       if (showFeedback) {
         error('فشل في تحديث قائمة المستخدمين');
       }
@@ -201,7 +202,7 @@ export const useAdminStore = defineStore('admin', () => {
 
     try {
       // Get the subscription before action to know the user_id
-      const { data: subBefore } = await supabase.from('subscriptions').select('user_id').eq('id', id).single();
+      const { data: subBefore } = await api.subscriptions.getSubscriptionById(id);
 
       await api.admin.handleSubscriptionAction(id, action);
       await loadDashboardData(); // تحديث البيانات
@@ -214,7 +215,7 @@ export const useAdminStore = defineStore('admin', () => {
 
       success('تم تنفيذ الإجراء بنجاح');
     } catch (error) {
-      console.error('Error handling subscription action:', error);
+      logger.error('Error handling subscription action:', error);
       error('حدث خطأ أثناء تنفيذ الإجراء');
     }
   }
@@ -232,7 +233,7 @@ export const useAdminStore = defineStore('admin', () => {
 
       success('تم تفعيل الاشتراك بنجاح');
     } catch (error) {
-      console.error('Error activating manual subscription:', error);
+      logger.error('Error activating manual subscription:', error);
       error('حدث خطأ أثناء تفعيل الاشتراك');
     }
   }

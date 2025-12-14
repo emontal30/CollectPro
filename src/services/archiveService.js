@@ -1,9 +1,10 @@
 import { authService } from './authService.js'
+import logger from '@/utils/logger.js'
 
 export const archiveService = {
   async getAvailableDates(userId) {
     try {
-      console.log('🔍 Fetching available archive dates for user:', userId);
+      logger.info('🔍 Fetching available archive dates for user:', userId);
       
       const { data, error } = await authService.supabase
         .from('archive_data')
@@ -12,15 +13,15 @@ export const archiveService = {
         .order('archive_date', { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching archive dates:', error);
+        logger.error('❌ Error fetching archive dates:', error);
         return { dates: [], error };
       }
 
       const dates = [...new Set(data?.map(item => item.archive_date) || [])];
-      console.log('✅ Archive dates fetched:', dates);
+      logger.info('✅ Archive dates fetched:', dates);
       return { dates, error };
     } catch (err) {
-      console.error('❌ Exception in getAvailableDates:', err);
+      logger.error('❌ Exception in getAvailableDates:', err);
       return { dates: [], error: err };
     }
   },

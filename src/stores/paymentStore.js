@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/services/api';
-import { supabase } from '@/services/api';
 import { useRouter } from 'vue-router';
 import { useNotifications } from '@/composables/useNotifications';
+import logger from '@/utils/logger.js'
 
 export const usePaymentStore = defineStore('payment', () => {
   // --- الحالة (State) ---
@@ -39,11 +39,11 @@ export const usePaymentStore = defineStore('payment', () => {
       try {
         await loadUserData();
       } catch (userError) {
-        console.warn('Could not load user data, continuing anyway:', userError);
+        logger.warn('Could not load user data, continuing anyway:', userError);
         // نستمر حتى بدون بيانات المستخدم
       }
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     } finally {
       isLoading.value = false;
     }
@@ -73,7 +73,7 @@ export const usePaymentStore = defineStore('payment', () => {
         };
       }
     } catch (error) {
-      console.warn('Could not load user data, using defaults:', error);
+      logger.warn('Could not load user data, using defaults:', error);
       userData.value = {
         name: 'زائر',
         email: 'guest@example.com',
@@ -137,7 +137,7 @@ export const usePaymentStore = defineStore('payment', () => {
       router.push('/app/my-subscription');
 
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       error(`حدث خطأ أثناء إرسال الطلب: ${err.message}`);
     } finally {
       isLoading.value = false;

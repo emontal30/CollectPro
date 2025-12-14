@@ -3,6 +3,7 @@ import vue from 'eslint-plugin-vue';
 import prettier from 'eslint-config-prettier';
 
 export default [
+  { ignores: ['dist/**', 'node_modules/**', 'public/**', '.vite/**', 'coverage/**'] },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   prettier,

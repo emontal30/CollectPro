@@ -69,6 +69,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import logger from '@/utils/logger.js'
 
 const store = useAuthStore();
 const currentYear = ref(new Date().getFullYear());
@@ -83,21 +84,21 @@ const handleInstallPromptLogic = () => {
   // 1. التحقق أولاً: هل التطبيق مثبت بالفعل؟ (Standalone Mode)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (isStandalone) {
-    console.log('LoginView: App is already installed (standalone mode)');
+    logger.info('LoginView: App is already installed (standalone mode)');
     showInstallButton.value = false;
     return;
   }
 
   // 2. التحقق من الحدث المخزن عالمياً (إذا حدث قبل تحميل المكون)
   if (window.deferredPrompt) {
-    console.log('LoginView: Found global deferredPrompt - showing install button');
+    logger.info('LoginView: Found global deferredPrompt - showing install button');
     showInstallButton.value = true;
     return;
   }
 
   // 3. الاستماع للحدث محلياً كاحتياطي (للحالات النادرة)
   const handleInstallPrompt = (e) => {
-    console.log('LoginView: Captured beforeinstallprompt event (fallback)');
+    logger.info('LoginView: Captured beforeinstallprompt event (fallback)');
     e.preventDefault();
     window.deferredPrompt = e; // تخزين عالمي
     showInstallButton.value = true;
@@ -110,7 +111,7 @@ const handleInstallPromptLogic = () => {
   // تنظيف في حال عدم ظهور الحدث (fallback بعد 3 ثوان)
   setTimeout(() => {
     if (!showInstallButton.value && !window.deferredPrompt) {
-      console.log('LoginView: No install prompt captured within 3 seconds');
+      logger.info('LoginView: No install prompt captured within 3 seconds');
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
     }
   }, 3000);
@@ -118,7 +119,7 @@ const handleInstallPromptLogic = () => {
 
 const installApp = async () => {
   if (!window.deferredPrompt) {
-    console.warn('LoginView: No deferredPrompt available for installation');
+    logger.warn('LoginView: No deferredPrompt available for installation');
     return;
   }
 
@@ -129,19 +130,19 @@ const installApp = async () => {
     // انتظار رد المستخدم
     const { outcome } = await window.deferredPrompt.userChoice;
 
-    console.log(`LoginView: User response to install prompt: ${outcome}`);
+    logger.info(`LoginView: User response to install prompt: ${outcome}`);
 
     // تصفير المتغيرات لأن الحدث لا يستخدم إلا مرة واحدة
     window.deferredPrompt = null;
     showInstallButton.value = false;
 
     if (outcome === 'accepted') {
-      console.log('LoginView: App installation accepted');
+      logger.info('LoginView: App installation accepted');
     } else {
-      console.log('LoginView: App installation dismissed');
+      logger.info('LoginView: App installation dismissed');
     }
   } catch (error) {
-    console.error('LoginView: Error during app installation:', error);
+    logger.error('LoginView: Error during app installation:', error);
     // تصفير في حالة الخطأ أيضاً
     window.deferredPrompt = null;
     showInstallButton.value = false;
@@ -496,24 +497,7 @@ const installApp = async () => {
   100% { transform: rotate(360deg); }
 }
 
-/* =========================================
-   7. الوضع الليلي (Dark Mode)
-   ========================================= */
-:global(body.dark) .login-wrapper {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-}
-:global(body.dark) .login-card {
-  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
-  color: #f1f1f1;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  border-color: rgba(0, 200, 150, 0.1);
-}
-
-:global(body.dark) .app-name { color: #00c896; }
-:global(body.dark) .subtitle { color: #ccc; }
-:global(body.dark) .privacy-policy { color: #aaa; }
-:global(body.dark) .footer-info { color: #999; border-top-color: #333; }
-
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* =========================================
    8. استجابة الشاشات الصغيرة (Mobile)
    ========================================= */

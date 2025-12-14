@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
+import logger from '@/utils/logger.js'
 
 export const useCounterStore = defineStore('counter', () => {
   // --- الحالة (State) ---
@@ -49,13 +50,13 @@ export const useCounterStore = defineStore('counter', () => {
       // تحديث القيمة فقط إذا كانت مختلفة
       if (totalCollected.value !== newTotal) {
         totalCollected.value = newTotal;
-        console.log('🔄 تم مزامنة إجمالي المحصل:', newTotal);
+        logger.info('🔄 تم مزامنة إجمالي المحصل:', newTotal);
       } else {
-        console.log('✅ إجمالي المحصل محدث بالفعل:', newTotal);
+        logger.info('✅ إجمالي المحصل محدث بالفعل:', newTotal);
       }
       
     } catch (error) {
-      console.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
+      logger.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
       // محاولة استخدام القيمة القديمة
       const fallback = Number(localStorage.getItem('totalCollected')) || 0;
       if (totalCollected.value !== fallback) {
@@ -172,7 +173,7 @@ export const useCounterStore = defineStore('counter', () => {
   window.addEventListener('harvestDataUpdated', (e) => {
     if (e.detail && e.detail.totalCollected !== undefined) {
       totalCollected.value = e.detail.totalCollected;
-      console.log('✅ تم تحديث إجمالي المحصل عبر الحدث المخصص:', e.detail.totalCollected);
+      logger.info('✅ تم تحديث إجمالي المحصل عبر الحدث المخصص:', e.detail.totalCollected);
     }
   });
 

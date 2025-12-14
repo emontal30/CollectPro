@@ -129,28 +129,4 @@ onMounted(() => {
   opacity: 1;
 }
 
-/* Dark mode support */
-body.dark .alert-info {
-  background: rgba(23, 162, 184, 0.1);
-  color: #5bc0de;
-  border-color: rgba(23, 162, 184, 0.3);
-}
-
-body.dark .alert-success {
-  background: rgba(40, 167, 69, 0.1);
-  color: #5cb85c;
-  border-color: rgba(40, 167, 69, 0.3);
-}
-
-body.dark .alert-warning {
-  background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
-  border-color: rgba(255, 193, 7, 0.3);
-}
-
-body.dark .alert-danger {
-  background: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-  border-color: rgba(220, 53, 69, 0.3);
-}
-</style>
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */

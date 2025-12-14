@@ -27,6 +27,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useUIStore } from '@/stores/ui'
+import logger from '@/utils/logger.js'
 
 const uiStore = useUIStore()
 const show = ref(false)
@@ -36,7 +37,7 @@ const install = async () => {
   if (deferredPrompt) {
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    console.log('Install outcome:', outcome)
+    logger.info('Install outcome:', outcome)
 
     if (outcome === 'accepted') {
       localStorage.setItem('appInstalled', 'true')

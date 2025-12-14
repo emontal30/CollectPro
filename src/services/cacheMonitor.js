@@ -4,15 +4,16 @@
  */
 
 import { getCacheStats, clearAllCaches, cleanExpiredCache } from '@/services/cacheManager';
+import logger from '@/utils/logger.js'
 
 export function setupCacheMonitor() {
   // عرض إحصائيات الكاش في Console
   window.showCacheStats = () => {
     const stats = getCacheStats();
-    console.table({
-      'Memory Cache': `${stats.memory.items}/${stats.memory.max}`,
-      'LocalStorage': `${stats.localStorage.items}/${stats.localStorage.max}`,
-      'IndexedDB': `${stats.indexedDB.items}/${stats.indexedDB.max}`
+    logger.info('Cache stats:', {
+      memory: `${stats.memory.items}/${stats.memory.max}`,
+      localStorage: `${stats.localStorage.items}/${stats.localStorage.max}`,
+      indexedDB: `${stats.indexedDB.items}/${stats.indexedDB.max}`
     });
     return stats;
   };
@@ -20,17 +21,17 @@ export function setupCacheMonitor() {
   // تنظيف جميع الكاش
   window.clearCache = async () => {
     await clearAllCaches();
-    console.log('✅ تم تنظيف جميع الكاش');
+    logger.info('✅ تم تنظيف جميع الكاش');
   };
 
   // تنظيف البيانات المنتهية الصلاحية
   window.cleanExpiredCache = async () => {
     await cleanExpiredCache();
-    console.log('✅ تم تنظيف البيانات المنتهية الصلاحية');
+    logger.info('✅ تم تنظيف البيانات المنتهية الصلاحية');
   };
 
-  console.log('🧪 Cache Monitor Activated');
-  console.log('استخدم: showCacheStats() - لعرض الإحصائيات');
-  console.log('استخدم: clearCache() - لتنظيف جميع الكاش');
-  console.log('استخدم: cleanExpiredCache() - لتنظيف المنتهي صلاحيته');
+  logger.info('🧪 Cache Monitor Activated');
+  logger.info('استخدم: showCacheStats() - لعرض الإحصائيات');
+  logger.info('استخدم: clearCache() - لتنظيف جميع الكاش');
+  logger.info('استخدم: cleanExpiredCache() - لتنظيف المنتهي صلاحيته');
 }

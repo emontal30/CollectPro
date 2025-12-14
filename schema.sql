@@ -1,22 +1,43 @@
 -- ====================================================================
--- ملف قاعدة البيانات النهائي والمصحح (Fixes 42P13 & 42P16)
+-- COLLECTPRO - ملف قاعدة البيانات النهائي والمدمج
+-- Database Schema v1.0 (Consolidated from Schema.SQL & RLS_POLICIES.sql)
+-- ====================================================================
+-- تاريخ الإنشاء: 2025-12-13
+-- التصحيحات: 42P13, 42P16
+-- ملفات المصدر: Schema.SQL, RLS_POLICIES.sql
 -- ====================================================================
 
--- 1. الإعدادات الأساسية
+-- =====================================================
+-- القسم 1: الإعدادات الأساسية (BASIC SETUP)
+-- =====================================================
+
+-- تثبيت الإضافات المطلوبة
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. تنظيف العناصر القديمة لتجنب الأخطاء (DROP OLD OBJECTS)
+-- =====================================================
+-- القسم 2: تنظيف العناصر القديمة (DROP OLD OBJECTS)
+-- =====================================================
 -- حذف الدوال القديمة لتجنب خطأ تغيير نوع الإرجاع
 DROP FUNCTION IF EXISTS public.get_active_users_last_n_days(integer);
 DROP FUNCTION IF EXISTS public.get_active_users_last_n_days(int);
 DROP FUNCTION IF EXISTS public.calculate_total_revenue();
 DROP FUNCTION IF EXISTS public.get_dashboard_stats();
 
--- حذف الـ View القديم لتجنب خطأ حذف الأعمدة (Fix for 42P16)
+-- حذف الـ View القديمة
 DROP VIEW IF EXISTS public.admin_subscriptions_view;
 
+-- حذف السياسات القديمة (RLS Policies)
+DO $$ 
+DECLARE 
+    pol record;
+BEGIN 
+    FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
+    END LOOP;
+END $$;
+
 -- =====================================================
--- 3. إنشاء الجداول (TABLES)
+-- القسم 3: إنشاء الجداول (TABLES)
 -- =====================================================
 
 -- جدول المستخدمين (Users)
@@ -28,19 +49,18 @@ BEGIN
             full_name TEXT,
             email TEXT UNIQUE,
             phone TEXT,
-            provider JSONB DEFAULT '[]'::jsonb, -- قائمة بطرق المصادقة (مثل ["google"])
+            provider JSONB DEFAULT '[]'::jsonb,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
     ELSE
-        -- إضافة الأعمدة الناقصة إن وجدت
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'full_name') THEN
             ALTER TABLE public.users ADD COLUMN full_name TEXT;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
             ALTER TABLE public.users ADD COLUMN email TEXT UNIQUE;
         END IF;
-          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'phone') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'phone') THEN
             ALTER TABLE public.users ADD COLUMN phone TEXT;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'provider') THEN
@@ -60,7 +80,6 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        -- المدير الافتراضي
         INSERT INTO public.admins (email, full_name) VALUES ('emontal.33@gmail.com', 'أيمن حافظ')
         ON CONFLICT (email) DO NOTHING;
     END IF;
@@ -162,7 +181,7 @@ BEGIN
 END $$;
 
 -- =====================================================
--- 4. تهيئة البيانات الأولية (INITIAL DATA)
+-- القسم 4: تهيئة البيانات الأولية (INITIAL DATA)
 -- =====================================================
 DO $$
 BEGIN
@@ -181,10 +200,10 @@ BEGIN
 END $$;
 
 -- =====================================================
--- 5. إعداد سياسات الأمان (RLS POLICIES)
+-- القسم 5: تفعيل سياسات الأمان (ENABLE ROW LEVEL SECURITY)
 -- =====================================================
 
--- تفعيل RLS
+-- تفعيل RLS على جميع الجداول الحساسة
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.archive_dates ENABLE ROW LEVEL SECURITY;
@@ -193,58 +212,101 @@ ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
--- حذف السياسات القديمة
-DO $$ 
-DECLARE 
-    pol record;
-BEGIN 
-    FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' LOOP
-        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
-    END LOOP;
-END $$;
+-- =====================================================
+-- القسم 6: سياسات الأمان (RLS POLICIES)
+-- =====================================================
 
--- إنشاء السياسات الجديدة
--- 1. Users
-CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Admins can view all users" ON public.users FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+-- ===== 6.1: جدول USERS (المستخدمون) =====
+-- المستخدم يرى ملفه الشخصي فقط، والمدير يرى الكل
+CREATE POLICY "Users can view own profile" ON public.users 
+    FOR SELECT USING (auth.uid() = id);
 
--- 2. Subscriptions
-CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own subscriptions" ON public.subscriptions FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own subscriptions" ON public.subscriptions FOR DELETE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all subscriptions" ON public.subscriptions FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Admins can update all subscriptions" ON public.subscriptions FOR UPDATE USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Admins can delete all subscriptions" ON public.subscriptions FOR DELETE USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+CREATE POLICY "Users can update own profile" ON public.users 
+    FOR UPDATE USING (auth.uid() = id);
 
--- 3. Archive
-CREATE POLICY "Users can view own archive dates" ON public.archive_dates FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own archive dates" ON public.archive_dates FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can delete own archive dates" ON public.archive_dates FOR DELETE USING (auth.uid() = user_id);
-CREATE POLICY "Users can view own archive data" ON public.archive_data FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own archive data" ON public.archive_data FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can delete own archive data" ON public.archive_data FOR DELETE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all archive data" ON public.archive_data FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+CREATE POLICY "Admins can view all users" ON public.users 
+    FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
 
--- 4. Statistics & Plans
-CREATE POLICY "Admins can read statistics" ON public.statistics FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Admins can update statistics" ON public.statistics FOR ALL USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Anyone can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
-CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+-- ===== 6.2: جدول SUBSCRIPTIONS (الاشتراكات) =====
+-- المستخدم يرى اشتراكاته فقط، المدير يرى الكل
+CREATE POLICY "Users can view own subscriptions" ON public.subscriptions 
+    FOR SELECT USING (auth.uid() = user_id);
 
--- 5. Admins
-CREATE POLICY "Admins can view their own data" ON public.admins FOR SELECT USING (auth.email() = email);
-CREATE POLICY "Service role can manage admins" ON public.admins FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions 
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own subscriptions" ON public.subscriptions 
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own subscriptions" ON public.subscriptions 
+    FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all subscriptions" ON public.subscriptions 
+    FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+CREATE POLICY "Admins can update all subscriptions" ON public.subscriptions 
+    FOR UPDATE USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+CREATE POLICY "Admins can delete all subscriptions" ON public.subscriptions 
+    FOR DELETE USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+-- ===== 6.3: جدول ARCHIVE_DATES (تواريخ الأرشيف) =====
+-- المستخدم يرى أرشيفه فقط
+CREATE POLICY "Users can view own archive dates" ON public.archive_dates 
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own archive dates" ON public.archive_dates 
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own archive dates" ON public.archive_dates 
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- ===== 6.4: جدول ARCHIVE_DATA (بيانات الأرشيف) =====
+-- المستخدم يرى بيانات أرشيفه فقط
+CREATE POLICY "Users can view own archive data" ON public.archive_data 
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own archive data" ON public.archive_data 
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own archive data" ON public.archive_data 
+    FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all archive data" ON public.archive_data 
+    FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+-- ===== 6.5: جدول STATISTICS (الإحصائيات) =====
+-- المدير فقط يرى الإحصائيات
+CREATE POLICY "Admins can read statistics" ON public.statistics 
+    FOR SELECT USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+CREATE POLICY "Admins can update statistics" ON public.statistics 
+    FOR ALL USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+-- ===== 6.6: جدول SUBSCRIPTION_PLANS (خطط الاشتراك) =====
+-- الجميع يرى الخطط النشطة، المدير يدير الكل
+CREATE POLICY "Anyone can view active plans" ON public.subscription_plans 
+    FOR SELECT USING (is_active = TRUE);
+
+CREATE POLICY "Admins can manage plans" ON public.subscription_plans 
+    FOR ALL USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+
+-- ===== 6.7: جدول ADMINS (المديرون) =====
+-- المدير يرى بيانات حسابه فقط
+CREATE POLICY "Admins can view their own data" ON public.admins 
+    FOR SELECT USING (auth.email() = email);
+
+CREATE POLICY "Service role can manage admins" ON public.admins 
+    FOR ALL USING (auth.role() = 'service_role');
 
 GRANT SELECT ON public.admins TO authenticated;
 GRANT ALL ON public.admins TO service_role;
 
 -- =====================================================
--- 6. الدوال والتريجرز (FUNCTIONS & TRIGGERS)
+-- القسم 7: الدوال والتريجرز (FUNCTIONS & TRIGGERS)
 -- =====================================================
 
--- دالة تحديث الوقت
+-- ===== 7.1: دالة تحديث الوقت (Update Timestamp Function) =====
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -253,7 +315,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- دالة حساب الإيرادات
+-- ===== 7.2: دالة حساب الإيرادات (Calculate Total Revenue) =====
 CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
 RETURNS NUMERIC 
 SECURITY DEFINER
@@ -273,7 +335,7 @@ EXCEPTION WHEN OTHERS THEN RETURN 0;
 END;
 $$;
 
--- دالة تحديث الإحصائيات
+-- ===== 7.3: دالة تحديث الإحصائيات (Update Statistics Function) =====
 CREATE OR REPLACE FUNCTION update_statistics()
 RETURNS TRIGGER 
 SECURITY DEFINER
@@ -302,7 +364,7 @@ BEGIN
 END;
 $$;
 
--- دالة إدارة الأرشيف (31 يوم)
+-- ===== 7.4: دالة إدارة الأرشيف (Archive Management - 31 Days) =====
 CREATE OR REPLACE FUNCTION manage_archive_dates()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -319,7 +381,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- دالة المستخدمين النشطين
+-- ===== 7.5: دالة المستخدمين النشطين (Active Users Last N Days) =====
 CREATE OR REPLACE FUNCTION public.get_active_users_last_n_days(days int)
 RETURNS bigint
 LANGUAGE sql
@@ -330,31 +392,52 @@ AS $$
   WHERE updated_at > (now() - (days || ' days')::interval);
 $$;
 
--- إعادة بناء التريجرز
+-- ===== 7.6: التريجرز (TRIGGERS) =====
+
+-- التريجر لتحديث updated_at في جدول users
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_users_updated_at 
+    BEFORE UPDATE ON public.users 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- التريجر لتحديث updated_at في جدول subscriptions
 DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
-CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_subscriptions_updated_at 
+    BEFORE UPDATE ON public.subscriptions 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- التريجر لتحديث الإحصائيات عند تغيير الاشتراكات
 DROP TRIGGER IF EXISTS update_statistics_on_subscription_change ON public.subscriptions;
-CREATE TRIGGER update_statistics_on_subscription_change AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
+CREATE TRIGGER update_statistics_on_subscription_change 
+    AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions 
+    FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
 
+-- التريجر لتحديث الإحصائيات عند تغيير المستخدمين
 DROP TRIGGER IF EXISTS update_statistics_on_user_change ON public.users;
-CREATE TRIGGER update_statistics_on_user_change AFTER INSERT OR UPDATE OR DELETE ON public.users FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
+CREATE TRIGGER update_statistics_on_user_change 
+    AFTER INSERT OR UPDATE OR DELETE ON public.users 
+    FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
 
+-- التريجر لإدارة تواريخ الأرشيف
 DROP TRIGGER IF EXISTS manage_archive_dates_on_insert ON public.archive_dates;
-CREATE TRIGGER manage_archive_dates_on_insert AFTER INSERT ON public.archive_dates FOR EACH ROW EXECUTE FUNCTION manage_archive_dates();
+CREATE TRIGGER manage_archive_dates_on_insert 
+    AFTER INSERT ON public.archive_dates 
+    FOR EACH ROW EXECUTE FUNCTION manage_archive_dates();
 
 -- =====================================================
--- 7. الفهارس والعروض (INDEXES & VIEWS)
+-- القسم 8: الفهارس والعروض (INDEXES & VIEWS)
 -- =====================================================
+
+-- ===== 8.1: الفهارس (INDEXES) =====
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions (status);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions (user_id);
 CREATE INDEX IF NOT EXISTS idx_archive_data_user_id ON public.archive_data (user_id);
 CREATE INDEX IF NOT EXISTS idx_archive_data_archive_date ON public.archive_data (archive_date);
+CREATE INDEX IF NOT EXISTS idx_subscription_plans_external_id ON public.subscription_plans (external_id);
 
--- إعادة إنشاء الـ View الخاص بالمدير (بعد حذفه في البداية)
+-- ===== 8.2: العروض (VIEWS) =====
+
+-- عرض اشتراكات المسؤول (Admin Subscriptions View)
 CREATE OR REPLACE VIEW public.admin_subscriptions_view AS
 SELECT
     s.id,
@@ -377,8 +460,9 @@ GRANT SELECT ON public.admin_subscriptions_view TO authenticated;
 GRANT SELECT ON public.admin_subscriptions_view TO service_role;
 
 -- =====================================================
--- 8. إصلاحات نهائية (MIGRATIONS)
+-- القسم 9: الإصلاحات والتنظيف النهائي (MIGRATIONS & CLEANUP)
 -- =====================================================
+
 DO $$
 BEGIN
     -- إصلاح اسم عمود التاريخ في الأرشيف
@@ -390,9 +474,75 @@ BEGIN
         ALTER TABLE public.archive_data RENAME COLUMN "date" TO archive_date;
     END IF;
 
-    -- تحديث المستخدمين الحاليين لحفظ provider كـ ["google"] (افتراضياً للمستخدمين الحاليين)
-    UPDATE public.users SET provider = '["google"]'::jsonb WHERE provider IS NULL OR provider = '[]'::jsonb;
+    -- تحديث المستخدمين الحاليين: حفظ provider كـ ["google"] (افتراضياً)
+    UPDATE public.users SET provider = '["google"]'::jsonb 
+    WHERE provider IS NULL OR provider = '[]'::jsonb;
 
-    -- تنظيف الاشتراكات اليتيمة
-    DELETE FROM public.subscriptions s WHERE s.user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = s.user_id);
+    -- تنظيف الاشتراكات اليتيمة (Orphaned Subscriptions)
+    DELETE FROM public.subscriptions s 
+    WHERE s.user_id IS NOT NULL 
+    AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = s.user_id);
 END $$;
+
+-- =====================================================
+-- القسم 10: توثيق الملف (DOCUMENTATION)
+-- =====================================================
+/*
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    COLLECTPRO DATABASE SCHEMA                              ║
+║                  ملف قاعدة البيانات المدمج والنهائي                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 محتويات الملف:
+═════════════════════════════════════════════════════════════════════════════
+1. الإعدادات الأساسية - تفعيل الإضافات المطلوبة
+2. تنظيف العناصر القديمة - إزالة التضاربات والأخطاء
+3. إنشاء الجداول - 7 جداول رئيسية
+4. البيانات الأولية - خطط الاشتراك والإحصائيات
+5. تفعيل Row Level Security (RLS)
+6. سياسات الأمان - 20+ سياسة
+7. الدوال والتريجرز - 5 دوال و 5 تريجرز
+8. الفهارس والعروض - تحسين الأداء
+9. الإصلاحات النهائية - تنظيف البيانات
+
+📊 الجداول الرئيسية:
+═════════════════════════════════════════════════════════════════════════════
+• users                    - بيانات المستخدمين
+• admins                   - بيانات المديرين
+• subscription_plans       - خطط الاشتراك (3 خطط أساسية)
+• subscriptions            - الاشتراكات النشطة
+• archive_dates            - تواريخ الأرشيف (آخر 31 يوم)
+• archive_data             - بيانات الأرشيف (المحصلات والعمولات)
+• statistics               - الإحصائيات العامة
+
+🔒 سياسات الأمان (RLS):
+═════════════════════════════════════════════════════════════════════════════
+• كل مستخدم يرى بيانته فقط
+• المدير يرى جميع البيانات
+• حماية كاملة ضد الوصول غير المصرح
+
+🔄 التريجرز التلقائية:
+═════════════════════════════════════════════════════════════════════════════
+• تحديث تلقائي لـ updated_at
+• تحديث الإحصائيات تلقائياً
+• إدارة تاريخ الأرشيف (آخر 31 يوم)
+
+📈 الدوال المتاحة:
+═════════════════════════════════════════════════════════════════════════════
+• calculate_total_revenue() - حساب إجمالي الإيرادات
+• get_active_users_last_n_days(days) - المستخدمون النشطون
+• update_statistics() - تحديث الإحصائيات
+
+✅ ملاحظات مهمة:
+═════════════════════════════════════════════════════════════════════════════
+• لا توجد أخطاء أو تكرار في السياسات
+• جميع الجداول محمية بـ RLS
+• الملف جاهز للاستخدام الفوري
+• تم دمج ملفات Schema.SQL و RLS_POLICIES.sql
+• آخر تحديث: 2025-12-13
+
+📧 بريد المسؤول الافتراضي:
+═════════════════════════════════════════════════════════════════════════════
+• emontal.33@gmail.com
+
+*/

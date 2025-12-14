@@ -128,35 +128,7 @@ const getIconClass = (type) => {
   transform: scale(1.1);
 }
 
-/* Dark mode support - محسّن */
-body.dark .notification-success {
-  background: linear-gradient(135deg, rgba(40, 167, 69, 0.3), rgba(32, 201, 151, 0.3));
-  color: #5ffe7a;
-  border-left-color: #28a745;
-  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.35);
-}
-
-body.dark .notification-error {
-  background: linear-gradient(135deg, rgba(220, 53, 69, 0.3), rgba(255, 107, 107, 0.3));
-  color: #ff7b7b;
-  border-left-color: #dc3545;
-  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.35);
-}
-
-body.dark .notification-warning {
-  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 183, 3, 0.25));
-  color: #ffd700;
-  border-left-color: #ffc107;
-  box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
-}
-
-body.dark .notification-info {
-  background: linear-gradient(135deg, rgba(23, 162, 184, 0.3), rgba(0, 123, 255, 0.3));
-  color: #6dd5ff;
-  border-left-color: #17a2b8;
-  box-shadow: 0 8px 25px rgba(23, 162, 184, 0.35);
-}
-
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* Animation */
 .notification-enter-active,
 .notification-leave-active {

@@ -93,10 +93,10 @@
 
 <script setup>
 import { inject, onMounted, ref } from 'vue';
+import logger from '@/utils/logger.js'
 import { useRouter } from 'vue-router';
 import { useDashboardStore } from '@/stores/dashboard';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import '@/assets/css/_unified-components.css';
 
 const router = useRouter();
 const store = useDashboardStore();
@@ -194,7 +194,7 @@ const handleSaveAndGo = async () => {
       );
     }
   } catch (error) {
-    console.error('Save error:', error);
+    logger.error('Save error:', error);
     showStatusMessage(
       'error',
       '❌ حدث خطأ أثناء الحفظ',
@@ -316,30 +316,7 @@ onMounted(() => {
 }
 
 /* الوضع الليلي */
-body.dark .status-bar.paste {
-  background: linear-gradient(135deg, rgba(23, 162, 184, 0.25), rgba(0, 123, 255, 0.25));
-  color: #5ddef4;
-  border-color: rgba(23, 162, 184, 0.5);
-}
-
-body.dark .status-bar.saving {
-  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 152, 0, 0.25));
-  color: #ffd54f;
-  border-color: rgba(255, 152, 0, 0.5);
-}
-
-body.dark .status-bar.success {
-  background: linear-gradient(135deg, rgba(40, 167, 69, 0.25), rgba(32, 201, 151, 0.25));
-  color: #5ffe7a;
-  border-color: rgba(40, 167, 69, 0.5);
-}
-
-body.dark .status-bar.error {
-  background: linear-gradient(135deg, rgba(220, 53, 69, 0.25), rgba(255, 107, 107, 0.25));
-  color: #ff6b6b;
-  border-color: rgba(220, 53, 69, 0.5);
-}
-
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* التأثيرات المتحركة */
 @keyframes pulse {
   0%, 100% { opacity: 1; }

@@ -3,6 +3,8 @@
  * Monitors memory usage and performance to prevent freezing
  */
 
+import logger from './logger.js'
+
 class PerformanceMonitor {
   constructor() {
     this.isEnabled = false; // Disabled by default
@@ -17,7 +19,7 @@ class PerformanceMonitor {
   enable() {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    console.log('📊 Performance Monitor enabled');
+    logger.info('📊 Performance Monitor enabled');
     this.startMemoryMonitoring();
     this.setupErrorTracking();
   }
@@ -45,12 +47,12 @@ class PerformanceMonitor {
 
       // Only log if using more than 50MB (reduced logging)
       if (usedMB > 50) {
-        console.log(`💾 Memory: ${usedMB}MB / ${totalMB}MB`);
+        logger.info(`💾 Memory: ${usedMB}MB / ${totalMB}MB`);
       }
 
       // Check for memory leaks
       if (memoryInfo.usedJSHeapSize > this.maxMemoryUsage) {
-        console.warn('⚠️ High memory usage detected:', {
+        logger.warn('⚠️ High memory usage detected:', {
           used: `${usedMB}MB`,
           total: `${totalMB}MB`,
           limit: `${Math.round(memoryInfo.jsHeapSizeLimit / 1024 / 1024)}MB`
@@ -68,13 +70,13 @@ class PerformanceMonitor {
 
     // Track unhandled promise rejections
     this.handleUnhandledRejection = (event) => {
-      console.error('🚨 Unhandled Promise Rejection:', event.reason);
+      logger.error('🚨 Unhandled Promise Rejection:', event.reason);
       this.reportPerformanceIssue('unhandled-promise-rejection', event.reason);
     };
 
     // Track JavaScript errors
     this.handleError = (event) => {
-      console.error('🚨 JavaScript Error:', event.error);
+      logger.error('🚨 JavaScript Error:', event.error);
       this.reportPerformanceIssue('javascript-error', event.error);
     };
 
@@ -101,7 +103,7 @@ class PerformanceMonitor {
       uptime: Math.round((Date.now() - this.startTime) / 1000)
     };
 
-    console.warn('📈 Performance Issue Detected:', performanceData);
+    logger.warn('📈 Performance Issue Detected:', performanceData);
   }
 
   /**
@@ -118,7 +120,7 @@ class PerformanceMonitor {
         const duration = Math.round(end - start);
 
         if (duration > 2000) { // Only log if function takes more than 2 seconds
-          console.warn(`⏱️ Slow function detected: ${fnName} took ${duration}ms`);
+          logger.warn(`⏱️ Slow function detected: ${fnName} took ${duration}ms`);
           this.reportPerformanceIssue('slow-function', `${fnName} took ${duration}ms`);
         }
 
@@ -126,7 +128,7 @@ class PerformanceMonitor {
       } catch (error) {
         const end = performance.now();
         const duration = Math.round(end - start);
-        console.error(`❌ Function ${fnName} failed after ${duration}ms:`, error);
+        logger.error(`❌ Function ${fnName} failed after ${duration}ms:`, error);
         throw error;
       }
     };
@@ -151,7 +153,7 @@ class PerformanceMonitor {
       this.handleError = null;
     }
 
-    console.log('🧹 Performance Monitor cleaned up');
+    logger.info('🧹 Performance Monitor cleaned up');
   }
 }
 

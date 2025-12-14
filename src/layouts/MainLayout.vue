@@ -140,16 +140,7 @@ footer {
   background: transparent;
 }
 
-/* Dark mode */
-body.dark main {
-  background: var(--dark-bg);
-}
-
-body.dark .alert {
-  background: var(--dark-bg);
-  color: var(--dark-text);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {

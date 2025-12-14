@@ -29,12 +29,12 @@
                     <td>
                       <input
                         :value="formatWithCommas(store.counter1[val])"
-                        @input="onRawInput($event, val, 1)"
-                        @blur="onBlurFormat(val, 1)"
                         type="text"
                         inputmode="numeric"
                         pattern="[0-9,]*"
                         class="input-field centered-number"
+                        @input="onRawInput($event, val, 1)"
+                        @blur="onBlurFormat(val, 1)"
                       />
                     </td>
                     <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
@@ -79,12 +79,12 @@
                       <td>
                         <input
                           :value="formatWithCommas(store.counter2[val])"
-                          @input="onRawInput($event, val, 2)"
-                          @blur="onBlurFormat(val, 2)"
                           type="text"
                           inputmode="numeric"
                           pattern="[0-9,]*"
                           class="input-field centered-number"
+                          @input="onRawInput($event, val, 2)"
+                          @blur="onBlurFormat(val, 2)"
                         />
                       </td>
                       <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
@@ -215,14 +215,14 @@
 import { inject, onMounted, onUnmounted } from 'vue';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import '@/assets/css/_unified-components.css';
+import logger from '@/utils/logger.js'
 
 const store = useCounterStore();
 
 // دالة لمزامنة إجمالي المحصل من صفحة التحصيلات
 const syncTotalCollected = () => {
   store.updateTotalCollected();
-  console.log('🔄 تم تشغيل مزامنة إجمالي المحصل');
+  logger.debug('تم تشغيل مزامنة إجمالي المحصل');
 };
 
 // مزامنة عند تحميل الصفحة
@@ -272,7 +272,7 @@ const exportData = async () => {
         }).then(() => {
           // تم حذف رسالة النجاح
         }).catch(error => {
-          console.error('Share failed:', error);
+          logger.error('Share failed:', error);
           addNotification('❌ فشل المشاركة', 'error', 3000);
         });
       } else {
@@ -285,7 +285,7 @@ const exportData = async () => {
       }
     });
   } catch (error) {
-    console.error('Export failed:', error);
+    logger.error('Export failed:', error);
     addNotification('❌ فشل التصدير', 'error', 3000);
   }
 };
@@ -417,127 +417,7 @@ th i {
   font-weight: 600 !important;
 }
 
-/* ====== DARK MODE FOR COUNTER VIEW ====== */
-
-/* الجداول في الوضع الليلي */
-:deep(body.dark) .counter-table,
-:deep(body.dark) .categories-table {
-  background: var(--dark-surface);
-  color: var(--dark-text-primary);
-}
-
-/* رؤوس الجداول في الوضع الليلي */
-:deep(body.dark) .counter-table thead,
-:deep(body.dark) .categories-table thead {
-  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
-}
-
-:deep(body.dark) .counter-table th,
-:deep(body.dark) .categories-table th {
-  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
-  color: var(--dark-text-primary);
-  border-color: var(--dark-border);
-}
-
-/* صفوف الجدول في الوضع الليلي */
-:deep(body.dark) .counter-table tbody tr,
-:deep(body.dark) .categories-table tbody tr {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-:deep(body.dark) .counter-table tbody tr:hover,
-:deep(body.dark) .categories-table tbody tr:hover {
-  background: var(--dark-surface-hover);
-}
-
-:deep(body.dark) .counter-table td,
-:deep(body.dark) .categories-table td {
-  background: var(--dark-surface);
-  color: var(--dark-text-primary);
-  border-color: var(--dark-border);
-}
-
-/* النصوص المميزة في الوضع الليلي */
-:deep(body.dark) .highlight-text {
-  color: var(--dark-accent);
-  font-weight: 700;
-}
-
-/* حقول الإدخال في الجداول */
-:deep(body.dark) .input-field {
-  background: var(--dark-surface-hover);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-:deep(body.dark) .input-field:focus {
-  background: rgba(0, 121, 101, 0.2);
-  border-color: var(--dark-accent);
-  color: var(--dark-text-primary);
-}
-
-/* إجمالي العداد في الوضع الليلي */
-:deep(body.dark) .counter-totals {
-  background: linear-gradient(135deg, var(--dark-surface), rgba(0, 121, 101, 0.1));
-  border-color: var(--dark-border);
-}
-
-:deep(body.dark) .counter-total {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-:deep(body.dark) .counter-total-label {
-  color: var(--dark-text-secondary);
-}
-
-:deep(body.dark) .counter-total-value {
-  color: var(--dark-accent);
-}
-
-/* رسالة بدون بيانات في الوضع الليلي */
-:deep(body.dark) .no-data-msg {
-  color: var(--dark-text-secondary);
-  background: var(--dark-surface-hover);
-}
-
-/* البطاقات في الوضع الليلي */
-:deep(body.dark) .counter-card,
-:deep(body.dark) .summary-section {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-/* العنوانيات في الوضع الليلي */
-:deep(body.dark) .counter-title,
-:deep(body.dark) .summary-title,
-:deep(body.dark) .categories-title {
-  background: linear-gradient(45deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
-  color: var(--dark-text-primary);
-}
-
-/* ألوان الفئات في الوضع الليلي - معرفة في _unified-components.css */
-/* لا تحتاج لتعريف هنا */
-
-/* الأزرار في الوضع الليلي */
-:deep(body.dark) .btn {
-  background: linear-gradient(135deg, var(--dark-accent), rgba(0, 121, 101, 0.8));
-  color: var(--dark-text-primary);
-}
-
-:deep(body.dark) .btn:hover {
-  background: linear-gradient(135deg, rgba(0, 121, 101, 0.8), var(--dark-accent));
-}
-
-/* جدول الملخص في الوضع الليلي */
-:deep(body.dark) .categories-summary {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-/* Center numeric text inside counter inputs for both modes */
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 .counter-table .centered-number,
 .categories-table .centered-number {
   text-align: center !important;
@@ -550,9 +430,7 @@ th i {
   border-radius: 12px;
 }
 
-:deep(body.dark) .summary-section {
-  border-radius: 0 !important;
-}
+/* Night mode rule migrated to src/assets/css/unified-dark-mode.css */
 
 /* ====== RESPONSIVE DESIGN FOR SMALL SCREENS ====== */
 

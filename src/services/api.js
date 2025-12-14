@@ -10,6 +10,14 @@ import { archiveService } from './archiveService.js'
 import { paymentService } from './paymentService.js'
 import { generalService } from './generalService.js'
 
+// Export Token Interceptor & Retry Logic
+export { 
+  withTokenRetry,
+  supabaseQueryWithRetry,
+  supabaseMutationWithRetry,
+  ensureTokenBeforeOperation
+} from './apiInterceptor.js'
+
 // Export individual services for direct access
 export {
   authService,

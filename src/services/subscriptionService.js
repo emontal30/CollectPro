@@ -76,6 +76,16 @@ export const subscriptionService = {
       .eq('id', subscriptionId)
 
     return { data, error }
+  },
+
+  async getSubscriptionById(subscriptionId) {
+    const { data, error } = await authService.supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .single()
+
+    return { data, error }
   }
 }
 

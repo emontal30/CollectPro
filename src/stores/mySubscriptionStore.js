@@ -4,6 +4,7 @@ import api from '@/services/api';
 import eventBus from '@/utils/eventBus';
 import { useRouter } from 'vue-router';
 import { calculateDaysRemaining } from '@/utils/formatters';
+import logger from '@/utils/logger.js'
 
 export const useMySubscriptionStore = defineStore('mySubscription', () => {
   // --- الحالة (State) ---
@@ -63,7 +64,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       const preloadedData = sessionStorage.getItem('preloadedSubscriptionData');
       if (preloadedData) {
         const parsed = JSON.parse(preloadedData);
-        console.log('📋 Using preloaded subscription data');
+        logger.info('📋 Using preloaded subscription data');
         subscription.value = parsed.subscription;
         history.value = parsed.history || [];
         user.value = parsed.user;
@@ -77,7 +78,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       // التحقق من التخزين المؤقت أولاً
       const now = Date.now();
       if (cache.value.timestamp && (now - cache.value.timestamp) < cache.value.duration) {
-        console.log('📋 Using cached subscription data');
+        logger.info('📋 Using cached subscription data');
         subscription.value = cache.value.subscription;
         history.value = cache.value.history || [];
         user.value = cache.value.user;
@@ -120,7 +121,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       }
 
     } catch (error) {
-      console.error('Error loading subscription:', error);
+      logger.error('Error loading subscription:', error);
       // في حالة الخطأ، نظهر الصفحة الفارغة
       subscription.value = null;
       history.value = [];
@@ -145,10 +146,10 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
         cache.value.timestamp = 0;
       }
     } catch (e) {
-      console.warn('Failed to update subscription cache from event:', e);
+      logger.warn('Failed to update subscription cache from event:', e);
     }
 
-    console.log('MySubscription subscription updated from event:', subscriptionData);
+    logger.info('MySubscription subscription updated from event:', subscriptionData);
   }
 
   // الاستماع لأحداث تحديث الاشتراك
@@ -195,7 +196,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       })).filter(p => p.planIdentifier); // تأكد من أن الخطة صالحة
 
     } catch (error) {
-      console.error('Error fetching plans:', error);
+      logger.error('Error fetching plans:', error);
     } finally {
       loadingPlans.value = false;
     }

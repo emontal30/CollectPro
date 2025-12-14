@@ -142,7 +142,6 @@
 import { onMounted } from 'vue';
 import { usePaymentStore } from '@/stores/paymentStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import '@/assets/css/_unified-components.css';
 
 const store = usePaymentStore();
 

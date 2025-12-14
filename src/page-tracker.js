@@ -3,6 +3,8 @@
  * Tracks and saves the last visited page for session restoration
  */
 
+import logger from '@/utils/logger.js'
+
 class PageTracker {
   constructor() {
     this.init();
@@ -32,7 +34,7 @@ class PageTracker {
       localStorage.setItem('collectpro_last_page', currentPage);
     }
     
-    console.log('📍 Page saved:', currentPage);
+    logger.info('📍 Page saved:', currentPage);
   }
 
   /**
@@ -91,7 +93,7 @@ class PageTracker {
           localStorage.setItem('collectpro_last_page', targetPath);
         }
 
-        console.log('🔗 Navigation tracked:', targetPath);
+        logger.info('🔗 Navigation tracked:', targetPath);
       }
     }
 
@@ -153,7 +155,7 @@ class PageTracker {
         try {
           cleanupFn();
         } catch (error) {
-          console.warn('Error during page tracker cleanup:', error);
+          logger.warn('Error during page tracker cleanup:', error);
         }
       });
       this.cleanup = [];

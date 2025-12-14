@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import logger from '@/utils/logger.js'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
@@ -75,7 +76,7 @@ export const useSettingsStore = defineStore('settings', {
           this.zoomLevel = parsed.zoomLevel || 4
           this.applySettings()
         } catch (error) {
-          console.error('Error loading settings:', error)
+          logger.error('Error loading settings:', error)
         }
       } else {
         this.applySettings()

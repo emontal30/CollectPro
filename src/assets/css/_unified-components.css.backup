@@ -1,4 +1,4 @@
-/* ====== UNIFIED COMPONENTS SYSTEM ====== */
+﻿/* ====== UNIFIED COMPONENTS SYSTEM ====== */
 /* Consolidated from view components CSS to create reusable patterns */
 /* Date: December 2025 */
 
@@ -410,120 +410,81 @@ th {
   padding: 18px 12px;
 }
 
-/* ====== ARCHIVE TABLE COMPONENT ====== */
-/* Specific styling for archive table headers and totals */
-
-.header-cell {
-  white-space: nowrap;
-  padding: 18px 12px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(10px);
-  line-height: 1.4;
-}
-
-.date-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.shop-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.code-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.amount-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.extra-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.collector-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.net-header {
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-}
-
-.total-label {
-  text-align: center;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.net-icon {
-  margin-right: 4px;
-  font-size: 0.8em;
+th.shop {
+  background: linear-gradient(135deg, var(--primary), #005a4b) !important;
+  color: white !important;
 }
 
 th.serial, th.shop, th.code, th.amount, th.extra, th.collector, th.net {
   background: linear-gradient(135deg, var(--primary), #005a4b) !important;
   color: white !important;
-  text-align: center !important;
 }
 
-/* ====== COLUMN WIDTHS ====== */
-/* Unified column widths for all tables */
-
-th.shop, td.shop {
-  width: 180px !important;
-  min-width: 180px !important;
-  max-width: 180px !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  font-weight: bold !important;
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: white;
+  table-layout: fixed;
 }
 
-/* Enable wrap in shop column for archive page only */
-.modern-table--archive .shop {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  width: auto !important;
-  min-width: 200px !important;
-  max-width: none !important;
+/* Column widths for modern table */
+.modern-table th:nth-child(1),
+.modern-table td:nth-child(1) {
+  width: 25%;
+  min-width: 0;
+  max-width: 1fr;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Enable wrap in shop column for harvest page */
-.modern-table--harvest .shop {
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  width: 180px !important;
-  min-width: 180px !important;
-  max-width: 180px !important;
-  font-weight: bold !important;
+.modern-table th:nth-child(2),
+.modern-table td:nth-child(2) {
+  width: 25%;
+  min-width: 0;
+  max-width: 1fr;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Unified background for archive table headers */
-.modern-table--archive th {
-  background: linear-gradient(135deg, var(--primary), #005a4b) !important;
-  color: white !important;
+.modern-table th:nth-child(3),
+.modern-table td:nth-child(3) {
+  width: 25%;
+  min-width: 0;
+  max-width: 1fr;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.modern-table th:nth-child(4),
+.modern-table td:nth-child(4) {
+  width: 25%;
+  min-width: 0;
+  max-width: 1fr;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-
-/* Column widths for modern table - auto layout for flexibility */
-
-
+th {
+  padding: 16px 12px;
+  text-align: right;
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #d1d5db;
+  border-right: 1px solid #d1d5db;
+  position: relative;
+}
 
 th:last-child {
   border-right: none;
@@ -534,7 +495,17 @@ th i {
   color: #6b7280;
 }
 
-
+td {
+  padding: 16px 12px;
+  text-align: right;
+  border-bottom: 1px solid #d1d5db;
+  border-right: 1px solid #d1d5db;
+  vertical-align: middle;
+  color: #374151;
+  font-size: 0.95rem;
+  overflow: hidden;
+  word-wrap: break-word;
+}
 
 /* ====== BACKWARD-COMPATIBLE HARVEST / ARCHIVE TABLE HELPERS ======
    These rules mirror the existing .modern-table--harvest and .modern-table--archive
@@ -556,266 +527,28 @@ th i {
   font-weight: 800 !important;
 }
 
-
-
-/* ====== DATE DISPLAY COMPONENT ====== */
-/* Unified date display styling for harvest page */
-
-.date-display {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 8px 15px;
-  background: linear-gradient(135deg, rgba(0, 121, 101, 0.08), rgba(0, 121, 101, 0.04));
-  border-radius: 10px;
-  border: 1px solid rgba(0, 121, 101, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 121, 101, 0.08);
-  position: relative;
-  overflow: hidden;
-  max-width: fit-content;
-  margin-left: auto;
-  margin-right: auto;
-  flex-wrap: wrap; /* السماح بالالتفاف على الشاشات الصغيرة */
+.modern-table--harvest .serial, .modern-table--harvest .serial {
+  font-size: 12px !important;
 }
 
-.date-display::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 121, 101, 0.03), transparent);
-  transition: left 0.8s ease;
+.modern-table--harvest .code, .modern-table--harvest .code {
+  font-size: 12px !important;
 }
 
-.date-display:hover::before {
-  left: 100%;
+/* Size helpers for table control buttons (keeps exact sizing parity) */
+.table-settings-btn,
+.modern-table .table-settings-btn {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 6px !important;
+  font-size: 12px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  border-radius: 4px !important;
+  flex-shrink: 0 !important;
 }
-
-.date-icon {
-  font-size: 1.1rem;
-  color: var(--primary);
-  background: linear-gradient(135deg, rgba(0, 121, 101, 0.1), rgba(0, 121, 101, 0.05));
-  padding: 4px;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0, 121, 101, 0.15);
-}
-
-.date-label {
-  font-weight: 600;
-  color: var(--primary);
-  font-size: 0.95rem;
-  text-shadow: 0 1px 2px rgba(0, 121, 101, 0.2);
-}
-
-.date-value {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--primary);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 249, 250, 0.8));
-  padding: 4px 10px;
-  border-radius: 5px;
-  border: 1px solid rgba(0, 121, 101, 0.2);
-  box-shadow: 0 1px 4px rgba(0, 121, 101, 0.1);
-  min-width: 100px;
-  text-align: center;
-  text-shadow: 0 1px 2px rgba(0, 121, 101, 0.1);
-}
-
-.date-separator {
-  font-weight: 600;
-  color: var(--primary);
-  font-size: 1.1rem;
-  margin: 0 2px;
-  opacity: 0.7;
-}
-
-/* ====== NET COLUMN STYLING ====== */
-/* Unified net column styling based on value */
-
-td.net.positive {
-  color: #007bff !important; /* أزرق للأرقام الموجبة */
-  font-weight: bold !important;
-}
-
-td.net.negative {
-  color: #dc3545 !important; /* أحمر للأرقام السالبة */
-  font-weight: bold !important;
-}
-
-td.net.zero {
-  color: #28a745 !important; /* أخضر داكن للصفر */
-  font-weight: bold !important;
-}
-
-/* ====== RESPONSIVE TABLE SETTINGS ====== */
-/* Unified responsive table settings for all screen sizes */
-
-/* Small screens */
-@media (max-width: 768px) {
-  .table-settings-btn,
-  .date-display .table-settings-btn,
-  .archive-controls .table-settings-btn,
-  header .zoom-in-btn,
-  header .zoom-out-btn,
-  .zoom-in-btn,
-  .zoom-out-btn {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    min-height: 32px !important;
-    max-height: 32px !important;
-    border-radius: 4px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .table-settings-btn,
-  .date-display .table-settings-btn,
-  .archive-controls .table-settings-btn {
-    padding: 6px !important;
-    font-size: 12px !important;
-  }
-
-  .table-settings-btn i {
-    font-size: 14px !important;
-  }
-
-  .date-display .modern-table--harvest-settings-container {
-    margin-right: auto;
-    margin-left: 4px;
-  }
-
-
-
-  .zoom-in-btn,
-  .zoom-out-btn {
-    padding: 4px !important;
-    font-size: 11px !important;
-  }
-
-  .zoom-in-btn i,
-  .zoom-out-btn i {
-    font-size: 12px !important;
-  }
-
-  .zoom-controls {
-    gap: 1px !important;
-  }
-
-  /* تحسين أحجام جدول التحصيلات للشاشات الصغيرة */
-  .modern-table--harvest td {
-    font-size: 14px !important;
-  }
-
-  .modern-table--harvest .shop {
-    font-weight: 700 !important;
-  }
-
-  .modern-table--harvest .net {
-    font-size: 15px !important;
-    font-weight: 800 !important;
-  }
-
-  .modern-table--harvest .serial,
-  .modern-table--harvest .code {
-    font-size: 12px !important;
-  }
-}
-
-/* Medium screens */
-@media (max-width: 1024px) {
-  .table-settings-btn,
-  .date-display .table-settings-btn,
-  .archive-controls .table-settings-btn {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    max-width: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    border-radius: 5px !important;
-    flex-shrink: 0 !important;
-    padding: 7px !important;
-    font-size: 13px !important;
-  }
-
-  .table-settings-btn i {
-    font-size: 15px !important;
-  }
-
-  .date-display .modern-table--harvest-settings-container {
-    margin-right: auto;
-    margin-left: 6px;
-  }
-
-
-
-  /* تحسين أحجام جدول التحصيلات للشاشات المتوسطة */
-  .modern-table--harvest td {
-    font-size: 16px !important;
-  }
-
-  .modern-table--harvest .shop {
-    font-weight: 700 !important;
-  }
-
-  .modern-table--harvest .net {
-    font-size: 17px !important;
-    font-weight: 800 !important;
-  }
-
-  .modern-table--harvest .serial,
-  .modern-table--harvest .code {
-    font-size: 14px !important;
-  }
-
-
-
-  /* تثبيت حجم أزرار التكبير والتصغير للشاشات المتوسطة */
-  .zoom-in-btn,
-  .zoom-out-btn {
-    width: 36px !important;
-    height: 36px !important;
-    padding: 5px !important;
-    font-size: 12px !important;
-    min-width: 36px !important;
-    max-width: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    border-radius: 4px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .zoom-in-btn i,
-  .zoom-out-btn i {
-    font-size: 13px !important;
-  }
-
-  .zoom-controls {
-    gap: 1px !important;
-  }
-
-  /* تثبيت حجم أزرار التكبير والتصغير في header للشاشات المتوسطة */
-  header .zoom-in-btn,
-  header .zoom-out-btn {
-    width: 36px !important;
-    height: 36px !important;
-    padding: 5px !important;
-    font-size: 12px !important;
-    min-width: 36px !important;
-    max-width: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    border-radius: 4px !important;
-    flex-shrink: 0 !important;
-  }
-}
-
-
 
 /* Column visibility helpers (harvest) - keep identical selectors + add component variant */
 .modern-table--harvest.hide-col-serial th.serial,
@@ -1066,11 +799,6 @@ tbody tr:last-child td {
 .date-cell i {
   color: var(--primary, #007965);
   font-size: 0.9rem;
-}
-
-/* Small screens */
-@media (max-width: 768px) {
-
 }
 
 /* Status Badge in Table */
@@ -1380,7 +1108,11 @@ tbody tr:hover {
     gap: 8px;
   }
 
-
+  .date-cell {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
 
   .modal-content {
     width: 95%;
@@ -1637,161 +1369,6 @@ body.dark .btn-secondary {
 
 body.dark .btn-secondary:hover {
   background: #666;
-}
-
-/* ====== HARVEST VIEW COMPONENTS ====== */
-
-.harvest-page {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.date-display {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  justify-content: center;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: linear-gradient(135deg, rgba(0, 121, 101, 0.1), rgba(0, 121, 101, 0.05));
-  border-radius: 12px;
-  border: 1px solid rgba(0, 121, 101, 0.2);
-}
-
-.date-icon {
-  color: var(--primary, #007965);
-  font-size: 1.2rem;
-}
-
-.date-label {
-  font-weight: 600;
-  color: #555;
-}
-
-.date-value {
-  font-weight: 700;
-  color: var(--primary, #007965);
-}
-
-.date-separator {
-  color: #999;
-  font-weight: bold;
-}
-
-.control-group {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.table-wrap {
-  overflow-x: auto;
-  margin: 20px 0;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-
-.summary-container {
-  margin: 30px 0;
-  padding: 25px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
-  border: 1px solid rgba(0, 121, 101, 0.1);
-}
-
-.summary-container h2 {
-  text-align: center;
-  color: var(--primary, #007965);
-  margin-bottom: 25px;
-  font-size: 1.5rem;
-}
-
-.summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.field-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-size: 0.9rem;
-}
-
-.field-icon {
-  color: var(--primary, #007965);
-  font-size: 1.1rem;
-}
-
-.bold-input {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: bold;
-  text-align: center;
-  direction: ltr;
-  transition: all 0.3s ease;
-  background: #f8f9fa;
-}
-
-.bold-input:focus {
-  border-color: var(--primary, #007965);
-  outline: none;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2);
-}
-
-.calc-field {
-  display: block;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  text-align: center;
-  border: 1px solid #dee2e6;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.buttons-container {
-  margin-top: 30px;
-}
-
-.btn--clear-harvest {
-  background: linear-gradient(135deg, #dc3545, #c82333);
-  color: white;
-}
-
-.btn--clear-harvest:hover {
-  background: linear-gradient(135deg, #c82333, #dc3545);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
-}
-
-.btn--archive-today {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
-  color: white;
-}
-
-.btn--archive-today:hover {
-  background: linear-gradient(135deg, #f57c00, #ff9800);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
 }
 
 /* ====== SUBSCRIPTIONS VIEW COMPONENTS ====== */
@@ -2230,7 +1807,7 @@ input:focus {
 }
 
 .payment-option.active::after {
-  content: "\2714";
+  content: "âœ"";
   position: absolute;
   top: 15px;
   left: 15px;
@@ -3849,6 +3426,10 @@ body.dark .stat-icon {
   .archive-controls {
     flex-direction: column;
     gap: 15px;
+  }
+
+  .control-group {
+    min-width: 100%;
   }
 
   .control-group label {

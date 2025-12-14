@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import api from '@/services/api';
+import logger from '@/utils/logger.js'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // --- الحالة (State) ---
@@ -118,7 +119,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
         subscriptionStatus.value = subscription;
       }
     } catch (error) {
-      console.error('Error loading subscription status:', error);
+      logger.error('Error loading subscription status:', error);
     } finally {
       isLoadingSubscription.value = false;
     }

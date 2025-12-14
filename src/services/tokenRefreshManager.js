@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/supabase';
+import logger from '@/utils/logger.js'
 
 let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 3;
@@ -27,11 +28,11 @@ export async function refreshTokenWithRetry() {
   while (refreshAttempts < MAX_REFRESH_ATTEMPTS) {
     refreshAttempts++;
     try {
-      console.debug(`🔄 Token refresh attempt ${refreshAttempts}/${MAX_REFRESH_ATTEMPTS}...`);
+      logger.debug(`🔄 Token refresh attempt ${refreshAttempts}/${MAX_REFRESH_ATTEMPTS}...`);
 
       // Check if online
       if (!navigator.onLine) {
-        console.warn('⚠️ Offline — deferring token refresh');
+        logger.warn('⚠️ Offline — deferring token refresh');
         return false;
       }
 
@@ -43,18 +44,18 @@ export async function refreshTokenWithRetry() {
       }
 
       if (data?.session) {
-        console.log('✅ Token refreshed successfully');
+        logger.info('✅ Token refreshed successfully');
         refreshAttempts = 0; // Reset on success
         return true;
       } else {
         throw new Error('No session returned from refresh');
       }
     } catch (err) {
-      console.warn(`❌ Token refresh failed (attempt ${refreshAttempts}):`, err.message);
+      logger.warn(`❌ Token refresh failed (attempt ${refreshAttempts}):`, err.message);
 
       // If this was the last attempt, stop
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
-        console.error('🚨 Token refresh failed after all attempts — session may be invalid');
+        logger.error('🚨 Token refresh failed after all attempts — session may be invalid');
         return false;
       }
 
@@ -76,14 +77,14 @@ export async function ensureValidToken() {
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error || !session) {
-      console.warn('⚠️ No valid session — attempting refresh...');
+      logger.warn('⚠️ No valid session — attempting refresh...');
       return await refreshTokenWithRetry();
     }
 
     // Token is valid
     return true;
   } catch (err) {
-    console.error('Error checking token validity:', err);
+    logger.error('Error checking token validity:', err);
     // On error, retry refresh
     return await refreshTokenWithRetry();
   }

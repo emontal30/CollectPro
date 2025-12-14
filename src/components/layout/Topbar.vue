@@ -140,21 +140,8 @@ const toggleSidebar = () => {
   transform: scale(0.95);
 }
 
-/* Dark Mode Styles for Topbar */
-body.dark .topbar {
-  background: linear-gradient(135deg, var(--dark-surface), var(--dark-surface-hover));
-  border-bottom: 1px solid var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-/* Fix content overlap with fixed topbar */
-body {
-  padding-top: 80px;
-}
-
-main {
-  padding-top: 80px;
-}
+/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
+/* Fix content overlap with fixed topbar remains global (body padding set elsewhere) */
 
 /* Mobile responsiveness */
 @media (max-width: 1024px) {

@@ -10,10 +10,7 @@
     <div class="subscription-container">
       <div v-if="store.isLoading" class="subscription-card">
         <div class="subscription-details">
-          <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>جاري تحميل بيانات اشتراكك...</p>
-          </div>
+          <Loader message="جاري تحميل بيانات اشتراكك..." />
         </div>
       </div>
 
@@ -185,9 +182,9 @@
         </div>
         <div class="modal-body">
           
-          <div v-if="store.loadingPlans" class="loading-spinner">
-             <p>جاري تحميل الخطط...</p>
-          </div>
+           <div v-if="store.loadingPlans">
+             <Loader message="جاري تحميل الخطط..." />
+           </div>
           
           <div v-else class="renew-plans">
             <div 
@@ -214,25 +211,26 @@
 
 <script setup>
 import { onMounted, onActivated, watch } from 'vue';
+import logger from '@/utils/logger.js'
 import { useRoute } from 'vue-router';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import '@/assets/css/_unified-components.css';
+import Loader from '@/components/ui/Loader.vue';
 
 const store = useMySubscriptionStore();
 const route = useRoute();
 
 // When the route becomes active (or user navigates back), re-init to ensure fresh data
 onActivated(() => {
-  console.log('MySubscription activated — re-initializing store');
-  store.init().catch(err => console.error('Error re-initializing subscription on activate:', err));
+  logger.info('MySubscription activated — re-initializing store');
+  store.init().catch(err => logger.error('Error re-initializing subscription on activate:', err));
 });
 
 // Watch route changes to re-init when the user navigates to this view
 watch(() => route.name, (newName) => {
   if (newName === 'MySubscription') {
-    console.log('Route changed to MySubscription — init store');
-    store.init().catch(err => console.error('Error init on route change:', err));
+    logger.info('Route changed to MySubscription — init store');
+    store.init().catch(err => logger.error('Error init on route change:', err));
   }
 });
 
@@ -274,11 +272,11 @@ function getStatusText(status) {
 }
 
 onMounted(() => {
-  console.log('📱 MySubscription view mounted, loading subscription data...');
+  logger.info('📱 MySubscription view mounted, loading subscription data...');
   store.init().then(() => {
-    console.log('✅ Subscription data loaded');
+    logger.info('✅ Subscription data loaded');
   }).catch(err => {
-    console.error('❌ Error loading subscription:', err);
+    logger.error('❌ Error loading subscription:', err);
   });
 });
 </script>

@@ -105,7 +105,6 @@ import { onMounted, reactive } from 'vue';
 import { useSubscriptionsStore } from '@/stores/subscriptionsStore';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import '@/assets/css/_unified-components.css';
 
 const store = useSubscriptionsStore();
 const router = useRouter();

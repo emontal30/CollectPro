@@ -1,4 +1,4 @@
-/* ====== UNIFIED DARK MODE SYSTEM ====== */
+﻿/* ====== UNIFIED DARK MODE SYSTEM ====== */
 /* Single source of truth - Consolidated from dark-mode.css & sidebar-dark-mode.css */
 /* NO DUPLICATES. Optimized for performance and maintainability */
 
@@ -23,6 +23,22 @@
   --dark-overlay: rgba(0, 0, 0, 0.6);
   --dark-shadow: rgba(0, 0, 0, 0.3);
   --dark-shadow-hover: rgba(0, 0, 0, 0.4);
+}
+
+/* Backwards-compatible variable aliases and mappings
+   This ensures legacy variable names used across the codebase
+   (from `main.css` and components) pick proper dark-mode values
+   without changing component-level CSS. This keeps visual parity. */
+body.dark {
+  --primary: var(--dark-accent);
+  --secondary: var(--dark-warning);
+  --light-bg: var(--dark-bg);
+  --dark-text: var(--dark-text-primary);
+  --highlight-green: var(--dark-success);
+  --highlight-td: var(--dark-surface-light);
+  --dark-mode-green: var(--dark-success);
+  --dark-mode-orange: var(--dark-warning);
+  --total-row-bg: var(--dark-accent);
 }
 
 /* ====== GLOBAL BASE ====== */
@@ -224,6 +240,36 @@ body.dark .btn-warning {
 body.dark .btn-danger {
   background-color: var(--dark-danger);
   border-color: var(--dark-danger);
+}
+
+/* ====== FIX: Align total-row with table columns in dark mode ======
+   Ensure the total-row uses sticky positioning and no rounded card styling
+   so it lines up exactly with table columns (Harvest view). */
+body.dark .modern-table--harvest .total-row,
+body.dark .total-row {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 10 !important;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.45) !important;
+  border-radius: 0 !important;
+  background: var(--dark-accent) !important;
+  color: var(--dark-text-primary) !important;
+  font-weight: 700 !important;
+}
+
+body.dark .modern-table--harvest .total-row td,
+body.dark .total-row td {
+  border-top: 2px solid rgba(255,255,255,0.06) !important;
+  padding: 18px 12px !important;
+  vertical-align: middle !important;
+  background-color: var(--dark-accent) !important;
+}
+
+body.dark .modern-table--harvest .total-row td:first-child,
+body.dark .total-row td:first-child {
+  text-align: center !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
 }
 
 body.dark .btn-info {
@@ -462,18 +508,36 @@ body.dark .page-item.active .page-link {
 }
 
 /* ====== SEARCH & FILTERS ====== */
-body.dark .search-input,
-body.dark .filter-input {
+body.dark .search-input-wrapper {
   background-color: var(--dark-surface);
   border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-  transition: all 0.15s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-body.dark .search-input:focus,
-body.dark .filter-input:focus {
+body.dark .search-input-wrapper:hover {
+  border-color: rgba(0, 200, 150, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+body.dark .search-input-wrapper:focus-within {
   border-color: var(--dark-accent);
-  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.15), 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+body.dark .search-input {
+  color: var(--dark-text-primary);
+}
+
+body.dark .control-icon {
+  color: var(--dark-accent);
+}
+
+body.dark .btn--icon.btn--gear i {
+  color: white;
+}
+
+body.dark .btn--icon.btn--gear:hover {
+  background: rgba(0, 200, 150, 0.15);
 }
 
 /* ====== SCROLLBARS ====== */
@@ -537,7 +601,7 @@ body.dark .user-id {
 
 /* ====== SUBSCRIPTION COMPONENTS ====== */
 
-/* إصلاح الوضع الليلي في صفحة اشتراكي */
+/* ط¥طµظ„ط§ط­ ط§ظ„ظˆط¶ط¹ ط§ظ„ظ„ظٹظ„ظٹ ظپظٹ طµظپط­ط© ط§ط´طھط±ط§ظƒظٹ */
 body.dark .subscription-card {
   background: var(--dark-surface) !important;
   border: 1px solid var(--dark-border) !important;
@@ -608,9 +672,7 @@ body.dark .plan-duration {
   color: var(--dark-accent) !important;
 }
 
-body.dark .date-cell {
-  color: var(--dark-text-secondary) !important;
-}
+
 
 body.dark .modal-content {
   background: var(--dark-surface) !important;
@@ -640,7 +702,7 @@ body.dark .renew-plan:hover {
   box-shadow: 0 5px 15px var(--dark-shadow) !important;
 }
 
-/* تحسينات خطط الأسعار في الوضع الليلي */
+/* طھط­ط³ظٹظ†ط§طھ ط®ط·ط· ط§ظ„ط£ط³ط¹ط§ط± ظپظٹ ط§ظ„ظˆط¶ط¹ ط§ظ„ظ„ظٹظ„ظٹ */
 body.dark .plan-price {
   color: var(--dark-text-primary) !important;
 }
@@ -655,7 +717,7 @@ body.dark .period {
   color: var(--dark-text-secondary) !important;
 }
 
-/* تحسينات وضوح النص في صفحة الاشتراكات */
+/* طھط­ط³ظٹظ†ط§طھ ظˆط¶ظˆط­ ط§ظ„ظ†طµ ظپظٹ طµظپط­ط© ط§ظ„ط§ط´طھط±ط§ظƒط§طھ */
 body.dark .plan-features li {
   color: var(--dark-text-primary) !important;
   font-weight: 500 !important;
@@ -671,9 +733,9 @@ body.dark .featured-badge {
   color: var(--dark-text-primary) !important;
 }
 
-/* تحسينات خلفية ملخص البيان في صفحة التحصيلات */
+/* طھط­ط³ظٹظ†ط§طھ ط®ظ„ظپظٹط© ظ…ظ„ط®طµ ط§ظ„ط¨ظٹط§ظ† ظپظٹ طµظپط­ط© ط§ظ„طھط­طµظٹظ„ط§طھ */
 
-/* إصلاح التكرار في حاويات ملخص إجمالي وملخص البيان */
+/* ط¥طµظ„ط§ط­ ط§ظ„طھظƒط±ط§ط± ظپظٹ ط­ط§ظˆظٹط§طھ ظ…ظ„ط®طµ ط¥ط¬ظ…ط§ظ„ظٹ ظˆظ…ظ„ط®طµ ط§ظ„ط¨ظٹط§ظ† */
 body.dark .summary-grid {
   background: var(--dark-surface) !important;
   border: 1px solid var(--dark-border) !important;
@@ -722,9 +784,9 @@ body.dark .reset-status-field {
   color: var(--dark-text-primary) !important;
 }
 
-/* تحسينات خلفية ملخص إجمالي في صفحة الكاونتر */
+/* طھط­ط³ظٹظ†ط§طھ ط®ظ„ظپظٹط© ظ…ظ„ط®طµ ط¥ط¬ظ…ط§ظ„ظٹ ظپظٹ طµظپط­ط© ط§ظ„ظƒط§ظˆظ†طھط± */
 
-/* تعديل مربعات ملخص إجمالي لتكون بجانب بعضها البعض مع أخذ حيز الصف بالكامل */
+/* طھط¹ط¯ظٹظ„ ظ…ط±ط¨ط¹ط§طھ ظ…ظ„ط®طµ ط¥ط¬ظ…ط§ظ„ظٹ ظ„طھظƒظˆظ† ط¨ط¬ط§ظ†ط¨ ط¨ط¹ط¶ظ‡ط§ ط§ظ„ط¨ط¹ط¶ ظ…ط¹ ط£ط®ط° ط­ظٹط² ط§ظ„طµظپ ط¨ط§ظ„ظƒط§ظ…ظ„ */
 body.dark .summary-section {
   background: var(--dark-surface) !important;
   border: 1px solid var(--dark-border) !important;
@@ -744,7 +806,7 @@ body.dark .summary-title {
   border-radius: 8px !important;
 }
 
-/* تعديل صفوف الملخص لتكون بعرض الصف بالكامل */
+/* طھط¹ط¯ظٹظ„ طµظپظˆظپ ط§ظ„ظ…ظ„ط®طµ ظ„طھظƒظˆظ† ط¨ط¹ط±ط¶ ط§ظ„طµظپ ط¨ط§ظ„ظƒط§ظ…ظ„ */
 body.dark .summary-row {
   display: flex !important;
   width: 100% !important;
@@ -763,7 +825,7 @@ body.dark .summary-row-3 .summary-item {
   min-width: 0 !important;
 }
 
-/* تحسين شكل المربعات */
+/* طھط­ط³ظٹظ† ط´ظƒظ„ ط§ظ„ظ…ط±ط¨ط¹ط§طھ */
 body.dark .summary-item {
   background: var(--dark-surface-light) !important;
   border: 1px solid var(--dark-border) !important;
@@ -796,7 +858,7 @@ body.dark .summary-value {
   font-weight: 700 !important;
 }
 
-/* تحسين التناسق في مربعات ملخص إجمالي */
+/* طھط­ط³ظٹظ† ط§ظ„طھظ†ط§ط³ظ‚ ظپظٹ ظ…ط±ط¨ط¹ط§طھ ظ…ظ„ط®طµ ط¥ط¬ظ…ط§ظ„ظٹ */
 
 body.dark .summary-item-total {
   background: linear-gradient(135deg, var(--dark-surface), rgba(0,121,101,0.2)) !important;
@@ -822,7 +884,7 @@ body.dark .summary-item-status {
   box-shadow: 0 4px 12px var(--dark-shadow) !important;
 }
 
-/* تحسين التكرار في بنية العداد الأول والثاني */
+/* طھط­ط³ظٹظ† ط§ظ„طھظƒط±ط§ط± ظپظٹ ط¨ظ†ظٹط© ط§ظ„ط¹ط¯ط§ط¯ ط§ظ„ط£ظˆظ„ ظˆط§ظ„ط«ط§ظ†ظٹ */
 body.dark .second-counter-container {
   background: var(--dark-surface) !important;
   border: 1px solid var(--dark-border) !important;
@@ -854,7 +916,7 @@ body.dark .currency-label {
   font-weight: 600 !important;
 }
 
-/* تحسين التكرار في صفحة عداد الأموال */
+/* طھط­ط³ظٹظ† ط§ظ„طھظƒط±ط§ط± ظپظٹ طµظپط­ط© ط¹ط¯ط§ط¯ ط§ظ„ط£ظ…ظˆط§ظ„ */
 body.dark .counter-card {
   background: var(--dark-surface) !important;
   border: 1px solid var(--dark-border) !important;
@@ -898,7 +960,7 @@ body.dark .categories-totals {
   border-top: 2px solid var(--dark-accent) !important;
 }
 
-/* إصلاح التكرار في حاويات وجداول صفحة عداد الأموال */
+/* ط¥طµظ„ط§ط­ ط§ظ„طھظƒط±ط§ط± ظپظٹ ط­ط§ظˆظٹط§طھ ظˆط¬ط¯ط§ظˆظ„ طµظپط­ط© ط¹ط¯ط§ط¯ ط§ظ„ط£ظ…ظˆط§ظ„ */
 body.dark .cp-table {
   background: var(--dark-surface) !important;
 }
@@ -907,7 +969,7 @@ body.dark .table-wrap {
   background: var(--dark-surface) !important;
 }
 
-/* إصلاح الخلفية البيضاء أسفل العداد الأول والثاني */
+/* ط¥طµظ„ط§ط­ ط§ظ„ط®ظ„ظپظٹط© ط§ظ„ط¨ظٹط¶ط§ط، ط£ط³ظپظ„ ط§ظ„ط¹ط¯ط§ط¯ ط§ظ„ط£ظˆظ„ ظˆط§ظ„ط«ط§ظ†ظٹ */
 body.dark .counter-totals {
   background: var(--dark-surface-light) !important;
   border-top: 2px solid var(--dark-accent) !important;
@@ -930,11 +992,11 @@ body.dark .secondary-val {
   color: var(--dark-text-secondary) !important;
 }
 
-/* تحسينات مربع الحالة في صفحة الكاونتر */
+/* طھط­ط³ظٹظ†ط§طھ ظ…ط±ط¨ط¹ ط§ظ„ط­ط§ظ„ط© ظپظٹ طµظپط­ط© ط§ظ„ظƒط§ظˆظ†طھط± */
 
-/* تحسينات لوحة التحكم */
+/* طھط­ط³ظٹظ†ط§طھ ظ„ظˆط­ط© ط§ظ„طھط­ظƒظ… */
 
-/* إصلاح مشكلة البحث في صفحة لوحة التحكم */
+/* ط¥طµظ„ط§ط­ ظ…ط´ظƒظ„ط© ط§ظ„ط¨ط­ط« ظپظٹ طµظپط­ط© ظ„ظˆط­ط© ط§ظ„طھط­ظƒظ… */
 body.dark .table-header-info {
   background: var(--dark-surface-light) !important;
   border: 1px solid var(--dark-border) !important;
@@ -1182,9 +1244,520 @@ body.dark .counter-total-value {
   color: var(--dark-text-primary);
 }
 
+/* ====== TABLE STATUS COLORS ====== */
+body.dark td.net.positive {
+  color: #4dabf7 !important;
+  font-weight: bold !important;
+  text-shadow: 0 1px 2px rgba(77, 171, 247, 0.3);
+}
+
+body.dark td.net.negative {
+  color: #fa5252 !important;
+  font-weight: bold !important;
+  text-shadow: 0 1px 2px rgba(250, 82, 82, 0.3);
+}
+
+body.dark td.net.zero {
+  color: #51cf66 !important;
+  font-weight: bold !important;
+  text-shadow: 0 1px 2px rgba(81, 207, 102, 0.3);
+}
+
+/* ====== BUTTONS CONTAINER ====== */
+body.dark .buttons-container {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(42, 42, 42, 0.9));
+  border: 2px solid rgba(0, 200, 150, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ====== HARVEST TABLE INPUTS ====== */
+body.dark .modern-table--harvest input.extra,
+body.dark .modern-table--harvest input.collector {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(0,200,150,0.3);
+  color: #e0e0e0;
+}
+
+body.dark .modern-table--harvest input:focus {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  border-color: rgba(255,165,0,0.6);
+  box-shadow: 0 0 0 2px rgba(255,165,0,0.2);
+  color: #ffffff;
+}
+
+/* ====== TOTAL ROW ====== */
+body.dark .total-row {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.3) 0%, rgba(0, 150, 130, 0.4) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 200, 150, 0.3);
+  border-radius: 8px;
+}
+
+body.dark .total-row td:first-child {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+body.dark .total-row .numeric, body.dark .total-row .amount, body.dark .total-row .collector, body.dark .total-row .net,
+body.dark .total-row .numeric, body.dark .total-row .amount, body.dark .total-row .collector, body.dark .total-row .net {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  font-weight: 700 !important;
+}
+
+body.dark .total-row td {
+  border-bottom: 1px solid rgba(0,200,150,0.6) !important;
+  border-right: 1px solid rgba(0,200,150,0.6) !important;
+  padding: 18px 12px !important;
+  vertical-align: middle !important;
+}
+
+/* ====== MODALS & CONTENT ====== */
+body.dark .modal-note {
+  color: #ffb74d;
+}
+
+body.dark .modal-content {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  color: #e0e0e0;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+body.dark textarea {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border: 2px solid rgba(0,200,150,0.4);
+  color: #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,200,150,0.1);
+}
+
+body.dark textarea:focus {
+  border-color: rgba(255,165,0,0.6);
+  box-shadow: 0 0 0 3px rgba(255,165,0,0.2), 0 4px 16px rgba(255,165,0,0.1);
+}
+
+/* ====== TOGGLE DARK MODE BUTTON ====== */
+body.dark #toggleDark {
+  color: #ffeb3b;
+  background: transparent;
+  border-radius: 4px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+body.dark #toggleDark:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: none;
+  filter: none;
+  text-shadow: none;
+  box-shadow: none;
+  outline: none;
+}
+
+/* ====== BUTTON VARIANTS (DARK MODE) ====== */
+body.dark .btn-primary {
+  background: linear-gradient(135deg, rgba(0,200,150,0.9) 0%, rgba(0,160,133,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(0, 200, 150, 0.4);
+  border: 1px solid rgba(0,200,150,0.5);
+}
+
+body.dark .btn-primary:hover {
+  background: linear-gradient(135deg, rgba(0,160,133,0.95) 0%, rgba(0,200,150,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(0, 200, 150, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-success {
+  background: linear-gradient(135deg, rgba(46,204,113,0.9) 0%, rgba(39,174,96,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+  border: 1px solid rgba(46,204,113,0.5);
+}
+
+body.dark .btn-success:hover {
+  background: linear-gradient(135deg, rgba(39,174,96,0.95) 0%, rgba(46,204,113,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-secondary {
+  background: linear-gradient(135deg, rgba(52,152,219,0.9) 0%, rgba(41,128,185,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+  border: 1px solid rgba(52,152,219,0.5);
+}
+
+body.dark .btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(41,128,185,0.95) 0%, rgba(52,152,219,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-info {
+  background: linear-gradient(135deg, rgba(155,89,182,0.9) 0%, rgba(142,68,173,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
+  border: 1px solid rgba(155,89,182,0.5);
+}
+
+body.dark .btn-info:hover {
+  background: linear-gradient(135deg, rgba(142,68,173,0.95) 0%, rgba(155,89,182,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(155, 89, 182, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-danger {
+  background: linear-gradient(135deg, rgba(231,76,60,0.9) 0%, rgba(192,57,43,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+  border: 1px solid rgba(231,76,60,0.5);
+}
+
+body.dark .btn-danger:hover {
+  background: linear-gradient(135deg, rgba(192,57,43,0.95) 0%, rgba(231,76,60,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-export {
+  background: linear-gradient(135deg, rgba(243,156,18,0.9) 0%, rgba(230,126,34,0.95) 100%);
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+  border: 1px solid rgba(243,156,18,0.5);
+}
+
+body.dark .btn-export:hover {
+  background: linear-gradient(135deg, rgba(230,126,34,0.95) 0%, rgba(243,156,18,0.9) 100%);
+  box-shadow: 0 6px 20px rgba(243, 156, 18, 0.5);
+  transform: translateY(-2px);
+}
+
+body.dark .btn-archive {
+  background: linear-gradient(135deg, rgba(22,160,133,0.9) 0%, rgba(26,188,156,0.95) 100%);
+  box-shadow: 0 3px 10px rgba(22, 160, 133, 0.4);
+  border: 1px solid rgba(22,160,133,0.5);
+}
+
+body.dark .btn-archive:hover {
+  background: linear-gradient(135deg, rgba(26,188,156,0.95) 0%, rgba(22,160,133,0.9) 100%);
+  box-shadow: 0 5px 15px rgba(22, 160, 133, 0.5);
+  transform: translateY(-2px);
+}
+
+/* ====== SUMMARY SECTION (DARK MODE) ====== */
+body.dark #summary {
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+  border: 2px solid rgba(0,200,150,0.3);
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+body.dark .summary-grid label {
+  color: #e0e0e0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 2px solid rgba(0,200,150,0.2);
+}
+
+body.dark .summary-grid input {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border: 2px solid rgba(0,200,150,0.4);
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,200,150,0.1);
+}
+
+body.dark .calc-field {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border: 2px solid rgba(0,200,150,0.4);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 16px rgba(0,200,150,0.2);
+}
+
+body.dark .reset-amount-field .calc-field,
+body.dark .total-collected-field .calc-field,
+body.dark .reset-status-field .calc-field {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 2px solid rgba(200, 200, 200, 0.3);
+  color: #f0f0f0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(200, 200, 200, 0.1);
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.dark .reset-amount-field .calc-field:hover,
+body.dark .total-collected-field .calc-field:hover,
+body.dark .reset-status-field .calc-field:hover {
+  border-color: rgba(200, 200, 200, 0.5);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 3px 12px rgba(200, 200, 200, 0.15);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
+}
+
+/* ====== ARCHIVE CONTROLS (DARK MODE) ====== */
+body.dark .archive-controls {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(37, 37, 37, 0.9));
+  border-color: rgba(0,200,150,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 2px 8px rgba(0,200,150,0.1);
+}
+
+body.dark .archive-controls label {
+  color: #00c896;
+}
+
+body.dark .control-icon {
+  color: #00c896;
+  background: linear-gradient(135deg, rgba(0,200,150,0.15), rgba(0,200,150,0.08));
+  box-shadow: 0 2px 8px rgba(0,200,150,0.2);
+}
+
+body.dark .control-group:hover .control-icon {
+  box-shadow: 0 4px 12px rgba(0,200,150,0.3);
+}
+
+body.dark .archive-select, body.dark .archive-search, body.dark #archiveSelect, body.dark #archiveSearch {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border: 2px solid rgba(0,200,150,0.4);
+  color: #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,200,150,0.1);
+}
+
+body.dark .archive-select:focus, body.dark .archive-search:focus, body.dark #archiveSelect:focus, body.dark #archiveSearch:focus {
+  border-color: #00c896;
+  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.25), 0 4px 15px rgba(0, 200, 150, 0.2);
+  background: linear-gradient(135deg, #2a2a2a, #2a2a2a);
+}
+
+body.dark .archive-select option, body.dark .archive-search option, body.dark #archiveSelect option, body.dark #archiveSearch option {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  padding: 8px;
+}
+
+/* ====== CODE COLUMN (DARK MODE) ====== */
+body.dark td.code {
+  font-size: 0.9em;
+  color: #cccccc;
+  font-style: italic;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ====== TABLE ROW STYLES (DARK MODE) ====== */
+body.dark tbody tr:hover {
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.25), rgba(0, 200, 150, 0.1));
+  box-shadow: 0 4px 15px rgba(0, 200, 150, 0.3);
+  border-radius: 8px;
+}
+
+body.dark tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.dark tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ====== MOBILE TABLE BORDER (DARK MODE) ====== */
+@media (max-width: 768px) {
+  body.dark th, body.dark td {
+    border-bottom-color: rgba(0,200,150,0.3);
+    border-right-color: rgba(0,200,150,0.3);
+  }
+
+  body.dark tbody tr:hover {
+    background: linear-gradient(135deg, rgba(0, 200, 150, 0.15) 0%, rgba(0, 200, 150, 0.08) 100%);
+    box-shadow: 0 2px 8px rgba(0, 200, 150, 0.2);
+  }
+}
+
+/* ====== SMALL SCREEN TOGGLE BUTTON (DARK MODE) ====== */
+@media (max-width: 768px) {
+  body.dark #toggleDark:hover,
+  body.dark #toggleDark:focus,
+  body.dark #toggleDark:active {
+    transform: none !important;
+    filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body.dark #toggleDark:hover,
+  body.dark #toggleDark:focus,
+  body.dark #toggleDark:active {
+    transform: none !important;
+    filter: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+/* ====== BOTTOM NAVIGATION (DARK MODE) ====== */
+body.dark .bottom-nav {
+  background-color: rgba(30, 30, 30, 0.9);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark .bottom-nav-btn {
+  background: linear-gradient(135deg, #444, #333);
+  color: #ccc;
+}
+
+body.dark .bottom-nav-btn:hover {
+  background: linear-gradient(135deg, #555, #444);
+}
+
+/* ====== NON-EDITABLE CELLS (DARK MODE) ====== */
+body.dark .non-editable {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+body.dark tr.editable-row td {
+  background-color: transparent;
+}
+
+/* ====== ALERTS (DARK MODE) ====== */
+body.dark .alert {
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+  border: 2px solid rgba(255,255,255,0.1);
+  color: #e0e0e0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+body.dark .alert::before {
+  background: linear-gradient(90deg, #00a085, #007965);
+}
+
+body.dark .alert-success {
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.2) 0%, rgba(39, 174, 96, 0.1) 100%);
+  border-left-color: #28a745;
+  color: #90ee90;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  box-shadow: 0 8px 32px rgba(39, 174, 96, 0.3);
+}
+
+body.dark .alert-success::before {
+  background: linear-gradient(90deg, #28a745, #20c997);
+}
+
+body.dark .alert-danger {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.2) 0%, rgba(231, 76, 60, 0.1) 100%);
+  border-left-color: #dc3545;
+  color: #ff6b6b;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  box-shadow: 0 8px 32px rgba(231, 76, 60, 0.3);
+}
+
+body.dark .alert-danger::before {
+  background: linear-gradient(90deg, #dc3545, #fd7e14);
+}
+
+body.dark .alert-info {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.2) 0%, rgba(23, 162, 184, 0.1) 100%);
+  border-left-color: #17a2b8;
+  color: #5bc0de;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  box-shadow: 0 8px 32px rgba(23, 162, 184, 0.3);
+}
+
+body.dark .alert-info::before {
+  background: linear-gradient(90deg, #17a2b8, #6f42c1);
+}
+
+body.dark .alert i {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ====== CONFIRM MODAL (DARK MODE) ====== */
+body.dark .confirm-modal {
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+  color: #e0e0e0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .confirm-modal::before {
+  background: linear-gradient(90deg, #00a085, #007965);
+}
+
+/* ====== RESULT CELLS (DARK MODE) ====== */
+body.dark .result-cell.positive {
+  color: #4dabf7;
+  text-shadow: 0 1px 2px rgba(77, 171, 247, 0.3);
+}
+
+body.dark .result-cell.negative {
+  color: #fa5252;
+  text-shadow: 0 1px 2px rgba(250, 82, 82, 0.3);
+}
+
+body.dark .result-cell.zero {
+  color: #e9ecef;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ====== PWA INSTALL PROMPT (DARK MODE) ====== */
+body.dark .install-prompt {
+  background: rgba(30, 30, 30, 0.9);
+  border-color: rgba(0, 200, 150, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .install-prompt-content::before {
+  background: linear-gradient(90deg, rgba(0, 200, 150, 0.8) 0%, rgba(0, 150, 130, 0.9) 100%);
+}
+
+body.dark .install-text h3 {
+  color: #ffffff;
+}
+
+body.dark .install-text p {
+  color: #e0e0e0;
+}
+
+body.dark .dismiss-btn {
+  background: transparent;
+  color: #999;
+  border-color: #555;
+}
+
+body.dark .dismiss-btn:hover {
+  background: #333;
+  color: #cccccc;
+}
+
+/* ====== DATA INPUT PAGE (DARK MODE) ====== */
+body.dark main textarea {
+  background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
+  border-color: rgba(0,200,150,0.4);
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,200,150,0.1);
+}
+
+body.dark main textarea:focus {
+  border-color: #00c896;
+  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.25), 0 4px 15px rgba(0, 200, 150, 0.2);
+  background: linear-gradient(135deg, #2a2a2a, #2a2a2a);
+}
+
+body.dark main .buttons button {
+  background: linear-gradient(135deg, rgba(0,200,150,0.8), rgba(0,150,130,0.9));
+  box-shadow: 0 4px 12px rgba(0,200,150,0.3);
+}
+
+body.dark main .buttons button:hover {
+  background: linear-gradient(135deg, rgba(255,165,0,0.8), rgba(255,140,0,0.9));
+  box-shadow: 0 6px 16px rgba(255,165,0,0.4);
+}
+
 /* ====== HARVEST COMPONENTS ====== */
+/* إزالة تلوين الخلفية في الوضع الليلي */
 body.dark .negative-net {
-  background: rgba(231, 76, 60, 0.2) !important;
+  background: transparent !important;
 }
 
 /* ====== SMOOTH TRANSITIONS ====== */
@@ -1214,3 +1787,115 @@ body.dark * {
     font-size: 16px; /* Prevent zoom on iOS */
   }
 }
+
+/* ====== MIGRATED COMPONENT DARK RULES (Dashboard, Topbar, Alerts, Notifications) ======
+   These rules were moved from component-scoped styles into this unified file.
+*/
+
+/* Dashboard status bars */
+body.dark .status-bar.paste {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.25), rgba(0, 123, 255, 0.25));
+  color: #5ddef4;
+  border-color: rgba(23, 162, 184, 0.5);
+}
+
+body.dark .status-bar.saving {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 152, 0, 0.25));
+  color: #ffd54f;
+  border-color: rgba(255, 152, 0, 0.5);
+}
+
+body.dark .status-bar.success {
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.25), rgba(32, 201, 151, 0.25));
+  color: #5ffe7a;
+  border-color: rgba(40, 167, 69, 0.5);
+}
+
+body.dark .status-bar.error {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.25), rgba(255, 107, 107, 0.25));
+  color: #ff6b6b;
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+/* Topbar */
+body.dark .topbar {
+  background: linear-gradient(135deg, var(--dark-surface), var(--dark-surface-hover));
+  border-bottom: 1px solid var(--dark-border);
+  color: var(--dark-text-primary);
+}
+
+/* Main layout */
+body.dark main {
+  background: var(--dark-bg);
+}
+
+/* Alerts (BaseAlert) */
+body.dark .alert-info {
+  background: rgba(23, 162, 184, 0.1);
+  color: #5bc0de;
+  border-color: rgba(23, 162, 184, 0.3);
+}
+
+body.dark .alert-success {
+  background: rgba(40, 167, 69, 0.1);
+  color: #5cb85c;
+  border-color: rgba(40, 167, 69, 0.3);
+}
+
+body.dark .alert-warning {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+body.dark .alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
+}
+
+/* Notifications */
+body.dark .notification-success {
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.3), rgba(32, 201, 151, 0.3));
+  color: #5ffe7a;
+  border-left-color: #28a745;
+  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.35);
+}
+
+body.dark .notification-error {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.3), rgba(255, 107, 107, 0.3));
+  color: #ff7b7b;
+  border-left-color: #dc3545;
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.35);
+}
+
+body.dark .notification-warning {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 183, 3, 0.25));
+  color: #ffd700;
+  border-left-color: #ffc107;
+  box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+}
+
+body.dark .notification-info {
+  background: linear-gradient(135deg, rgba(23, 162, 184, 0.3), rgba(0, 123, 255, 0.3));
+  color: #6dd5ff;
+  border-left-color: #17a2b8;
+  box-shadow: 0 8px 25px rgba(23, 162, 184, 0.35);
+}
+/* ====== OVERRIDE: Prevent conditional coloring on total net cell (dark mode) ====== */
+/* Ensures totals keep the total-row color instead of positive/negative hues */
+body.dark .total-row td.net,
+body.dark .total-row td.net.positive,
+body.dark .total-row td.net.negative,
+body.dark .modern-table--harvest .total-row td.net,
+body.dark .modern-table--archive .total-row td.net {
+ color: inherit !important;
+ text-shadow: none !important;
+}
+
+/* ====== HARVEST VIEW DARK MODE STYLES ====== */
+body.dark .date-display, body.dark .search-container {
+ border-color: rgba(0, 200, 150, 0.2);
+}
+
+/* تم دمج تنسيق search-input في الوضع الليلي مع التنسيق الموحد في الأعلى */

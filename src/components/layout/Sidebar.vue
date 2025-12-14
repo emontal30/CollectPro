@@ -108,6 +108,7 @@
 
 <script setup>
 import { computed, onMounted, inject } from 'vue';
+import logger from '@/utils/logger.js'
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
@@ -140,7 +141,7 @@ const handleLogout = async () => {
     await store.logout();
     addNotification('تم تسجيل الخروج بنجاح', 'success');
   } catch (error) {
-    console.error('Logout failed:', error);
+    logger.error('Logout failed:', error);
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error', {
       suggestion: 'تحقق من اتصال الإنترنت أو أعد تحميل الصفحة'
     });

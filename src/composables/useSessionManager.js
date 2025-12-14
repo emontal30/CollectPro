@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import logger from '@/utils/logger.js'
 import { supabase } from '@/supabase';
 import { useRouter } from 'vue-router';
 
@@ -26,7 +27,7 @@ export function useSessionManager() {
       const { data: { session }, error } = await supabase.auth.getSession();
       return !!session && !error;
     } catch (err) {
-      console.warn('checkSessionValidity: network error, assuming session valid for now', err)
+      logger.warn('checkSessionValidity: network error, assuming session valid for now', err)
       return true;
     }
   };
@@ -38,7 +39,7 @@ export function useSessionManager() {
   };
 
   // Stubs for backward compatibility
-  const initializeSession = () => console.log('✅ Session persistence active');
+  const initializeSession = () => logger.info('✅ Session persistence active');
   const cleanup = () => {};
   const updateLastActivity = () => {};
   const setupActivityListeners = () => () => {};

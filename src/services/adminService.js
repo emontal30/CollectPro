@@ -1,4 +1,5 @@
 import { authService } from './authService.js'
+import logger from '@/utils/logger.js'
 
 export const adminService = {
   async getStats() {
@@ -105,7 +106,7 @@ export const adminService = {
       .order('created_at', { ascending: false, nullsFirst: false });
 
     if (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       return [];
     }
 
@@ -115,7 +116,7 @@ export const adminService = {
       .eq('status', 'active');
 
     if (subsError) {
-      console.error('Error fetching active subscriptions:', subsError);
+      logger.error('Error fetching active subscriptions:', subsError);
     }
 
     const activeUserIds = new Set(activeSubs?.map(s => s.user_id) || []);

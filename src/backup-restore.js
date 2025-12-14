@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import logger from './utils/logger.js';
 
 const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
@@ -25,7 +26,7 @@ const BACKUP_DIR = './backups';
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) {
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    console.log('✅ تم إنشاء مجلد النسخ الاحتياطي');
+    logger.info('✅ تم إنشاء مجلد النسخ الاحتياطي');
   }
 }
 
@@ -34,7 +35,7 @@ function ensureBackupDir() {
  */
 async function exportTable(tableName) {
   try {
-    console.log(`📤 جاري تصدير جدول: ${tableName}`);
+    logger.info(`📤 جاري تصدير جدول: ${tableName}`);
 
     const { data, error } = await supabase
       .from(tableName)
@@ -42,14 +43,14 @@ async function exportTable(tableName) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error(`❌ خطأ في تصدير ${tableName}:`, error);
+      logger.error(`❌ خطأ في تصدير ${tableName}:`, error);
       return null;
     }
 
-    console.log(`✅ تم تصدير ${data.length} سجل من ${tableName}`);
+    logger.info(`✅ تم تصدير ${data.length} سجل من ${tableName}`);
     return data;
   } catch (error) {
-    console.error(`❌ خطأ في تصدير ${tableName}:`, error);
+    logger.error(`❌ خطأ في تصدير ${tableName}:`, error);
     return null;
   }
 }
@@ -58,7 +59,7 @@ async function exportTable(tableName) {
  * تصدير جميع البيانات
  */
 async function exportAllData() {
-  console.log('🚀 بدء عملية التصدير...');
+  logger.info('🚀 بدء عملية التصدير...');
 
   ensureBackupDir();
 
@@ -80,12 +81,12 @@ async function exportAllData() {
 
   // حفظ الملف
   fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
-  console.log(`💾 تم حفظ النسخة الاحتياطية في: ${backupFile}`);
+  logger.info(`💾 تم حفظ النسخة الاحتياطية في: ${backupFile}`);
 
   // إنشاء ملف أحدث
   const latestFile = path.join(BACKUP_DIR, 'latest-backup.json');
   fs.writeFileSync(latestFile, JSON.stringify(backupData, null, 2));
-  console.log(`🔄 تم تحديث الملف الأحدث: ${latestFile}`);
+  logger.info(`🔄 تم تحديث الملف الأحدث: ${latestFile}`);
 
   return backupFile;
 }
@@ -95,12 +96,12 @@ async function exportAllData() {
  */
 async function importTable(tableName, data) {
   if (!data || data.length === 0) {
-    console.log(`⚠️ لا توجد بيانات للاستيراد في جدول: ${tableName}`);
+    logger.warn(`⚠️ لا توجد بيانات للاستيراد في جدول: ${tableName}`);
     return;
   }
 
   try {
-    console.log(`📥 جاري استيراد ${data.length} سجل إلى جدول: ${tableName}`);
+    logger.info(`📥 جاري استيراد ${data.length} سجل إلى جدول: ${tableName}`);
 
     // تقسيم البيانات إلى دفعات لتجنب مشاكل الأداء
     const batchSize = 100;
@@ -114,19 +115,19 @@ async function importTable(tableName, data) {
         .insert(batch);
 
       if (error) {
-        console.error(`❌ خطأ في استيراد دفعة ${Math.floor(i/batchSize) + 1} من ${tableName}:`, error);
+        logger.error(`❌ خطأ في استيراد دفعة ${Math.floor(i/batchSize) + 1} من ${tableName}:`, error);
         // المتابعة مع الدفعة التالية بدلاً من التوقف
         continue;
       }
 
       imported += batch.length;
-      console.log(`✅ تم استيراد دفعة ${Math.floor(i/batchSize) + 1} (${batch.length} سجل)`);
+      logger.info(`✅ تم استيراد دفعة ${Math.floor(i/batchSize) + 1} (${batch.length} سجل)`);
     }
 
-    console.log(`✅ تم استيراد ${imported} سجل من أصل ${data.length} في ${tableName}`);
+    logger.info(`✅ تم استيراد ${imported} سجل من أصل ${data.length} في ${tableName}`);
 
   } catch (error) {
-    console.error(`❌ خطأ في استيراد ${tableName}:`, error);
+    logger.error(`❌ خطأ في استيراد ${tableName}:`, error);
   }
 }
 
@@ -134,18 +135,18 @@ async function importTable(tableName, data) {
  * استيراد جميع البيانات
  */
 async function importAllData(backupFile) {
-  console.log('🚀 بدء عملية الاستيراد...');
+  logger.info('🚀 بدء عملية الاستيراد...');
 
   if (!fs.existsSync(backupFile)) {
-    console.error(`❌ ملف النسخة الاحتياطية غير موجود: ${backupFile}`);
+    logger.error(`❌ ملف النسخة الاحتياطية غير موجود: ${backupFile}`);
     return;
   }
 
   try {
     const backupData = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
 
-    console.log(`📅 تاريخ النسخة الاحتياطية: ${backupData.timestamp}`);
-    console.log(`🏷️ الإصدار: ${backupData.version}`);
+    logger.info(`📅 تاريخ النسخة الاحتياطية: ${backupData.timestamp}`);
+    logger.info(`🏷️ الإصدار: ${backupData.version}`);
 
     // ترتيب الجداول حسب التبعيات
     const importOrder = [
@@ -160,15 +161,15 @@ async function importAllData(backupFile) {
     for (const tableName of importOrder) {
       if (backupData.tables[tableName]) {
         await importTable(tableName, backupData.tables[tableName]);
-      } else {
-        console.log(`⚠️ جدول ${tableName} غير موجود في النسخة الاحتياطية`);
+        } else {
+        logger.warn(`⚠️ جدول ${tableName} غير موجود في النسخة الاحتياطية`);
       }
     }
 
-    console.log('✅ تم الانتهاء من عملية الاستيراد');
+    logger.info('✅ تم الانتهاء من عملية الاستيراد');
 
   } catch (error) {
-    console.error('❌ خطأ في قراءة ملف النسخة الاحتياطية:', error);
+    logger.error('❌ خطأ في قراءة ملف النسخة الاحتياطية:', error);
   }
 }
 
@@ -192,9 +193,9 @@ function listBackups() {
     })
     .sort((a, b) => new Date(b.modified) - new Date(a.modified));
 
-  console.log('📋 النسخ الاحتياطية المتاحة:');
+  logger.info('📋 النسخ الاحتياطية المتاحة:');
   files.forEach((file, index) => {
-    console.log(`${index + 1}. ${file.name} (${file.size}) - ${file.modified}`);
+    logger.info(`${index + 1}. ${file.name} (${file.size}) - ${file.modified}`);
   });
 
   return files;
@@ -215,13 +216,13 @@ function cleanupOldBackups() {
     }))
     .sort((a, b) => b.stats.mtime - a.stats.mtime);
 
-  if (files.length > 10) {
+    if (files.length > 10) {
     const toDelete = files.slice(10);
-    console.log(`🧹 حذف ${toDelete.length} نسخة احتياطية قديمة...`);
+    logger.info(`🧹 حذف ${toDelete.length} نسخة احتياطية قديمة...`);
 
     toDelete.forEach(file => {
       fs.unlinkSync(file.path);
-      console.log(`🗑️ تم حذف: ${file.name}`);
+      logger.info(`🗑️ تم حذف: ${file.name}`);
     });
   }
 }
@@ -253,18 +254,18 @@ async function main() {
       break;
 
     default:
-      console.log('💡 استخدام:');
-      console.log('  node backup-restore.js export          # تصدير البيانات');
-      console.log('  node backup-restore.js import [file]    # استيراد البيانات');
-      console.log('  node backup-restore.js list             # عرض النسخ الاحتياطية');
-      console.log('  node backup-restore.js cleanup          # تنظيف النسخ القديمة');
+      logger.info('💡 استخدام:');
+      logger.info('  node backup-restore.js export          # تصدير البيانات');
+      logger.info('  node backup-restore.js import [file]    # استيراد البيانات');
+      logger.info('  node backup-restore.js list             # عرض النسخ الاحتياطية');
+      logger.info('  node backup-restore.js cleanup          # تنظيف النسخ القديمة');
       break;
   }
 }
 
 // تشغيل إذا تم استدعاء الملف مباشرة
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(console.error);
+  main().catch(err => logger.error(err));
 }
 
 export {

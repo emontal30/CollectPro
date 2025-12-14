@@ -5,6 +5,7 @@
  */
 
 import localforage from 'localforage';
+import logger from '@/utils/logger.js'
 
 // تكوين حدود التخزين
 const CACHE_CONFIG = {
@@ -57,7 +58,7 @@ export function safeDeepClone(data) {
   try {
     return JSON.parse(JSON.stringify(data));
   } catch (err) {
-    console.warn('⚠️ safeDeepClone failed, returning original data:', err);
+    logger.warn('⚠️ safeDeepClone failed, returning original data:', err);
     return data;
   }
 }
@@ -74,11 +75,11 @@ async function cleanExpiredCache() {
       if (now - metadata.timestamp > CACHE_CONFIG.localStorage.ttl) {
         localStorage.removeItem(key);
         cacheMetadata.localStorage.delete(key);
-        console.log(`🗑️ تم حذف (localStorage): ${key}`);
+        logger.info(`🗑️ تم حذف (localStorage): ${key}`);
       }
     }
   } catch (err) {
-    console.error('❌ خطأ في تنظيف localStorage:', err);
+    logger.error('❌ خطأ في تنظيف localStorage:', err);
   }
 
   // تنظيف IndexedDB
@@ -87,18 +88,18 @@ async function cleanExpiredCache() {
       if (now - metadata.timestamp > CACHE_CONFIG.indexedDB.ttl) {
         await localforage.removeItem(key);
         cacheMetadata.indexedDB.delete(key);
-        console.log(`🗑️ تم حذف (IndexedDB): ${key}`);
+        logger.info(`🗑️ تم حذف (IndexedDB): ${key}`);
       }
     }
   } catch (err) {
-    console.error('❌ خطأ في تنظيف IndexedDB:', err);
+    logger.error('❌ خطأ في تنظيف IndexedDB:', err);
   }
 
   // تنظيف Memory Cache
   for (const [key, metadata] of memoryCache) {
     if (now - metadata.timestamp > CACHE_CONFIG.memory.ttl) {
       memoryCache.delete(key);
-      console.log(`🗑️ تم حذف (Memory): ${key}`);
+      logger.info(`🗑️ تم حذف (Memory): ${key}`);
     }
   }
 }
@@ -126,7 +127,7 @@ async function evictLRU(storage) {
       await localforage.removeItem(key);
     }
     metadata.delete(key);
-    console.log(`♻️ تم حذف (LRU ${storage}): ${key}`);
+    logger.info(`♻️ تم حذف (LRU ${storage}): ${key}`);
   }
 }
 
@@ -155,10 +156,10 @@ export async function setLocalStorageCache(key, data, metadata = {}) {
       lastAccessed: now
     });
 
-    console.log(`✅ حفظ (localStorage): ${key} (${Math.round(size / 1024)}KB)`);
+    logger.info(`✅ حفظ (localStorage): ${key} (${Math.round(size / 1024)}KB)`);
     return true;
   } catch (err) {
-    console.error(`❌ خطأ في حفظ (localStorage): ${key}`, err);
+    logger.error(`❌ خطأ في حفظ (localStorage): ${key}`, err);
     return false;
   }
 }
@@ -178,10 +179,10 @@ export function getLocalStorageCache(key) {
       metadata.lastAccessed = Date.now();
     }
 
-    console.log(`📖 قراءة (localStorage): ${key}`);
+    logger.info(`📖 قراءة (localStorage): ${key}`);
     return parsed.data;
   } catch (err) {
-    console.error(`❌ خطأ في قراءة (localStorage): ${key}`, err);
+    logger.error(`❌ خطأ في قراءة (localStorage): ${key}`, err);
     return null;
   }
 }
@@ -214,10 +215,10 @@ export async function setIndexedDBCache(key, data, metadata = {}) {
       lastAccessed: now
     });
 
-    console.log(`✅ حفظ (IndexedDB): ${key} (${Math.round(size / 1024)}KB)`);
+    logger.info(`✅ حفظ (IndexedDB): ${key} (${Math.round(size / 1024)}KB)`);
     return true;
   } catch (err) {
-    console.error(`❌ خطأ في حفظ (IndexedDB): ${key}`, err);
+    logger.error(`❌ خطأ في حفظ (IndexedDB): ${key}`, err);
     return false;
   }
 }
@@ -235,10 +236,10 @@ export async function getIndexedDBCache(key) {
       metadata.lastAccessed = Date.now();
     }
 
-    console.log(`📖 قراءة (IndexedDB): ${key}`);
+    logger.info(`📖 قراءة (IndexedDB): ${key}`);
     return item.data;
   } catch (err) {
-    console.error(`❌ خطأ في قراءة (IndexedDB): ${key}`, err);
+    logger.error(`❌ خطأ في قراءة (IndexedDB): ${key}`, err);
     return null;
   }
 }
@@ -253,7 +254,7 @@ export function setMemoryCache(key, data, metadata = {}) {
       const sorted = Array.from(memoryCache.entries())
         .sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
       memoryCache.delete(sorted[0][0]);
-      console.log(`♻️ تم حذف (Memory LRU): ${sorted[0][0]}`);
+      logger.info(`♻️ تم حذف (Memory LRU): ${sorted[0][0]}`);
     }
 
     const now = Date.now();
@@ -264,10 +265,10 @@ export function setMemoryCache(key, data, metadata = {}) {
       metadata
     });
 
-    console.log(`✅ حفظ (Memory): ${key}`);
+    logger.info(`✅ حفظ (Memory): ${key}`);
     return true;
   } catch (err) {
-    console.error(`❌ خطأ في حفظ (Memory): ${key}`, err);
+    logger.error(`❌ خطأ في حفظ (Memory): ${key}`, err);
     return false;
   }
 }
@@ -283,10 +284,10 @@ export function getMemoryCache(key) {
     // تحديث آخر وصول
     item.lastAccessed = Date.now();
 
-    console.log(`📖 قراءة (Memory): ${key}`);
+    logger.info(`📖 قراءة (Memory): ${key}`);
     return item.data;
   } catch (err) {
-    console.error(`❌ خطأ في قراءة (Memory): ${key}`, err);
+    logger.error(`❌ خطأ في قراءة (Memory): ${key}`, err);
     return null;
   }
 }
@@ -343,10 +344,10 @@ export async function removeFromAllCaches(key) {
     await localforage.removeItem(key);
     cacheMetadata.localStorage.delete(key);
     cacheMetadata.indexedDB.delete(key);
-    console.log(`🗑️ تم حذف من جميع المخزنات: ${key}`);
+    logger.info(`🗑️ تم حذف من جميع المخزنات: ${key}`);
     return true;
   } catch (err) {
-    console.error(`❌ خطأ في الحذف: ${key}`, err);
+    logger.error(`❌ خطأ في الحذف: ${key}`, err);
     return false;
   }
 }
@@ -361,10 +362,10 @@ export async function clearAllCaches() {
     await localforage.clear();
     cacheMetadata.localStorage.clear();
     cacheMetadata.indexedDB.clear();
-    console.log('🧹 تم تنظيف جميع المخزنات');
+    logger.info('🧹 تم تنظيف جميع المخزنات');
     return true;
   } catch (err) {
-    console.error('❌ خطأ في التنظيف الكامل:', err);
+    logger.error('❌ خطأ في التنظيف الكامل:', err);
     return false;
   }
 }
@@ -393,17 +394,17 @@ export function getCacheStats() {
  * بدء التنظيف التلقائي المنتظم
  */
 export function startAutoCleaning(interval = 5 * 60 * 1000) { // كل 5 دقائق
-  console.log('⏱️ بدء التنظيف التلقائي للكاش');
+  logger.info('⏱️ بدء التنظيف التلقائي للكاش');
   
   setInterval(() => {
     cleanExpiredCache().catch(err => {
-      console.error('❌ خطأ في التنظيف التلقائي:', err);
+      logger.error('❌ خطأ في التنظيف التلقائي:', err);
     });
   }, interval);
 
   // تنظيف عند إغلاق الصفحة
   window.addEventListener('beforeunload', () => {
-    cleanExpiredCache().catch(console.error);
+    cleanExpiredCache().catch((e) => logger.error(e));
   });
 }
 
@@ -441,10 +442,10 @@ export async function clearCacheByPattern(pattern) {
       }
     }
 
-    console.log(`♻️ تم حذف ${count} عناصر بناءً على Pattern: ${pattern}`);
+    logger.info(`♻️ تم حذف ${count} عناصر بناءً على Pattern: ${pattern}`);
     return count;
   } catch (err) {
-    console.error(`❌ خطأ في حذف الكاش بـ Pattern: ${pattern}`, err);
+    logger.error(`❌ خطأ في حذف الكاش بـ Pattern: ${pattern}`, err);
     return 0;
   }
 }

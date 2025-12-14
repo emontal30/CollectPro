@@ -5,6 +5,8 @@
 
 import localforage from 'localforage';
 import api from '@/services/api';
+import logger from '@/utils/logger.js'
+import { supabase } from '@/supabase'
 
 const QUEUE_STORE = 'archive_sync_queue';
 const TIMESTAMP_STORE = 'archive_timestamps';
@@ -15,9 +17,9 @@ const TIMESTAMP_STORE = 'archive_timestamps';
 export async function initQueueStore() {
   try {
     await localforage.setItem('_initialized', true);
-    console.log('✅ Archive sync queue initialized');
+    logger.info('✅ Archive sync queue initialized');
   } catch (err) {
-    console.error('Failed to initialize queue store:', err);
+    logger.error('Failed to initialize queue store:', err);
   }
 }
 
@@ -34,10 +36,10 @@ export async function addToSyncQueue(archiveData) {
       retries: 0
     });
     await localforage.setItem(QUEUE_STORE, queue);
-    console.log('📌 Archive added to sync queue (total pending:', queue.length, ')');
+    logger.info('📌 Archive added to sync queue (total pending:', queue.length, ')');
     return queue.length;
   } catch (err) {
-    console.error('Error adding to sync queue:', err);
+    logger.error('Error adding to sync queue:', err);
     return 0;
   }
 }
@@ -49,7 +51,7 @@ export async function getPendingSyncItems() {
   try {
     return (await localforage.getItem(QUEUE_STORE)) || [];
   } catch (err) {
-    console.error('Error getting pending sync items:', err);
+    logger.error('Error getting pending sync items:', err);
     return [];
   }
 }
@@ -62,9 +64,9 @@ export async function removeSyncItem(itemId) {
     const queue = (await localforage.getItem(QUEUE_STORE)) || [];
     const filtered = queue.filter(item => item.id !== itemId);
     await localforage.setItem(QUEUE_STORE, filtered);
-    console.log('✅ Sync item removed (pending:', filtered.length, ')');
+    logger.info('✅ Sync item removed (pending:', filtered.length, ')');
   } catch (err) {
-    console.error('Error removing sync item:', err);
+    logger.error('Error removing sync item:', err);
   }
 }
 
@@ -80,7 +82,7 @@ export async function incrementRetryCount(itemId) {
       await localforage.setItem(QUEUE_STORE, queue);
     }
   } catch (err) {
-    console.error('Error incrementing retry count:', err);
+    logger.error('Error incrementing retry count:', err);
   }
 }
 
@@ -90,9 +92,9 @@ export async function incrementRetryCount(itemId) {
 export async function clearSyncQueue() {
   try {
     await localforage.setItem(QUEUE_STORE, []);
-    console.log('🗑️ Sync queue cleared');
+    logger.info('🗑️ Sync queue cleared');
   } catch (err) {
-    console.error('Error clearing sync queue:', err);
+    logger.error('Error clearing sync queue:', err);
   }
 }
 
@@ -109,7 +111,7 @@ export async function getQueueStats() {
       oldestItem: queue[0]?.timestamp ? new Date(queue[0].timestamp).toLocaleString('ar-EG') : null
     };
   } catch (err) {
-    console.error('Error getting queue stats:', err);
+    logger.error('Error getting queue stats:', err);
     return { pendingCount: 0, totalRetries: 0, oldestItem: null };
   }
 }
@@ -123,7 +125,7 @@ export async function saveArchiveTimestamp(date) {
     timestamps[date] = Date.now();
     await localforage.setItem(TIMESTAMP_STORE, timestamps);
   } catch (err) {
-    console.error('Error saving archive timestamp:', err);
+    logger.error('Error saving archive timestamp:', err);
   }
 }
 
@@ -137,7 +139,7 @@ export async function wasRecentlySynced(date, withinMs = 60000) {
     if (!timestamp) return false;
     return Date.now() - timestamp < withinMs;
   } catch (err) {
-    console.error('Error checking sync status:', err);
+    logger.error('Error checking sync status:', err);
     return false;
   }
 }
@@ -147,21 +149,20 @@ export async function wasRecentlySynced(date, withinMs = 60000) {
  * Called when connection is restored
  */
 export async function processPendingSyncQueue() {
-  try {
-    const { supabase } = api;
+    try {
+    // Use direct supabase client
     if (!supabase) {
-      console.error('❌ Supabase client not available');
+      logger.error('❌ Supabase client not available');
       return { synced: 0, failed: 0 };
     }
 
     const queue = await getPendingSyncItems();
 
     if (queue.length === 0) {
-      console.log('✅ No pending archives to sync');
+      logger.info('✅ No pending archives to sync');
       return { synced: 0, failed: 0 };
     }
-
-    console.log(`🔄 Processing ${queue.length} pending archive(s)...`);
+    logger.info(`🔄 Processing ${queue.length} pending archive(s)...`);
 
     let synced = 0;
     let failed = 0;
@@ -169,19 +170,19 @@ export async function processPendingSyncQueue() {
     for (const item of queue) {
       try {
         if (!navigator.onLine) {
-          console.warn('⚠️ Connection lost during sync — pausing queue processing');
+          logger.warn('⚠️ Connection lost during sync — pausing queue processing');
           break;
         }
 
         const { user_id, archive_date, rows } = item.data;
 
         if (!rows || rows.length === 0) {
-          console.warn('⚠️ Skipping empty archive:', archive_date);
+          logger.warn('⚠️ Skipping empty archive:', archive_date);
           await removeSyncItem(item.id);
           continue;
         }
 
-        console.log(`📤 Syncing archive: ${archive_date} (attempt ${(item.retries || 0) + 1})`);
+        logger.info(`📤 Syncing archive: ${archive_date} (attempt ${(item.retries || 0) + 1})`);
 
         // Delete old data for this date (replace)
         const { error: deleteError } = await supabase
@@ -210,24 +211,24 @@ export async function processPendingSyncQueue() {
         // Success — remove from queue
         await removeSyncItem(item.id);
         synced++;
-        console.log(`✅ Archive synced: ${archive_date}`);
+        logger.info(`✅ Archive synced: ${archive_date}`);
       } catch (err) {
-        console.error(`❌ Failed to sync archive ${item.data?.archive_date}:`, err.message);
+        logger.error(`❌ Failed to sync archive ${item.data?.archive_date}:`, err.message);
         await incrementRetryCount(item.id);
         failed++;
 
         // Stop on persistent errors
         if (err.message?.includes('401') || err.message?.includes('403')) {
-          console.error('🚨 Authentication error — stopping sync queue processing');
+          logger.error('🚨 Authentication error — stopping sync queue processing');
           break;
         }
       }
     }
 
-    console.log(`📊 Sync queue processing complete: ${synced} synced, ${failed} failed`);
+    logger.info(`📊 Sync queue processing complete: ${synced} synced, ${failed} failed`);
     return { synced, failed };
   } catch (err) {
-    console.error('Error processing sync queue:', err);
+    logger.error('Error processing sync queue:', err);
     return { synced: 0, failed: 0 };
   }
 }

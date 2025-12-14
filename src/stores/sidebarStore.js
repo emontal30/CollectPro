@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import eventBus from '@/utils/eventBus';
 import { calculateDaysRemaining } from '@/utils/formatters';
+import logger from '@/utils/logger.js'
 
 export const useSidebarStore = defineStore('sidebar', () => {
   // --- الحالة (State) ---
@@ -82,13 +83,13 @@ export const useSidebarStore = defineStore('sidebar', () => {
       isAdmin.value = ['emontal.33@gmail.com'].includes(currentUser.email); // Check logic
       const { subscription: subData } = await api.subscriptions.getSubscription(currentUser.id);
       subscription.value = subData;
-    } catch (err) { console.error('Error fetching sidebar data:', err); }
+    } catch (err) { logger.error('Error fetching sidebar data:', err); }
   }
 
   // 4. تحديث بيانات الاشتراك من event bus
   function updateSubscriptionFromEvent(subscriptionData) {
     subscription.value = subscriptionData;
-    console.log('Sidebar subscription updated from event:', subscriptionData);
+    logger.info('Sidebar subscription updated from event:', subscriptionData);
   }
 
   // الاستماع لأحداث تحديث الاشتراك
@@ -106,7 +107,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
       isOpen.value = false; // إغلاق الشريط الجانبي قبل الخروج
       await authStore.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
       // في حالة الخطأ، وجه لصفحة الدخول مباشرة
       try {
         await router.replace('/');

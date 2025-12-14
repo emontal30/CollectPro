@@ -4,6 +4,7 @@ import api from '@/services/api';
 import { getPendingSyncItems } from '@/services/archiveSyncQueue';
 import { getSmartCache, setSmartCache, removeFromAllCaches } from '@/services/cacheManager';
 import { useNotifications } from '@/composables/useNotifications';
+import logger from '@/utils/logger.js'
 
 export const useArchiveStore = defineStore('archive', () => {
   // --- الحالة (State) ---
@@ -47,45 +48,45 @@ export const useArchiveStore = defineStore('archive', () => {
     let dbDates = [];
     let queueDates = [];
 
-    console.log('📅 Loading available archive dates...');
-    console.log('📌 Local dates found:', localDates);
+    logger.info('📅 Loading available archive dates...');
+    logger.info('📌 Local dates found:', localDates);
 
     // تحديث فوري بالتواريخ المحلية أولاً
     const initialMerged = [...new Set([...localDates, ...queueDates])].sort().reverse();
     availableDates.value = initialMerged;
-    console.log('📅 Initial available dates (local only):', initialMerged);
+    logger.info('📅 Initial available dates (local only):', initialMerged);
 
     try {
       // Get pending sync queue dates
       const pendingItems = await getPendingSyncItems();
       queueDates = [...new Set(pendingItems.map(item => item.data?.archive_date).filter(Boolean))];
-      console.log('📋 Sync queue dates found:', queueDates);
+      logger.info('📋 Sync queue dates found:', queueDates);
     } catch (err) {
-      console.warn('⚠️ Could not read sync queue:', err);
+      logger.warn('⚠️ Could not read sync queue:', err);
     }
 
     try {
       const { user } = await api.auth.getUser();
       if (user) {
-        console.log('👤 User found:', user.id);
+        logger.info('👤 User found:', user.id);
         const { dates, error } = await api.archive.getAvailableDates(user.id);
         if (error) {
-          console.error('❌ Error fetching DB dates:', error);
+          logger.error('❌ Error fetching DB dates:', error);
         } else {
-          console.log('📊 DB dates found:', dates);
+          logger.info('📊 DB dates found:', dates);
           dbDates = dates || [];
         }
       } else {
-        console.warn('⚠️ No user found for loading archive dates');
+        logger.warn('⚠️ No user found for loading archive dates');
       }
     } catch (e) {
-      console.error("❌ خطأ في جلب التواريخ من قاعدة البيانات", e);
+      logger.error("❌ خطأ في جلب التواريخ من قاعدة البيانات", e);
     }
 
     // دمج التواريخ وإزالة التكرار وتحديث القائمة
     const merged = [...new Set([...localDates, ...dbDates, ...queueDates])].sort().reverse();
     availableDates.value = merged;
-    console.log('✅ Available dates merged and updated:', merged);
+    logger.info('✅ Available dates merged and updated:', merged);
   }
 
   // 2. تحميل بيانات تاريخ معين (من LocalStorage, Sync Queue, ثم Supabase)
@@ -103,7 +104,7 @@ export const useArchiveStore = defineStore('archive', () => {
     const localData = localArchive[dateStr];
 
     if (localData) {
-      console.log('📌 Loading from localStorage:', dateStr);
+      logger.info('📌 Loading from localStorage:', dateStr);
       // تحليل النص (مفصول بـ Tabs)
       const lines = localData.split("\n");
       rows.value = lines.map(line => {
@@ -133,12 +134,12 @@ export const useArchiveStore = defineStore('archive', () => {
 
     // ب) التحقق من الـ Sync Queue
     try {
-      console.log('📋 Checking sync queue for date:', dateStr);
+      logger.info('📋 Checking sync queue for date:', dateStr);
       const pendingItems = await getPendingSyncItems();
       const queueItem = pendingItems.find(item => item.data?.archive_date === dateStr);
       
       if (queueItem && queueItem.data?.rows) {
-        console.log('✅ Found in sync queue:', dateStr, queueItem.data.rows);
+        logger.info('✅ Found in sync queue:', dateStr, queueItem.data.rows);
         rows.value = queueItem.data.rows.map(row => ({
           date: dateStr,
           shop: row.shop || "",
@@ -151,15 +152,15 @@ export const useArchiveStore = defineStore('archive', () => {
         isLoading.value = false;
         return;
       }
-    } catch (err) {
-      console.warn('⚠️ Error checking sync queue:', err);
+      } catch (err) {
+      logger.warn('⚠️ Error checking sync queue:', err);
     }
 
     // ج) التحميل من Supabase إذا لم يوجد محلياً أو في الـ queue
     try {
       const { user } = await api.auth.getUser();
       if (user) {
-        console.log('🔍 Loading from database:', dateStr);
+        logger.info('🔍 Loading from database:', dateStr);
         const { data } = await api.archive.getArchiveByDate(user.id, dateStr);
 
         if (data && data.length > 0) {
@@ -188,7 +189,7 @@ export const useArchiveStore = defineStore('archive', () => {
         }
       }
     } catch (e) {
-      console.error("فشل تحميل الأرشيف", e);
+      logger.error("فشل تحميل الأرشيف", e);
       addNotification("حدث خطأ أثناء جلب البيانات من السحابة.", 'error');
     } finally {
       isLoading.value = false;
@@ -249,7 +250,7 @@ export const useArchiveStore = defineStore('archive', () => {
           }
         }
        } catch(e) {
-         console.error("خطأ في البحث السحابي", e);
+         logger.error("خطأ في البحث السحابي", e);
        }
     }
     isLoading.value = false;

@@ -1,0 +1,9 @@
+dist/
+node_modules/
+public/
+.vite/
+*.min.js
+*.map
+coverage/
+src/**/*.min.js
+src/dist/

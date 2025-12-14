@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
-import { supabase } from '@/services/api';
+import api from '@/services/api';
 import { useAuthStore } from './auth';
 import localforage from 'localforage';
 import { addToSyncQueue, getQueueStats } from '@/services/archiveSyncQueue';
 import { setSmartCache, getSmartCache, removeFromAllCaches, safeDeepClone } from '@/services/cacheManager';
+import logger from '@/utils/logger.js'
 
 export const useHarvestStore = defineStore('harvest', {
   state: () => ({
@@ -77,17 +78,7 @@ export const useHarvestStore = defineStore('harvest', {
       const amount = rows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
       const extra = rows.reduce((sum, row) => sum + (parseFloat(row.extra) || 0), 0)
       const collector = rows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0)
-      return {
-        amount: amount,
-        extra: extra,
-        collector: collector,
-        net: collector - (amount + extra)
-      }
-    },
-
-    totalNet: (state) => {
-      const totals = state.totals || { amount: 0, extra: 0, collector: 0 }
-      return totals.collector - (totals.amount + totals.extra)
+      return { amount, extra, collector }
     },
 
     resetAmount: (state) => {
@@ -105,6 +96,11 @@ export const useHarvestStore = defineStore('harvest', {
       } else {
         return { val: combinedValue, text: 'زيادة 🔵', color: '#007bff' };
       }
+    },
+
+    totalNet: (state) => {
+      const totals = state.totals;
+      return (parseFloat(totals.collector) || 0) - ((parseFloat(totals.amount) || 0) + (parseFloat(totals.extra) || 0));
     }
   },
 
@@ -121,7 +117,7 @@ export const useHarvestStore = defineStore('harvest', {
           this.currentData = localData
         }
       } catch (error) {
-        console.error('Error loading current data:', error)
+        logger.error('Error loading current data:', error)
         this.error = error.message
       } finally {
         this.isLoading = false
@@ -133,7 +129,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         // In development mode, skip database sync and use localStorage only
         if (import.meta.env.DEV) {
-          console.log('Development mode: Skipping database sync, using localStorage only')
+          logger.debug('Development mode: Skipping database sync, using localStorage only')
           return
         }
 
@@ -162,7 +158,7 @@ export const useHarvestStore = defineStore('harvest', {
           this.saveToLocalStorage()
         }
       } catch (error) {
-        console.error('Error syncing with database:', error)
+        logger.error('Error syncing with database:', error)
       }
     },
 
@@ -267,7 +263,7 @@ export const useHarvestStore = defineStore('harvest', {
 
         return { success: true }
       } catch (error) {
-        console.error('Error archiving data:', error)
+        logger.error('Error archiving data:', error)
         return { success: false, error: error.message }
       }
     },
@@ -292,7 +288,7 @@ export const useHarvestStore = defineStore('harvest', {
         this.archivedData = data || []
         return this.archivedData
       } catch (error) {
-        console.error('Error loading archived data:', error)
+        logger.error('Error loading archived data:', error)
         this.error = error.message
         return []
       } finally {
@@ -305,7 +301,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         // In development mode, skip database sync and use localStorage only
         if (import.meta.env.DEV) {
-          console.log('Development mode: Skipping database save, using localStorage only')
+          logger.debug('Development mode: Skipping database save, using localStorage only')
           return
         }
 
@@ -341,10 +337,10 @@ export const useHarvestStore = defineStore('harvest', {
           .insert(dbData)
 
         if (error) {
-          console.error('Error saving to database:', error)
+          logger.error('Error saving to database:', error)
         }
       } catch (error) {
-        console.error('Error in saveToDatabase:', error)
+        logger.error('Error in saveToDatabase:', error)
       }
     },
 
@@ -353,7 +349,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         // In development mode, skip database sync and use localStorage only
         if (import.meta.env.DEV) {
-          console.log('Development mode: Skipping database delete, using localStorage only')
+          logger.debug('Development mode: Skipping database delete, using localStorage only')
           return
         }
 
@@ -367,7 +363,7 @@ export const useHarvestStore = defineStore('harvest', {
           .eq('user_id', user.id)
           .eq('date', this.currentDate)
       } catch (error) {
-        console.error('Error deleting from database:', error)
+        logger.error('Error deleting from database:', error)
       }
     },
 
@@ -376,7 +372,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         localStorage.setItem(`harvest_${this.currentDate}`, JSON.stringify(this.currentData))
       } catch (error) {
-        console.error('Error saving to localStorage:', error)
+        logger.error('Error saving to localStorage:', error)
       }
     },
 
@@ -386,11 +382,11 @@ export const useHarvestStore = defineStore('harvest', {
         const cleanRows = safeDeepClone(this.rows);
         // use smart cache to ensure consistent store format & metadata
         await setSmartCache(key, cleanRows, 'indexedDB');
-        console.log('✅ Rows saved to IndexedDB via smart cache:', key);
+        logger.info('✅ Rows saved to IndexedDB via smart cache:', key);
       } catch (error) {
         // Log error but don't call saveRowsToLocalStorage to avoid infinite loop
         // localStorage is already being saved separately
-        console.warn('⚠️ IndexedDB save failed (using localStorage fallback):', error?.message);
+        logger.warn('⚠️ IndexedDB save failed (using localStorage fallback):', error?.message);
       }
     },
 
@@ -400,11 +396,11 @@ export const useHarvestStore = defineStore('harvest', {
         const data = await localforage.getItem(key);
         if (data && data.length > 0) {
           this.rows = data;
-          console.log('✅ Rows loaded from IndexedDB:', key);
+          logger.info('✅ Rows loaded from IndexedDB:', key);
           return data;
         }
       } catch (error) {
-        console.error('Error loading from IndexedDB:', error);
+        logger.error('Error loading from IndexedDB:', error);
       }
       return null;
     },
@@ -414,7 +410,7 @@ export const useHarvestStore = defineStore('harvest', {
         const data = localStorage.getItem(`harvest_${this.currentDate}`)
         return data ? JSON.parse(data) : []
       } catch (error) {
-        console.error('Error loading from localStorage:', error)
+          logger.error('Error loading from localStorage:', error)
         return []
       }
     },
@@ -440,7 +436,7 @@ export const useHarvestStore = defineStore('harvest', {
             detail: { totalCollected } 
           }));
         } catch (syncError) {
-          console.warn('⚠️ خطأ في مزامنة إجمالي المحصل:', syncError.message);
+          logger.warn('⚠️ خطأ في مزامنة إجمالي المحصل:', syncError.message);
         }
         
         // حاول حفظ في IndexedDB في الخلفية (non-blocking)
@@ -449,13 +445,13 @@ export const useHarvestStore = defineStore('harvest', {
             await setSmartCache(key, cleanedRows, 'indexedDB');
           } catch (dbError) {
             // لا تكسر البرنامج - LocalStorage يكفي
-            console.warn('⚠️ IndexedDB backup failed:', dbError.message);
+            logger.warn('⚠️ IndexedDB backup failed:', dbError.message);
           }
         }, 0);
         
-        console.log('✅ تم حفظ الصفوف:', this.rows.length, 'صف');
+        logger.info('✅ تم حفظ الصفوف:', this.rows.length, 'صف');
       } catch (error) {
-        console.error('❌ خطأ في حفظ الصفوف:', error);
+        logger.error('❌ خطأ في حفظ الصفوف:', error);
       }
     },
 
@@ -463,9 +459,9 @@ export const useHarvestStore = defineStore('harvest', {
     saveCurrentBalanceToLocalStorage() {
       try {
         localStorage.setItem('currentBalance', this.currentBalance.toString());
-        console.log('Saved currentBalance to localStorage:', this.currentBalance);
+        logger.info('Saved currentBalance to localStorage:', this.currentBalance);
       } catch (error) {
-        console.error('Error saving currentBalance to localStorage:', error);
+        logger.error('Error saving currentBalance to localStorage:', error);
       }
     },
 
@@ -473,7 +469,7 @@ export const useHarvestStore = defineStore('harvest', {
     setMasterLimit(limit) {
       this.masterLimit = parseFloat(limit) || 100000
       localStorage.setItem('masterLimit', this.masterLimit.toString())
-      console.log('Master limit set and saved:', this.masterLimit)
+      logger.info('Master limit set and saved:', this.masterLimit)
     },
 
     // Set current balance
@@ -506,7 +502,7 @@ export const useHarvestStore = defineStore('harvest', {
 
     // Clear all fields
     clearFields() {
-      console.log('clearFields called, clearing all data');
+      logger.debug('clearFields called, clearing all data');
       this.rows = [{
         id: Date.now(),
         shop: '',
@@ -520,7 +516,7 @@ export const useHarvestStore = defineStore('harvest', {
       this.currentBalance = 0; // Clear current balance as per user requirement
       this.saveRowsToLocalStorage();
       localStorage.removeItem('currentBalance'); // Remove from storage
-      console.log('Data cleared and saved');
+      logger.info('Data cleared and saved');
     },
 
     // دالة لتحويل النص الخام (من localStorage) إلى كائنات صفوف
@@ -690,11 +686,11 @@ export const useHarvestStore = defineStore('harvest', {
               .from('archive_dates')
               .upsert({ user_id: user.id, archive_date: isoDate }, { onConflict: 'user_id, archive_date' });
 
-            console.log('✅ Archive synced to database');
+            logger.info('✅ Archive synced to database');
             savedToServer = true;
             // نجح الإرسال — لا حاجة لإضافة للـ queue
           } catch (err) {
-            console.warn('⚠️ Failed to sync archive to database, adding to sync queue:', err.message);
+            logger.warn('⚠️ Failed to sync archive to database, adding to sync queue:', err.message);
             // فشل الإرسال — أضف للـ queue للإعادة لاحقاً
             await addToSyncQueue({
               user_id: user.id,
@@ -706,7 +702,7 @@ export const useHarvestStore = defineStore('harvest', {
         } else {
           // غير متصل أو في development — أضف للـ queue
           if (!import.meta.env.DEV) {
-            console.log('📌 Offline — adding archive to sync queue');
+            logger.info('📌 Offline — adding archive to sync queue');
             await addToSyncQueue({
               user_id: user.id,
               archive_date: isoDate,
@@ -739,14 +735,14 @@ export const useHarvestStore = defineStore('harvest', {
         return { success: true, message: successMessage };
 
       } catch (error) {
-        console.error('Archive Error:', error);
+        logger.error('Archive Error:', error);
         return { success: false, message: `حدث خطأ: ${error.message || 'فشل الاتصال'}` };
       }
     },
 
     // Initialize the store
     async initialize() {
-      console.log('Initializing harvest store...');
+      logger.debug('Initializing harvest store...');
       
       // Try localStorage first (الأكثر أماناً)
       if (!this.rows || this.rows.length === 0) {
@@ -754,28 +750,28 @@ export const useHarvestStore = defineStore('harvest', {
         if (savedRows) {
           try {
             this.rows = JSON.parse(savedRows);
-            console.log('✅ Loaded rows from localStorage:', this.rows.length, 'rows');
-            console.log('Rows already exist in store:', this.rows.length, 'rows');
+            logger.info('✅ Loaded rows from localStorage:', this.rows.length, 'rows');
+            logger.info('Rows already exist in store:', this.rows.length, 'rows');
 
             // Ensure master limit and current balance are loaded even when rows exist
             this.loadMasterLimit();
             const savedBalanceEarly = localStorage.getItem('currentBalance');
             if (savedBalanceEarly) {
               this.currentBalance = parseFloat(savedBalanceEarly);
-              console.log('Loaded currentBalance from localStorage (early):', this.currentBalance);
+              logger.info('Loaded currentBalance from localStorage (early):', this.currentBalance);
             } else {
-              console.log('No saved currentBalance in localStorage (early)');
+              logger.info('No saved currentBalance in localStorage (early)');
             }
 
             return; // تم التحميل بنجاح
           } catch (error) {
-            console.error('Error parsing saved rows:', error);
+            logger.error('Error parsing saved rows:', error);
             // المتابعة إلى الخطوة التالية
           }
         }
         
         // إذا لم تكن هناك بيانات محفوظة، ابدأ برف فارغة
-        console.log('No saved rows, initializing empty row');
+        logger.info('No saved rows, initializing empty row');
         this.rows = [{
           id: Date.now(),
           shop: '',
@@ -791,14 +787,14 @@ export const useHarvestStore = defineStore('harvest', {
       const savedBalance = localStorage.getItem('currentBalance');
       if (savedBalance) {
         this.currentBalance = parseFloat(savedBalance);
-        console.log('Loaded currentBalance from localStorage:', this.currentBalance);
+        logger.info('Loaded currentBalance from localStorage:', this.currentBalance);
       } else {
-        console.log('No saved currentBalance in localStorage');
+        logger.info('No saved currentBalance in localStorage');
       }
 
       // محاولة تحميل بيانات جديدة عند التهيئة
       const dataLoaded = this.loadDataFromStorage();
-      console.log('loadDataFromStorage result:', dataLoaded);
+      logger.debug('loadDataFromStorage result:', dataLoaded);
 
       // التأكد من وجود صف فارغ في النهاية إذا لم تكن هناك صفوف
       if (!this.rows || this.rows.length === 0) {
@@ -823,7 +819,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         this.syncQueueStats = await getQueueStats();
       } catch (error) {
-        console.error('Error updating sync queue stats:', error);
+        logger.error('Error updating sync queue stats:', error);
       }
     }
   }
