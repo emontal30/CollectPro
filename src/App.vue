@@ -35,11 +35,31 @@ const VISIBILITY_CHECK_THROTTLE = 30000; // 30 seconds
 
 // Function to update body class based on route
 function updateBodyClass(routeName) {
-  document.body.classList.remove('harvest-page', 'archive-page');
-  if (routeName === 'harvest') {
-    document.body.classList.add('harvest-page');
-  } else if (routeName === 'archive') {
-    document.body.classList.add('archive-page');
+  // Remove all page-specific classes first
+  document.body.classList.remove(
+    'harvest-page', 
+    'archive-page', 
+    'dashboard-page', 
+    'counter-page', 
+    'subscriptions-page', 
+    'admin-page',
+    'my-subscription-page'
+  );
+  
+  // Add appropriate page class based on route
+  const pageClassMap = {
+    'harvest': 'harvest-page',
+    'archive': 'archive-page',
+    'dashboard': 'dashboard-page',
+    'counter': 'counter-page',
+    'subscriptions': 'subscriptions-page',
+    'admin': 'admin-page',
+    'my-subscription': 'my-subscription-page'
+  };
+  
+  const pageClass = pageClassMap[routeName];
+  if (pageClass) {
+    document.body.classList.add(pageClass);
   }
 }
 

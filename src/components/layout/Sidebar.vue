@@ -423,10 +423,8 @@ onMounted(() => {
 
 .dark-mode-toggle:hover {
   color: white;
-  transform: scale(1.1);
 }
 
-/* Light mode styles only - Dark mode handled by unified-dark-mode.css */
 /* Navigation Links */
 .sidebar-content { flex: 1; overflow-y: auto; }
 .nav-links { list-style: none; padding: 0 15px; }

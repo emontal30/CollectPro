@@ -26,7 +26,7 @@ defineProps({
 
 <style scoped>
 .page-header {
-  background: linear-gradient(135deg, var(--primary, #007965) 0%, #005a4a 100%);
+  background: var(--primary, #007965);
   color: white;
   padding: 8px 15px;
   margin: 10px;
@@ -35,17 +35,6 @@ defineProps({
   position: relative;
   overflow: hidden;
   text-align: center;
-}
-
-.page-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
-  pointer-events: none;
 }
 
 .header-content {

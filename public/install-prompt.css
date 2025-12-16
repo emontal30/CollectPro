@@ -224,38 +224,7 @@
   transform: rotate(90deg);
 }
 
-/* الوضع الليلي */
-body.dark .install-prompt-modal {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  border-color: rgba(0, 200, 150, 0.3);
-}
-
-body.dark .install-prompt-header {
-  background: linear-gradient(135deg, #00c896 0%, #00a574 100%);
-}
-
-body.dark .install-prompt-description {
-  color: #e0e0e0;
-}
-
-body.dark .install-prompt-feature {
-  color: #b0b0b0;
-}
-
-body.dark .install-prompt-feature:hover {
-  color: #00c896;
-}
-
-body.dark .install-prompt-btn-secondary {
-  background: #2d2d2d;
-  color: #00c896;
-  border-color: #00c896;
-}
-
-body.dark .install-prompt-btn-secondary:hover {
-  background: #00c896;
-  color: #1a1a1a;
-}
+/* Dark-mode rules moved to `src/assets/css/unified-dark-mode.css` */
 
 /* استجابة للموبايل */
 @media (max-width: 480px) {

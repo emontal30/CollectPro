@@ -4,7 +4,6 @@ import App from './App.vue'
 import router from './router'
 import './assets/css/variables.css'
 import './assets/css/base.css'
-import './assets/css/main.css'
 import './assets/css/_unified-components.css'
 import './assets/css/unified-dark-mode.css' /* Single source of truth for dark mode */
 import { startAutoCleaning } from './services/cacheManager'

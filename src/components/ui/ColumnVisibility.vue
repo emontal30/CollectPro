@@ -134,28 +134,5 @@ function close() {
 
 @media (max-width:420px){ .cv-modal { width:92%; } }
 /* dark theme support: prefers-color-scheme and .dark-mode fallback */
-@media (prefers-color-scheme: dark) {
-  .cv-overlay{ background:rgba(0,0,0,0.6); }
-  .cv-modal{ background:var(--bg, #0f1720); color:var(--text, #e6eef0); }
-  .cv-body{ background:transparent }
-  .cv-item{ border-bottom:1px solid rgba(255,255,255,0.04); }
-  .cv-checkbox .checkmark{ border-color:rgba(255,255,255,0.08); background:var(--surface, #0f1720); }
-  .cv-checkbox input:focus + .checkmark{ box-shadow:0 0 0 4px rgba(0,121,101,0.12); }
-  .cv-footer .btn--ghost{ border-color: rgba(255,255,255,0.06); color: var(--text, #e6eef0); }
-  .cv-save{ background: linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff }
-  .cv-selectall-btn{ border-color: rgba(255,255,255,0.06); color: var(--text, #e6eef0); }
-  .cv-selectall-btn[aria-pressed="true"]{ background: linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff }
-  .cv-close{ background: rgba(255,255,255,0.08); color:#fff }
-}
-.dark-mode .cv-overlay{ background:rgba(0,0,0,0.6); }
-.dark-mode .cv-modal{ background:var(--bg, #0f1720); color:var(--text, #e6eef0); }
-.dark-mode .cv-body{ background:transparent }
-.dark-mode .cv-item{ border-bottom:1px solid rgba(255,255,255,0.04); }
-.dark-mode .cv-checkbox .checkmark{ border-color:rgba(255,255,255,0.08); background:var(--surface, #0f1720); }
-/* dark-mode button variants */
-.dark-mode .cv-footer .btn--ghost{ border-color: rgba(255,255,255,0.06); color: var(--text, #e6eef0); }
-.dark-mode .cv-save{ background: linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff }
-.dark-mode .cv-selectall-btn{ border-color: rgba(255,255,255,0.06); color: var(--text, #e6eef0); }
-.dark-mode .cv-selectall-btn[aria-pressed="true"]{ background: linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff }
-.dark-mode .cv-close{ background: rgba(255,255,255,0.08); color:#fff }
+/* Dark-mode rules migrated to `src/assets/css/unified-dark-mode.css` */
 </style>
