@@ -2,18 +2,8 @@
 /* Consolidated from view components CSS to create reusable patterns */
 /* Date: December 2025 */
 
-:root {
-  /* Component Spacing */
-  --card-padding: 30px;
-  --card-padding-mobile: 20px;
-  --gap-default: 15px;
-  --gap-large: 30px;
-  
-  /* Border & Shadow */
-  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --card-shadow-hover: 0 15px 35px rgba(0, 0, 0, 0.12);
-  --card-border: 1px solid rgba(0, 121, 101, 0.1);
-}
+/* Component tokens (spacing, shadows) have been moved to
+   `src/assets/css/variables.css` as the single source of truth. */
 
 /* ====== CONTROL ICON COMPONENT ====== */
 /* Unified gear button styling */
@@ -84,6 +74,118 @@
   transition: all 0.3s ease;
   outline: none;
   height: 48px;
+}
+
+/* ====== SEARCH CONTROL COMPONENT ====== */
+/* Unified search control wrapper */
+
+.search-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0;
+  /* Keep search and settings on a single line; allow internal input to shrink when needed */
+  flex-wrap: nowrap;
+}
+
+.btn-settings-table {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  background: rgba(0, 121, 101, 0.1);
+  color: var(--primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.btn-settings-table:hover {
+  background: rgba(0, 121, 101, 0.2);
+  /* transform disabled via global overrides to avoid motion; keep background change */
+}
+
+/* Ensure search input shares space and can shrink without forcing wrap */
+.search-input-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ====== BUTTON ICON STYLES ====== */
+/* Icon colors for archive buttons */
+
+.btn--back-to-harvest i {
+  color: #90EE90;
+}
+
+.btn--delete-archive {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.btn--delete-archive:hover {
+  background: linear-gradient(135deg, #c82333, #dc3545);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.btn--delete-archive i {
+  color: white;
+}
+
+/* === Button utility base (replaces global button{} usage) === */
+.btn-base,
+.btn {
+  margin: 8px;
+  padding: 14px 24px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0,121,101,0.3);
+  position: relative;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  min-height: 50px;
+  flex-direction: column;
+  text-align: center;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  width: fit-content;
+  transition: var(--transition);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);
 }
 
 .search-input-wrapper:focus-within {
@@ -320,6 +422,88 @@
   width: 100%;
 }
 
+/* Consolidated modern table class (merge of collections-table and modern-table--harvest)
+   Use `.modern-table` on templates to opt-in to unified table architecture. */
+.modern-table {
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: center;
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.08);
+  border: 2px solid var(--primary);
+  min-width: 100%;
+  position: relative;
+  transition: var(--transition);
+}
+
+.modern-table:hover {
+  box-shadow: 0 12px 35px rgba(0,0,0,0.2), 0 6px 15px rgba(0,0,0,0.12), 0 0 0 2px var(--primary);
+  border-color: #005a4b;
+}
+
+.modern-table th,
+.modern-table td {
+  border-bottom: 2px solid var(--primary);
+  border-right: 2px solid var(--primary);
+  padding: 16px 12px;
+  transition: var(--transition);
+  position: relative;
+  vertical-align: middle;
+  min-height: 65px;
+  box-sizing: border-box;
+}
+
+/* Make all table cells consistent: no wrapping, center/ellipsis, responsive fallback */
+.modern-table th,
+.modern-table td,
+.collections-table th,
+.collections-table td,
+.archive-table th,
+.archive-table td,
+th, td {
+  vertical-align: middle !important;
+  padding: 16px 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 600px) {
+  /* allow wrapping on small screens for readability */
+  .modern-table td,
+  .collections-table td,
+  .archive-table td,
+  td {
+    white-space: normal !important;
+  }
+}
+
+.modern-table th {
+  background: linear-gradient(135deg, var(--primary), #005a4b);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  line-height: 1.4;
+  padding: 18px 12px;
+}
+
+/* keep last-child rules consistent */
+.modern-table th:last-child,
+.modern-table td:last-child { border-right: none; }
+
+
 /* Ensure tables inside .table-wrapper fill the container and use fixed layout */
 .table-wrapper table {
   width: 100% !important;
@@ -348,6 +532,58 @@ table {
   min-width: 100%;
   position: relative;
   transition: var(--transition);
+}
+
+/* ====== AUTO-FIT COLUMNS FOR HARVEST TABLE ======
+   Auto-fit columns based on content, except for the shop column */
+.harvest-page .modern-table {
+  table-layout: auto;
+}
+
+.harvest-page .modern-table th,
+.harvest-page .modern-table td {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Keep shop column fixed width */
+.harvest-page .modern-table .shop {
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-weight: bold !important;
+}
+
+/* Ensure other columns auto-fit based on content */
+.harvest-page .modern-table .code,
+.harvest-page .modern-table .amount,
+.harvest-page .modern-table .extra,
+.harvest-page .modern-table .collector,
+.harvest-page .modern-table .net {
+  width: auto !important;
+  min-width: 80px !important;
+  max-width: none !important;
+}
+
+/* Responsive: allow wrapping on small screens */
+@media (max-width: 768px) {
+  .harvest-page .modern-table th,
+  .harvest-page .modern-table td {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  
+  .harvest-page .modern-table .shop {
+    width: 150px !important;
+    min-width: 150px !important;
+  }
 }
 
 .collections-table:hover,
@@ -480,41 +716,41 @@ th.serial, th.shop, th.code, th.amount, th.extra, th.collector, th.net {
 /* ====== COLUMN WIDTHS ====== */
 /* Unified column widths for all tables */
 
-th.shop, td.shop {
-  width: 180px !important;
-  min-width: 180px !important;
-  max-width: 180px !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  font-weight: bold !important;
-}
-
-/* Enable wrap in shop column for archive page only */
-.modern-table--archive .shop {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  word-break: break-word !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  width: auto !important;
-  min-width: 200px !important;
-  max-width: none !important;
-}
-
-/* Enable wrap in shop column for harvest page */
-.modern-table--harvest .shop {
+/* Archive-specific: keep shop column consistent (no wrapping) */
+.archive-page .modern-table .shop {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   width: 180px !important;
   min-width: 180px !important;
   max-width: 180px !important;
-  font-weight: bold !important;
+  direction: rtl;
+  text-align: right;
+  font-family: var(--ui-font, 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, "Segoe UI", Roboto, Arial);
+  font-size: 14px;
 }
 
-/* Unified background for archive table headers */
-.modern-table--archive th {
+/* Ensure shop column uses RTL direction, right alignment and unified font/size
+   Applies to both editable inputs and readonly text inside the shop cell.
+   Kept minimal to avoid duplicating existing declarations. */
+.harvest-page .modern-table .shop,
+.harvest-page .modern-table .shop .readonly-field,
+.harvest-page .modern-table .shop input.editable-input,
+.harvest-page .modern-table .shop input.centered-input {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--ui-font, 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, "Segoe UI", Roboto, Arial);
+  font-size: 14px;
+}
+/* Ensure editable inputs and readonly text in shop column are bold like other shop cells */
+.harvest-page .modern-table .shop input.editable-input,
+.harvest-page .modern-table .shop input.centered-input,
+.harvest-page .modern-table .shop .readonly-field {
+  font-weight: 700 !important;
+}
+
+/* Unified background for modern table headers */
+.modern-table th {
   background: linear-gradient(135deg, var(--primary), #005a4b) !important;
   color: white !important;
 }
@@ -543,15 +779,15 @@ th i {
 */
 
 /* Small-screen tweaks for harvest table (applies to legacy ID and new class) */
-.modern-table--harvest td, .modern-table--harvest td {
+.harvest-page .modern-table td {
   font-size: 14px !important;
 }
 
-.modern-table--harvest .shop, .modern-table--harvest .shop {
+.harvest-page .modern-table .shop {
   font-weight: 700 !important;
 }
 
-.modern-table--harvest .net, .modern-table--harvest .net {
+.harvest-page .modern-table .net {
   font-size: 15px !important;
   font-weight: 800 !important;
 }
@@ -662,29 +898,28 @@ td.net.zero {
   header .zoom-in-btn,
   header .zoom-out-btn,
   .zoom-in-btn,
-  .zoom-out-btn {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    min-height: 32px !important;
-    max-height: 32px !important;
-    border-radius: 4px !important;
-    flex-shrink: 0 !important;
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
   }
-
-  .table-settings-btn,
-  .date-display .table-settings-btn,
-  .archive-controls .table-settings-btn {
-    padding: 6px !important;
-    font-size: 12px !important;
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 121, 101, 0.18);
   }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed }
+ 
 
-  .table-settings-btn i {
-    font-size: 14px !important;
-  }
-
-  .date-display .modern-table--harvest-settings-container {
+  .date-display .modern-table-settings-container {
     margin-right: auto;
     margin-left: 4px;
   }
@@ -707,21 +942,21 @@ td.net.zero {
   }
 
   /* تحسين أحجام جدول التحصيلات للشاشات الصغيرة */
-  .modern-table--harvest td {
+  .harvest-page .modern-table td {
     font-size: 14px !important;
   }
 
-  .modern-table--harvest .shop {
+  .harvest-page .modern-table .shop {
     font-weight: 700 !important;
   }
 
-  .modern-table--harvest .net {
+  .harvest-page .modern-table .net {
     font-size: 15px !important;
     font-weight: 800 !important;
   }
 
-  .modern-table--harvest .serial,
-  .modern-table--harvest .code {
+  .harvest-page .modern-table .serial,
+  .harvest-page .modern-table .code {
     font-size: 12px !important;
   }
 }
@@ -747,7 +982,7 @@ td.net.zero {
     font-size: 15px !important;
   }
 
-  .date-display .modern-table--harvest-settings-container {
+  .date-display .modern-table-settings-container {
     margin-right: auto;
     margin-left: 6px;
   }
@@ -755,21 +990,21 @@ td.net.zero {
 
 
   /* تحسين أحجام جدول التحصيلات للشاشات المتوسطة */
-  .modern-table--harvest td {
+  .harvest-page .modern-table td {
     font-size: 16px !important;
   }
 
-  .modern-table--harvest .shop {
+  .harvest-page .modern-table .shop {
     font-weight: 700 !important;
   }
 
-  .modern-table--harvest .net {
+  .harvest-page .modern-table .net {
     font-size: 17px !important;
     font-weight: 800 !important;
   }
 
-  .modern-table--harvest .serial,
-  .modern-table--harvest .code {
+  .harvest-page .modern-table .serial,
+  .harvest-page .modern-table .code {
     font-size: 14px !important;
   }
 
@@ -817,131 +1052,17 @@ td.net.zero {
 
 
 
-/* Column visibility helpers (harvest) - keep identical selectors + add component variant */
-.modern-table--harvest.hide-col-serial th.serial,
-.modern-table--harvest.hide-col-serial th.serial,
-.modern-table--harvest.hide-col-serial td.serial,
-.modern-table--harvest.hide-col-serial td.serial,
-.modern-table--harvest.hide-col-serial thead th:nth-child(1),
-.modern-table--harvest.hide-col-serial thead th:nth-child(1),
-.modern-table--harvest.hide-col-serial tbody td:nth-child(1),
-.modern-table--harvest.hide-col-serial tbody td:nth-child(1) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
+/* Column visibility is now handled by Vue `v-show` and the ColumnVisibility component.
+   Legacy `.hide-col-*` selectors removed to eliminate CSS-only hiding and duplication. */
 
-.modern-table--harvest.hide-col-shop th.shop,
-.modern-table--harvest.hide-col-shop th.shop,
-.modern-table--harvest.hide-col-shop td.shop,
-.modern-table--harvest.hide-col-shop td.shop,
-.modern-table--harvest.hide-col-shop thead th:nth-child(2),
-.modern-table--harvest.hide-col-shop thead th:nth-child(2),
-.modern-table--harvest.hide-col-shop tbody td:nth-child(2),
-.modern-table--harvest.hide-col-shop tbody td:nth-child(2) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-code th.code,
-.modern-table--harvest.hide-col-code th.code,
-.modern-table--harvest.hide-col-code td.code,
-.modern-table--harvest.hide-col-code td.code,
-.modern-table--harvest.hide-col-code thead th:nth-child(3),
-.modern-table--harvest.hide-col-code thead th:nth-child(3),
-.modern-table--harvest.hide-col-code tbody td:nth-child(3),
-.modern-table--harvest.hide-col-code tbody td:nth-child(3) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-amount th.amount,
-.modern-table--harvest.hide-col-amount th.amount,
-.modern-table--harvest.hide-col-amount td.amount,
-.modern-table--harvest.hide-col-amount td.amount,
-.modern-table--harvest.hide-col-amount thead th:nth-child(4),
-.modern-table--harvest.hide-col-amount thead th:nth-child(4),
-.modern-table--harvest.hide-col-amount tbody td:nth-child(4),
-.modern-table--harvest.hide-col-amount tbody td:nth-child(4) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-extra th.extra,
-.modern-table--harvest.hide-col-extra th.extra,
-.modern-table--harvest.hide-col-extra thead th:nth-child(5),
-.modern-table--harvest.hide-col-extra thead th:nth-child(5),
-.modern-table--harvest.hide-col-extra tbody td:nth-child(5),
-.modern-table--harvest.hide-col-extra tbody td:nth-child(5) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Column visibility helpers (archive) - keep identical selectors + add component variant */
-.modern-table--archive.hide-col-shop thead th:nth-child(2),
-.modern-table--archive.hide-col-shop thead th:nth-child(2),
-.modern-table--archive.hide-col-shop tbody td:nth-child(2),
-.modern-table--archive.hide-col-shop tbody td:nth-child(2) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-code thead th:nth-child(3),
-.modern-table--archive.hide-col-code thead th:nth-child(3),
-.modern-table--archive.hide-col-code tbody td:nth-child(3),
-.modern-table--archive.hide-col-code tbody td:nth-child(3) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-amount thead th:nth-child(4),
-.modern-table--archive.hide-col-amount thead th:nth-child(4),
-.modern-table--archive.hide-col-amount tbody td:nth-child(4),
-.modern-table--archive.hide-col-amount tbody td:nth-child(4) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-extra thead th:nth-child(5),
-.modern-table--archive.hide-col-extra thead th:nth-child(5),
-.modern-table--archive.hide-col-extra tbody td:nth-child(5),
-.modern-table--archive.hide-col-extra tbody td:nth-child(5) {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
+/* Legacy `.hide-col-*` rules removed; column visibility handled by Vue `v-show`. */
 
 /* ====== TOTAL / SUMMARY ROW =====
    Consolidated: use class-based selectors only. Legacy IDs removed.
 */
 .total-row,
-.modern-table--harvest .total-row,
-.modern-table--archive .total-row {
+.harvest-page .modern-table .total-row,
+.archive-page .modern-table .total-row {
   font-weight: 700 !important;
   background: #00897B !important;
   color: white !important;
@@ -953,8 +1074,8 @@ td.net.zero {
 }
 
 .total-row td,
-.modern-table--harvest .total-row td,
-.modern-table--archive .total-row td {
+.harvest-page .modern-table .total-row td,
+.archive-page .modern-table .total-row td {
   background: transparent !important;
   border-bottom: 1px solid rgba(0,121,101,0.4) !important;
   border-right: 1px solid rgba(0,121,101,0.4) !important;
@@ -965,8 +1086,8 @@ td.net.zero {
 }
 
 .total-row td:first-child,
-.modern-table--harvest .total-row td:first-child,
-.modern-table--archive .total-row td:first-child {
+.harvest-page .modern-table .total-row td:first-child,
+.archive-page .modern-table .total-row td:first-child {
   text-align: center !important;
   font-size: 20px !important;
   font-weight: 800 !important;
@@ -977,16 +1098,16 @@ td.net.zero {
 .total-row .collector,
 .total-row .net,
 .total-row .extra,
-.modern-table--harvest .total-row .numeric,
-.modern-table--harvest .total-row .amount,
-.modern-table--harvest .total-row .collector,
-.modern-table--harvest .total-row .net,
-.modern-table--harvest .total-row .extra,
-.modern-table--archive .total-row .numeric,
-.modern-table--archive .total-row .amount,
-.modern-table--archive .total-row .collector,
-.modern-table--archive .total-row .net,
-.modern-table--archive .total-row .extra {
+.harvest-page .modern-table .total-row .numeric,
+.harvest-page .modern-table .total-row .amount,
+.harvest-page .modern-table .total-row .collector,
+.harvest-page .modern-table .total-row .net,
+.harvest-page .modern-table .total-row .extra,
+.archive-page .modern-table .total-row .numeric,
+.archive-page .modern-table .total-row .amount,
+.archive-page .modern-table .total-row .collector,
+.archive-page .modern-table .total-row .net,
+.archive-page .modern-table .total-row .extra {
   text-align: center !important;
   font-weight: 700 !important;
   font-size: 18px !important;
@@ -1066,6 +1187,31 @@ tbody tr:last-child td {
 .date-cell i {
   color: var(--primary, #007965);
   font-size: 0.9rem;
+}
+
+/* Ensure table date column aligns with other table cells */
+.modern-table td.date-cell,
+.collections-table td.date-cell,
+.archive-table td.date-cell,
+td.date-cell {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 16px 12px !important; /* match .modern-table td */
+  min-width: 120px !important;
+  max-width: 160px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.modern-table th.date-header,
+.collections-table th.date-header,
+.archive-table th.date-header,
+th.date-header {
+  text-align: center !important;
+  padding: 18px 12px !important; /* match header padding */
+  min-width: 120px !important;
 }
 
 /* Small screens */
@@ -1444,200 +1590,8 @@ tbody tr:hover {
   }
 }
 
-/* ====== DARK MODE SUPPORT ====== */
-
-body.dark .subscription-card {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-body.dark .subscription-header {
-  background: linear-gradient(135deg, var(--dark-accent), rgba(0,121,101,0.6));
-  color: var(--dark-text-primary);
-}
-
-body.dark .subscription-details {
-  background: var(--dark-surface);
-  color: var(--dark-text-primary);
-}
-
-body.dark .detail-row {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark .detail-label,
-body.dark .detail-value {
-  color: var(--dark-text-primary);
-}
-
-body.dark .detail-value {
-  background: rgba(0,0,0,0.2);
-  color: var(--dark-text-primary);
-}
-
-body.dark .action-info {
-  background: rgba(0, 121, 101, 0.2);
-  color: var(--dark-accent);
-}
-
-body.dark .action-warning {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-}
-
-body.dark .action-success {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-body.dark .subscription-history {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-body.dark .history-header {
-  background: linear-gradient(135deg, var(--dark-surface), var(--dark-surface-hover));
-  border-bottom-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-body.dark .history-header h2 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .modern-table {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-body.dark th {
-  background: var(--dark-surface-light);
-  color: var(--dark-text-primary);
-  border-bottom-color: var(--dark-border);
-  border-right-color: var(--dark-border);
-}
-
-body.dark td {
-  background: var(--dark-surface);
-  color: var(--dark-text-primary);
-  border-bottom-color: var(--dark-border);
-  border-right-color: var(--dark-border);
-}
-
-body.dark tbody tr:hover {
-  background: var(--dark-surface-hover);
-}
-
-body.dark .date-cell {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .plan-name {
-  color: var(--dark-text-primary);
-}
-
-body.dark .plan-duration {
-  background: rgba(0, 121, 101, 0.3);
-  color: var(--dark-accent);
-}
-
-body.dark .status-badge::before {
-  background: currentColor;
-}
-
-body.dark .renew-plan {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-  color: var(--dark-text-primary);
-}
-
-body.dark .renew-plan h3 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .renew-plan .plan-price {
-  color: var(--dark-accent);
-}
-
-body.dark .modal-content {
-  background: var(--dark-surface);
-  color: var(--dark-text-primary);
-}
-
-body.dark .modal-header {
-  border-bottom-color: var(--dark-border);
-}
-
-body.dark .modal-header h2 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .close-modal {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .close-modal:hover {
-  color: var(--dark-text-primary);
-}
-
-body.dark .modal-body {
-  color: var(--dark-text-primary);
-}
-
-body.dark .modal-footer {
-  border-top-color: var(--dark-border);
-}
-
-body.dark .loading-spinner i {
-  color: var(--dark-accent);
-}
-
-body.dark .loading-spinner p {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .no-data {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .no-data h3 {
-  color: var(--dark-text-primary);
-}
-
-body.dark .no-subscription {
-  color: var(--dark-text-secondary);
-}
-
-body.dark .no-subscription i {
-  color: var(--dark-accent);
-}
-
-body.dark .table-container {
-  background: var(--dark-surface);
-}
-
-body.dark .btn-primary {
-  background: linear-gradient(135deg, var(--dark-accent), rgba(0,121,101,0.6));
-  color: var(--dark-text-primary);
-}
-
-body.dark .btn-primary:hover {
-  background: linear-gradient(135deg, rgba(0,121,101,0.6), var(--dark-accent));
-  box-shadow: 0 5px 15px rgba(0, 121, 101, 0.5);
-}
-
-body.dark .btn-secondary {
-  background: #555;
-  color: white;
-}
-
-body.dark .btn-secondary:hover {
-  background: #666;
-}
+/* Dark mode support moved to src/assets/css/unified-dark-mode.css
+   (Consolidated body.dark overrides for all components.) */
 
 /* ====== HARVEST VIEW COMPONENTS ====== */
 
@@ -2154,18 +2108,19 @@ body.dark .btn-secondary:hover {
   color: #ff8c00;
 }
 
-input {
+/* Convert global input selector to a named utility to avoid global conflicts */
+.input-base {
   width: 100%;
   padding: 12px 45px 12px 15px;
   border: 1px solid #ddd;
   border-radius: 10px;
   font-size: 16px;
   font-family: 'Cairo', sans-serif;
-  transition: all 0.3s ease;
+  transition: var(--transition);
 }
 
-input:focus {
-  border-color: #007965;
+.input-base:focus {
+  border-color: var(--primary);
   outline: none;
   box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2);
 }
@@ -2448,7 +2403,8 @@ td.category-label[data-val="1"] { color: #ef4444; }
 
 .counter-totals {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 28px;
   padding: 15px 20px;
   background: #f9fafb;
   border-top: 2px solid rgba(0, 121, 101, 0.3);
@@ -2575,33 +2531,32 @@ td.category-label[data-val="1"] { color: #ef4444; }
   transition: transform 0.2s;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
+.btn-dashboard {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: var(--transition);
 }
-
-.no-data-msg {
-  padding: 20px;
-  color: #888;
-  font-style: italic;
-  text-align: center;
-  width: 100%;
+.btn-dashboard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transition: left 0.5s ease;
 }
-
-.counter-table th, .counter-table td {
-  width: 33.33%;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.counter-table,
-.categories-table {
-  width: 100%;
-  min-width: 100%;
-  max-width: 100%;
-  table-layout: auto;
-}
+.btn-dashboard:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.12) }
+.btn-dashboard:hover::before { left: 100% }
+.btn-dashboard:active { transform: translateY(0) }
+.btn-dashboard i { font-size: 1.1em }
+.btn-dashboard span { font-size: 0.95em }
+.btn-dashboard:disabled { opacity: 0.5; cursor: not-allowed }
+ 
 
 .categories-table th:nth-child(1),
 .categories-table td:nth-child(1) {
@@ -2882,11 +2837,12 @@ td.category-label[data-val="1"] { color: #ef4444; }
 
 .archive-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 15px;
-  padding: 15px 20px;
+  /* Stack rows: date selector on its own row, search+gear on the next row */
+  flex-direction: column;
+  gap: 6px; /* reduced vertical spacing between rows */
+  align-items: stretch;
+  margin-bottom: 10px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.9));
   border-radius: 15px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 2px 8px rgba(0,121,101,0.05);
@@ -2915,8 +2871,8 @@ td.category-label[data-val="1"] { color: #ef4444; }
 .control-group {
   display: flex;
   align-items: center;
-  flex: 1;
-  min-width: 250px;
+  flex: none;
+  width: 100%;
 }
 
 .control-group label {
@@ -2928,6 +2884,31 @@ td.category-label[data-val="1"] { color: #ef4444; }
   font-size: 13px;
   margin: 0;
   width: 100%;
+}
+
+/* Reduce width of the date selector while keeping responsive fallback */
+.archive-select {
+  width: 260px;
+  max-width: 60%;
+  min-width: 180px;
+}
+
+@media (max-width: 600px) {
+  .archive-select {
+    width: 100% !important;
+    max-width: none;
+  }
+}
+
+/* Archive-specific: ensure search+settings stay on one line */
+.archive-controls .search-control {
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.archive-controls .btn-settings-table {
+  margin-left: 12px; /* ensure separation from input */
 }
 
 .control-icon {
@@ -3071,7 +3052,7 @@ input[type="text"] {
 
 /* إعدادات موحدة للجداول */
 .collections-table .negative-net-border::before,
-.modern-table--harvest .negative-net-border::before {
+.harvest-page .modern-table .negative-net-border::before {
   left: -2px;
   top: 2px;
   bottom: 2px;
@@ -3098,12 +3079,103 @@ body.dark .negative-net-border:hover::before {
 
 /* إعدادات موحدة للجداول في الوضع الليلي */
 body.dark .collections-table .negative-net-border::before,
-body.dark .modern-table--harvest .negative-net-border::before {
+body.dark .harvest-page .modern-table .negative-net-border::before {
   left: -2px;
   top: 2px;
   bottom: 2px;
   width: 6px;
   border-radius: 3px 0 0 3px;
+}
+
+/* Disable hover/transition/transform effects on buttons when user requests no hover effects */
+/* This neutralizes animations for sidebar button and any other buttons. */
+.btn,
+button,
+.btn-settings-table,
+.btn--icon,
+.btn--gear,
+.btn--back-to-harvest,
+.btn--delete-archive {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.btn:hover,
+button:hover,
+.btn-settings-table:hover,
+.btn--icon:hover,
+.btn--gear:hover,
+.btn--back-to-harvest:hover,
+.btn--delete-archive:hover {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically disable all effects for the sidebar menu toggle button */
+/* Stronger, higher-specificity rules to override component-scoped styles and any JS-driven filters */
+/* Menu toggle - base visual styling (no transitions/animations) */
+.menu-toggle,
+.menu-toggle i {
+  background: none !important;
+  border: none !important;
+  color: inherit !important;
+  padding: 8px 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 24px !important;
+  outline: none !important;
+  border-radius: 8px !important;
+  background-image: none !important;
+}
+
+/* Responsive sizing for menu-toggle (mirror original Topbar.vue sizes) */
+@media (max-width: 768px) {
+  .menu-toggle { font-size: 18px !important; padding: 6px 10px !important; }
+}
+
+@media (max-width: 480px) {
+  .menu-toggle { font-size: 16px !important; padding: 5px 8px !important; }
+}
+
+@media (max-width: 360px) {
+  .menu-toggle { font-size: 14px !important; padding: 4px 6px !important; }
+}
+
+.header-content .menu-toggle,
+.header-content .menu-toggle i,
+.menu-toggle,
+.menu-toggle i,
+.menu-toggle::before,
+.menu-toggle::after {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  outline: none !important;
+  background-image: none !important;
+  will-change: auto !important;
+}
+
+.header-content .menu-toggle:hover,
+.header-content .menu-toggle:focus,
+.header-content .menu-toggle:active,
+.menu-toggle:hover,
+.menu-toggle:focus,
+.menu-toggle:active {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  background-image: none !important;
 }
 
 /* ====== TOTAL ROW NEGATIVE BORDER SYSTEM ====== */
@@ -3437,6 +3509,54 @@ body.dark .total-row-negative:hover::before {
   background: rgba(0, 121, 101, 0.05);
 }
 
+/* Prevent full-page horizontal scroll while keeping tables horizontally scrollable */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* keep app/page containers within viewport and use box-sizing for predictable sizing */
+#app, .app-root, .page-wrapper, .main-layout, .auth-layout {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Ensure large tables don't force the whole page to scroll horizontally; allow internal horizontal scrolling instead */
+.table-wrapper, .overflow-x-auto, .modern-table, .data-table, .table-responsive {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Small safeguard: prevent elements with min-width:100% plus horizontal padding from overflowing */
+@media (max-width: 600px) {
+  .modern-table, .data-table {
+    min-width: 600px; /* allow horizontal scrolling on narrow screens instead of stretching the page */
+  }
+}
+
+/* ---- Table header typography (Archive & Harvest only) ---- */
+.archive-page .modern-table thead th,
+.harvest-page .modern-table thead th {
+  font-family: "Noto Kufi Arabic", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+/* ---- Shop column: force RTL layout and right alignment (Archive & Harvest) ---- */
+.archive-page .modern-table th.shop,
+.archive-page .modern-table td.shop,
+.harvest-page .modern-table th.shop,
+.harvest-page .modern-table td.shop {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: embed;
+  padding-right: 12px;
+  padding-left: 8px;
+}
+
 .legend-color {
   width: 16px;
   height: 16px;
@@ -3638,7 +3758,7 @@ body.dark .summary-row > .summary-item-total {
 }
 
 /* If screen is narrow, fall back to 1 column to avoid overlap */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   body.dark .summary-row-3,
   body.dark .summary-row-2,
   body.dark .summary-row {
@@ -3715,7 +3835,7 @@ body.dark .stat-icon {
 
 /* ====== RESPONSIVE EXTENSIONS ====== */
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .summary-row-3 {
     grid-template-columns: 1fr;
   }

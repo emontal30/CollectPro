@@ -23,7 +23,7 @@
       @save="applySavedColumnsHarvest"
     />
 
-    <div class="control-group">
+    <div class="search-control">
       <div class="search-input-wrapper">
         <i class="fas fa-search control-icon"></i>
         <input
@@ -32,14 +32,14 @@
           placeholder=" ...ابحث في المحل أو الكود"
           class="search-input"
         />
-        <button class="btn--icon btn--gear" @click="showColumnsHarvest = true" title="عرض/اخفاء الأعمدة">
-          <i class="fas fa-cog"></i>
-        </button>
       </div>
+      <button class="btn-settings-table" @click="showColumnsHarvest = true" title="عرض/اخفاء الأعمدة">
+        <i class="fas fa-cog"></i>
+      </button>
     </div>
 
     <div class="table-wrapper">
-      <table class="collections-table modern-table modern-table--harvest w-full">
+      <table class="modern-table w-full">
         <thead>
           <tr>
             <th v-show="isVisibleHarvest('shop')" class="shop whitespace-nowrap">🏪 المحل</th>
@@ -52,7 +52,7 @@
         </thead>
         <tbody>
           <tr v-for="(row, index) in store.filteredRows" :key="row.id">
-            <td v-show="isVisibleHarvest('shop')" class="shop" :class="{ 'negative-net-shop': getNetClass(row) === 'negative' }">
+            <td v-show="isVisibleHarvest('shop')" class="shop" :class="{ 'negative-net-border': getNetClass(row) === 'negative' }">
               <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
               <span v-else class="readonly-field">{{ row.shop }}</span>
             </td>
@@ -100,7 +100,7 @@
           </tr>
 
           <tr class="total-row">
-            <td v-show="isVisibleHarvest('shop')" class="shop" :class="{ 'negative-net-shop': getTotalNetClass === 'negative' }">الإجمالي</td>
+            <td v-show="isVisibleHarvest('shop')" class="shop">الإجمالي</td>
             <td v-show="isVisibleHarvest('code')" class="code"></td>
             <td v-show="isVisibleHarvest('amount')" class="amount centered-text">{{ store.formatNumber(store.totals.amount) }}</td>
             <td v-show="isVisibleHarvest('extra')" class="extra centered-text">{{ store.formatNumber(store.totals.extra) }}</td>

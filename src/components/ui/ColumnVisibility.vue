@@ -14,7 +14,7 @@
 
       <div class="cv-body">
         <div class="cv-controls">
-          <button class="cv-selectall-btn" :aria-pressed="allChecked" @click="toggleAll">
+          <button class="cv-selectall-btn btn" :aria-pressed="allChecked" @click="toggleAll">
             <i class="fas" :class="allChecked ? 'fa-times' : 'fa-check'" aria-hidden="true"></i>
             <span class="cv-label">{{ allChecked ? 'إلغاء التحديد' : 'تحديد الكل' }}</span>
           </button>
@@ -32,8 +32,8 @@
       </div>
 
       <footer class="cv-footer">
-        <button class="btn btn--ghost" @click="close">إلغاء</button>
-        <button class="btn btn--primary cv-save" @click="save">حفظ التغييرات</button>
+        <button class="btn btn-ghost" @click="close">إلغاء</button>
+        <button class="btn btn-primary cv-save" @click="save">حفظ التغييرات</button>
       </footer>
     </div>
   </div>
@@ -111,7 +111,7 @@ function close() {
 .cv-label{ margin-left:12px; font-weight:600 }
 .cv-selectall-btn{ display:inline-flex; gap:10px; align-items:center; border:1px solid rgba(0,0,0,0.06); background:transparent; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700 }
 .cv-selectall-btn i{ width:18px; text-align:center }
-.cv-selectall-btn[aria-pressed="true"]{ background:linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff; border-color:transparent }
+.cv-selectall-btn[aria-pressed="true"]{ background:linear-gradient(90deg,var(--primary,#007965), var(--primary-dark)); color:#fff; border-color:transparent }
 
 /* custom checkbox */
 .cv-checkbox{ display:flex; align-items:center; gap:12px; cursor:pointer; position:relative }
@@ -124,13 +124,13 @@ function close() {
 .cv-checkbox input:checked + .checkmark::after{ border-left-color:#fff; border-bottom-color:#fff; opacity:1 }
 
 .cv-footer{ display:flex; gap:10px; justify-content:flex-end; padding:12px 16px; background:linear-gradient(180deg, rgba(0,0,0,0.02), transparent); }
-.cv-save{ background:var(--primary,#007965); color:#fff; border-radius:8px; padding:8px 14px }
+.cv-save{ /* use global btn-primary for visuals */ }
 .cv-save:hover{ filter:brightness(0.96); }
-.btn--ghost{ background:#ffffff; border:1px solid rgba(0,0,0,0.12); color:var(--text,#111); border-radius:8px; padding:8px 12px }
-.btn--ghost:hover{ background:rgba(0,0,0,0.03); }
+.btn-ghost{ background:#ffffff; border:1px solid rgba(0,0,0,0.12); color:var(--text,#111); border-radius:8px; padding:8px 12px }
+.btn-ghost:hover{ background:rgba(0,0,0,0.03); }
 .cv-selectall-btn{ background:#ffffff; border:1px solid rgba(0,0,0,0.12); color:var(--text,#111); border-radius:8px; padding:8px 10px; }
 .cv-selectall-btn:hover{ background:rgba(0,0,0,0.03); }
-.cv-selectall-btn[aria-pressed="true"]{ background: linear-gradient(90deg,var(--primary,#007965), #006a56); color:#fff }
+.cv-selectall-btn[aria-pressed="true"]{ background: linear-gradient(90deg,var(--primary,#007965), var(--primary-dark)); color:#fff }
 
 @media (max-width:420px){ .cv-modal { width:92%; } }
 /* dark theme support: prefers-color-scheme and .dark-mode fallback */

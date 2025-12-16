@@ -1,0 +1,25 @@
+/* Base CSS: font imports and fundamental body settings
+   Moved here from main.css for a single entry point
+*/
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--light-bg);
+  color: #333;
+  transition: var(--transition);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  overflow-x: auto;
+  font-size: 22px;
+}

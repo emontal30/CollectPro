@@ -1,18 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
-
-:root {
-  --primary: #007965;
-  --secondary: #f39c12;
-  --success: #27ae60;
-  --danger: #e74c3c;
-  --light-bg: #f8f9fa;
-  --highlight-green: #27AE60;
-  --highlight-td: #EEEEEE;
-  --total-row-bg: #e8f5e8;
-  --border-radius: 10px;
-  --transition: all 0.3s ease;
-}
+/* Variables and font import moved to `src/assets/css/variables.css` and `src/assets/css/base.css` */
 
 /* ====== Shared Modal System ====== */
 .shared-modal-overlay {
@@ -172,27 +159,7 @@
   }
 }
 
-/* Basic body styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Cairo', sans-serif;
-  margin: 0;
-  padding: 0;
-  background: var(--light-bg);
-  color: #333;
-  transition: var(--transition);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  opacity: 1;
-  overflow-x: auto;
-  font-size: 22px;
-}
+/* Basic resets and core body styles moved to `src/assets/css/base.css` */
 
 /* Only enforce the 768px minimum on pages that opt-in by adding
    the `page-has-fixed-width` class to the body. This avoids forcing
@@ -327,65 +294,8 @@ main {
 
 /* Table visuals migrated to `_unified-components.css` for centralization */
 
-/* Basic button styles */
-button {
-  margin: 8px;
-  padding: 14px 24px;
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  background: linear-gradient(135deg, var(--primary), #005a4b);
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 15px rgba(0,121,101,0.3);
-  position: relative;
-  overflow: hidden;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  min-height: 50px;
-  flex-direction: column;
-  text-align: center;
-}
-
-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-button:hover {
-  background: linear-gradient(135deg, var(--secondary), #d68910);
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(243,156,18,0.4);
-}
-
-button i {
-  font-size: 1.2em;
-  margin-bottom: 4px;
-}
-
-button span {
-  font-size: 0.9em;
-  line-height: 1.2;
-}
-
-button:hover::before {
-  left: 100%;
-}
-
-button:active {
-  transform: translateY(0);
-}
+/* Button utilities moved to `src/assets/css/_unified-components.css` as `.btn` / `.btn-base`.
+   Do not define global `button {}` rules — use `.btn` on elements instead. */
 
 /* Footer */
 .footer {
@@ -586,98 +496,8 @@ footer strong {
 /* استخدام التنسيقات الموحدة من _unified-components.css */
 }
 
-/* ====== Table Column Visibility Controls ====== */
-/* Harvest table column indices: 1 serial, 2 shop, 3 code, 4 amount, 5 extra, 6 collector, 7 net */
-.modern-table--harvest.hide-col-serial th.serial,
-.modern-table--harvest.hide-col-serial td.serial,
-.modern-table--harvest.hide-col-serial thead th:nth-child(1),
-.modern-table--harvest.hide-col-serial tbody td:nth-child(1) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-shop th.shop,
-.modern-table--harvest.hide-col-shop td.shop,
-.modern-table--harvest.hide-col-shop thead th:nth-child(2),
-.modern-table--harvest.hide-col-shop tbody td:nth-child(2) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-code th.code,
-.modern-table--harvest.hide-col-code td.code,
-.modern-table--harvest.hide-col-code thead th:nth-child(3),
-.modern-table--harvest.hide-col-code tbody td:nth-child(3) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-amount th.amount,
-.modern-table--harvest.hide-col-amount td.amount,
-.modern-table--harvest.hide-col-amount thead th:nth-child(4),
-.modern-table--harvest.hide-col-amount tbody td:nth-child(4) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--harvest.hide-col-extra th.extra,
-.modern-table--harvest.hide-col-extra thead th:nth-child(5),
-.modern-table--harvest.hide-col-extra tbody td:nth-child(5) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Archive table column indices: 1 date, 2 shop, 3 code, 4 amount, 5 extra, 6 collector, 7 net */
-.modern-table--archive.hide-col-shop thead th:nth-child(2),
-.modern-table--archive.hide-col-shop tbody td:nth-child(2) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-code thead th:nth-child(3),
-.modern-table--archive.hide-col-code tbody td:nth-child(3) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-amount thead th:nth-child(4),
-.modern-table--archive.hide-col-amount tbody td:nth-child(4) { 
-  display: none !important; 
-  visibility: hidden !importan;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.modern-table--archive.hide-col-extra thead th:nth-child(5),
-.modern-table--archive.hide-col-extra tbody td:nth-child(5) { 
-  display: none !important; 
-  visibility: hidden !important;
-  width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
+/* Column visibility is now handled via Vue `v-show` and `ColumnVisibility` component.
+   Removed legacy `.hide-col-*` CSS rules to avoid CSS-only column hiding conflicts. */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -687,6 +507,14 @@ body {
   font-family: 'Cairo', sans-serif;
   margin: 0;
   padding: 0;
+.harvest-page .modern-table th.serial, .harvest-page .modern-table td.serial {
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: 40px !important;
+  padding: 16px 6px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
   background: var(--light-bg);
   color: #333;
   transition: var(--transition);
@@ -972,15 +800,7 @@ th.serial, td.serial {
   text-align: center;
 }
 
-/* Force serial column to be responsive but controlled */
-.modern-table--harvest th.serial, .modern-table--harvest td.serial { 
-  width: auto !important; 
-  min-width: 20px !important; 
-  max-width: 40px !important;
-  padding: 16px 6px !important;
-  white-space: nowrap !important;
-  text-align: center !important;
-}
+/* Force serial column to be responsive but controlled (migrated to page-scoped .harvest-page .modern-table) */
 
 /* تصغير حجم النص في خلايا عمود المسلسل فقط */
 td.serial {
@@ -1013,7 +833,8 @@ td.serial {
 }
 
 /* Force desktop layout - remove all mobile responsive table behavior */
-@media (max-width: 923px) {
+/* Normalized breakpoint: replaced 923px with 1024px for consistency */
+@media (max-width: 1024px) {
   /* Use a wrapper to handle horizontal scrolling; keep table as table for proper layout */
   .table-responsive {
     overflow-x: auto;
@@ -1029,7 +850,6 @@ td.serial {
     display: table;
     table-layout: fixed;
     white-space: normal;
-    font-size: 12px;
     width: 100%;
   }
   /* Make table at least as wide as the wrapper so no blank gap appears */
@@ -1054,33 +874,28 @@ td.serial {
 
 
 
-@media (max-width: 525px) {
-  table {
-    font-size: 10px;
+/* Unified small-screen table behavior: prefer horizontal scroll over shrinking fonts */
+@media (max-width: 768px) {
+  .table-wrapper,
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    box-sizing: border-box;
   }
-  th.serial, td.serial { width: auto; min-width: 15px; max-width: 30px; }
-  th.amount, td.amount { width: 70px; min-width: 70px; }
-  th.extra, td.extra { width: 60px; min-width: 60px; }
-  th.collector, td.collector { width: 60px; min-width: 60px; }
-  th.net, td.net { width: 60px; min-width: 60px; }
-  th, td {
-    padding: 6px 3px;
-    min-height: 45px;
-  }
-}
 
-@media (max-width: 625px) {
+  /* Keep table readable — avoid aggressive font-size reductions */
   table {
-    font-size: 11px;
+    display: table;
+    table-layout: auto;
+    white-space: nowrap;
+    width: 100%;
   }
-  th.serial, td.serial { width: 18px; min-width: 18px; }
-  th.amount, td.amount { width: 80px; min-width: 80px; }
-  th.extra, td.extra { width: 70px; min-width: 70px; }
-  th.collector, td.collector { width: 70px; min-width: 70px; }
-  th.net, td.net { width: 70px; min-width: 70px; }
+
+  /* Slightly reduce horizontal padding on very small screens while keeping legible type */
   th, td {
-    padding: 8px 4px;
-    min-height: 50px;
+    padding: 10px 8px;
+    min-height: 48px;
   }
 }
 
@@ -1231,29 +1046,10 @@ td.highlight {
   gap: 20px;
   flex-wrap: wrap;
 }
-button {
-   margin: 8px;
-   padding: 14px 24px;
-   border: none;
-   border-radius: var(--border-radius);
-   cursor: pointer;
-   background: linear-gradient(135deg, var(--primary), #005a4b);
-   color: white;
-   font-size: 16px;
-   font-weight: 600;
-   transition: all 0.3s ease;
-   display: inline-flex;
-   align-items: center;
-   justify-content: center;
-   gap: 10px;
-   box-shadow: 0 4px 15px rgba(0,121,101,0.3);
-   position: relative;
-   overflow: hidden;
-   text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-   min-height: 50px;
-   flex-direction: column;
-   text-align: center;
-}
+/* Use `.btn` class from `_unified-components.css` for button styling. */
+/* Avoid global button{} selectors. */
+/* Elements that formerly relied on global button styles should receive the `btn` class. */
+
 button::before {
   content: '';
   position: absolute;
@@ -1318,8 +1114,9 @@ footer strong {
   color: #2c3e50; 
   font-weight: bold; 
 }
-.modern-table--harvest input.amount,
-.modern-table--harvest input.extra {
+/* Harvest input styles migrated to .harvest-page .modern-table */
+.harvest-page .modern-table input.amount,
+.harvest-page .modern-table input.extra {
   width: 100%;
   height: 56px;
   text-align: center;
@@ -1331,7 +1128,8 @@ footer strong {
   color: inherit;
 }
 
-.modern-table--harvest input.collector {
+/* Harvest collector input styles migrated to .harvest-page .modern-table */
+.harvest-page .modern-table input.collector {
   width: 100%;
   height: 56px;
   text-align: center;
@@ -1345,28 +1143,25 @@ footer strong {
 }
 
 /* On narrow screens make inputs use full cell width to avoid leaving extra whitespace */
-@media (max-width: 923px) {
-  .modern-table--harvest input.extra,
-  .modern-table--harvest input.collector {
+/* Harvest input responsive rules migrated to .harvest-page .modern-table */
+@media (max-width: 1024px) {
+  .harvest-page .modern-table input.extra,
+  .harvest-page .modern-table input.collector {
     width: 100%;
   }
 }
 
-body.dark .modern-table--harvest input.extra,
-body.dark .modern-table--harvest input.collector {
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-  border: 1px solid rgba(0,200,150,0.3);
-  color: #e0e0e0;
-}
-.modern-table--harvest input:focus {
+/* Harvest dark-mode input styles consolidated into unified-dark-mode.css */
+/* Harvest input focus migrated to .harvest-page .modern-table */
+.harvest-page .modern-table input:focus {
   outline: none;
   border-color: var(--secondary);
   box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.2);
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* تم نقل الجزء المتعلق بـ dark mode إلى unified-dark-mode.css */
-.modern-table--harvest input:hover {
+/* Harvest input hover migrated to .harvest-page .modern-table */
+.harvest-page .modern-table input:hover {
   border-color: rgba(0, 121, 101, 0.3);
 }
 /* تحسين تنسيق الأرقام في الحقول */

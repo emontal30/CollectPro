@@ -1,11 +1,17 @@
 // أداة تصدير واستيراد البيانات لـ CollectPro
 import fs from 'fs';
 import path from 'path';
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import logger from './utils/logger.js';
 
-const supabaseUrl = 'https://altnvsolaqphpndyztup.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdG52c29sYXFwaHBuZHl6dHVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI2ODUsImV4cCI6MjA3MzYzODY4NX0.LOvdanWvNL1DaScTDTyXSAbi_4KX_jnJFB1WEdtb-GI';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  logger.error('Supabase URL or KEY not found in environment variables. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  throw new Error('Missing Supabase environment variables');
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

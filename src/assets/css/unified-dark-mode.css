@@ -2,28 +2,8 @@
 /* Single source of truth - Consolidated from dark-mode.css & sidebar-dark-mode.css */
 /* NO DUPLICATES. Optimized for performance and maintainability */
 
-:root {
-  /* Color Palette */
-  --dark-bg: #0f0f0f;
-  --dark-surface: #1a1a1a;
-  --dark-surface-hover: #252525;
-  --dark-surface-light: #2a2a2a;
-  --dark-border: #333333;
-  --dark-text-primary: #ffffff;
-  --dark-text-secondary: #b0b0b0;
-  --dark-text-muted: #808080;
-  /* Accent & Status */
-  --dark-accent: #007965;
-  --dark-accent-hover: #005a4b;
-  --dark-success: #27ae60;
-  --dark-warning: #f39c12;
-  --dark-danger: #e74c3c;
-  --dark-info: #3498db;
-  /* Effects */
-  --dark-overlay: rgba(0, 0, 0, 0.6);
-  --dark-shadow: rgba(0, 0, 0, 0.3);
-  --dark-shadow-hover: rgba(0, 0, 0, 0.4);
-}
+/* Dark-mode primitives moved to `src/assets/css/variables.css`.
+   This file now contains mappings/overrides for body.dark only. */
 
 /* Backwards-compatible variable aliases and mappings
    This ensures legacy variable names used across the codebase
@@ -125,12 +105,59 @@ body.dark td {
   border-color: var(--dark-border);
 }
 
+/* Dark-mode: consistent non-wrapping table cells with responsive fallback */
+body.dark .modern-table th,
+body.dark .modern-table td,
+body.dark .collections-table th,
+body.dark .collections-table td,
+body.dark .archive-table th,
+body.dark .archive-table td,
+body.dark th, body.dark td {
+  vertical-align: middle !important;
+  padding: 16px 12px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 600px) {
+  body.dark .modern-table td,
+  body.dark .collections-table td,
+  body.dark .archive-table td,
+  body.dark td {
+    white-space: normal !important;
+  }
+}
+
 body.dark tr:hover td {
   background-color: var(--dark-surface-hover);
 }
 
 body.dark tr:nth-child(even) td {
   background-color: var(--dark-surface);
+}
+
+/* Dark-mode: Table header typography (Archive & Harvest only) */
+body.dark .archive-page .modern-table thead th,
+body.dark .harvest-page .modern-table thead th {
+  font-family: "Noto Kufi Arabic", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* Dark-mode: Shop column RTL/right alignment */
+body.dark .archive-page .modern-table th.shop,
+body.dark .archive-page .modern-table td.shop,
+body.dark .harvest-page .modern-table th.shop,
+body.dark .harvest-page .modern-table td.shop {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: embed;
+  padding-right: 12px;
+  padding-left: 8px;
 }
 
 body.dark .collections-table,
@@ -170,6 +197,46 @@ body.dark .total-row td {
 
 body.dark .date-cell {
   color: var(--dark-text-secondary);
+}
+
+/* Archive shop column in dark mode: match harvest sizing and direction */
+body.dark .archive-page .modern-table .shop {
+  direction: rtl;
+  text-align: right;
+  font-family: var(--ui-font, 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, "Segoe UI", Roboto, Arial);
+  font-size: 14px;
+  /* prevent wrapping in dark mode as well */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
+}
+
+/* Dark mode: align date column with same rules as light mode */
+body.dark .modern-table td.date-cell,
+body.dark .collections-table td.date-cell,
+body.dark .archive-table td.date-cell,
+body.dark td.date-cell {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  padding: 16px 12px !important;
+  min-width: 120px !important;
+  max-width: 160px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.dark .modern-table th.date-header,
+body.dark .collections-table th.date-header,
+body.dark .archive-table th.date-header,
+body.dark th.date-header {
+  text-align: center !important;
+  padding: 18px 12px !important;
+  min-width: 120px !important;
 }
 
 /* ====== FORM ELEMENTS ====== */
@@ -242,10 +309,56 @@ body.dark .btn-danger {
   border-color: var(--dark-danger);
 }
 
+/* ====== SEARCH CONTROL DARK MODE ====== */
+body.dark .search-input-wrapper {
+  background: var(--dark-surface) !important;
+  border-color: rgba(0, 196, 150, 0.2) !important;
+  box-shadow: 0 4px 15px rgba(0, 196, 150, 0.05) !important;
+}
+
+body.dark .search-input-wrapper:hover {
+  border-color: rgba(0, 196, 150, 0.4) !important;
+  box-shadow: 0 6px 20px rgba(0, 196, 150, 0.1) !important;
+}
+
+body.dark .search-input {
+  background: transparent !important;
+  color: var(--dark-text-primary) !important;
+}
+
+body.dark .search-input::placeholder {
+  color: var(--dark-text-muted) !important;
+}
+
+body.dark .btn-settings-table {
+  background: rgba(0, 196, 150, 0.1);
+  color: var(--dark-accent);
+}
+
+body.dark .btn-settings-table:hover {
+  background: rgba(0, 196, 150, 0.2);
+}
+
+body.dark .btn--back-to-harvest {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+body.dark .btn--back-to-harvest:hover {
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+body.dark .btn--delete-archive {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+body.dark .btn--delete-archive:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
 /* ====== FIX: Align total-row with table columns in dark mode ======
    Ensure the total-row uses sticky positioning and no rounded card styling
    so it lines up exactly with table columns (Harvest view). */
-body.dark .modern-table--harvest .total-row,
+body.dark .modern-table .total-row,
 body.dark .total-row {
   position: sticky !important;
   bottom: 0 !important;
@@ -257,7 +370,7 @@ body.dark .total-row {
   font-weight: 700 !important;
 }
 
-body.dark .modern-table--harvest .total-row td,
+body.dark .modern-table .total-row td,
 body.dark .total-row td {
   border-top: 2px solid rgba(255,255,255,0.06) !important;
   padding: 18px 12px !important;
@@ -265,7 +378,7 @@ body.dark .total-row td {
   background-color: var(--dark-accent) !important;
 }
 
-body.dark .modern-table--harvest .total-row td:first-child,
+body.dark .modern-table .total-row td:first-child,
 body.dark .total-row td:first-child {
   text-align: center !important;
   font-size: 20px !important;
@@ -337,6 +450,13 @@ body.dark .status-positive {
 body.dark .status-negative {
   background-color: var(--dark-danger);
   color: var(--dark-text-primary);
+}
+
+/* Override: remove green background for zero-status only inside CounterView summary */
+body.dark .summary-item-status .summary-value.status-zero {
+  background-color: transparent !important;
+  color: var(--dark-text-primary) !important;
+  box-shadow: none !important;
 }
 
 /* ====== TYPOGRAPHY ====== */
@@ -1271,14 +1391,14 @@ body.dark .buttons-container {
 }
 
 /* ====== HARVEST TABLE INPUTS ====== */
-body.dark .modern-table--harvest input.extra,
-body.dark .modern-table--harvest input.collector {
+body.dark .modern-table input.extra,
+body.dark .modern-table input.collector {
   background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(0,200,150,0.3);
   color: #e0e0e0;
 }
 
-body.dark .modern-table--harvest input:focus {
+body.dark .modern-table input:focus {
   background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
   border-color: rgba(255,165,0,0.6);
   box-shadow: 0 0 0 2px rgba(255,165,0,0.2);
@@ -1498,6 +1618,11 @@ body.dark .archive-controls {
   background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(37, 37, 37, 0.9));
   border-color: rgba(0,200,150,0.2);
   box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 2px 8px rgba(0,200,150,0.1);
+  /* Mirror light-mode layout: stack date selector and search rows */
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* reduced vertical spacing in dark mode */
+  align-items: stretch;
 }
 
 body.dark .archive-controls label {
@@ -1512,6 +1637,30 @@ body.dark .control-icon {
 
 body.dark .control-group:hover .control-icon {
   box-shadow: 0 4px 12px rgba(0,200,150,0.3);
+}
+
+/* Dark-mode: reduce width of date selector with same responsive fallback */
+body.dark .archive-select {
+  width: 260px;
+  max-width: 60%;
+  min-width: 180px;
+}
+
+@media (max-width: 600px) {
+  body.dark .archive-select {
+    width: 100% !important;
+    max-width: none;
+  }
+}
+
+body.dark .archive-controls .search-control {
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+body.dark .archive-controls .btn-settings-table {
+  margin-left: 12px;
 }
 
 body.dark .archive-select, body.dark .archive-search, body.dark #archiveSelect, body.dark #archiveSearch {
@@ -1887,8 +2036,8 @@ body.dark .notification-info {
 body.dark .total-row td.net,
 body.dark .total-row td.net.positive,
 body.dark .total-row td.net.negative,
-body.dark .modern-table--harvest .total-row td.net,
-body.dark .modern-table--archive .total-row td.net {
+body.dark .modern-table .total-row td.net,
+body.dark .modern-table .total-row td.net {
  color: inherit !important;
  text-shadow: none !important;
 }
@@ -1899,3 +2048,89 @@ body.dark .date-display, body.dark .search-container {
 }
 
 /* تم دمج تنسيق search-input في الوضع الليلي مع التنسيق الموحد في الأعلى */
+
+/* Disable hover/transition/transform effects on buttons in dark mode as well */
+button,
+.btn,
+.btn-settings-table,
+.btn--icon,
+.btn--gear,
+.btn--back-to-harvest,
+.btn--delete-archive {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+button:hover,
+.btn:hover,
+.btn-settings-table:hover,
+.btn--icon:hover,
+.btn--gear:hover,
+.btn--back-to-harvest:hover,
+.btn--delete-archive:hover {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically disable all effects for the sidebar menu toggle button in dark mode */
+/* Stronger specificity to override scoped component styles and any JS-driven filters */
+body.dark .header-content .menu-toggle,
+body.dark .header-content .menu-toggle i,
+body.dark .menu-toggle,
+body.dark .menu-toggle i,
+body.dark .menu-toggle::before,
+body.dark .menu-toggle::after {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  outline: none !important;
+  background-image: none !important;
+  will-change: auto !important;
+}
+
+body.dark .header-content .menu-toggle:hover,
+body.dark .header-content .menu-toggle:focus,
+body.dark .header-content .menu-toggle:active,
+body.dark .menu-toggle:hover,
+body.dark .menu-toggle:focus,
+body.dark .menu-toggle:active {
+  transition: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  background-image: none !important;
+}
+
+/* Menu toggle base look in dark mode */
+body.dark .menu-toggle,
+body.dark .menu-toggle i {
+  color: var(--dark-text-primary) !important;
+  background: none !important;
+  border: none !important;
+  padding: 8px 12px !important;
+  font-size: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+}
+
+@media (max-width: 768px) {
+  body.dark .menu-toggle { font-size: 18px !important; padding: 6px 10px !important; }
+}
+
+@media (max-width: 480px) {
+  body.dark .menu-toggle { font-size: 16px !important; padding: 5px 8px !important; }
+}
+
+@media (max-width: 360px) {
+  body.dark .menu-toggle { font-size: 14px !important; padding: 4px 6px !important; }
+}

@@ -114,31 +114,8 @@ const toggleSidebar = () => {
   transform: scale(0.95);
 }
 
-/* Menu toggle button */
-.menu-toggle {
-  background: none;
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  outline: none;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
-}
-
-.menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
-
-.menu-toggle:active {
-  transform: scale(0.95);
-}
+/* Menu toggle styling is now provided by unified component CSS to avoid duplication.
+   Left intentionally blank here to avoid scoped overrides. */
 
 /* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* Fix content overlap with fixed topbar remains global (body padding set elsewhere) */
@@ -167,10 +144,7 @@ const toggleSidebar = () => {
     font-size: 1.2rem;
   }
   
-  .menu-toggle {
-    font-size: 18px;
-    padding: 6px 10px;
-  }
+  /* menu-toggle sizing handled in unified CSS */
 }
 
 @media (max-width: 480px) {
@@ -186,10 +160,7 @@ const toggleSidebar = () => {
     font-size: 1rem;
   }
   
-  .menu-toggle {
-    font-size: 16px;
-    padding: 5px 8px;
-  }
+  /* menu-toggle sizing handled in unified CSS */
   
   .logo-section {
     gap: 8px;
@@ -209,9 +180,6 @@ const toggleSidebar = () => {
     font-size: 0.9rem;
   }
   
-  .menu-toggle {
-    font-size: 14px;
-    padding: 4px 6px;
-  }
+  /* menu-toggle sizing handled in unified CSS */
 }
 </style>

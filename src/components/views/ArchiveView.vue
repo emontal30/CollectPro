@@ -21,26 +21,25 @@
         </label>
       </div>
 
-      <div class="control-group">
-        <label>
+      <div class="search-control">
+        <div class="search-input-wrapper">
           <i class="fas fa-search control-icon"></i>
-          بحث:
           <input
             v-model="store.searchQuery"
-            class="archive-search"
             type="text"
-            placeholder="اكتب اسم المحل أو الكود"
+            placeholder="ابحث في المحل أو الكود"
+            class="search-input"
             @input="handleSearch"
           />
-        </label>
-        <button class="settings-btn" @click="showColumnSettings = true" title="إعدادات الأعمدة">
+        </div>
+        <button class="btn-settings-table" @click="showColumnSettings = true" title="إعدادات الأعمدة">
           <i class="fas fa-cog"></i>
         </button>
       </div>
     </div>
 
     <div class="table-wrapper">
-      <table class="collections-table w-full modern-table modern-table--archive">
+      <table class="modern-table w-full">
         <thead>
           <tr>
             <th class="header-cell date-header">📅 التاريخ</th>
@@ -95,7 +94,7 @@
 
     <div class="buttons">
       <router-link to="/app/harvest" class="btn btn--back-to-harvest">
-        <i class="fas fa-arrow-left" style="color: #90EE90 !important;"></i>
+        <i class="fas fa-arrow-left"></i>
         <span>العودة للتحصيلات</span>
       </router-link>
 
@@ -104,7 +103,7 @@
         :disabled="!store.selectedDate"
         @click="store.deleteCurrentArchive"
       >
-        <i class="fas fa-trash-alt" style="color: #DC143C !important;"></i>
+        <i class="fas fa-trash-alt"></i>
         <span>حذف الأرشيف الحالي</span>
       </button>
     </div>

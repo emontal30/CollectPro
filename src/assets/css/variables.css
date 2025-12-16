@@ -1,0 +1,68 @@
+/* Centralized design variables (single source of truth)
+   Generated: Phase 1 of CSS refactor
+   Do NOT change visual values — only centralize.
+*/
+:root {
+  /* -- Color palette (primary app colors) */
+  --primary: #007965;
+  --secondary: #f39c12;
+  --success: #27ae60;
+  --danger: #e74c3c;
+  --light-bg: #f8f9fa;
+  --highlight-green: #27AE60;
+  --highlight-td: #EEEEEE;
+  --total-row-bg: #e8f5e8;
+
+  /* -- Common sizing / transitions */
+  --border-radius: 10px;
+  --transition: all 0.3s ease;
+
+  /* -- Component spacing & card tokens (from unified components) */
+  --card-padding: 30px;
+  --card-padding-mobile: 20px;
+  --gap-default: 15px;
+  --gap-large: 30px;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover: 0 15px 35px rgba(0, 0, 0, 0.12);
+  --card-border: 1px solid rgba(0, 121, 101, 0.1);
+
+  /* -- Dark mode primitives (kept here, mapped where needed) */
+  --dark-bg: #0f0f0f;
+  --dark-surface: #1a1a1a;
+  --dark-surface-hover: #252525;
+  --dark-surface-light: #2a2a2a;
+  --dark-border: #333333;
+  --dark-text-primary: #ffffff;
+  --dark-text-secondary: #b0b0b0;
+  --dark-text-muted: #808080;
+  --dark-accent: #007965;
+  --dark-accent-hover: #005a4b;
+  --dark-success: #27ae60;
+  --dark-warning: #f39c12;
+  --dark-danger: #e74c3c;
+  --dark-info: #3498db;
+  --dark-overlay: rgba(0, 0, 0, 0.6);
+  --dark-shadow: rgba(0, 0, 0, 0.3);
+  --dark-shadow-hover: rgba(0, 0, 0, 0.4);
+
+  /* === Aliases / backwards-compatible mappings === */
+  /* Keep legacy variable names working while moving to single source */
+  --dark-accent-hover-alias: var(--dark-accent-hover);
+
+  /* Map legacy main variables to dark equivalents where code expects them */
+  /* body.dark will override some variables (in dark-mode CSS) using these primitives */
+
+  /* -- Breakpoints */
+  --bp-mobile: 480px;
+  --bp-tablet: 768px;
+  --bp-desktop: 1024px;
+
+  /* -- Z-index scale */
+  --z-modal: 10000;
+  --z-toast: 11000;
+  --z-header: 1000;
+  --z-sidebar: 900;
+  /* -- Color ramps (darken variants used in gradients) */
+  --primary-dark: #005a4b;
+  --secondary-dark: #d68910;
+}
