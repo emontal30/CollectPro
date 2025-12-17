@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const isLoading = ref(false)
   const isInitialized = ref(false)
-  const isInitializing = ref(false) // Prevent multiple simultaneous initializations
+  const isInitializing = ref(false)
   let initPromise = null
   const router = useRouter()
   const authWarning = ref('')
@@ -24,16 +24,17 @@ export const useAuthStore = defineStore('auth', () => {
   // --- Private Helpers ---
 
   /**
-   * دالة مركزية لتعيين المستخدم ومزامنة الملف الشخصي
-   * تمنع تكرار الكود في initializeAuth و getUser
+   * إعداد جلسة المستخدم ومزامنة البيانات
    */
   async function setUserSession(session) {
     if (session?.user) {
       logger.debug('✅ Session active for:', session.user.email)
       user.value = session.user
-      await syncUserProfile(session.user)
+      
+      // مزامنة الملف الشخصي في الخلفية
+      syncUserProfile(session.user).catch(err => logger.warn('Profile sync warning:', err))
 
-      // تحميل مسبق لبيانات الاشتراك لتحسين الأداء
+      // تحميل بيانات الاشتراك مسبقاً للأداء
       preloadSubscriptionData(session.user.id)
     } else {
       logger.debug('❌ No active session found')
@@ -42,20 +43,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * تحميل مسبق لبيانات الاشتراك (في الخلفية)
+   * تحميل بيانات الاشتراك وتخزينها مؤقتاً (Cache)
    */
   async function preloadSubscriptionData(userId) {
     if (!userId) return
 
     try {
-    logger.debug('📋 Preloading subscription data...')
-      // تحميل البيانات بشكل متزامن في الخلفية
+      logger.debug('📋 Preloading subscription data...')
       const [subscriptionResult, historyResult] = await Promise.all([
         api.subscriptions.getSubscription(userId),
         api.subscriptions.getSubscriptionHistory(userId)
       ])
 
-      // حفظ في sessionStorage للمتاجر المعنية
       const cacheData = {
         subscription: subscriptionResult.subscription,
         history: historyResult.history || [],
@@ -70,42 +69,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /**
-   * تنظيف مخلفات جوجل والستوريج عند تسجيل الخروج
-   */
-  function clearLocalArtifacts() {
-    const projectRef = import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0]
-    
-    // 1. Clear Supabase specific token
-    if (projectRef) {
-      localStorage.removeItem(`sb-${projectRef}-auth-token`)
-    }
-    
-    // 2. Clear Session Storage
-    sessionStorage.clear()
-
-    // 3. Clear Google/OAuth related LocalStorage items
-    const keysToRemove = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && /google|gauth|oauth/i.test(key)) {
-        keysToRemove.push(key)
-      }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key))
-
-    // 4. Cookie clearing is now handled by supabase.auth.signOut()
-    logger.info('Cookie cleanup is delegated to Supabase signOut.');
-  }
-
   // --- Actions ---
 
   /**
-   * 1. تهيئة المصادقة عند بدء التطبيق
+   * 1. تهيئة المصادقة (تعمل مرة واحدة فقط)
    */
   async function initializeAuth() {
     if (isInitialized.value) return Promise.resolve()
-
     if (isInitializing.value && initPromise) return initPromise
 
     isInitializing.value = true
@@ -115,37 +85,31 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         logger.debug('🚀 Initializing Auth...')
 
+        // معالجة OAuth Redirect (إن وجد)
         await handleOAuthCallback()
 
-        logger.info('🔍 Fetching session from API...')
+        // جلب الجلسة الحالية
         const { session } = await api.auth.getSession()
-        logger.info('🔍 Session fetched:', session ? 'exists' : 'null')
         await setUserSession(session)
 
+        // الاستماع لتغيرات حالة المصادقة
         api.auth.onAuthStateChange(async (event, session) => {
-          try {
-            logger.debug('🔔 Auth State Changed:', event, { session })
+          logger.debug('🔔 Auth State Changed:', event)
 
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              await setUserSession(session)
-              isLoading.value = false
-            } else if (event === 'SIGNED_OUT') {
-              logger.info('🔒 Received SIGNED_OUT event — clearing local artifacts and resetting user state')
-              try { clearLocalArtifacts() } catch (e) { logger.warn('Failed to clear local artifacts:', e) }
-              user.value = null
-              isInitialized.value = false
-              isLoading.value = false
-            }
-          } catch (err) {
-            logger.error('Error in auth state change handler:', err)
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            await setUserSession(session)
+          } else if (event === 'SIGNED_OUT') {
+            logger.info('🔒 User Signed Out — Cleaning state')
+            user.value = null
+            sessionStorage.clear() // تنظيف بيانات الجلسة المؤقتة فقط
+            isInitialized.value = false
           }
         })
 
         isInitialized.value = true
       } catch (error) {
         logger.error('💥 Auth Initialization Error:', error)
-        authWarning.value = 'تعذر الاتصال بخدمة المصادقة. قد يتأثر التزامن مع الخادم.'
-        throw error
+        authWarning.value = 'تعذر الاتصال بخدمة المصادقة.'
       } finally {
         isLoading.value = false
         isInitializing.value = false
@@ -157,18 +121,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 2. الحصول على المستخدم الحالي (للاستخدام في الراوتر)
+   * 2. جلب المستخدم الحالي (مع التحديث)
    */
   async function getUser() {
     if (user.value) return user.value
 
-    isLoading.value = true
     try {
+      isLoading.value = true
       const { session } = await api.auth.getSession()
       await setUserSession(session)
     } catch (error) {
       logger.error('Failed to get user:', error)
-      authWarning.value = 'فشل جلب بيانات المستخدم. تحقق من اتصال الشبكة.'
       user.value = null
     } finally {
       isLoading.value = false
@@ -177,106 +140,74 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 3. معالجة الرابط بعد العودة من جوجل
+   * 3. معالجة الروابط العائدة من مزود الخدمة (Google)
    */
   async function handleOAuthCallback() {
     const hash = window.location.hash.substring(1)
     if (!hash) return
 
     const params = new URLSearchParams(hash)
-    const accessToken = params.get('access_token')
-    const refreshToken = params.get('refresh_token')
-    const type = params.get('type')
-
-    if (accessToken || refreshToken || type === 'recovery') {
+    if (params.get('access_token') || params.get('type') === 'recovery') {
       logger.info('🔄 Processing OAuth Callback...')
       try {
-        // نترك Supabase يعالج التوكن تلقائياً، نحن فقط ننظف الرابط
-        const { data, error } = await api.auth.getSession()
-          if (!error && data?.session) {
-          logger.info('✅ OAuth Login Successful')
-        }
+        const { data } = await api.auth.getSession()
+        if (data?.session) logger.info('✅ OAuth Login Successful')
       } catch (err) {
         logger.error('OAuth Handling Error:', err)
       } finally {
-        // تنظيف الرابط من التوكنز للحماية
         window.history.replaceState({}, document.title, window.location.pathname)
       }
     }
   }
 
   /**
-   * 4. تسجيل الدخول بجوجل
+   * 4. تسجيل الدخول باستخدام Google
    */
   async function loginWithGoogle() {
     isLoading.value = true
-
-    // Ensure loading state shows for at least 200ms to be visible
+    // تأخير بسيط لإظهار حالة التحميل
     await new Promise(resolve => setTimeout(resolve, 200))
 
-    // Set up a timeout to reset loading state in case OAuth redirect fails
-    const loadingTimeout = setTimeout(() => {
-      isLoading.value = false
-    }, 5000) // 5 seconds timeout
-
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('your-project')) {
-        throw new Error('إعدادات Supabase غير صحيحة في ملف .env')
-      }
-
       const { error } = await api.auth.signInWithGoogle()
       if (error) throw error
-
-      // If OAuth call succeeds, clear the timeout since loading will be handled by auth state change
-      clearTimeout(loadingTimeout)
-
     } catch (error) {
       logger.error('Login Error:', error)
       addNotification(error.message, 'error')
-      authWarning.value = 'حدث خطأ أثناء تسجيل الدخول. تحقق من اتصال الشبكة.'
+      authWarning.value = 'حدث خطأ أثناء تسجيل الدخول.'
       isLoading.value = false
-      clearTimeout(loadingTimeout)
     }
+    // ملاحظة: لا نعيد isLoading لـ false هنا لأن المتصفح سيقوم بإعادة التوجيه
   }
 
   /**
-   * 5. تسجيل الخروج
+   * 5. تسجيل الخروج (Clean Logout)
    */
   async function logout() {
     logger.info('🔒 Starting logout process...')
     isLoading.value = true
 
     try {
-      // 1. تنظيف المتصفح فوراً
-      clearLocalArtifacts()
+      // 1. تنظيف التخزين المؤقت للجلسة (Safe)
+      sessionStorage.clear()
 
-      // 2. تحديث الحالة فوراً
+      // 2. تصفير الحالة محلياً
       user.value = null
       isInitialized.value = false
 
-      // 3. تسجيل الخروج من Supabase (غير blocking)
-      try {
-        const { error } = await api.auth.signOut()
-        if (error) logger.warn('Supabase SignOut Warning:', error.message)
-      } catch (signOutError) {
-        logger.warn('SignOut failed, but proceeding with logout:', signOutError)
-      }
+      // 3. الطلب من Supabase إنهاء الجلسة (يمسح الكوكيز والتوكنز تلقائياً)
+      const { error } = await api.auth.signOut()
+      if (error) logger.warn('Supabase SignOut Warning:', error.message)
 
       logger.info('✅ Logout completed, redirecting...')
-      // 4. تعيين isLoading إلى false
-      isLoading.value = false
-      // 5. إعادة التوجيه إلى صفحة الدخول
       router.push('/')
 
     } catch (error) {
       logger.error('❌ Logout Critical Error:', error)
-      // في حالة الخطأ، نضمن إعادة التحميل
-      user.value = null
-      isLoading.value = false
+      // إعادة تحميل إجبارية في حالة الخطأ الجسيم لضمان نظافة التطبيق
       window.location.reload()
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -284,16 +215,12 @@ export const useAuthStore = defineStore('auth', () => {
     authWarning.value = ''
   }
 
-  /**
-   * 6. مزامنة بيانات المستخدم مع قاعدة البيانات
-   */
   async function syncUserProfile(userData) {
     if (!userData) return
     try {
-      const { error } = await api.user.syncUserProfile(userData)
-      if (error) logger.error('Profile Sync Error:', error)
+      await api.user.syncUserProfile(userData)
     } catch (err) {
-      logger.error('Profile Sync Unexpected Error:', err)
+      logger.error('Profile Sync Error:', err)
     }
   }
 

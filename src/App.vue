@@ -1,220 +1,145 @@
 <template>
-  <div id="app" :class="appClasses">
+  <div id="app" :class="pageClasses">
     <OfflineBanner />
     <router-view />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch, computed, ref } from 'vue';
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import OfflineBanner from '@/components/ui/OfflineBanner.vue';
-import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useSessionManager } from '@/composables/useSessionManager';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
-import { useRoute } from 'vue-router';
 import { processPendingSyncQueue } from '@/services/archiveSyncQueue';
 import logger from '@/utils/logger.js';
 
+// --- Stores & Composables ---
 const authStore = useAuthStore();
 const sessionManager = useSessionManager();
-const router = useRouter();
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
+const router = useRouter();
 const route = useRoute();
-const isMounted = ref(false);
 
-// Cleanup handlers
+// --- Local State ---
+const isLoaded = ref(false);
+
+// --- Cleanup References ---
 let visibilityCleanup = null;
 let activityCleanup = null;
 let onlineCleanup = null;
 
-// Throttling for visibility checks
-let lastVisibilityCheck = 0;
-const VISIBILITY_CHECK_THROTTLE = 30000; // 30 seconds
-
-// Reactive class binding for the main app container
-const appClasses = computed(() => {
-  const pageClassMap = {
-    'harvest': 'harvest-page',
-    'archive': 'archive-page',
-    'dashboard': 'dashboard-page',
-    'counter': 'counter-page',
-    'subscriptions': 'subscriptions-page',
-    'admin': 'admin-page',
-    'my-subscription': 'my-subscription-page'
-  };
-  const pageClass = pageClassMap[route.name];
+// --- Computed: Page Classes (Reactive Logic) ---
+const pageClasses = computed(() => {
+  const currentRoute = route.name;
   
+  // خريطة الكلاسات الخاصة بكل صفحة للحفاظ على التنسيق
+  const classMap = {
+    'Harvest': 'harvest-page',
+    'Archive': 'archive-page',
+    'Dashboard': 'dashboard-page',
+    'Counter': 'counter-page',
+    'Subscriptions': 'subscriptions-page',
+    'Admin': 'admin-page',
+    'MySubscription': 'my-subscription-page'
+  };
+
+  const specificClass = classMap[currentRoute] || (currentRoute ? `${currentRoute.toLowerCase()}-page` : '');
+
   return {
-    [pageClass]: pageClass,
-    'loaded': isMounted.value
+    [specificClass]: !!specificClass,
+    'loaded': isLoaded.value // بديل لتلاعب body.classList.add('loaded')
   };
 });
 
-// Watch auth changes for diagnostics (no redirects here)
+// --- Diagnostics ---
 watch(() => authStore.user, (newUser, oldUser) => {
-  try {
-    logger.info('🔁 authStore.user changed (diagnostic):', { hadUser: !!oldUser, hasUser: !!newUser });
-  } catch (e) {
-    logger.warn('Error logging auth change:', e);
+  if (newUser !== oldUser) {
+    logger.debug('👤 Auth State Updated:', { hasUser: !!newUser });
   }
 });
 
-// Removed conflicting watcher that was redirecting to dashboard on auth restore
-// Routing logic is now handled exclusively by Router Guard
+// --- Lifecycle Hooks ---
+onMounted(async () => {
+  logger.info('🚀 App initializing...');
 
-onMounted(() => {
-  logger.info('🚀 App mounted, initializing session management and stores...');
+  try {
+    // 1. Initialize Stores & Session
+    // نقوم بتهيئة الجلسة أولاً لضمان توفر المعلومات الأساسية
+    sessionManager.initializeSession();
+    activityCleanup = sessionManager.setupActivityListeners();
 
-  // Initialize session management first
-  sessionManager.initializeSession();
+    // تهيئة المخازن الأخرى (Non-blocking)
+    if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
+    if (settingsStore?.loadSettings) settingsStore.loadSettings();
+
+    // محاولة تهيئة المصادقة (بدون تعطيل الواجهة)
+    authStore.initializeAuth().catch(err => {
+      logger.warn('⚠️ Auth init background warning:', err.message);
+    });
+
+    // 2. Setup Event Listeners
+    setupVisibilityHandler();
+    setupOnlineHandler();
+
+    // 3. Mark App as Loaded (Trigger CSS Transitions)
+    // نستخدم setTimeout صغير لضمان تطبيق الأنيميشن بعد الرسم الأولي
+    setTimeout(() => {
+      isLoaded.value = true;
+      logger.info('✅ App fully mounted and loaded');
+    }, 100);
+
+  } catch (error) {
+    logger.error('❌ Critical App Initialization Error:', error);
+  }
+});
+
+onUnmounted(() => {
+  logger.info('🧹 App cleaning up...');
   
-  // Setup activity listeners for session tracking
-  activityCleanup = sessionManager.setupActivityListeners();
+  // إزالة جميع المستمعين لتجنب تسريب الذاكرة
+  if (visibilityCleanup) visibilityCleanup();
+  if (onlineCleanup) onlineCleanup();
+  if (activityCleanup) activityCleanup();
+  
+  // تنظيف إدارة الجلسة
+  sessionManager.cleanup();
+});
 
-  // Enable performance monitor temporarily to capture freezes
-  try {
-    if (window.performanceMonitor && typeof window.performanceMonitor.enable === 'function') {
-      window.performanceMonitor.enable();
-      logger.info('📈 Performance monitor enabled (debug)');
-    }
-  } catch (err) {
-    logger.warn('Failed to enable performance monitor:', err);
-  }
+// --- Helper Functions ---
 
-  // Wrap router.push/replace to log timings and errors for diagnostics
-  try {
-    const origPush = router.push.bind(router);
-    router.push = (...args) => {
-      logger.info('➡️ router.push called', args);
-      const t0 = performance.now();
-      const result = origPush(...args);
-      Promise.resolve(result)
-        .then(() => logger.info('✅ router.push resolved', args, Math.round(performance.now() - t0), 'ms'))
-        .catch(err => logger.error('❌ router.push error', err, args));
-      return result;
-    };
-
-    const origReplace = router.replace.bind(router);
-    router.replace = (...args) => {
-      logger.info('➡️ router.replace called', args);
-      const t0 = performance.now();
-      const result = origReplace(...args);
-      Promise.resolve(result)
-        .then(() => logger.info('✅ router.replace resolved', args, Math.round(performance.now() - t0), 'ms'))
-        .catch(err => logger.error('❌ router.replace error', err, args));
-      return result;
-    };
-  } catch (err) {
-    logger.warn('Router instrumentation failed:', err);
-  }
-
-  // Optional: allow disabling Service Worker via localStorage for debugging
-  // Set `localStorage.setItem('collectpro_disable_sw', '1')` to unregister SW on startup
-  if ('serviceWorker' in navigator) {
-    try {
-      const disableSW = localStorage.getItem('collectpro_disable_sw')
-      if (disableSW === '1') {
-          navigator.serviceWorker.getRegistrations()
-            .then(regs => {
-              regs.forEach(reg => {
-                reg.unregister()
-                  .then(ok => logger.info('ServiceWorker unregistered (debug):', ok, reg))
-                  .catch(err => logger.error('ServiceWorker unregister error:', err));
-              });
-            })
-            .catch(err => logger.error('ServiceWorker unregister error:', err));
-        }
-    } catch (err) {
-      logger.warn('ServiceWorker debug toggle check failed:', err)
-    }
-  }
-
-  // Initialize auth asynchronously (non-blocking)
-    authStore.initializeAuth().catch(error => {
-    logger.error('Auth initialization failed:', error);
-    // Don't block UI for auth errors
-  });
-
-  // Initialize other stores immediately (non-blocking)
-  if (uiStore?.loadFromLocalStorage) {
-    uiStore.loadFromLocalStorage();
-  }
-
-  if (settingsStore?.loadSettings) {
-    settingsStore.loadSettings();
-  }
-
-  // Enhanced page visibility handler with session check (throttled)
+function setupVisibilityHandler() {
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
-      // Update activity timestamp
       sessionManager.updateLastActivity();
-
-      // Check auth state when actually needed
-      if (authStore.user === null && authStore.isLoading === false) {
-        authStore.getUser().catch(err => logger.error(err));
+      
+      // تحقق خفيف من التوكن عند العودة للتطبيق إذا لم يكن هناك مستخدم
+      if (!authStore.user && !authStore.isLoading) {
+        authStore.getUser().catch(() => {});
       }
-
-      // NOTE: Removed periodic session validity checks here to avoid
-      // network-driven navigation freezes. Session validity is now
-      // checked only on-demand (e.g., when user is missing) or for
-      // admin-protected routes in the router guard.
     }
   };
 
   document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
-  visibilityCleanup = () => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
+  visibilityCleanup = () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+}
 
-  // Setup online/offline listeners for Background Sync
+function setupOnlineHandler() {
   const handleOnline = () => {
-    logger.info('🌐 Connection restored — processing pending sync queue...');
-    processPendingSyncQueue().catch(err => logger.error(err));
+    logger.info('🌐 Connection restored — syncing...');
+    processPendingSyncQueue().catch(err => logger.error('Sync Error:', err));
   };
 
   window.addEventListener('online', handleOnline);
   onlineCleanup = () => window.removeEventListener('online', handleOnline);
-
-  isMounted.value = true;
-  logger.info('✅ App initialization complete');
-});
-
-onUnmounted(() => {
-  logger.info('🧹 App unmounting, cleaning up...');
-
-  // Cleanup event listeners
-  if (visibilityCleanup) {
-    visibilityCleanup();
-  }
-  if (onlineCleanup) {
-    onlineCleanup();
-  }
-
-  // Cleanup activity listeners
-  if (activityCleanup) {
-    activityCleanup();
-  }
-
-  // Stop session monitoring and cleanup
-  sessionManager.cleanup();
-
-  // Stop all monitoring systems (legacy)
-  authStore.stopSessionMonitoring?.();
-  authStore.stopActivityTracking?.();
-
-  // Cleanup page tracker (legacy)
-  if (window.pageTracker?.cleanup) {
-    window.pageTracker.cleanup();
-  }
-
-  logger.info('✅ Cleanup complete');
-});
+}
 </script>
 
 <style>
-/* Global styles are imported in main.js */
+/* Global styles are managed via assets/css imports in main.js.
+  No local styles needed here to preserve the unified system.
+*/
 </style>
