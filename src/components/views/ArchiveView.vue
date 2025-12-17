@@ -32,7 +32,7 @@
             @input="handleSearch"
           />
         </div>
-        <button class="btn-settings-table" @click="showColumnSettings = true" title="إعدادات الأعمدة">
+        <button class="btn-settings-table" title="إعدادات الأعمدة" @click="showColumnSettings = true">
           <i class="fas fa-cog"></i>
         </button>
       </div>
@@ -53,7 +53,7 @@
         </thead>
         <tbody>
           <tr v-if="store.isLoading">
-            <td :colspan="totalColumns" style="text-align: center; padding: 20px;">
+            <td :colspan="totalColumns" class="text-center p-20">
               <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
             </td>
           </tr>
@@ -68,7 +68,7 @@
 
             <td class="net numeric" :class="getNetClass(row.net)">
               {{ store.formatNumber(row.net) }}
-              <i :class="getNetIcon(row.net)" style="margin-right: 4px; font-size: 0.8em;"></i>
+              <i :class="getNetIcon(row.net)" class="mr-2 text-xs"></i>
             </td>
           </tr>
 
@@ -118,8 +118,8 @@
         <div class="column-option">
           <label>
             <input
-              type="checkbox"
               v-model="visibleColumns.shop"
+              type="checkbox"
               @change="saveColumnSettings"
             />
             🏪 المحل
@@ -128,8 +128,8 @@
         <div class="column-option">
           <label>
             <input
-              type="checkbox"
               v-model="visibleColumns.code"
+              type="checkbox"
               @change="saveColumnSettings"
             />
             🔢 الكود
@@ -138,8 +138,8 @@
         <div class="column-option">
           <label>
             <input
-              type="checkbox"
               v-model="visibleColumns.amount"
+              type="checkbox"
               @change="saveColumnSettings"
             />
             💵 مبلغ التحويل
@@ -148,8 +148,8 @@
         <div class="column-option">
           <label>
             <input
-              type="checkbox"
               v-model="visibleColumns.extra"
+              type="checkbox"
               @change="saveColumnSettings"
             />
             📌 أخرى

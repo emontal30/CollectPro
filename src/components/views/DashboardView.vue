@@ -10,7 +10,7 @@
     <div class="input-section">
       <div class="input-container">
         <label for="dataInput" class="input-label">
-          <i class="fas fa-table" style="color: var(--primary)"></i>
+          <i class="fas fa-table text-primary"></i>
           البيانات
         </label>
         <textarea 
@@ -151,7 +151,7 @@ const handleClear = async () => {
     text: 'هل أنت متأكد من مسح جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه.',
     icon: 'warning',
     confirmButtonText: 'مسح البيانات',
-    confirmButtonColor: '#dc3545'
+    confirmButtonColor: 'var(--danger, #dc3545)'
   });
 
   if (result.isConfirmed) {

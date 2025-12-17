@@ -394,13 +394,15 @@ const formatInputNumber = (num) => {
    return new Intl.NumberFormat('en-US', {
      minimumFractionDigits: 0,
      maximumFractionDigits: 2
-   }).format(num)
-}
-
+   }).format(num);
+};
 
 const getNetClass = (row) => {
   if (!row) {
-    console.error('getNetClass called with undefined row');
+    // Development-only error logging
+    if (import.meta.env.DEV) {
+      console.error('getNetClass called with undefined row');
+    }
     return 'zero';
   }
   const net = row.collector - (row.amount + row.extra);
@@ -441,7 +443,7 @@ const archiveToday = async () => {
       : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
     icon: 'question',
     confirmButtonText: 'أرشفة',
-    confirmButtonColor: '#007965'
+    confirmButtonColor: 'var(--primary, #007965)'
   });
 
   if (!confirmResult.isConfirmed) return;

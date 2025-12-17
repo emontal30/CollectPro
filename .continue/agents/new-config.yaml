@@ -1,0 +1,10 @@
+name: local-ollama
+version: 1
+models:
+  - name: qwen
+    provider: ollama
+    model: qwen2.5-coder:7b
+  - name: Claude 4.5 Opus
+    provider: anthropic
+    model: claude-opus-4-5
+    apiKey: con-c8ee...5d9b

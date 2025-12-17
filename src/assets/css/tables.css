@@ -1,0 +1,2 @@
+/* Wrapper: tables.css -> delegates to components/tables.css */
+@import './components/tables.css';

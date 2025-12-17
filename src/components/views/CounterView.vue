@@ -258,7 +258,7 @@ const exportData = async () => {
 
   try {
     const canvas = await html2canvas(element, {
-      backgroundColor: '#ffffff',
+      backgroundColor: 'var(--bg-white, #ffffff)',
       scale: 2,
       useCORS: true
     });
@@ -297,7 +297,7 @@ const handleResetAll = async () => {
     text: 'هل أنت متأكد من إعادة تعيين جميع العدادات؟ هذا الإجراء لا يمكن التراجع عنه.',
     icon: 'warning',
     confirmButtonText: 'إعادة التعيين',
-    confirmButtonColor: '#dc3545'
+    confirmButtonColor: 'var(--danger, #dc3545)'
   });
 
   if (result.isConfirmed) {

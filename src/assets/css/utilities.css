@@ -1,0 +1,2 @@
+/* Wrapper: utilities.css -> delegates to components/utilities.css */
+@import './components/utilities.css';

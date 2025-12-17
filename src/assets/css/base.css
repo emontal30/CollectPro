@@ -1,25 +1,80 @@
-/* Base CSS: font imports and fundamental body settings
-   Moved here from main.css for a single entry point
-*/
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+/* ====== BASE STYLES & RESET ====== */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  font-size: 16px; /* Standard base size */
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: 'Cairo', sans-serif;
-  margin: 0;
-  padding: 0;
-  background: var(--light-bg);
-  color: #333;
-  transition: var(--transition);
+  font-family: var(--font-family-sans);
+  background-color: var(--light-bg);
+  color: var(--gray-900);
+  line-height: 1.6;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   opacity: 1;
-  overflow-x: auto;
-  font-size: 22px;
+  transition: opacity 0.3s ease;
+  overflow-x: hidden; /* Prevent horizontal scroll on body */
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Page Wrapper Utility */
+#app, .app-root, .page-wrapper {
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: 80px; /* Space for fixed header */
+}
+
+/* Typography Helpers */
+h1, h2, h3, h4, h5, h6 {
+  margin-bottom: 0.5em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--primary-dark);
 }

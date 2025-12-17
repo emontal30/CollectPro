@@ -1,0 +1,2 @@
+/* Wrapper: forms.css -> delegates to components/search.css (search is used for forms/inputs in this project) */
+@import './components/search.css';

@@ -370,18 +370,18 @@ const selectAllUsers = computed({
 // Subscription Details Modal
 function showSubscriptionDetails(subscription) {
   const detailsHtml = `
-    <div style="text-align: right; direction: rtl;">
-      <div style="margin-bottom: 15px;"><strong>معرف الاشتراك:</strong> ${subscription.id}</div>
-      <div style="margin-bottom: 15px;"><strong>الاسم:</strong> ${subscription.users?.full_name || subscription.users?.email || 'غير محدد'}</div>
-      <div style="margin-bottom: 15px;"><strong>البريد الإلكتروني:</strong> ${subscription.users?.email || 'غير محدد'}</div>
-      <div style="margin-bottom: 15px;"><strong>الخطة:</strong> ${subscription.subscription_plans?.name_ar || subscription.plan_name || 'غير محدد'}</div>
-      <div style="margin-bottom: 15px;"><strong>السعر:</strong> ${subscription.price || subscription.subscription_plans?.price_egp || 'غير محدد'} ج.م</div>
-      <div style="margin-bottom: 15px;"><strong>تاريخ البدء:</strong> ${store.formatDate(subscription.start_date)}</div>
-      <div style="margin-bottom: 15px;"><strong>تاريخ الانتهاء:</strong> ${store.formatDate(subscription.end_date)}</div>
-      <div style="margin-bottom: 15px;"><strong>الحالة:</strong> <span class="status-badge status-${subscription.status}">${subscription.status}</span></div>
-      <div style="margin-bottom: 15px;"><strong>رقم العملية:</strong> ${subscription.transaction_id || 'غير محدد'}</div>
-      <div style="margin-bottom: 15px;"><strong>تاريخ الإنشاء:</strong> ${store.formatDate(subscription.created_at)}</div>
-      <div style="margin-bottom: 15px;"><strong>تاريخ التحديث:</strong> ${store.formatDate(subscription.updated_at)}</div>
+    <div class="direction-rtl text-right">
+      <div class="mb-3"><strong>معرف الاشتراك:</strong> ${subscription.id}</div>
+      <div class="mb-3"><strong>الاسم:</strong> ${subscription.users?.full_name || subscription.users?.email || 'غير محدد'}</div>
+      <div class="mb-3"><strong>البريد الإلكتروني:</strong> ${subscription.users?.email || 'غير محدد'}</div>
+      <div class="mb-3"><strong>الخطة:</strong> ${subscription.subscription_plans?.name_ar || subscription.plan_name || 'غير محدد'}</div>
+      <div class="mb-3"><strong>السعر:</strong> ${subscription.price || subscription.subscription_plans?.price_egp || 'غير محدد'} ج.م</div>
+      <div class="mb-3"><strong>تاريخ البدء:</strong> ${store.formatDate(subscription.start_date)}</div>
+      <div class="mb-3"><strong>تاريخ الانتهاء:</strong> ${store.formatDate(subscription.end_date)}</div>
+      <div class="mb-3"><strong>الحالة:</strong> <span class="status-badge status-${subscription.status}">${subscription.status}</span></div>
+      <div class="mb-3"><strong>رقم العملية:</strong> ${subscription.transaction_id || 'غير محدد'}</div>
+      <div class="mb-3"><strong>تاريخ الإنشاء:</strong> ${store.formatDate(subscription.created_at)}</div>
+      <div><strong>تاريخ التحديث:</strong> ${store.formatDate(subscription.updated_at)}</div>
     </div>
   `;
 

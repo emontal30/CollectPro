@@ -1,12 +1,12 @@
 <template>
-  <div id="app">
+  <div id="app" :class="appClasses">
     <OfflineBanner />
     <router-view />
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, onUnmounted, watch, computed, ref } from 'vue';
 import OfflineBanner from '@/components/ui/OfflineBanner.vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
@@ -23,6 +23,7 @@ const router = useRouter();
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const route = useRoute();
+const isMounted = ref(false);
 
 // Cleanup handlers
 let visibilityCleanup = null;
@@ -33,20 +34,8 @@ let onlineCleanup = null;
 let lastVisibilityCheck = 0;
 const VISIBILITY_CHECK_THROTTLE = 30000; // 30 seconds
 
-// Function to update body class based on route
-function updateBodyClass(routeName) {
-  // Remove all page-specific classes first
-  document.body.classList.remove(
-    'harvest-page', 
-    'archive-page', 
-    'dashboard-page', 
-    'counter-page', 
-    'subscriptions-page', 
-    'admin-page',
-    'my-subscription-page'
-  );
-  
-  // Add appropriate page class based on route
+// Reactive class binding for the main app container
+const appClasses = computed(() => {
   const pageClassMap = {
     'harvest': 'harvest-page',
     'archive': 'archive-page',
@@ -56,16 +45,12 @@ function updateBodyClass(routeName) {
     'admin': 'admin-page',
     'my-subscription': 'my-subscription-page'
   };
+  const pageClass = pageClassMap[route.name];
   
-  const pageClass = pageClassMap[routeName];
-  if (pageClass) {
-    document.body.classList.add(pageClass);
-  }
-}
-
-// Watch for route changes
-watch(() => route.name, (newName) => {
-  updateBodyClass(newName);
+  return {
+    [pageClass]: pageClass,
+    'loaded': isMounted.value
+  };
 });
 
 // Watch auth changes for diagnostics (no redirects here)
@@ -162,8 +147,6 @@ onMounted(() => {
     settingsStore.loadSettings();
   }
 
-  updateBodyClass(route.name);
-
   // Enhanced page visibility handler with session check (throttled)
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
@@ -196,7 +179,7 @@ onMounted(() => {
   window.addEventListener('online', handleOnline);
   onlineCleanup = () => window.removeEventListener('online', handleOnline);
 
-  document.body.classList.add('loaded');
+  isMounted.value = true;
   logger.info('✅ App initialization complete');
 });
 

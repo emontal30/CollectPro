@@ -1,19 +1,20 @@
-/* ====== متغيرات التصميم المركزية ====== */
+/* ====== VARIABLES (DESIGN TOKENS) ====== */
 /* المصدر الوحيد للقيم المشتركة في التطبيق */
 :root {
-  /* ====== الألوان الأساسية ====== */
+  /* ====== الألوان الأساسية (Primary Colors) ====== */
   --primary: #007965;
   --primary-dark: #005a4b;
   --primary-light: #00a085;
   --primary-rgb: 0, 121, 101;
-  
-  /* الألوان الوظيفية */
+
+  /* ====== الألوان الوظيفية (Functional Colors) ====== */
   --success: #27ae60;
   --warning: #f39c12;
   --danger: #e74c3c;
   --info: #3498db;
-  
-  /* درجات الرمادي */
+  --secondary: var(--warning); /* Compatibility alias */
+
+  /* ====== درجات الرمادي (Grayscales) ====== */
   --gray-100: #f8f9fa;
   --gray-200: #e9ecef;
   --gray-300: #dee2e6;
@@ -23,180 +24,63 @@
   --gray-700: #495057;
   --gray-800: #343a40;
   --gray-900: #212529;
-  
-  /* ألوان الخلفية */
+
+  /* ====== خلفيات وألوان خاصة (Backgrounds) ====== */
   --light-bg: var(--gray-100);
+  --content-bg: #f5f7fa;
+  --white: #ffffff;
   --highlight-td: #EEEEEE;
   --total-row-bg: #e8f5e8;
-  
-  /* ====== القياسات ====== */
+
+  /* ====== الخطوط (Typography) ====== */
+  --font-family-sans: 'Cairo', 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'Courier New', SFMono-Regular, monospace;
+  --base-font-size: 16px; /* Adjusted for better readability */
+
+  /* ====== الحدود والزوايا (Borders & Radius) ====== */
   --border-radius-sm: 4px;
   --border-radius: 8px;
   --border-radius-lg: 12px;
   --border-radius-xl: 16px;
-  
-  /* ====== الانتقالات ====== */
-  --transition: all 0.3s ease;
-  --transition-fast: all 0.15s ease;
-  --transition-slow: all 0.5s ease;
-  
-  /* ====== الهوامش والمسافات ====== */
+  --border-color: rgba(0, 121, 101, 0.1);
+
+  /* ====== المسافات (Spacing) ====== */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  
-  /* ====== البطاقات ====== */
-  --card-padding: var(--spacing-lg);
-  --card-padding-mobile: var(--spacing-md);
-  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  --card-shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --card-border: 1px solid rgba(var(--primary-rgb), 0.1);
-  
-  /* ====== الجداول ====== */
-  --table-border-color: var(--primary);
-  --table-header-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  --table-hover-shadow: 0 12px 35px rgba(0,0,0,0.1), 0 6px 15px rgba(0,0,0,0.08), 0 0 0 2px var(--primary);
-  --table-cell-padding: 12px 16px;
-  --table-row-hover: rgba(var(--primary-rgb), 0.03);
-  
-  /* ====== الوضع الليلي ====== */
-  --dark-bg: #0f0f0f;
-  --dark-surface: #1a1a1a;
-  --dark-surface-hover: #252525;
-  --dark-surface-light: #2a2a2a;
-  --dark-border: #333333;
-  --dark-text-primary: #ffffff;
-  --dark-text-secondary: #b0b0b0;
-  --dark-text-muted: #808080;
-  --dark-accent: var(--primary);
-  --dark-accent-hover: var(--primary-dark);
-  --dark-success: var(--success);
-  --dark-warning: var(--warning);
-  --dark-danger: var(--danger);
-  --dark-info: var(--info);
-  --dark-overlay: rgba(0, 0, 0, 0.6);
-  --dark-shadow: rgba(0, 0, 0, 0.3);
-  --dark-shadow-hover: rgba(0, 0, 0, 0.4);
-  
-  /* ====== الأزرار ====== */
-  --btn-padding-y: 0.5rem;
-  --btn-padding-x: 1rem;
-  --btn-border-radius: var(--border-radius);
-  --btn-transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  
-  /* ====== الخطوط ====== */
-  --font-family-sans: 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-family-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  
-  /* ====== الظلال ====== */
+
+  /* ====== الظلال (Shadows) ====== */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  
-  /* ====== الزووم ====== */
-  --zindex-dropdown: 1000;
-  --zindex-sticky: 1020;
-  --zindex-fixed: 1030;
-  --zindex-modal-backdrop: 1040;
-  --zindex-modal: 1050;
-  --zindex-popover: 1060;
-  --zindex-tooltip: 1070;
-  
-  /* ====== الروابط ====== */
-  --link-color: var(--primary);
-  --link-hover-color: var(--primary-dark);
-  --link-decoration: none;
-  --link-hover-decoration: underline;
-  
-  /* ====== النماذج ====== */
-  --input-bg: #fff;
-  --input-disabled-bg: #e9ecef;
-  --input-color: #495057;
-  --input-border-color: #ced4da;
-  --input-focus-border-color: #80bdff;
-  --input-focus-box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-  --input-placeholder-color: #6c757d;
-  --input-padding-y: 0.375rem;
-  --input-padding-x: 0.75rem;
-  --input-line-height: 1.5;
-  --input-border-radius: var(--border-radius);
-  
-  /* ====== التنبيهات ====== */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* ====== الانتقالات (Transitions) ====== */
+  --transition: all 0.3s ease;
+  --transition-fast: all 0.15s ease;
+
+  /* ====== الطبقات (Z-Index) ====== */
+  --z-header: 1000;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-toast: 11000;
+
+  /* ====== إعدادات الجداول (Table Config) ====== */
+  --table-header-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  --table-row-hover: rgba(var(--primary-rgb), 0.03);
+  --table-border-color: var(--primary);
+
+  /* ====== التنبيهات (Alerts) ====== */
   --alert-padding-y: 0.75rem;
   --alert-padding-x: 1.25rem;
-  --alert-margin-bottom: 1rem;
   --alert-border-radius: var(--border-radius);
-  --alert-link-font-weight: 700;
-  
-  /* ====== الشعار ====== */
-  --logo-width: 150px;
-  --logo-height: 50px;
-  
-  /* ====== الشريط الجانبي ====== */
-  --sidebar-width: 250px;
-  --sidebar-bg: #fff;
-  --sidebar-color: #333;
-  --sidebar-hover-bg: rgba(0, 0, 0, 0.05);
-  --sidebar-active-bg: rgba(0, 121, 101, 0.1);
-  --sidebar-active-color: var(--primary);
-  --sidebar-icon-size: 1.25rem;
-  
-  /* ====== شريط العنوان العلوي ====== */
+
+  /* ====== تخطيط الصفحة (Layout Dimensions) ====== */
   --header-height: 60px;
-  --header-bg: #fff;
-  --header-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  
-  /* ====== المحتوى الرئيسي ====== */
-  --content-padding: var(--spacing-lg);
-  --content-bg: #f5f7fa;
-  
-  /* ====== التذييل ====== */
   --footer-height: 60px;
-  --footer-bg: #fff;
-  --footer-color: #6c757d;
-  --footer-border-top: 1px solid rgba(0, 0, 0, 0.05);
-  
-  /* ====== الأيقونات ====== */
-  --icon-size-sm: 1rem;
-  --icon-size: 1.25rem;
-  --icon-size-lg: 1.5rem;
-  --icon-size-xl: 2rem;
-  
-  /* ====== الرسوم المتحركة ====== */
-  --animation-duration: 0.3s;
-  --animation-timing: ease;
-  
-  /* ====== الطباعة ====== */
-  --print-font-size: 12pt;
-  --print-line-height: 1.5;
-  --print-color: #000;
-  --print-bg: #fff;
-  --print-link-color: #0000ee;
-  
-  /* ====== التوافق مع الإصدارات القديمة ====== */
-  --secondary: var(--warning);
-  --highlight-green: var(--success);
-  --dark-accent-hover-alias: var(--dark-accent-hover);
-
-  /* Map legacy main variables to dark equivalents where code expects them */
-  /* body.dark will override some variables (in dark-mode CSS) using these primitives */
-
-  /* -- Breakpoints */
-  --bp-mobile: 480px;
-  --bp-tablet: 768px;
-  --bp-desktop: 1024px;
-
-  /* -- Z-index scale */
-  --z-modal: 10000;
-  --z-toast: 11000;
-  --z-header: 1000;
-  --z-sidebar: 900;
-  /* -- Color ramps (darken variants used in gradients) */
-  --primary-dark: #005a4b;
-  --secondary-dark: #d68910;
+  --sidebar-width: 250px;
 }

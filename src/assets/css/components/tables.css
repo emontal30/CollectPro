@@ -1,0 +1,149 @@
+/* ====== TABLES COMPONENT ====== */
+
+/* 1. Generic Table Wrapper */
+.table-wrapper, .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 20px 0;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+/* 2. Base Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  min-width: 600px; /* Prevent squashing on mobile */
+  table-layout: fixed; /* Default to fixed */
+}
+
+/* 3. Modern & Legacy Table Classes Merged */
+.modern-table, .collections-table, .archive-table, .counter-table {
+  width: 100%;
+  text-align: center;
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border: 2px solid var(--primary);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* 4. Table Header (Thead/Th) */
+thead th, .modern-table th, .collections-table th {
+  background: var(--table-header-bg);
+  color: white;
+  padding: 18px 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  font-family: "Noto Kufi Arabic", var(--font-family-sans);
+}
+
+/* 5. Table Cells (Td) */
+tbody td, .modern-table td, .collections-table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(0, 121, 101, 0.1);
+  border-right: 1px solid rgba(0, 121, 101, 0.1);
+  vertical-align: middle;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+  height: 55px; /* Unified height */
+}
+
+tbody tr:hover {
+  background-color: var(--table-row-hover);
+}
+
+/* Last child borders removal */
+th:last-child, td:last-child { border-right: none !important; }
+tr:last-child td { border-bottom: none !important; }
+
+/* 6. Specific Column Styles (Harvest/Archive) */
+/* Shop Column - Always RTL */
+.shop, td.shop, th.shop {
+  width: 180px !important;
+  min-width: 180px;
+  text-align: right !important;
+  direction: rtl !important;
+  font-weight: 700 !important;
+  padding-right: 12px !important;
+}
+
+/* Date Column */
+.date-cell, .date-header {
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+/* 7. Total Row (Sticky Bottom) */
+.total-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: #00897B; /* Fallback */
+  background: var(--primary-light);
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.total-row td {
+  background: transparent !important;
+  border-top: 2px solid rgba(255,255,255,0.3) !important;
+  border-right: 1px solid rgba(0,0,0,0.1) !important;
+  font-family: var(--font-family-sans);
+  font-size: 1.1rem;
+}
+
+/* 8. Net Column Coloring & Borders */
+td.net.positive { color: #007bff; font-weight: bold; }
+td.net.negative { color: #dc3545; font-weight: bold; }
+td.net.zero { color: #28a745; font-weight: bold; }
+
+/* Professional Negative Net Border System */
+.negative-net-border {
+  position: relative;
+}
+
+.negative-net-border::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 5px;
+  background: var(--danger);
+  border-radius: 0 3px 3px 0;
+  z-index: 5;
+}
+
+.total-row-negative {
+  background: var(--primary) !important; /* Base */
+  position: relative;
+}
+
+.total-row-negative::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  background: #e53935;
+  z-index: 15;
+}
+
+/* 9. Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-table td, .modern-table th {
+    padding: 8px 4px;
+    font-size: 0.85rem;
+  }
+  .shop {
+    width: 140px !important;
+    min-width: 140px;
+  }
+}

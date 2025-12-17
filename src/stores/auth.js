@@ -94,14 +94,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
     keysToRemove.forEach(key => localStorage.removeItem(key))
 
-    // 4. Clear Cookies (Google related)
-    document.cookie.split(";").forEach(cookie => {
-      const name = cookie.split("=")[0].trim()
-      if (/google|g_state|oauth/i.test(name)) {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=${window.location.hostname};`
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.${window.location.hostname};`
-      }
-    })
+    // 4. Cookie clearing is now handled by supabase.auth.signOut()
+    logger.info('Cookie cleanup is delegated to Supabase signOut.');
   }
 
   // --- Actions ---

@@ -57,7 +57,7 @@
 
           <div class="footer-info">
             <p> <span id="year">{{ currentYear }}</span> جميع الحقوق محفوظة.</p>
-            <p>تم التصميم والتطوير بواسطة | <strong style="color:#ff6600;">أيمن حافظ</strong> v2.8.4</p>
+            <p>تم التصميم والتطوير بواسطة | <strong class="text-primary">أيمن حافظ</strong> v2.8.4</p>
           </div>
 
         </div>

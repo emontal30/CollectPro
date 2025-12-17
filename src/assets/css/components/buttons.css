@@ -1,0 +1,166 @@
+/* ====== BUTTONS COMPONENT ====== */
+
+/* 1. Base Button Styles */
+.btn, .btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-family: var(--font-family-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: var(--transition);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* 2. Primary Button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 121, 101, 0.4);
+}
+
+/* 3. Secondary Button */
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+/* 4. Danger/Delete Button */
+.btn-danger, .btn--delete-archive {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled), .btn--delete-archive:hover {
+  background: linear-gradient(135deg, #c82333, #dc3545);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+/* 5. Dashboard Action Buttons (Migrated from unified) */
+.btn-dashboard {
+  flex-direction: column;
+  min-height: 50px;
+  min-width: 150px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  margin: 8px;
+  box-shadow: 0 4px 15px rgba(0, 121, 101, 0.3);
+}
+
+.btn-dashboard:hover {
+  background: linear-gradient(135deg, #f39c12, #d68910);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
+}
+
+.btn-dashboard i {
+  font-size: 1.4em;
+  margin-bottom: 4px;
+}
+
+/* Dashboard Specific Icons Colors */
+#pasteBtn i { color: #90EE90 !important; }
+#saveGoBtn i { color: #FFA500 !important; }
+#goToArchiveBtn i { color: #D3D3D3 !important; }
+#clearBtn i { color: #DC143C !important; }
+
+/* 6. Form/Submit Buttons */
+.submit-btn, .choose-plan-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.submit-btn:hover:not(:disabled), .choose-plan-btn:hover {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);
+}
+
+/* 7. Icon Only Buttons */
+.btn--icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+}
+
+.btn--icon:hover {
+  background: rgba(0, 121, 101, 0.08);
+}
+
+.btn-settings-table {
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 121, 101, 0.1);
+  color: var(--primary);
+  font-size: 18px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-settings-table:hover {
+  background: rgba(0, 121, 101, 0.2);
+}
+
+/* 8. Fixed Buttons (Sticky) */
+.btn--clear-harvest {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  border-radius: 0;
+}
+
+/* 9. Shared Modal Buttons */
+.shared-modal-btn {
+  min-width: 80px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-primary, .btn-dashboard {
+    width: 100%;
+    margin: 4px 0;
+  }
+  .buttons-row {
+    flex-direction: column;
+  }
+}

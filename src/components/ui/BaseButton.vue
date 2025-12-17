@@ -38,24 +38,30 @@ defineEmits(['click']);
 </script>
 
 <style scoped>
+@import url('../../../assets/css/variables.css');
+
 .btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 18px 24px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  font-family: 'Cairo', sans-serif;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  font-family: var(--font-family-sans);
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
   text-decoration: none;
-  min-height: 60px;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  border-radius: var(--btn-border-radius);
+  transition: var(--btn-transition);
+  gap: 10px;
+  min-height: 50px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0,121,101,0.3);
 }
 
 .btn::before {
@@ -65,7 +71,7 @@ defineEmits(['click']);
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   transition: left 0.5s;
 }
 
@@ -73,73 +79,74 @@ defineEmits(['click']);
   left: 100%;
 }
 
-.btn:disabled {
-  opacity: 0.6;
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.65;
   cursor: not-allowed;
-  transform: none !important;
+  pointer-events: none;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  border-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 121, 101, 0.3);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
   color: white;
+  background: linear-gradient(135deg, var(--success), #1e7e34);
+  border-color: var(--success);
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #1e7e34, var(--success));
+  border-color: #1e7e34;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
   color: white;
+  background: linear-gradient(135deg, var(--gray-600), var(--gray-700));
+  border-color: var(--gray-600);
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, var(--gray-700), var(--gray-600));
+  border-color: var(--gray-700);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
+  background: linear-gradient(135deg, var(--danger), #c82333);
+  border-color: var(--danger);
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-}
-
-.btn-success:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
-  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #545b62 0%, #495057 100%);
-  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
-  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+.btn-danger:hover {
+  background: linear-gradient(135deg, #c82333, var(--danger));
+  border-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
 }
 
 .btn i {
-  font-size: 1.2rem;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
+  font-size: 1.25rem;
+  color: inherit;
 }
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .btn {
-    padding: 15px 20px;
+    padding: 0.75rem 1.5rem;
     font-size: 1rem;
   }
 }

@@ -9,7 +9,7 @@
             <small class="cv-sub">اختر الأعمدة التي تريد عرضها في الجدول</small>
           </div>
         </div>
-        <button class="cv-close" @click="close" aria-label="إغلاق">✕</button>
+        <button class="cv-close" aria-label="إغلاق" @click="close">✕</button>
       </header>
 
       <div class="cv-body">
@@ -23,7 +23,7 @@
         <ul class="cv-list">
           <li v-for="col in columns" :key="col.key" class="cv-item">
             <label class="cv-checkbox">
-              <input type="checkbox" v-model="visibleMap[col.key]" />
+              <input v-model="visibleMap[col.key]" type="checkbox" />
               <span class="checkmark"></span>
               <span class="cv-label">{{ col.label }}</span>
             </label>

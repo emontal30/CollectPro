@@ -201,7 +201,7 @@ const activateUserSubscription = async (user) => {
     text: `هل أنت متأكد من تفعيل اشتراك لمدة ${days} يوم للمستخدم ${user.full_name || user.email}؟`,
     icon: 'question',
     confirmButtonText: 'تفعيل',
-    confirmButtonColor: '#007965'
+    confirmButtonColor: 'var(--primary, #007965)'
   });
 
   if (!result.isConfirmed) return;
@@ -226,7 +226,7 @@ const handleBulkActivate = async () => {
     text: `سيتم تفعيل الاشتراك لمدة ${bulkDays.value} يوم لعدد ${checkedUserIds.value.length} مستخدم. هل أنت متأكد؟`,
     icon: 'question',
     confirmButtonText: 'تفعيل الجميع',
-    confirmButtonColor: '#007965'
+    confirmButtonColor: 'var(--primary, #007965)'
   });
 
   if (!result.isConfirmed) return;
