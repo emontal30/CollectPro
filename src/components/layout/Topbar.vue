@@ -88,6 +88,18 @@ const toggleSidebar = () => {
   gap: 10px;
 }
 
+.menu-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Dark mode toggle button */
 .dark-mode-toggle {
   background: none;
@@ -113,9 +125,6 @@ const toggleSidebar = () => {
 .dark-mode-toggle:active {
   transform: scale(0.95);
 }
-
-/* Menu toggle styling is now provided by unified component CSS to avoid duplication.
-   Left intentionally blank here to avoid scoped overrides. */
 
 /* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* Fix content overlap with fixed topbar remains global (body padding set elsewhere) */
@@ -143,8 +152,6 @@ const toggleSidebar = () => {
   .app-title {
     font-size: 1.2rem;
   }
-  
-  /* menu-toggle sizing handled in unified CSS */
 }
 
 @media (max-width: 480px) {
@@ -159,8 +166,6 @@ const toggleSidebar = () => {
   .app-title {
     font-size: 1rem;
   }
-  
-  /* menu-toggle sizing handled in unified CSS */
   
   .logo-section {
     gap: 8px;
@@ -179,7 +184,5 @@ const toggleSidebar = () => {
   .app-title {
     font-size: 0.9rem;
   }
-  
-  /* menu-toggle sizing handled in unified CSS */
 }
 </style>

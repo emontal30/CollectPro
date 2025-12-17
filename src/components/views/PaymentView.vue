@@ -151,5 +151,42 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* All styles imported from _unified-components.css */
+.payment-option {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid var(--gray-300);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.payment-option:hover, .payment-option.active {
+  border-color: var(--primary);
+  background: rgba(0, 121, 101, 0.02);
+}
+
+.payment-option.active::after {
+  content: "✔"; /* Checkmark */
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.payment-icon {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  margin-left: 15px;
+}
+
+.v-cash { background: #e60012; }
+.instapay { background: #1e40af; }
 </style>

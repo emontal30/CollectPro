@@ -1,16 +1,19 @@
-import { authService } from './authService.js'
-import logger from '@/utils/logger.js'
+import { apiInterceptor } from './api.js';
+import { authService } from './authService.js';
+import logger from '@/utils/logger.js';
 
 export const archiveService = {
   async getAvailableDates(userId) {
     try {
       logger.info('🔍 Fetching available archive dates for user:', userId);
       
-      const { data, error } = await authService.supabase
-        .from('archive_data')
-        .select('archive_date')
-        .eq('user_id', userId)
-        .order('archive_date', { ascending: false });
+      const { data, error } = await apiInterceptor(
+        authService.supabase
+          .from('archive_data')
+          .select('archive_date')
+          .eq('user_id', userId)
+          .order('archive_date', { ascending: false })
+      );
 
       if (error) {
         logger.error('❌ Error fetching archive dates:', error);
@@ -27,35 +30,41 @@ export const archiveService = {
   },
 
   async getArchiveByDate(userId, date) {
-    const { data, error } = await authService.supabase
-      .from('archive_data')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('archive_date', date)
+    const { data, error } = await apiInterceptor(
+      authService.supabase
+        .from('archive_data')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('archive_date', date)
+    );
 
-    return { data, error }
+    return { data, error };
   },
 
   async searchArchive(userId, query) {
-    const { data, error } = await authService.supabase
-      .from('archive_data')
-      .select('*')
-      .eq('user_id', userId)
-      .or(`shop.ilike.%${query}%,code.ilike.%${query}%`)
-      .order('archive_date', { ascending: false })
+    const { data, error } = await apiInterceptor(
+      authService.supabase
+        .from('archive_data')
+        .select('*')
+        .eq('user_id', userId)
+        .or(`shop.ilike.%${query}%,code.ilike.%${query}%`)
+        .order('archive_date', { ascending: false })
+    );
 
-    return { data, error }
+    return { data, error };
   },
 
   async deleteArchiveByDate(userId, date) {
-    const { error } = await authService.supabase
-      .from('archive_data')
-      .delete()
-      .eq('user_id', userId)
-      .eq('archive_date', date)
+    const { error } = await apiInterceptor(
+      authService.supabase
+        .from('archive_data')
+        .delete()
+        .eq('user_id', userId)
+        .eq('archive_date', date)
+    );
 
-    return { error }
+    return { error };
   }
-}
+};
 
-export default archiveService
+export default archiveService;

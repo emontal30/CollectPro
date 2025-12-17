@@ -357,5 +357,19 @@ const totalColumns = computed(() => {
 });
 </script>
 <style scoped>
-/* All styles imported from _unified-components.css */
+.archive-page {
+  max-width: 1200px;
+}
+
+.archive-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.9));
+  border-radius: 15px;
+  border: 2px solid rgba(0,121,101,0.1);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
 </style>

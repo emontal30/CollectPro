@@ -467,5 +467,57 @@ const archiveToday = async () => {
 };
 </script>
 <style scoped>
-/* All styles imported from _unified-components.css */
+.harvest-page { 
+  max-width: 800px; 
+}
+
+.date-display {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(0, 121, 101, 0.1), rgba(0, 121, 101, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(0, 121, 101, 0.2);
+}
+
+.date-value {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.summary-container {
+  margin: 30px 0;
+  padding: 25px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0, 121, 101, 0.1);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 15px;
+  background: linear-gradient(45deg, rgba(0,121,101,0.05), rgba(243,156,18,0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(0,121,101,0.1);
+}
+
+.summary-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--gray-900);
+}
 </style>

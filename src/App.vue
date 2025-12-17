@@ -73,8 +73,8 @@ onMounted(async () => {
     activityCleanup = sessionManager.setupActivityListeners();
 
     // تهيئة المخازن الأخرى (Non-blocking)
-    if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
-    if (settingsStore?.loadSettings) settingsStore.loadSettings();
+    // Removed eager loading of UI and Settings stores.
+    // These are now loaded in MainLayout.vue after authentication.
 
     // محاولة تهيئة المصادقة (بدون تعطيل الواجهة)
     authStore.initializeAuth().catch(err => {

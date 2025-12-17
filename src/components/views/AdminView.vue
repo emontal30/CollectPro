@@ -541,7 +541,76 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* All styles imported from _unified-components.css */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover { 
+  transform: translateY(-5px); 
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(0, 121, 101, 0.1);
+  color: var(--primary);
+}
+
+.chart-container {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fffe 0%, #e6f7f5 100%);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 121, 101, 0.08);
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.simple-chart {
+  display: flex;
+  align-items: flex-end;
+  height: 200px;
+  gap: 20px;
+  width: 100%;
+}
+
+.chart-bar {
+  flex: 1;
+  background: rgba(0, 121, 101, 0.1);
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  height: 100%;
+}
+
+.bar-fill {
+  background: linear-gradient(180deg, var(--primary-light), var(--primary));
+  border-radius: 8px 8px 0 0;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  transition: height 1s ease;
+}
 
 /* Center all table headers */
 th {

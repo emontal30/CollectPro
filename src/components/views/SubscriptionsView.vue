@@ -138,5 +138,60 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Minimal scoped styles - all other styles imported from _unified-components.css */
+.subscriptions-page {
+  max-width: 768px;
+}
+
+.plan-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  overflow: hidden;
+  width: 100%;
+  max-width: 350px;
+  transition: var(--transition);
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+  margin: 10px;
+}
+
+.plan-card:hover {
+  transform: translateY(-10px);
+}
+
+.plan-card.featured {
+  border: 2px solid var(--success);
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.plan-header {
+  padding: 30px 20px;
+  text-align: center;
+  background: var(--gray-100);
+}
+
+.price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.plan-features ul {
+  list-style: none;
+  padding: 20px;
+  margin: 0;
+}
+
+.plan-features li {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-features li i { 
+  color: var(--success); 
+}
 </style>

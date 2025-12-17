@@ -293,4 +293,54 @@ onMounted(() => {
   margin: 0 auto;
   padding: 20px;
 }
+
+.subscription-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  margin-bottom: 30px;
+  border: 1px solid rgba(0, 121, 101, 0.1);
+  transition: var(--transition);
+}
+
+.subscription-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.subscription-header {
+  padding: 25px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subscription-details {
+  padding: 20px;
+  background: #fafafa;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.detail-value {
+  font-weight: 600;
+  background: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Days Remaining Indicators */
+.low-days { background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white; animation: pulse 2s infinite; }
+.medium-days { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: white; }
+.high-days { background: linear-gradient(135deg, #10b981, #059669) !important; color: white; }
+
 </style>

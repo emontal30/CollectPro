@@ -28,21 +28,31 @@
 </template>
 
 <script setup>
-import { computed, provide } from 'vue'
-import { useRoute } from 'vue-router'
-import Topbar from '@/components/layout/Topbar.vue'
-import Sidebar from '@/components/layout/Sidebar.vue'
-import Footer from '@/components/layout/Footer.vue'
-import NotificationContainer from '@/components/ui/NotificationContainer.vue'
-import { useNotifications } from '@/composables/useNotifications'
+import { computed, provide, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import Topbar from '@/components/layout/Topbar.vue';
+import Sidebar from '@/components/layout/Sidebar.vue';
+import Footer from '@/components/layout/Footer.vue';
+import NotificationContainer from '@/components/ui/NotificationContainer.vue';
+import { useNotifications } from '@/composables/useNotifications';
+import { useUIStore } from '@/stores/ui';
+import { useSettingsStore } from '@/stores/settings';
 
-const route = useRoute()
+const route = useRoute();
+const uiStore = useUIStore();
+const settingsStore = useSettingsStore();
+
+// Initialize UI and Settings stores when the main layout is mounted
+onMounted(() => {
+  if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
+  if (settingsStore?.loadSettings) settingsStore.loadSettings();
+});
 
 // نظام الإشعارات الموحد
-const notifications = useNotifications()
+const notifications = useNotifications();
 
 // توفير نظام الإشعارات للمكونات الفرعية
-provide('notifications', notifications)
+provide('notifications', notifications);
 
 // Dynamic page titles
 const pageTitle = computed(() => {
@@ -54,9 +64,9 @@ const pageTitle = computed(() => {
     '/subscriptions': 'الاشتراكات 💳',
     '/my-subscription': 'اشتراكي 🛡️',
     '/admin': 'لوحة التحكم 👑'
-  }
-  return titles[route.path] || 'CollectPro'
-})
+  };
+  return titles[route.path] || 'CollectPro';
+});
 </script>
 
 <style scoped>

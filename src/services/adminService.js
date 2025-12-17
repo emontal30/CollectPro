@@ -1,15 +1,16 @@
-import { authService } from './authService.js'
-import logger from '@/utils/logger.js'
+import { apiInterceptor } from './api.js';
+import { authService } from './authService.js';
+import logger from '@/utils/logger.js';
 
 export const adminService = {
   async getStats() {
     const [usersRes, pendingRes, activeRes, cancelledRes, expiredRes, revenueRes] = await Promise.all([
-      authService.supabase.from('users').select('*', { count: 'exact', head: true }),
-      authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled'),
-      authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'),
-      authService.supabase.rpc('calculate_total_revenue')
+      apiInterceptor(authService.supabase.from('users').select('*', { count: 'exact', head: true })),
+      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active')),
+      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
+      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
+      apiInterceptor(authService.supabase.rpc('calculate_total_revenue'))
     ]);
 
     return {
@@ -23,10 +24,12 @@ export const adminService = {
   },
 
   async getMonthlyChartData() {
-    const { data } = await authService.supabase
-      .from('subscriptions')
-      .select('created_at')
-      .order('created_at', { ascending: true });
+    const { data } = await apiInterceptor(
+      authService.supabase
+        .from('subscriptions')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+    );
 
     if (!data) return { labels: [], values: [] };
 
@@ -57,15 +60,17 @@ export const adminService = {
   },
 
   async getPendingSubscriptions() {
-    const { data } = await authService.supabase
-      .from('subscriptions')
-      .select(`
+    const { data } = await apiInterceptor(
+      authService.supabase
+        .from('subscriptions')
+        .select(`
         *,
         users:user_id (full_name, email),
         subscription_plans:plan_id (name, name_ar, price_egp)
       `)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+    );
 
     return data || [];
   },
@@ -95,25 +100,29 @@ export const adminService = {
       query = query.lte('end_date', sevenDaysFromNow);
     }
 
-    const { data } = await query;
+    const { data } = await apiInterceptor(query);
     return data || [];
   },
 
   async getUsers() {
-    const { data, error } = await authService.supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false, nullsFirst: false });
+    const { data, error } = await apiInterceptor(
+      authService.supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false, nullsFirst: false })
+    );
 
     if (error) {
       logger.error('Error fetching users:', error);
       return [];
     }
 
-    const { data: activeSubs, error: subsError } = await authService.supabase
-      .from('subscriptions')
-      .select('user_id')
-      .eq('status', 'active');
+    const { data: activeSubs, error: subsError } = await apiInterceptor(
+      authService.supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('status', 'active')
+    );
 
     if (subsError) {
       logger.error('Error fetching active subscriptions:', subsError);
@@ -132,8 +141,10 @@ export const adminService = {
 
     switch(action) {
       case 'approve':
-        const { data: sub } = await authService.supabase.from('subscriptions').select('plan_id').eq('id', id).single();
-        const { data: plan } = await authService.supabase.from('subscription_plans').select('duration_months').eq('id', sub.plan_id).single();
+        const { data: sub } = await apiInterceptor(authService.supabase.from('subscriptions').select('plan_id').eq('id', id).single());
+        if (!sub) return { success: false, error: 'Subscription not found' };
+
+        const { data: plan } = await apiInterceptor(authService.supabase.from('subscription_plans').select('duration_months').eq('id', sub.plan_id).single());
 
         const start = new Date();
         const end = new Date(start);
@@ -153,9 +164,9 @@ export const adminService = {
     }
 
     if (action === 'reject' || action === 'delete') {
-      await authService.supabase.from('subscriptions').delete().eq('id', id);
+      await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('id', id));
     } else {
-      await authService.supabase.from('subscriptions').update(updateData).eq('id', id);
+      await apiInterceptor(authService.supabase.from('subscriptions').update(updateData).eq('id', id));
     }
 
     return { success: true };
@@ -166,9 +177,9 @@ export const adminService = {
     const end = new Date(start);
     end.setDate(start.getDate() + Number(days));
 
-    await authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
+    await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending'));
 
-    const { error } = await authService.supabase.from('subscriptions').insert({
+    const { error } = await apiInterceptor(authService.supabase.from('subscriptions').insert({
       user_id: userId,
       plan_name: 'اشتراك يدوي',
       plan_period: `${days} يوم`,
@@ -177,10 +188,10 @@ export const adminService = {
       start_date: start,
       end_date: end,
       transaction_id: `MANUAL-${Date.now()}`
-    });
+    }));
 
     return { error };
   }
 }
 
-export default adminService
+export default adminService;
