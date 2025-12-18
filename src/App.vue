@@ -7,21 +7,15 @@
 
 <script setup>
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router'; // Router is used in template/computed
 import OfflineBanner from '@/components/ui/OfflineBanner.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useSessionManager } from '@/composables/useSessionManager';
-import { useUIStore } from '@/stores/ui';
-import { useSettingsStore } from '@/stores/settings';
-import { processPendingSyncQueue } from '@/services/archiveSyncQueue';
 import logger from '@/utils/logger.js';
 
 // --- Stores & Composables ---
 const authStore = useAuthStore();
 const sessionManager = useSessionManager();
-const uiStore = useUIStore();
-const settingsStore = useSettingsStore();
-const router = useRouter();
 const route = useRoute();
 
 // --- Local State ---
@@ -29,14 +23,13 @@ const isLoaded = ref(false);
 
 // --- Cleanup References ---
 let visibilityCleanup = null;
-let activityCleanup = null;
 let onlineCleanup = null;
+let activityCleanup = null;
 
-// --- Computed: Page Classes (Reactive Logic) ---
+// --- Computed: Page Classes ---
 const pageClasses = computed(() => {
   const currentRoute = route.name;
   
-  // خريطة الكلاسات الخاصة بكل صفحة للحفاظ على التنسيق
   const classMap = {
     'Harvest': 'harvest-page',
     'Archive': 'archive-page',
@@ -51,15 +44,8 @@ const pageClasses = computed(() => {
 
   return {
     [specificClass]: !!specificClass,
-    'loaded': isLoaded.value // بديل لتلاعب body.classList.add('loaded')
+    'loaded': isLoaded.value
   };
-});
-
-// --- Diagnostics ---
-watch(() => authStore.user, (newUser, oldUser) => {
-  if (newUser !== oldUser) {
-    logger.debug('👤 Auth State Updated:', { hasUser: !!newUser });
-  }
 });
 
 // --- Lifecycle Hooks ---
@@ -67,29 +53,22 @@ onMounted(async () => {
   logger.info('🚀 App initializing...');
 
   try {
-    // 1. Initialize Stores & Session
-    // نقوم بتهيئة الجلسة أولاً لضمان توفر المعلومات الأساسية
-    sessionManager.initializeSession();
+    // 1. Setup Session Listeners (Only listeners, no init check here)
+    // التغيير هنا: قمنا بإزالة initializeSession واستبدالها بإعداد المستمعين فقط
     activityCleanup = sessionManager.setupActivityListeners();
 
-    // تهيئة المخازن الأخرى (Non-blocking)
-    // Removed eager loading of UI and Settings stores.
-    // These are now loaded in MainLayout.vue after authentication.
+    // 2. Initialize Auth (This handles the session validity check now)
+    // ننتظر المصادقة لضمان عدم حدوث تعارض
+    await authStore.initializeAuth();
 
-    // محاولة تهيئة المصادقة (بدون تعطيل الواجهة)
-    authStore.initializeAuth().catch(err => {
-      logger.warn('⚠️ Auth init background warning:', err.message);
-    });
-
-    // 2. Setup Event Listeners
+    // 3. Setup Handlers
     setupVisibilityHandler();
     setupOnlineHandler();
 
-    // 3. Mark App as Loaded (Trigger CSS Transitions)
-    // نستخدم setTimeout صغير لضمان تطبيق الأنيميشن بعد الرسم الأولي
+    // 4. Mark App as Loaded
     setTimeout(() => {
       isLoaded.value = true;
-      logger.info('✅ App fully mounted and loaded');
+      logger.info('✅ Application Mounted Successfully');
     }, 100);
 
   } catch (error) {
@@ -100,13 +79,11 @@ onMounted(async () => {
 onUnmounted(() => {
   logger.info('🧹 App cleaning up...');
   
-  // إزالة جميع المستمعين لتجنب تسريب الذاكرة
   if (visibilityCleanup) visibilityCleanup();
   if (onlineCleanup) onlineCleanup();
   if (activityCleanup) activityCleanup();
   
-  // تنظيف إدارة الجلسة
-  sessionManager.cleanup();
+  sessionManager.clearLocalSession(); // Optional: clears strictly on destroy if needed
 });
 
 // --- Helper Functions ---
@@ -116,7 +93,7 @@ function setupVisibilityHandler() {
     if (document.visibilityState === 'visible') {
       sessionManager.updateLastActivity();
       
-      // تحقق خفيف من التوكن عند العودة للتطبيق إذا لم يكن هناك مستخدم
+      // Re-check user if returning to app
       if (!authStore.user && !authStore.isLoading) {
         authStore.getUser().catch(() => {});
       }
@@ -129,8 +106,8 @@ function setupVisibilityHandler() {
 
 function setupOnlineHandler() {
   const handleOnline = () => {
-    logger.info('🌐 Connection restored — syncing...');
-    processPendingSyncQueue().catch(err => logger.error('Sync Error:', err));
+    logger.info('🌐 Connection restored');
+    // Here we will add sync logic later (Phase 3)
   };
 
   window.addEventListener('online', handleOnline);
@@ -139,7 +116,5 @@ function setupOnlineHandler() {
 </script>
 
 <style>
-/* Global styles are managed via assets/css imports in main.js.
-  No local styles needed here to preserve the unified system.
-*/
+/* Global styles managed in assets/css */
 </style>

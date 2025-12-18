@@ -14,8 +14,13 @@
           اختر التاريخ:
           <select v-model="store.selectedDate" class="archive-select" @change="handleDateChange">
             <option value="">-- اختر تاريخ --</option>
-            <option v-for="date in store.availableDates" :key="date" :value="date">
-              {{ date }}
+            <option 
+              v-for="dateItem in store.availableDates" 
+              :key="dateItem.value" 
+              :value="dateItem.value"
+              :class="{ 'cloud-date': dateItem.source === 'cloud' }"
+            >
+              {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
             </option>
           </select>
         </label>
@@ -25,11 +30,10 @@
         <div class="search-input-wrapper">
           <i class="fas fa-search control-icon"></i>
           <input
-            v-model="store.searchQuery"
+            v-model="searchQuery"
             type="text"
             placeholder="ابحث في المحل أو الكود"
             class="search-input"
-            @input="handleSearch"
           />
         </div>
         <button class="btn-settings-table" title="إعدادات الأعمدة" @click="showColumnSettings = true">
@@ -58,8 +62,8 @@
             </td>
           </tr>
 
-          <tr v-for="(row, index) in store.rows" :key="index">
-            <td class="date-cell">{{ row.date }}</td>
+          <tr v-for="(row, index) in filteredRows" :key="index">
+            <td class="date-cell">{{ store.selectedDate }}</td>
             <td v-if="visibleColumns.shop" class="shop">{{ row.shop }}</td>
             <td v-if="visibleColumns.code" class="code">{{ row.code }}</td>
             <td v-if="visibleColumns.amount" class="amount">{{ store.formatNumber(row.amount) }}</td>
@@ -72,20 +76,22 @@
             </td>
           </tr>
 
-          <tr v-if="!store.isLoading && store.rows.length === 0">
-            <td :colspan="totalColumns" class="no-data-row">لا توجد بيانات لعرضها</td>
+          <tr v-if="!store.isLoading && filteredRows.length === 0">
+            <td :colspan="totalColumns" class="no-data-row">
+              {{ store.rows.length === 0 ? 'لا توجد بيانات لهذا التاريخ' : 'لا توجد نتائج مطابقة للبحث' }}
+            </td>
           </tr>
 
-          <tr v-if="store.rows.length > 0" class="total-row">
+          <tr v-if="filteredRows.length > 0" class="total-row">
             <td class="total-label">الإجمالي</td>
             <td v-if="visibleColumns.shop"></td>
             <td v-if="visibleColumns.code"></td>
-            <td v-if="visibleColumns.amount" class="amount">{{ store.formatNumber(store.totals.amount) }}</td>
-            <td v-if="visibleColumns.extra" class="extra">{{ store.formatNumber(store.totals.extra) }}</td>
-            <td class="collector">{{ store.formatNumber(store.totals.collector) }}</td>
-            <td class="net numeric" :class="getNetClass(store.totals.net)">
-              {{ store.formatNumber(store.totals.net) }}
-              <i :class="getNetIcon(store.totals.net)" class="net-icon"></i>
+            <td v-if="visibleColumns.amount" class="amount">{{ store.formatNumber(filteredTotals.amount) }}</td>
+            <td v-if="visibleColumns.extra" class="extra">{{ store.formatNumber(filteredTotals.extra) }}</td>
+            <td class="collector">{{ store.formatNumber(filteredTotals.collector) }}</td>
+            <td class="net numeric" :class="getNetClass(filteredTotals.net)">
+              {{ store.formatNumber(filteredTotals.net) }}
+              <i :class="getNetIcon(filteredTotals.net)" class="net-icon"></i>
             </td>
           </tr>
         </tbody>
@@ -101,58 +107,27 @@
       <button
         class="btn btn--delete-archive"
         :disabled="!store.selectedDate"
-        @click="store.deleteCurrentArchive"
+        @click="handleDelete"
       >
         <i class="fas fa-trash-alt"></i>
         <span>حذف الأرشيف الحالي</span>
       </button>
     </div>
 
-    <!-- Modal إعدادات الأعمدة -->
     <BaseModal
       :show="showColumnSettings"
       title="إعدادات الأعمدة"
       @close="closeColumnSettings"
     >
       <div class="column-settings">
-        <div class="column-option">
+        <div class="column-option" v-for="(label, key) in { shop: '🏪 المحل', code: '🔢 الكود', amount: '💵 مبلغ التحويل', extra: '📌 أخرى' }" :key="key">
           <label>
             <input
-              v-model="visibleColumns.shop"
+              v-model="visibleColumns[key]"
               type="checkbox"
               @change="saveColumnSettings"
             />
-            🏪 المحل
-          </label>
-        </div>
-        <div class="column-option">
-          <label>
-            <input
-              v-model="visibleColumns.code"
-              type="checkbox"
-              @change="saveColumnSettings"
-            />
-            🔢 الكود
-          </label>
-        </div>
-        <div class="column-option">
-          <label>
-            <input
-              v-model="visibleColumns.amount"
-              type="checkbox"
-              @change="saveColumnSettings"
-            />
-            💵 مبلغ التحويل
-          </label>
-        </div>
-        <div class="column-option">
-          <label>
-            <input
-              v-model="visibleColumns.extra"
-              type="checkbox"
-              @change="saveColumnSettings"
-            />
-            📌 أخرى
+            {{ label }}
           </label>
         </div>
       </div>
@@ -171,19 +146,18 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, onActivated, watch, ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, onUnmounted, onActivated, ref, computed } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
-import debounce from 'lodash/debounce'; // استخدام من مكتبة lodash أو إكتب دالة debounce يدوياً
 import PageHeader from '@/components/layout/PageHeader.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import api from '@/services/api';
-import logger from '@/utils/logger.js'
+import logger from '@/utils/logger.js';
 
+// --- التهيئة ---
 const store = useArchiveStore();
-const route = useRoute();
 
-// إعدادات الأعمدة
+// --- الحالة المحلية (Local State) ---
+const searchQuery = ref('');
 const showColumnSettings = ref(false);
 const visibleColumns = ref({
   shop: true,
@@ -192,7 +166,40 @@ const visibleColumns = ref({
   extra: true
 });
 
-// تحميل إعدادات الأعمدة من localStorage
+// --- الخصائص المحسوبة (Computed Properties) ---
+
+// 1. فلترة البيانات محلياً (أداء أسرع)
+const filteredRows = computed(() => {
+  if (!searchQuery.value) return store.rows;
+  const q = searchQuery.value.toLowerCase();
+  return store.rows.filter(row => 
+    (row.shop && row.shop.toLowerCase().includes(q)) || 
+    (row.code && row.code.toString().toLowerCase().includes(q))
+  );
+});
+
+// 2. إعادة حساب الإجماليات بناءً على الفلترة الحالية
+const filteredTotals = computed(() => {
+  return filteredRows.value.reduce((acc, row) => {
+    acc.amount += Number(row.amount) || 0;
+    acc.extra += Number(row.extra) || 0;
+    acc.collector += Number(row.collector) || 0;
+    acc.net += Number(row.net) || 0;
+    return acc;
+  }, { amount: 0, extra: 0, collector: 0, net: 0 });
+});
+
+// 3. حساب عدد الأعمدة لضبط الجدول (colspan)
+const totalColumns = computed(() => {
+  let count = 3; // date, collector, net (أعمدة ثابتة)
+  if (visibleColumns.value.shop) count++;
+  if (visibleColumns.value.code) count++;
+  if (visibleColumns.value.amount) count++;
+  if (visibleColumns.value.extra) count++;
+  return count;
+});
+
+// --- إدارة إعدادات الأعمدة ---
 const loadColumnSettings = () => {
   const saved = localStorage.getItem('archiveColumnSettings');
   if (saved) {
@@ -200,140 +207,90 @@ const loadColumnSettings = () => {
   }
 };
 
-// حفظ إعدادات الأعمدة في localStorage
 const saveColumnSettings = () => {
   localStorage.setItem('archiveColumnSettings', JSON.stringify(visibleColumns.value));
 };
 
-// تحديد الكل
 const selectAllColumns = () => {
-  visibleColumns.value = {
-    shop: true,
-    code: true,
-    amount: true,
-    extra: true
-  };
+  visibleColumns.value = { shop: true, code: true, amount: true, extra: true };
   saveColumnSettings();
 };
 
-// إغلاق الmodal وحفظ
 const closeColumnSettings = () => {
   showColumnSettings.value = false;
   saveColumnSettings();
 };
 
-onActivated(async () => {
-  logger.debug('Archive view activated — reloading available dates');
-  try {
-    await store.loadAvailableDates();
-    if (store.selectedDate) {
-      await store.loadArchiveByDate(store.selectedDate);
-    }
-  } catch (err) {
-    logger.error('Error reloading archive on activate:', err);
-  }
-});
-
-// Watch route changes to reload when navigated to
-watch(() => route.name, (newName) => {
-  if (newName === 'Archive') {
-    logger.debug('Route changed to Archive — reloading dates');
-    store.loadAvailableDates().catch(err => logger.error('Error loading dates on route change:', err));
-  }
-});
-
+// --- دورة حياة المكون (Lifecycle Hooks) ---
 let authSubscription = null;
 
 onMounted(async () => {
+  // إضافة كلاس لتنسيق الصفحة
   document.body.classList.add('page-has-fixed-width');
-  logger.debug('Archive view mounted, loading dates immediately...');
-
-  // تحميل إعدادات الأعمدة
+  logger.debug('🚀 ArchiveView Mounted');
+  
   loadColumnSettings();
 
   try {
-    // تحميل البيانات بشكل فوري
+    // تحميل قائمة التواريخ المتاحة (محلي + سحابي)
     await store.loadAvailableDates();
-    logger.info('Archive dates loaded immediately on mount:', store.availableDates);
-
-    // إذا كان هناك تاريخ محدد من قبل، إعادة تحميل البيانات
+    
+    // إذا كان هناك تاريخ محدد مسبقاً، قم بتحميل بياناته
     if (store.selectedDate) {
       await store.loadArchiveByDate(store.selectedDate);
-      logger.info('Archive data reloaded for selected date:', store.selectedDate);
     }
   } catch (error) {
-    logger.error('Error loading archive data:', error);
+    logger.error('❌ Error initializing archive view:', error);
   }
 
-  // Subscribe to auth state changes so that if the user session becomes
-  // available after navigation, we fetch DB-backed dates automatically.
-  try {
-    const res = api.auth.onAuthStateChange(async (event, session) => {
-      logger.debug('Archive view detected auth event:', event);
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // تحميل البيانات مرة أخرى عند تحديث الجلسة
-        await store.loadAvailableDates();
-        if (store.selectedDate) {
-          await store.loadArchiveByDate(store.selectedDate);
-        }
-        logger.info('Archive dates reloaded after auth:', store.availableDates);
-      } else if (event === 'SIGNED_OUT') {
-        // تنظيف البيانات عند تسجيل الخروج
-        store.availableDates = [];
-        store.selectedDate = '';
-        store.rows = [];
-      }
-    });
-
-    // supabase returns { data: { subscription } }
-    authSubscription = res?.data?.subscription;
-  } catch (e) {
-    logger.warn('Failed to subscribe to auth events in archive view', e);
-  }
-
-  // محاولة إضافية لتحميل التواريخ بعد فترة قصيرة (للتأكد من اكتمال المصادقة)
-  setTimeout(async () => {
-    logger.debug('Delayed loadAvailableDates attempt...');
-    await store.loadAvailableDates();
-    logger.info('Delayed available dates loaded:', store.availableDates);
-  }, 1000);
+  // الاستماع لتغيرات تسجيل الدخول (لتحديث التواريخ السحابية)
+  const res = api.auth.onAuthStateChange(async (event) => {
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      logger.info('🔄 Auth changed, reloading archive dates...');
+      await store.loadAvailableDates();
+      // تحديث البيانات المعروضة إذا لزم الأمر
+      if (store.selectedDate) await store.loadArchiveByDate(store.selectedDate);
+    } else if (event === 'SIGNED_OUT') {
+      store.availableDates = [];
+      store.rows = [];
+    }
+  });
+  
+  // حفظ الاشتراك لإلغائه لاحقاً
+  authSubscription = res?.data?.subscription;
 });
 
 onUnmounted(() => {
   document.body.classList.remove('page-has-fixed-width');
-  try {
-    if (authSubscription && typeof authSubscription.unsubscribe === 'function') {
-      authSubscription.unsubscribe();
-    }
-  } catch (e) {
-    logger.warn('Failed to unsubscribe auth events in archive view', e);
-  }
+  if (authSubscription?.unsubscribe) authSubscription.unsubscribe();
 });
 
-const handleDateChange = async () => {
-  logger.info('Date changed to:', store.selectedDate);
-  // تصفير البحث عند اختيار تاريخ
-  store.searchQuery = "";
-  // تحميل البيانات للتاريخ المختار
-  await store.loadArchiveByDate(store.selectedDate);
-  logger.info('Archive data loaded for date:', store.selectedDate, 'Rows:', store.rows.length);
-
-  // التأكد من تحديث قائمة التواريخ المتاحة (في حالة إضافة تاريخ جديد)
+onActivated(async () => {
+  // عند العودة للصفحة من الكاش (KeepAlive)، تأكد من تحديث القوائم
   await store.loadAvailableDates();
+});
+
+// --- التفاعلات (Methods) ---
+
+const handleDateChange = async () => {
+  logger.info('📅 Date selection changed:', store.selectedDate);
+  searchQuery.value = ""; // تصفير البحث عند تغيير اليوم
+  
+  if (store.selectedDate) {
+    await store.loadArchiveByDate(store.selectedDate);
+  } else {
+    store.rows = [];
+  }
 };
 
-// استخدام Debounce للبحث لتجنب الإلحاح عند الكتابة
-const handleSearch = debounce((e) => {
-  const query = e.target.value;
-  if (query) {
-    store.searchArchive(query);
-  } else if (store.selectedDate) {
-    // إذا تم مسح البحث، نعود لبيانات التاريخ المختار
-    store.loadArchiveByDate(store.selectedDate);
+const handleDelete = async () => {
+  if (store.selectedDate) {
+    await store.deleteArchive(store.selectedDate);
+    // بعد الحذف، المتجر سيقوم بتحديث القوائم تلقائياً
   }
-}, 500);
+};
 
-// --- دوال التنسيق البصري ---
+// --- دوال التنسيق المساعدة ---
 const getNetClass = (val) => {
   if (val > 0) return 'positive';
   if (val < 0) return 'negative';
@@ -345,31 +302,37 @@ const getNetIcon = (val) => {
   if (val < 0) return 'fas fa-arrow-down';
   return 'fas fa-check';
 };
-
-// حساب عدد الأعمدة الإجمالي للـ colspan
-const totalColumns = computed(() => {
-  let count = 3; // date, collector, net
-  if (visibleColumns.value.shop) count++;
-  if (visibleColumns.value.code) count++;
-  if (visibleColumns.value.amount) count++;
-  if (visibleColumns.value.extra) count++;
-  return count;
-});
 </script>
+
 <style scoped>
 .archive-page {
   max-width: 1200px;
+  margin: 0 auto;
 }
 
 .archive-controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 15px;
+  gap: 15px;
+  padding: 20px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.9));
-  border-radius: 15px;
-  border: 2px solid rgba(0,121,101,0.1);
-  margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 121, 101, 0.1);
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+/* تنسيق خاص للتواريخ السحابية في القائمة */
+.cloud-date {
+  color: #1e40af; /* أزرق داكن */
+  background-color: #eff6ff; /* خلفية زرقاء فاتحة جداً */
+  font-weight: 600;
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 640px) {
+  .archive-controls {
+    padding: 15px;
+  }
 }
 </style>

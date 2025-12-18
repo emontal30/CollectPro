@@ -13,14 +13,14 @@
         <div class="user-data-container">
           <div class="user-meta">
             <span id="user-name" class="user-name">
-              {{ store.user?.user_metadata?.full_name || store.user?.email || 'مستخدم' }}
+              {{ authStore.user?.user_metadata?.full_name || authStore.user?.email?.split('@')[0] || 'مستخدم' }}
             </span>
             <span id="user-email" class="user-email">
-              {{ store.user?.email }}
+              {{ authStore.user?.email }}
             </span>
             <div class="user-id-row">
               <span id="user-id" class="user-id">
-                ID: {{ store.user?.id?.slice(-7) }}
+                ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
               </span>
               <button 
                 class="dark-mode-toggle-small" 
@@ -34,15 +34,19 @@
         </div>
 
         <div class="subscription-container">
-          <h4 class="subscription-title">حالة الاشتراك</h4>
+          <h4 class="subscription-title">
+            {{ subStore.isSubscribed ? subStore.planName : 'حالة الاشتراك' }}
+          </h4>
           <div class="subscription-info">
             <div
               class="subscription-days-simple"
-              :class="store.subscriptionStatusClass"
+              :class="subscriptionStatusClass"
             >
-              <i class="fas fa-clock"></i>
-              <span id="days-left">{{ store.daysDisplay }}</span>
-              <span v-if="store.showDaysText"> يوم متبقي</span>
+              <i class="fas" :class="subscriptionIcon"></i>
+              <span id="days-left">
+                {{ subStore.isSubscribed ? subStore.daysRemaining : 'مجاني' }}
+              </span>
+              <span v-if="subStore.isSubscribed"> يوم متبقي</span>
             </div>
           </div>
         </div>
@@ -95,7 +99,8 @@
             <i class="fas fa-user-shield"></i><span>اشتراكي</span>
           </router-link>
         </li>
-        <li>
+        
+        <li v-if="authStore.isAdmin">
           <router-link to="/app/admin" active-class="active" @click="store.closeSidebar">
             <i class="fas fa-user-cog"></i><span>لوحة التحكم</span>
           </router-link>
@@ -108,14 +113,16 @@
 
 <script setup>
 import { computed, onMounted, inject } from 'vue';
-import logger from '@/utils/logger.js'
+import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 
 const store = useSidebarStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
+const subStore = useMySubscriptionStore();
 
 // نظام الإشعارات الموحد
 const { confirm, addNotification } = inject('notifications');
@@ -124,7 +131,23 @@ const isDarkMode = computed(() => settingsStore.darkMode);
 
 const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
-}
+};
+
+// حساب كلاس الحالة بناءً على بيانات المتجر الجديد للحفاظ على التنسيق القديم
+const subscriptionStatusClass = computed(() => {
+  if (!subStore.isSubscribed) return 'pending'; // اللون الأبيض (الافتراضي)
+  if (subStore.daysRemaining <= 0) return 'expired'; // اللون الأحمر
+  if (subStore.daysRemaining <= 7) return 'warning'; // اللون البرتقالي
+  return ''; // الافتراضي
+});
+
+// أيقونة الحالة
+const subscriptionIcon = computed(() => {
+  if (!subStore.isSubscribed) return 'fa-clock';
+  if (subStore.daysRemaining <= 0) return 'fa-times-circle';
+  if (subStore.daysRemaining <= 7) return 'fa-exclamation-circle';
+  return 'fa-check-circle';
+});
 
 const handleLogout = async () => {
   const result = await confirm({
@@ -138,23 +161,22 @@ const handleLogout = async () => {
   if (!result.isConfirmed) return;
 
   try {
-    await store.logout();
+    await authStore.logout(); // استخدام authStore للخروج
     addNotification('تم تسجيل الخروج بنجاح', 'success');
+    // التوجيه يتم تلقائياً في authStore، ولكن للتأكيد:
+    window.location.href = '/';
   } catch (error) {
     logger.error('Logout failed:', error);
-    addNotification('حدث خطأ أثناء تسجيل الخروج', 'error', {
-      suggestion: 'تحقق من اتصال الإنترنت أو أعد تحميل الصفحة'
-    });
-    // Fallback: force reload if logout fails
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 2000);
+    addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
   }
-}
+};
 
 // تحميل البيانات عند فتح الشريط الجانبي
 onMounted(() => {
-  store.fetchSidebarData();
+  store.fetchSidebarData(); // لجلب حالة الفتح/الغلق
+  if (authStore.user) {
+    subStore.loadSubscription(); // جلب بيانات الاشتراك (كاش ذكي)
+  }
 });
 </script>
 

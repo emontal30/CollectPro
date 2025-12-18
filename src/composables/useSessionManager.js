@@ -1,52 +1,84 @@
-import { ref } from 'vue';
+import { useRouter } from 'vue-router'
 import logger from '@/utils/logger.js'
-import { supabase } from '@/supabase';
-import { useRouter } from 'vue-router';
 
-const LAST_PAGE_KEY = 'collectpro_last_page';
+// ثوابت الجلسة
+const SESSION_TIMEOUT = 48 * 60 * 60 * 1000 // 48 ساعة
+const STORAGE_KEY_LAST_ACTIVE = 'app_last_active'
+const STORAGE_KEY_LAST_PAGE = 'app_last_page'
 
 export function useSessionManager() {
-  const router = useRouter();
-  const isSessionValid = ref(true);
+  const router = useRouter()
+  
+  /**
+   * تحديث توقيت آخر نشاط
+   */
+  function updateLastActivity() {
+    localStorage.setItem(STORAGE_KEY_LAST_ACTIVE, Date.now().toString())
+  }
 
-  const saveCurrentPage = (path) => {
-    const pagePath = path || router.currentRoute.value.fullPath;
-    if (pagePath && pagePath !== '/' && !pagePath.includes('/login')) {
-      localStorage.setItem(LAST_PAGE_KEY, pagePath);
+  /**
+   * التحقق من صلاحية الجلسة محلياً
+   */
+  function isSessionValidLocal() {
+    const lastActive = localStorage.getItem(STORAGE_KEY_LAST_ACTIVE)
+    if (!lastActive) return false
+
+    const now = Date.now()
+    const diff = now - Number(lastActive)
+
+    if (diff > SESSION_TIMEOUT) {
+      logger.warn('⏰ انتهت الجلسة محلياً (تجاوزت 48 ساعة)')
+      return false
     }
-  };
+    return true
+  }
 
-  const getLastPage = () => localStorage.getItem(LAST_PAGE_KEY);
-  const clearLastPage = () => localStorage.removeItem(LAST_PAGE_KEY);
+  /**
+   * تهيئة مستمعي النشاط
+   */
+  function setupActivityListeners() {
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
+    const handler = () => updateLastActivity()
 
-  const checkSessionValidity = async () => {
-    // If offline, assume session is valid to avoid forcing logout due to network errors
-    if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+    // استخدام passive لتحسين الأداء
+    events.forEach(evt => window.addEventListener(evt, handler, { passive: true }))
 
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      return !!session && !error;
-    } catch (err) {
-      logger.warn('checkSessionValidity: network error, assuming session valid for now', err)
-      return true;
+    // إرجاع دالة للتنظيف
+    return () => {
+      events.forEach(evt => window.removeEventListener(evt, handler))
     }
-  };
+  }
 
-  const forceLogout = async () => {
-    clearLastPage();
-    await supabase.auth.signOut();
-    router.push('/');
-  };
+  /**
+   * حفظ الصفحة الحالية
+   */
+  function saveCurrentPage(path) {
+    if (path && !path.includes('login') && path !== '/') {
+      localStorage.setItem(STORAGE_KEY_LAST_PAGE, path)
+    }
+  }
 
-  // Stubs for backward compatibility
-  const initializeSession = () => logger.info('✅ Session persistence active');
-  const cleanup = () => {};
-  const updateLastActivity = () => {};
-  const setupActivityListeners = () => () => {};
+  /**
+   * استرجاع آخر صفحة
+   */
+  function getLastPage() {
+    return localStorage.getItem(STORAGE_KEY_LAST_PAGE) || '/app/dashboard'
+  }
+
+  /**
+   * تنظيف الجلسة المحلية
+   */
+  function clearLocalSession() {
+    localStorage.removeItem(STORAGE_KEY_LAST_ACTIVE)
+    localStorage.removeItem(STORAGE_KEY_LAST_PAGE)
+  }
 
   return {
-    isSessionValid, checkSessionValidity, forceLogout,
-    saveCurrentPage, getLastPage, clearLastPage,
-    initializeSession, cleanup, updateLastActivity, setupActivityListeners
-  };
+    updateLastActivity,
+    isSessionValidLocal,
+    setupActivityListeners,
+    saveCurrentPage,
+    getLastPage,
+    clearLocalSession
+  }
 }

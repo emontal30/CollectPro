@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import api from '@/services/api';
 import { useNotifications } from '@/composables/useNotifications';
 import eventBus from '@/utils/eventBus';
@@ -20,15 +20,15 @@ export const useAdminStore = defineStore('admin', () => {
     pendingRate: 0
   });
 
-  // نظام الإشعارات الموحد
-  const { error, success, confirm, addNotification } = useNotifications();
+  // إصلاح: استدعاء الإشعارات بشكل صحيح
+  const { addNotification, confirm } = useNotifications();
 
   const chartsData = ref({
     activeUsersPercent: 0,
     inactiveUsersPercent: 0,
     expiringSoonPercent: 0,
     avgDurationPercent: 0,
-    piePercentages: [0, 0, 0, 0], // active, pending, cancelled, expired
+    piePercentages: [0, 0, 0, 0], 
     monthlyLabels: [],
     monthlyValues: []
   });
@@ -37,7 +37,6 @@ export const useAdminStore = defineStore('admin', () => {
   const pendingSubscriptions = ref([]);
   const allSubscriptions = ref([]);
   
-  // فلاتر
   const filters = ref({
     status: 'all',
     planType: 'all',
@@ -50,7 +49,6 @@ export const useAdminStore = defineStore('admin', () => {
 
   // --- الإجراءات (Actions) ---
 
-  // 1. تحميل جميع بيانات لوحة التحكم
   async function loadDashboardData() {
     isLoading.value = true;
     try {
@@ -60,115 +58,103 @@ export const useAdminStore = defineStore('admin', () => {
         fetchAllSubscriptions(),
         fetchUsers()
       ]);
-    } catch (error) {
-      logger.error('Error loading admin data:', error);
-      error('فشل تحميل البيانات');
+    } catch (err) {
+      logger.error('Error loading admin data:', err);
+      // إصلاح: استخدام addNotification بدلاً من error()
+      addNotification('فشل تحميل البيانات', 'error');
     } finally {
       isLoading.value = false;
     }
   }
 
-  // 2. جلب الإحصائيات والمخططات
   async function fetchStats() {
-    const statsData = await api.admin.getStats();
-
-    stats.value.totalUsers = statsData.totalUsers;
-    stats.value.pendingRequests = statsData.pendingRequests;
-    stats.value.activeSubscriptions = statsData.activeSubscriptions;
-    stats.value.cancelled = statsData.cancelled;
-    stats.value.expired = statsData.expired;
-    stats.value.totalRevenue = statsData.totalRevenue;
-
-    // حساب النسب للمخططات
-    const totalSubs = stats.value.pendingRequests + stats.value.activeSubscriptions + stats.value.cancelled + stats.value.expired;
-    if (totalSubs > 0) {
-      stats.value.completionRate = Math.round((stats.value.activeSubscriptions / totalSubs) * 100);
-      stats.value.pendingRate = Math.round((stats.value.pendingRequests / totalSubs) * 100);
-
-      // المخطط الدائري
-      chartsData.value.piePercentages = [
-        Math.round((stats.value.activeSubscriptions / totalSubs) * 100),
-        Math.round((stats.value.pendingRequests / totalSubs) * 100),
-        Math.round((stats.value.cancelled / totalSubs) * 100),
-        Math.round((stats.value.expired / totalSubs) * 100)
-      ];
-    }
-
-    // جلب بيانات المستخدمين النشطين (حساب يدوي)
     try {
+      const statsData = await api.admin.getStats();
+
+      stats.value.totalUsers = statsData.totalUsers;
+      stats.value.pendingRequests = statsData.pendingRequests;
+      stats.value.activeSubscriptions = statsData.activeSubscriptions;
+      stats.value.cancelled = statsData.cancelled;
+      stats.value.expired = statsData.expired;
+      stats.value.totalRevenue = statsData.totalRevenue;
+
+      const totalSubs = stats.value.pendingRequests + stats.value.activeSubscriptions + stats.value.cancelled + stats.value.expired;
+      if (totalSubs > 0) {
+        stats.value.completionRate = Math.round((stats.value.activeSubscriptions / totalSubs) * 100);
+        stats.value.pendingRate = Math.round((stats.value.pendingRequests / totalSubs) * 100);
+
+        chartsData.value.piePercentages = [
+          Math.round((stats.value.activeSubscriptions / totalSubs) * 100),
+          Math.round((stats.value.pendingRequests / totalSubs) * 100),
+          Math.round((stats.value.cancelled / totalSubs) * 100),
+          Math.round((stats.value.expired / totalSubs) * 100)
+        ];
+      }
+
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - filters.value.activeUsersPeriod);
 
-      const { data, error } = await supabase
+      const { data, error: dbError } = await supabase
         .from('subscriptions')
         .select('user_id')
         .eq('status', 'active')
         .gte('updated_at', daysAgo.toISOString());
 
-      if (error) {
-        logger.warn('Failed to fetch active users:', error);
+      if (dbError) {
+        logger.warn('Failed to fetch active users:', dbError);
         stats.value.activeUsers = 0;
       } else {
-        // حساب المستخدمين الفريدين
         const uniqueUsers = new Set(data?.map(sub => sub.user_id) || []);
         stats.value.activeUsers = uniqueUsers.size;
       }
-    } catch (e) {
-      logger.warn('Failed to fetch active users', e);
-      stats.value.activeUsers = 0;
-    }
 
-    // تحضير بيانات المخطط الخطي (آخر 5 شهور)
-    prepareLineChartData();
+      prepareLineChartData();
+    } catch (e) {
+      logger.warn('Error fetching stats:', e);
+    }
   }
 
-  // تحضير بيانات المخطط الخطي
   async function prepareLineChartData() {
     const { labels, values } = await api.admin.getMonthlyChartData();
     chartsData.value.monthlyLabels = labels;
     chartsData.value.monthlyValues = values;
   }
 
-  // 3. جلب الاشتراكات المعلقة
   async function fetchPendingSubscriptions() {
     pendingSubscriptions.value = await api.admin.getPendingSubscriptions();
   }
 
-  // 4. جلب جميع الاشتراكات مع الفلترة
   async function fetchAllSubscriptions(showFeedback = false) {
     try {
       const data = await api.admin.getAllSubscriptions(filters.value);
-      
-      // تحديث البيانات دائمًا عند التحديث
-      allSubscriptions.value = data || []; // يتم الآن الفلترة من جهة الخادم
+      allSubscriptions.value = data || [];
 
       if (showFeedback) {
-        success('تم تحديث قائمة الاشتراكات');
+        // إصلاح: استخدام addNotification بدلاً من success()
+        addNotification('تم تحديث قائمة الاشتراكات', 'success');
       }
-    } catch (error) {
-      logger.error('Error fetching all subscriptions:', error);
+    } catch (err) {
+      logger.error('Error fetching all subscriptions:', err);
       if (showFeedback) {
-        error('فشل في تحديث قائمة الاشتراكات');
+        addNotification('فشل في تحديث قائمة الاشتراكات', 'error');
       }
     }
   }
 
-  // 5. جلب المستخدمين المسجلين
   async function fetchUsers(showFeedback = false) {
     try {
       usersList.value = await api.admin.getUsers();
       if (showFeedback) {
-        success('تم تحديث قائمة المستخدمين');
+        addNotification('تم تحديث قائمة المستخدمين', 'success');
       }
-    } catch (error) {
-      logger.error('Error fetching users:', error);
+    } catch (err) {
+      logger.error('Error fetching users:', err);
       if (showFeedback) {
-        error('فشل في تحديث قائمة المستخدمين');
+        addNotification('فشل في تحديث قائمة المستخدمين', 'error');
       }
     }
   }
 
-  // 6. إجراءات الاشتراك (تفعيل/رفض/حذف)
   async function handleSubscriptionAction(id, action) {
     let confirmMsg = '';
 
@@ -179,7 +165,7 @@ export const useAdminStore = defineStore('admin', () => {
       case 'reject':
         confirmMsg = 'هل أنت متأكد من رفض هذا الاشتراك؟ سيتم حذفه.';
         break;
-      case 'cancel': // إلغاء تفعيل
+      case 'cancel':
         confirmMsg = 'هل أنت متأكد من إلغاء تفعيل هذا الاشتراك؟';
         break;
       case 'reactivate':
@@ -201,44 +187,42 @@ export const useAdminStore = defineStore('admin', () => {
     if (!result.isConfirmed) return;
 
     try {
-      // Get the subscription before action to know the user_id
       const { data: subBefore } = await api.subscriptions.getSubscriptionById(id);
 
       await api.admin.handleSubscriptionAction(id, action);
-      await loadDashboardData(); // تحديث البيانات
+      await loadDashboardData();
 
-      // Update sidebar if this affects the current user's subscription
       if (subBefore?.user_id) {
         const { subscription } = await api.subscriptions.getSubscription(subBefore.user_id);
         eventBus.emit('subscription-updated', subscription);
       }
 
-      success('تم تنفيذ الإجراء بنجاح');
-    } catch (error) {
-      logger.error('Error handling subscription action:', error);
-      error('حدث خطأ أثناء تنفيذ الإجراء');
+      addNotification('تم تنفيذ الإجراء بنجاح', 'success');
+    } catch (err) {
+      logger.error('Error handling subscription action:', err);
+      addNotification('حدث خطأ أثناء تنفيذ الإجراء', 'error');
     }
   }
 
-  // 7. تفعيل اشتراك يدوي لمستخدم
   async function activateManualSubscription(userId, days) {
     try {
-      const { error } = await api.admin.activateManualSubscription(userId, days);
-      if (error) throw error;
+      const { error: err } = await api.admin.activateManualSubscription(userId, days);
+      if (err) throw err;
+      
       await loadDashboardData();
 
-      // Update sidebar for the affected user
+      // تحديث الحالة للمستخدم المعني
       const { subscription } = await api.subscriptions.getSubscription(userId);
       eventBus.emit('subscription-updated', subscription);
 
-      success('تم تفعيل الاشتراك بنجاح');
-    } catch (error) {
-      logger.error('Error activating manual subscription:', error);
-      error('حدث خطأ أثناء تفعيل الاشتراك');
+      addNotification('تم تفعيل الاشتراك بنجاح', 'success');
+    } catch (err) {
+      logger.error('Error activating manual subscription:', err);
+      // إصلاح: استخدام addNotification بدلاً من error()
+      addNotification(err.message || 'حدث خطأ أثناء تفعيل الاشتراك', 'error');
     }
   }
 
-  // دوال مساعدة للتنسيق
   function formatDate(dateStr) {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-GB');

@@ -92,7 +92,6 @@ export const adminService = {
       query = query.eq('plan_id', filters.planType);
     }
 
-    // فلترة الاشتراكات التي قاربت على الانتهاء (من جهة الخادم)
     if (filters.expiry === 'expiring_soon') {
       const today = new Date().toISOString();
       const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -172,15 +171,35 @@ export const adminService = {
     return { success: true };
   },
 
+  // --- التعديل الرئيسي هنا: إصلاح تفعيل الاشتراك اليدوي ---
   async activateManualSubscription(userId, days) {
     const start = new Date();
     const end = new Date(start);
     end.setDate(start.getDate() + Number(days));
 
+    // 1. جلب معرف خطة صالح (لتجنب خطأ null value violates not-null constraint)
+    // نأخذ أول خطة متاحة فقط كمرجع (placeholder)
+    const { data: plan } = await apiInterceptor(
+      authService.supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1)
+        .single()
+    );
+    
+    // إذا لم توجد خطط، لا يمكننا إنشاء اشتراك بسبب قيود قاعدة البيانات
+    if (!plan) {
+      logger.error("No plans found to assign to manual subscription");
+      return { error: { message: "لا توجد خطط معرفة في النظام لربط الاشتراك بها" } };
+    }
+
+    // 2. حذف أي طلبات معلقة لتجنب التعارض
     await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending'));
 
+    // 3. إدراج الاشتراك الجديد مع plan_id الصالح
     const { error } = await apiInterceptor(authService.supabase.from('subscriptions').insert({
       user_id: userId,
+      plan_id: plan.id, // تم إضافة هذا الحقل الضروري
       plan_name: 'اشتراك يدوي',
       plan_period: `${days} يوم`,
       price: 0,

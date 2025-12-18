@@ -3,8 +3,9 @@ import { ref, computed, onUnmounted } from 'vue';
 import api from '@/services/api';
 import eventBus from '@/utils/eventBus';
 import { useRouter } from 'vue-router';
-import { calculateDaysRemaining } from '@/utils/formatters';
-import logger from '@/utils/logger.js'
+// تأكد من مسار الدالة المساعدة أو قم بتعريفها محلياً إذا لم تكن موجودة
+import { calculateDaysRemaining } from '@/utils/formatters'; 
+import logger from '@/utils/logger.js';
 
 export const useMySubscriptionStore = defineStore('mySubscription', () => {
   // --- الحالة (State) ---
@@ -12,31 +13,35 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const history = ref([]);
   const renewalPlans = ref([]);
   const user = ref(null);
-  const isLoading = ref(true);
+  const isLoading = ref(false); // تم تغيير القيمة الافتراضية إلى false لمنع التحميل المستمر
   const isRenewModalOpen = ref(false);
   const loadingPlans = ref(false);
   const router = useRouter();
 
-  // --- التخزين المؤقت (Caching) ---
-  const cache = ref({
-    subscription: null,
-    history: null,
-    timestamp: 0,
-    duration: 5 * 60 * 1000 // 5 دقائق
-  });
+  // --- إعدادات الكاش ---
+  const CACHE_KEY = 'user_subscription_cache';
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
 
   // --- الحسابات (Getters/Computed) ---
 
-  // 1. حساب الأيام المتبقية باستخدام الدالة المشتركة
+  // 1. حساب الأيام المتبقية
   const daysRemaining = computed(() => {
     if (!subscription.value?.end_date) return 0;
-    return calculateDaysRemaining(subscription.value.end_date);
+    try {
+      return calculateDaysRemaining(subscription.value.end_date);
+    } catch (e) {
+      // fallback بسيط في حالة عدم وجود الدالة
+      const end = new Date(subscription.value.end_date);
+      const now = new Date();
+      const diff = end - now;
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
   });
 
-  // 2. تصنيف الأيام لتحديد اللون (أحمر/برتقالي/أخضر)
+  // 2. تصنيف الأيام لتحديد اللون
   const daysClass = computed(() => {
     const days = daysRemaining.value;
-    if (days <= 0) return '';
+    if (days <= 0) return 'text-red-600 font-bold'; // منتهي
     if (days <= 7) return 'low-days';      // أحمر
     if (days <= 30) return 'medium-days';  // برتقالي
     return 'high-days';                    // أخضر
@@ -54,146 +59,160 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     return map[status] || 'غير معروف';
   });
 
+  // 4. اسم الخطة (للشريط الجانبي)
+  const planName = computed(() => {
+    if (!subscription.value) return 'مجاني';
+    return subscription.value.plan_name || 
+           subscription.value.subscription_plans?.name_ar || 
+           subscription.value.subscription_plans?.name || 
+           'خطة غير معروفة';
+  });
+
+  // 5. حالة الاشتراك
+  const isSubscribed = computed(() => subscription.value?.status === 'active');
+
   // --- الإجراءات (Actions) ---
 
-  // 1. تهيئة الصفحة وجلب البيانات (محسن للأداء مع التخزين المؤقت)
+  /**
+   * تهيئة الصفحة وجلب البيانات (محسن للأداء مع التخزين المؤقت)
+   */
   async function init() {
     isLoading.value = true;
     try {
-      // التحقق من البيانات المحملة مسبقاً في sessionStorage أولاً
-      const preloadedData = sessionStorage.getItem('preloadedSubscriptionData');
-      if (preloadedData) {
-        const parsed = JSON.parse(preloadedData);
-        logger.info('📋 Using preloaded subscription data');
-        subscription.value = parsed.subscription;
-        history.value = parsed.history || [];
-        user.value = parsed.user;
-        // حفظ في التخزين المؤقت المحلي أيضاً
-        cache.value = { ...parsed, duration: cache.value.duration };
+      // 1. التحقق من التخزين المؤقت أولاً
+      const cached = loadFromCache();
+      if (cached) {
+        logger.info('📦 Using cached subscription data');
+        subscription.value = cached.subscription;
+        history.value = cached.history || [];
+        user.value = cached.user;
+        
+        // إشعار المكونات الأخرى
         eventBus.emit('subscription-updated', subscription.value);
         isLoading.value = false;
         return;
       }
 
-      // التحقق من التخزين المؤقت أولاً
-      const now = Date.now();
-      if (cache.value.timestamp && (now - cache.value.timestamp) < cache.value.duration) {
-        logger.info('📋 Using cached subscription data');
-        subscription.value = cache.value.subscription;
-        history.value = cache.value.history || [];
-        user.value = cache.value.user;
-        eventBus.emit('subscription-updated', subscription.value);
-        isLoading.value = false;
-        return;
-      }
-
-      // محاولة جلب بيانات المستخدم (اختياري)
+      // 2. جلب البيانات من السيرفر
       const { user: currentUser } = await api.auth.getUser();
       user.value = currentUser;
 
       if (currentUser) {
-        // جلب البيانات بشكل متزامن لتسريع التحميل
+        // جلب البيانات بشكل متزامن
         const [subscriptionResult, historyResult] = await Promise.all([
-          api.subscriptions.getSubscription(currentUser.id),
-          api.subscriptions.getSubscriptionHistory(currentUser.id)
+          api.subscriptions.getSubscription(currentUser.id).catch(() => ({ subscription: null })),
+          api.subscriptions.getSubscriptionHistory(currentUser.id).catch(() => ({ history: [] }))
         ]);
 
-        subscription.value = subscriptionResult.subscription;
-        history.value = historyResult.history || [];
+        subscription.value = subscriptionResult?.subscription || null;
+        history.value = historyResult?.history || [];
 
         // حفظ في التخزين المؤقت
-        cache.value = {
+        saveToCache({
           subscription: subscription.value,
           history: history.value,
-          user: currentUser,
-          timestamp: now
-        };
-
-        // إرسال حدث للشريط الجانبي لتحديث البيانات
-        eventBus.emit('subscription-updated', subscription.value);
-      } else {
-        // لا يوجد مستخدم - عرض رسالة مناسبة
-        subscription.value = null;
-        history.value = [];
+          user: currentUser
+        });
 
         // إرسال حدث للشريط الجانبي
+        eventBus.emit('subscription-updated', subscription.value);
+      } else {
+        // لا يوجد مستخدم
+        subscription.value = null;
+        history.value = [];
         eventBus.emit('subscription-updated', null);
       }
 
     } catch (error) {
       logger.error('Error loading subscription:', error);
-      // في حالة الخطأ، نظهر الصفحة الفارغة
       subscription.value = null;
       history.value = [];
-
-      // إرسال حدث للشريط الجانبي
       eventBus.emit('subscription-updated', null);
     } finally {
       isLoading.value = false;
     }
   }
 
-  // 1.5 تحديث بيانات الاشتراك من event bus
+  // --- دوال الكاش المساعدة ---
+
+  function loadFromCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY); // استخدام localStorage ليكون أكثر استدامة
+      if (!raw) return null;
+      
+      const parsed = JSON.parse(raw);
+      const now = Date.now();
+      
+      // التحقق من صلاحية الوقت
+      if (now - parsed.timestamp < CACHE_DURATION) {
+        return parsed.data;
+      }
+      return null; // انتهت الصلاحية
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveToCache(data) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      logger.warn('Failed to save subscription cache:', e);
+    }
+  }
+
+  function clearCache() {
+    localStorage.removeItem(CACHE_KEY);
+    subscription.value = null;
+    history.value = [];
+    user.value = null;
+  }
+
+  // --- التعامل مع الأحداث ---
+
   function updateSubscriptionFromEvent(subscriptionData) {
     subscription.value = subscriptionData;
-    // إذا جاء تحديث من event bus فنقوم أيضاً بتحديث الكاش المحلي
-    try {
-      if (subscriptionData) {
-        cache.value.subscription = subscriptionData;
-        cache.value.timestamp = Date.now();
-      } else {
-        cache.value.subscription = null;
-        cache.value.timestamp = 0;
-      }
-    } catch (e) {
-      logger.warn('Failed to update subscription cache from event:', e);
+    // تحديث الكاش عند الاستلام من حدث خارجي
+    if (subscriptionData) {
+      saveToCache({
+        subscription: subscriptionData,
+        history: history.value, // الاحتفاظ بالتاريخ القديم مؤقتاً
+        user: user.value
+      });
     }
-
     logger.info('MySubscription subscription updated from event:', subscriptionData);
   }
 
-  // الاستماع لأحداث تحديث الاشتراك
+  // الاستماع للأحداث
   eventBus.on('subscription-updated', updateSubscriptionFromEvent);
 
-  // تنظيف المستمع عند تدمير المتجر
   onUnmounted(() => {
     eventBus.off('subscription-updated', updateSubscriptionFromEvent);
   });
 
-  // 2. جلب سجل الاشتراكات
-  async function fetchHistory(userId) {
-    const { history: data } = await api.subscriptions.getSubscriptionHistory(userId);
-    history.value = data || [];
-  }
+  // --- وظائف التجديد ---
 
-  // 3. مسح التخزين المؤقت
-  function clearCache() {
-    cache.value = {
-      subscription: null,
-      history: null,
-      user: null,
-      timestamp: 0
-    };
-  }
-
-  // 3. فتح نافذة التجديد وجلب الخطط
   async function openRenewModal() {
     isRenewModalOpen.value = true;
     loadingPlans.value = true;
 
     try {
-      // جلب الخطط المتاحة من قاعدة البيانات
-      const { plans } = await api.subscriptions.getPlans();
+      // جلب الخطط
+      const response = await api.subscriptions.getPlans();
+      // التعامل مع اختلاف هيكل الاستجابة المحتمل (data أو plans)
+      const plans = response.data || response.plans || [];
 
-      // تحويلها للشكل المطلوب للعرض
       const durationMap = { 1: 'monthly', 3: 'quarterly', 12: 'yearly' };
 
-      renewalPlans.value = (plans || []).map(plan => ({
+      renewalPlans.value = plans.map(plan => ({
         ...plan,
-        planIdentifier: durationMap[plan.duration_months], // معرف للخزن في localStorage
+        planIdentifier: durationMap[plan.duration_months] || plan.id,
         displayName: plan.name_ar || plan.name,
         features: plan.description || 'وصول كامل للمنصة.'
-      })).filter(p => p.planIdentifier); // تأكد من أن الخطة صالحة
+      }));
 
     } catch (error) {
       logger.error('Error fetching plans:', error);
@@ -202,14 +221,13 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     }
   }
 
-  // 4. اختيار خطة للتجديد
   function selectRenewalPlan(planIdentifier) {
     localStorage.setItem('selectedPlanId', planIdentifier);
     isRenewModalOpen.value = false;
     router.push('/app/payment');
   }
 
-  // 5. تنسيق التاريخ
+  // تنسيق التاريخ
   function formatDate(dateString) {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('ar-EG-u-nu-latn', { 
@@ -218,20 +236,28 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   }
 
   return {
+    // State
     subscription,
     history,
     user,
     isLoading,
-    daysRemaining,
-    daysClass,
-    statusText,
     isRenewModalOpen,
     renewalPlans,
     loadingPlans,
+    
+    // Getters
+    daysRemaining,
+    daysClass,
+    statusText,
+    planName,
+    isSubscribed,
+    
+    // Actions
     init,
     openRenewModal,
     selectRenewalPlan,
     formatDate,
-    clearCache
+    clearCache,
+    loadSubscription: init // Alias للتوافق
   };
 });
