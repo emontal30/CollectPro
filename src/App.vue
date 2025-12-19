@@ -6,25 +6,23 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, computed, ref, watch } from 'vue';
-import { useRoute } from 'vue-router'; // Router is used in template/computed
+import { onMounted, onUnmounted, computed, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import OfflineBanner from '@/components/ui/OfflineBanner.vue';
 import { useAuthStore } from '@/stores/auth';
-import { useSessionManager } from '@/composables/useSessionManager';
+import { useArchiveStore } from '@/stores/archiveStore';
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import { initializeSyncListener } from '@/services/archiveSyncQueue';
 import logger from '@/utils/logger.js';
 
 // --- Stores & Composables ---
 const authStore = useAuthStore();
-const sessionManager = useSessionManager();
+const archiveStore = useArchiveStore();
+const mySubscriptionStore = useMySubscriptionStore();
 const route = useRoute();
 
 // --- Local State ---
 const isLoaded = ref(false);
-
-// --- Cleanup References ---
-let visibilityCleanup = null;
-let onlineCleanup = null;
-let activityCleanup = null;
 
 // --- Computed: Page Classes ---
 const pageClasses = computed(() => {
@@ -53,17 +51,17 @@ onMounted(async () => {
   logger.info('🚀 App initializing...');
 
   try {
-    // 1. Setup Session Listeners (Only listeners, no init check here)
-    // التغيير هنا: قمنا بإزالة initializeSession واستبدالها بإعداد المستمعين فقط
-    activityCleanup = sessionManager.setupActivityListeners();
-
-    // 2. Initialize Auth (This handles the session validity check now)
-    // ننتظر المصادقة لضمان عدم حدوث تعارض
+    // 1. Initialize Auth
     await authStore.initializeAuth();
 
-    // 3. Setup Handlers
-    setupVisibilityHandler();
-    setupOnlineHandler();
+    // 2. Initialize Archive Services
+    archiveStore.cleanupOldArchives();
+    initializeSyncListener();
+
+    // 3. Initialize Subscription Store
+    if(authStore.isAuthenticated) {
+      mySubscriptionStore.init();
+    }
 
     // 4. Mark App as Loaded
     setTimeout(() => {
@@ -78,41 +76,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   logger.info('🧹 App cleaning up...');
-  
-  if (visibilityCleanup) visibilityCleanup();
-  if (onlineCleanup) onlineCleanup();
-  if (activityCleanup) activityCleanup();
-  
-  sessionManager.clearLocalSession(); // Optional: clears strictly on destroy if needed
 });
 
-// --- Helper Functions ---
-
-function setupVisibilityHandler() {
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      sessionManager.updateLastActivity();
-      
-      // Re-check user if returning to app
-      if (!authStore.user && !authStore.isLoading) {
-        authStore.getUser().catch(() => {});
-      }
-    }
-  };
-
-  document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
-  visibilityCleanup = () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-}
-
-function setupOnlineHandler() {
-  const handleOnline = () => {
-    logger.info('🌐 Connection restored');
-    // Here we will add sync logic later (Phase 3)
-  };
-
-  window.addEventListener('online', handleOnline);
-  onlineCleanup = () => window.removeEventListener('online', handleOnline);
-}
 </script>
 
 <style>

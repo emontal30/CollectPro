@@ -1,234 +1,65 @@
-/**
- * Archive Sync Queue Manager
- * Manages offline archive operations and syncs when connection is restored
- */
-
 import localforage from 'localforage';
-import api from '@/services/api';
-import logger from '@/utils/logger.js'
-import { supabase } from '@/supabase'
+import { useArchiveStore } from '@/stores/archiveStore';
+import { useNotifications } from '@/composables/useNotifications';
+import logger from '@/utils/logger.js';
 
-const QUEUE_STORE = 'archive_sync_queue';
-const TIMESTAMP_STORE = 'archive_timestamps';
+const QUEUE_KEY = 'archive_sync_queue';
 
-/**
- * Initialize localForage stores
- */
-export async function initQueueStore() {
+async function addToSyncQueue(item) {
   try {
-    await localforage.setItem('_initialized', true);
-    logger.info('✅ Archive sync queue initialized');
-  } catch (err) {
-    logger.error('Failed to initialize queue store:', err);
-  }
-}
-
-/**
- * Add archive operation to sync queue
- */
-export async function addToSyncQueue(archiveData) {
-  try {
-    const queue = (await localforage.getItem(QUEUE_STORE)) || [];
-    queue.push({
-      id: `${Date.now()}-${Math.random()}`,
-      data: archiveData,
-      timestamp: Date.now(),
-      retries: 0
-    });
-    await localforage.setItem(QUEUE_STORE, queue);
-    logger.info('📌 Archive added to sync queue (total pending:', queue.length, ')');
-    return queue.length;
+    const queue = (await localforage.getItem(QUEUE_KEY)) || [];
+    // Avoid adding duplicates
+    const exists = queue.some(q => q.date === item.date);
+    if (!exists) {
+      queue.push(item);
+      await localforage.setItem(QUEUE_KEY, queue);
+      logger.info(`📌 Added to sync queue: ${item.date}`);
+    }
   } catch (err) {
     logger.error('Error adding to sync queue:', err);
-    return 0;
   }
 }
 
-/**
- * Get all pending sync items
- */
-export async function getPendingSyncItems() {
-  try {
-    return (await localforage.getItem(QUEUE_STORE)) || [];
-  } catch (err) {
-    logger.error('Error getting pending sync items:', err);
-    return [];
-  }
-}
+async function processQueue() {
+  const archiveStore = useArchiveStore();
+  const { addNotification } = useNotifications();
+  let queue = (await localforage.getItem(QUEUE_KEY)) || [];
 
-/**
- * Remove sync item after successful upload
- */
-export async function removeSyncItem(itemId) {
-  try {
-    const queue = (await localforage.getItem(QUEUE_STORE)) || [];
-    const filtered = queue.filter(item => item.id !== itemId);
-    await localforage.setItem(QUEUE_STORE, filtered);
-    logger.info('✅ Sync item removed (pending:', filtered.length, ')');
-  } catch (err) {
-    logger.error('Error removing sync item:', err);
+  if (queue.length === 0) {
+    return;
   }
-}
 
-/**
- * Update retry count for an item
- */
-export async function incrementRetryCount(itemId) {
-  try {
-    const queue = (await localforage.getItem(QUEUE_STORE)) || [];
-    const item = queue.find(q => q.id === itemId);
-    if (item) {
-      item.retries = (item.retries || 0) + 1;
-      await localforage.setItem(QUEUE_STORE, queue);
+  logger.info(`🔄 Processing sync queue with ${queue.length} item(s)`);
+
+  while (queue.length > 0) {
+    if (!navigator.onLine) {
+      logger.warn('🔌 Connection lost. Pausing sync queue.');
+      return;
     }
-  } catch (err) {
-    logger.error('Error incrementing retry count:', err);
-  }
-}
 
-/**
- * Clear entire sync queue
- */
-export async function clearSyncQueue() {
-  try {
-    await localforage.setItem(QUEUE_STORE, []);
-    logger.info('🗑️ Sync queue cleared');
-  } catch (err) {
-    logger.error('Error clearing sync queue:', err);
-  }
-}
-
-/**
- * Get queue statistics
- */
-export async function getQueueStats() {
-  try {
-    const queue = (await localforage.getItem(QUEUE_STORE)) || [];
-    const totalRetries = queue.reduce((sum, item) => sum + (item.retries || 0), 0);
-    return {
-      pendingCount: queue.length,
-      totalRetries,
-      oldestItem: queue[0]?.timestamp ? new Date(queue[0].timestamp).toLocaleString('ar-EG') : null
-    };
-  } catch (err) {
-    logger.error('Error getting queue stats:', err);
-    return { pendingCount: 0, totalRetries: 0, oldestItem: null };
-  }
-}
-
-/**
- * Save archive timestamp for duplicate detection
- */
-export async function saveArchiveTimestamp(date) {
-  try {
-    const timestamps = (await localforage.getItem(TIMESTAMP_STORE)) || {};
-    timestamps[date] = Date.now();
-    await localforage.setItem(TIMESTAMP_STORE, timestamps);
-  } catch (err) {
-    logger.error('Error saving archive timestamp:', err);
-  }
-}
-
-/**
- * Check if archive for a date was recently synced
- */
-export async function wasRecentlySynced(date, withinMs = 60000) {
-  try {
-    const timestamps = (await localforage.getItem(TIMESTAMP_STORE)) || {};
-    const timestamp = timestamps[date];
-    if (!timestamp) return false;
-    return Date.now() - timestamp < withinMs;
-  } catch (err) {
-    logger.error('Error checking sync status:', err);
-    return false;
-  }
-}
-
-/**
- * Process pending sync queue — attempt to sync all queued archives to database
- * Called when connection is restored
- */
-export async function processPendingSyncQueue() {
+    const item = queue.shift(); // Process one by one
     try {
-    // Use direct supabase client
-    if (!supabase) {
-      logger.error('❌ Supabase client not available');
-      return { synced: 0, failed: 0 };
+      await archiveStore.uploadArchive(item.date, item.data);
+      addNotification(`تمت مزامنة أرشيف تاريخ ${item.date} بنجاح في قاعدة البيانات`, 'success');
+      await localforage.setItem(QUEUE_KEY, queue); // Update queue after successful upload
+    } catch (err) {
+      logger.error(`❌ Failed to sync ${item.date}. Re-queueing.`, err);
+      queue.unshift(item); // Add back to the front of the queue to retry next time
+      await localforage.setItem(QUEUE_KEY, queue);
+      // Stop processing if an error occurs to avoid multiple failures
+      return; 
     }
-
-    const queue = await getPendingSyncItems();
-
-    if (queue.length === 0) {
-      logger.info('✅ No pending archives to sync');
-      return { synced: 0, failed: 0 };
-    }
-    logger.info(`🔄 Processing ${queue.length} pending archive(s)...`);
-
-    let synced = 0;
-    let failed = 0;
-
-    for (const item of queue) {
-      try {
-        if (!navigator.onLine) {
-          logger.warn('⚠️ Connection lost during sync — pausing queue processing');
-          break;
-        }
-
-        const { user_id, archive_date, rows } = item.data;
-
-        if (!rows || rows.length === 0) {
-          logger.warn('⚠️ Skipping empty archive:', archive_date);
-          await removeSyncItem(item.id);
-          continue;
-        }
-
-        logger.info(`📤 Syncing archive: ${archive_date} (attempt ${(item.retries || 0) + 1})`);
-
-        // Delete old data for this date (replace)
-        const { error: deleteError } = await supabase
-          .from('archive_data')
-          .delete()
-          .eq('user_id', user_id)
-          .eq('archive_date', archive_date);
-
-        if (deleteError) throw deleteError;
-
-        // Insert new data
-        const { error: insertError } = await supabase
-          .from('archive_data')
-          .insert(rows);
-
-        if (insertError) throw insertError;
-
-        // Update archive_dates table
-        await supabase
-          .from('archive_dates')
-          .upsert(
-            { user_id, archive_date },
-            { onConflict: 'user_id, archive_date' }
-          );
-
-        // Success — remove from queue
-        await removeSyncItem(item.id);
-        synced++;
-        logger.info(`✅ Archive synced: ${archive_date}`);
-      } catch (err) {
-        logger.error(`❌ Failed to sync archive ${item.data?.archive_date}:`, err.message);
-        await incrementRetryCount(item.id);
-        failed++;
-
-        // Stop on persistent errors
-        if (err.message?.includes('401') || err.message?.includes('403')) {
-          logger.error('🚨 Authentication error — stopping sync queue processing');
-          break;
-        }
-      }
-    }
-
-    logger.info(`📊 Sync queue processing complete: ${synced} synced, ${failed} failed`);
-    return { synced, failed };
-  } catch (err) {
-    logger.error('Error processing sync queue:', err);
-    return { synced: 0, failed: 0 };
   }
 }
+
+function initializeSyncListener() {
+  window.addEventListener('online', processQueue);
+  logger.info('👂 Online event listener for sync queue initialized.');
+
+  // Also try to process the queue on startup, in case the app was closed while offline
+  if(navigator.onLine) {
+    processQueue();
+  }
+}
+
+export { addToSyncQueue, processQueue, initializeSyncListener };

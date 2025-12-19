@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/services/api';
+import { supabase } from '@/supabase';
 import { useRouter } from 'vue-router';
 import { useNotifications } from '@/composables/useNotifications';
 import logger from '@/utils/logger.js'
@@ -123,7 +124,7 @@ export const usePaymentStore = defineStore('payment', () => {
 
       const { error: paymentError } = await api.payment.submitPayment(
         user.id,
-        selectedPlan.value.id.length > 10 ? selectedPlan.value.id : null,
+        selectedPlan.value.id,
         transactionId.value,
         userData.value,
         selectedPlan.value

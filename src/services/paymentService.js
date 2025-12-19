@@ -1,5 +1,6 @@
 import { apiInterceptor } from './api.js';
 import { authService } from './authService.js';
+import logger from '@/utils/logger.js';
 
 export const paymentService = {
   async getPlanDetails(planId) {
@@ -23,7 +24,7 @@ export const paymentService = {
 
     if (error) {
       // Log the error but proceed with fallback
-      console.error("Error fetching plan from DB, using fallback.", error);
+      logger.error("Error fetching plan from DB, using fallback.", error);
     }
     
     if (data) {

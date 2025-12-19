@@ -116,13 +116,14 @@
 
     <div class="summary-container">
       <section id="summary">
-        <h2>ملخص البيان</h2>
+        <h2 class="summary-title"><i class="fas fa-file-invoice-dollar summary-title-icon"></i> ملخص البيان</h2>
+        <div class="summary-divider" aria-hidden="true"></div>
         <div class="summary-grid">
-          <div class="summary-row">
-            <label class="master-limit-field">
+          <div class="summary-row two-cols">
+            <div class="summary-item master-limit-field">
               <div class="field-header">
-                <i class="fas fa-crown field-icon"></i>
-                <strong>ليمت الماستر:</strong>
+                <i class="fas fa-crown field-icon master-icon"></i>
+                <strong>ليمت الماستر</strong>
               </div>
               <input
                 type="text"
@@ -133,11 +134,12 @@
                 @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
                 @blur="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
               />
-            </label>
-            <label class="current-balance-field">
+            </div>
+
+            <div class="summary-item current-balance-field">
               <div class="field-header">
-                <i class="fas fa-wallet field-icon"></i>
-                <strong>رصيد الماستر الحالي:</strong>
+                <i class="fas fa-wallet field-icon balance-icon"></i>
+                <strong>رصيد الماستر الحالي</strong>
               </div>
               <input
                 type="text"
@@ -148,63 +150,66 @@
                 @input="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
                 @blur="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
               />
-            </label>
-          </div>
-          
-          <div class="summary-row">
-            <label class="reset-amount-field">
-              <div class="field-header">
-                <i class="fas fa-undo-alt field-icon"></i>
-                <strong>مبلغ التصفيرة:</strong>
-              </div>
-              <span class="calc-field" :class="{ 'positive': store.resetAmount > 0, 'negative': store.resetAmount < 0 }">
-                {{ store.formatNumber(store.resetAmount) }}
-              </span>
-            </label>
-            <label class="total-collected-field">
-              <div class="field-header">
-                <i class="fas fa-coins field-icon"></i>
-                <strong>إجمالي المحصل:</strong>
-              </div>
-              <span class="calc-field">{{ store.formatNumber(store.totals.collector) }}</span>
-            </label>
+            </div>
           </div>
 
-          <label class="reset-status-field">
-            <div class="field-header">
-              <i class="fas fa-check-circle field-icon"></i>
-              <strong>حالة التصفيرة:</strong>
+          <div class="summary-row two-cols">
+            <div class="summary-item reset-amount-field">
+              <div class="field-header">
+                <i class="fas fa-undo-alt field-icon reset-icon"></i>
+                <strong>مبلغ التصفيرة</strong>
+              </div>
+              <div class="summary-value calc-field" :class="{ 'positive': store.resetAmount > 0, 'negative': store.resetAmount < 0 }">
+                {{ store.formatNumber(store.resetAmount) }}
+              </div>
             </div>
-            <span class="calc-field" :style="{ color: store.resetStatus.color }">
-              {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }} 
-              {{ store.resetStatus.text }}
-            </span>
-          </label>
+
+            <div class="summary-item total-collected-field">
+              <div class="field-header">
+                <i class="fas fa-coins field-icon coins-icon"></i>
+                <strong>إجمالي المحصل</strong>
+              </div>
+              <div class="summary-value calc-field">{{ store.formatNumber(store.totals.collector) }}</div>
+            </div>
+          </div>
+
+          <div class="summary-row full">
+            <div class="summary-item reset-status-field full-width">
+              <div class="field-header">
+                <i class="fas fa-check-circle field-icon status-icon"></i>
+                <strong>حالة التصفيرة</strong>
+              </div>
+              <div class="summary-value calc-field" :style="{ color: store.resetStatus.color }">
+                {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }}
+                &nbsp;{{ store.resetStatus.text }}
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
     </div>
 
     <div class="buttons-container">
       <div class="buttons-row">
-        <router-link to="/app/dashboard" class="btn">
+        <router-link to="/app/dashboard" class="btn btn-dashboard btn-dashboard--home">
           <i class="fas fa-home"></i>
           <span>صفحة الإدخال</span>
         </router-link>
 
-        <router-link to="/app/archive" class="btn">
+        <router-link id="goToArchiveBtn" to="/app/archive" class="btn btn-dashboard btn-dashboard--archive">
           <i class="fas fa-archive"></i>
           <span>الذهاب للأرشيف</span>
         </router-link>
       </div>
 
       <div class="buttons-row">
-        <button class="btn btn--clear-harvest" @click="store.clearFields">
+        <button class="btn btn-dashboard btn-dashboard--clear" @click="store.clearFields">
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
-
-        <button class="btn btn--archive-today" :disabled="store.rows.length === 0" @click="archiveToday">
-          <i class="fas fa-box-archive"></i>
+        <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="store.rows.length === 0" @click="archiveToday">
+          <i class="fas fa-folder"></i>
           <span>أرشفة اليوم</span>
         </button>
       </div>
@@ -214,7 +219,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onActivated, watch, inject, ref, reactive } from 'vue';
+import { computed, onMounted, onActivated, watch, inject, ref, reactive, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useCounterStore } from '@/stores/counterStore';
@@ -251,10 +256,7 @@ function applySavedColumnsHarvest(obj){ Object.keys(obj || {}).forEach(k => { co
 const { confirm, success, error, messages, addNotification } = inject('notifications');
 
 // Initialize the store when the view mounts or becomes active
-onMounted(() => {
-  store.initialize && store.initialize();
-  try { loadColumnsVisibilityHarvest(); } catch (e) { logger.debug('no saved harvest columns'); }
-});
+// (Initialization is consolidated into the main onMounted below)
 
 onActivated(() => {
   logger.debug('Harvest view activated — initializing store');
@@ -287,46 +289,47 @@ const syncWithCounterStore = () => {
 };
 
 onMounted(() => {
-    // محاولة تحميل بيانات جديدة عند فتح الصفحة (بدون إشعارات)
-    const dataLoaded = store.loadDataFromStorage();
-    if (dataLoaded) {
-      logger.info('✅ تم تحميل البيانات من صفحة الإدخال');
-    }
+  // محاولة تحميل بيانات جديدة عند فتح الصفحة (بدون إشعارات)
+  store.initialize && store.initialize();
+  try { loadColumnsVisibilityHarvest(); } catch (e) { logger.debug('no saved harvest columns'); }
 
-    // مزامنة إجمالي المحصل مع صفحة عداد الأموال
+  const dataLoaded = store.loadDataFromStorage();
+  if (dataLoaded) {
+    logger.info('✅ تم تحميل البيانات من صفحة الإدخال');
+  }
+
+  // مزامنة إجمالي المحصل مع صفحة عداد الأموال
+  syncWithCounterStore();
+
+  // مراقبة عودة التركيز للصفحة
+  const handleFocus = () => {
     syncWithCounterStore();
+  };
 
-    // مراقبة عودة التركيز للصفحة
-    const handleFocus = () => {
-      syncWithCounterStore();
-    };
+  window.addEventListener('focus', handleFocus);
 
-    window.addEventListener('focus', handleFocus);
-
-    // تنظيف المراجع عند إلغاء تحميل الصفحة
-    window.addEventListener('beforeunload', () => {
-      window.removeEventListener('focus', handleFocus);
-    });
+  // تنظيف المراجع عند إلغاء تحميل المكوّن
+  onBeforeUnmount(() => {
+    window.removeEventListener('focus', handleFocus);
   });
+});
 
 // Check and add empty row if last row has data
 const checkAndAddEmptyRow = (index) => {
-   if (index === store.rows.length - 1) {
-     const lastRow = store.rows[index];
-     if (lastRow.shop || lastRow.code || lastRow.amount || lastRow.extra || lastRow.collector) {
-       store.rows.push({
-         id: Date.now(),
-         shop: '',
-         code: '',
-         amount: 0,
-         extra: 0,
-         collector: 0,
-         net: 0,
-         isImported: false
-       });
-       store.saveRowsToLocalStorage();
-     }
-   }
+  // Always ensure there's at least one empty row at the end
+  if (index === store.rows.length - 1) {
+    store.rows.push({
+      id: Date.now(),
+      shop: '',
+      code: '',
+      amount: 0,
+      extra: null,
+      collector: null,
+      net: 0,
+      isImported: false
+    });
+    store.saveRowsToLocalStorage();
+  }
 };
 
 // Update shop and save
@@ -356,7 +359,8 @@ const updateAmount = (row, index, event) => {
 
 // Update extra and save
 const updateExtra = (row, index, event) => {
-   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
+   const rawValue = event.target.value.replace(/,/g, '');
+   const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
    row.extra = value;
    row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
    store.saveRowsToLocalStorage();
@@ -365,7 +369,8 @@ const updateExtra = (row, index, event) => {
 
 // Update collector and save
 const updateCollector = (row, index, event) => {
-   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
+   const rawValue = event.target.value.replace(/,/g, '');
+   const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
    row.collector = value;
    row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
    store.saveRowsToLocalStorage();
@@ -391,6 +396,7 @@ const currentDay = computed(() => {
 // Helper functions for colors and icons
 const formatInputNumber = (num) => {
    if (!num && num !== 0) return ''
+   if (num === 0) return '' // Show empty string for zero values
    return new Intl.NumberFormat('en-US', {
      minimumFractionDigits: 0,
      maximumFractionDigits: 2
@@ -491,33 +497,101 @@ const archiveToday = async () => {
 
 .summary-container {
   margin: 30px 0;
-  padding: 25px;
+  padding: 22px;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
-  border: 1px solid rgba(0, 121, 101, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 121, 101, 0.08);
 }
 
-.summary-row {
+.summary-title {
+  text-align: center;
+  font-size: 1.15rem;
+  margin-bottom: 14px;
   display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 15px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--gray-900);
 }
+
+.summary-title-icon {
+  font-size: 1.6rem;
+  color: var(--primary);
+}
+
+.summary-divider {
+  display: block;
+  width: 85%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 121, 101, 0.22), transparent);
+  border: none;
+  margin: 10px auto 18px;
+  border-radius: 3px;
+}
+
+.summary-grid { display: block; }
+
+.summary-row { margin-bottom: 12px; }
+
+.summary-row.two-cols {
+  display: flex;
+  gap: 12px;
+}
+
+.summary-row.full { display: block; }
 
 .summary-item {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 180px;
   text-align: center;
-  padding: 15px;
-  background: linear-gradient(45deg, rgba(0,121,101,0.05), rgba(243,156,18,0.05));
-  border-radius: 12px;
-  border: 1px solid rgba(0,121,101,0.1);
+  padding: 14px;
+  background: linear-gradient(45deg, rgba(0,121,101,0.03), rgba(243,156,18,0.03));
+  border-radius: 10px;
+  border: 1px solid rgba(0,121,101,0.08);
 }
 
-.summary-value {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--gray-900);
+.summary-item.full-width { width: 100%; }
+
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.field-icon { font-size: 1.05rem; opacity: 0.95; }
+.master-icon { color: var(--primary); }
+.balance-icon { color: #0ea5a4; }
+.reset-icon { color: #f59e0b; }
+.coins-icon { color: #fbbf24; }
+.status-icon { color: #10b981; }
+
+.bold-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.07);
+  background: transparent;
+  text-align: center;
+}
+
+.calc-field { font-size: 1.35rem; font-weight: 800; color: var(--gray-900); text-align: center; }
+
+/* Reduce size for reset amount and total collected by one step */
+.reset-amount-field .calc-field,
+.total-collected-field .calc-field {
+  font-size: 1.15rem;
+}
+
+/* small screens: stack */
+@media (max-width: 640px) {
+  .summary-row.two-cols { flex-direction: column; }
+  .summary-item { width: 100%; }
+  .summary-title { font-size: 1rem; }
 }
 </style>

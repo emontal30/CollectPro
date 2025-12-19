@@ -85,7 +85,7 @@
             <i :class="getChartIcon(type)"></i>
             <span>{{ getChartLabel(type) }}</span>
           </button>
-          <button class="btn-secondary chart-refresh-btn" :disabled="isRefreshingCharts" @click="refreshCharts">
+          <button class="btn btn-secondary chart-refresh-btn" :disabled="isRefreshingCharts" @click="refreshCharts">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingCharts }"></i>
             <span>تحديث</span>
           </button>
@@ -152,11 +152,11 @@
       <div class="table-header-info">
         <div class="table-actions users-search-row">
           <input v-model="store.filters.usersSearch" type="text" class="filter-select users-search-input" placeholder="ابحث عن المستخدمين" />
-          <button class="btn-secondary small-refresh-btn" :disabled="isRefreshingUsers" @click="refreshUsers"><i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingUsers }"></i></button>
+          <button class="btn btn-secondary small-refresh-btn" :disabled="isRefreshingUsers" @click="refreshUsers"><i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingUsers }"></i></button>
         </div>
         <div class="table-actions users-bulk-actions">
           <input v-model.number="bulkDays" type="number" class="subscription-days-input" min="1" placeholder="عدد أيام الاشتراك" />
-          <button class="btn-success" @click="bulkActivate"><i class="fas fa-check-double"></i> تفعيل الكل</button>
+          <button class="btn btn-success" @click="bulkActivate"><i class="fas fa-check-double"></i> تفعيل الكل</button>
         </div>
       </div>
 
@@ -242,7 +242,7 @@
             <option value="all">كل الصلاحيات</option>
             <option value="expiring_soon">قرب الانتهاء</option>
           </select>
-          <button class="btn-secondary small-refresh-btn" :disabled="isRefreshingSubscriptions" @click="refreshSubscriptions"><i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingSubscriptions }"></i></button>
+          <button class="btn btn-secondary small-refresh-btn" :disabled="isRefreshingSubscriptions" @click="refreshSubscriptions"><i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshingSubscriptions }"></i></button>
         </div>
       </div>
       <div class="table-container">

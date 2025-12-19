@@ -32,8 +32,8 @@ function showModal(title, message, onConfirm = null, confirmText = "موافق",
         <p>${message}</p>
       </div>
       <div class="shared-modal-footer">
-        ${showCancel ? `<button class="shared-modal-btn shared-modal-cancel">${cancelText}</button>` : ''}
-        <button class="shared-modal-btn shared-modal-confirm">${confirmText}</button>
+        ${showCancel ? `<button class="shared-modal-btn btn btn-secondary shared-modal-cancel">${cancelText}</button>` : ''}
+        <button class="shared-modal-btn btn btn-primary shared-modal-confirm">${confirmText}</button>
       </div>
     </div>
   `;

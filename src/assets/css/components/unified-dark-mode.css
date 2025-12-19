@@ -121,48 +121,9 @@ body.dark .footer {
   color: #64748b !important;
 }
 
-/* =========================================
-   4. BUTTONS & ACTIONS
-   ========================================= */
-body.dark .btn-primary,
-body.dark .btn-dashboard {
-  background: linear-gradient(135deg, #0f766e, #0d9488); /* Teal-700 to Teal-600 */
-  color: white;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-body.dark .btn-primary:hover,
-body.dark .btn-dashboard:hover {
-  background: linear-gradient(135deg, #0d9488, #14b8a6);
-  box-shadow: 0 0 15px rgba(20, 184, 166, 0.4); /* Teal Glow */
-}
-
-body.dark .btn-secondary {
-  background: #334155;
-  color: #e2e8f0;
-}
-
-body.dark .btn--delete-archive,
-body.dark .logout-btn {
-  background: linear-gradient(135deg, #991b1b, #7f1d1d) !important;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
-}
-
-body.dark .btn-settings-table {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--primary);
-}
-
-body.dark .btn-settings-table:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-body.dark .menu-toggle {
-  color: var(--primary) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
+/* Buttons dark-mode rules moved to src/assets/css/components/buttons.css
+   to centralize all button styles (light + dark) in a single component file.
+*/
 
 /* =========================================
    5. FORMS & INPUTS
@@ -229,7 +190,14 @@ body.dark .negative-net-border::before {
 
 /* Total Row Styles */
 body.dark .total-row {
-  background: #0f766e; /* Teal Dark */
+  /* reuse table header background for consistent navy tone */
+  background: var(--table-header-bg) !important;
+}
+
+/* Total row text color (all cells) in dark mode */
+body.dark .total-row,
+body.dark .total-row td {
+  color: #ffffff !important;
 }
 
 body.dark .total-row-negative {

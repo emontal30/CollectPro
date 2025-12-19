@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useSessionManager } from '@/composables/useSessionManager'
 import logger from '@/utils/logger.js'
 
 // Lazy Loading Components
@@ -90,7 +89,6 @@ const router = createRouter({
 // --- Smart Navigation Guard ---
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  const sessionManager = useSessionManager()
 
   // 1. Ensure Auth Initialized
   if (!authStore.isInitialized) {
@@ -104,9 +102,9 @@ router.beforeEach(async (to, from, next) => {
 
   // 2. Already Logged In -> Redirect to last page
   if (isLoggedIn && requiresGuest) {
-    const lastPage = sessionManager.getLastPage()
-    logger.info(`👤 User logged in, restoring: ${lastPage}`)
-    return next(lastPage)
+    const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
+    logger.info(`👤 User logged in, restoring to: ${lastRoute}`);
+    return next(lastRoute);
   }
 
   // 3. Protected Routes
@@ -128,9 +126,8 @@ router.beforeEach(async (to, from, next) => {
 
 // --- Page Tracker ---
 router.afterEach((to) => {
-  const sessionManager = useSessionManager()
   if (to.path.startsWith('/app')) {
-    sessionManager.saveCurrentPage(to.fullPath)
+    localStorage.setItem('app_last_route', to.fullPath);
   }
 })
 

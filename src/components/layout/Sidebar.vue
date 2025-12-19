@@ -23,7 +23,7 @@
                 ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
               </span>
               <button 
-                class="dark-mode-toggle-small" 
+                class="dark-mode-toggle-small btn--icon btn" 
                 title="تبديل الوضع الليلي"
                 @click="toggleDarkMode"
               >
@@ -54,7 +54,7 @@
         <div class="logout-container">
           <button
             id="logout-btn"
-            class="logout-btn"
+            class="logout-btn btn btn-danger"
             type="button"
             :disabled="authStore.isLoading"
             @click.stop="handleLogout"
@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, inject } from 'vue';
+import { computed, inject } from 'vue';
 import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
@@ -170,14 +170,6 @@ const handleLogout = async () => {
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
   }
 };
-
-// تحميل البيانات عند فتح الشريط الجانبي
-onMounted(() => {
-  store.fetchSidebarData(); // لجلب حالة الفتح/الغلق
-  if (authStore.user) {
-    subStore.loadSubscription(); // جلب بيانات الاشتراك (كاش ذكي)
-  }
-});
 </script>
 
 <style scoped>

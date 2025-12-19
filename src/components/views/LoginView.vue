@@ -15,7 +15,7 @@
 
           <div class="btn-container">
             <button 
-              class="google-login-btn" 
+              class="google-login-btn btn btn-primary" 
               :class="{ 'is-loading': store.isLoading }"
               :disabled="store.isLoading"
               @click="store.loginWithGoogle"
@@ -39,7 +39,7 @@
           <hr class="privacy-divider">
 
           <div v-if="showInstallButton" class="install-app-section">
-            <button class="install-app-btn" @click="installApp">
+            <button class="install-app-btn btn btn-primary" @click="installApp">
               <div class="install-app-icon">
                 <img src="/favicon.svg" alt="شعار التطبيق" />
               </div>

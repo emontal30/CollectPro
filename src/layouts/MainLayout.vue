@@ -16,7 +16,11 @@
     <!-- Main content area -->
     <main>
       <div class="content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <KeepAlive include="DashboardView,HarvestView">
+            <component :is="Component" />
+          </KeepAlive>
+        </router-view>
       </div>
     </main>
 

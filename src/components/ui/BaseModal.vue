@@ -5,7 +5,7 @@
         <div class="shared-modal" @click.stop>
           <div class="shared-modal-header">
             <h3>{{ title }}</h3>
-            <button class="shared-modal-close" aria-label="إغلاق" @click="close">
+            <button class="shared-modal-close btn btn--icon" aria-label="إغلاق" @click="close">
               <i class="fas fa-times"></i>
             </button>
           </div>

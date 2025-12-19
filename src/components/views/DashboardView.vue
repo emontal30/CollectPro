@@ -11,7 +11,7 @@
       <div class="input-container">
         <label for="dataInput" class="input-label">
           <i class="fas fa-table text-primary"></i>
-          البيانات
+          ادخل البيانات
         </label>
         <textarea 
           id="dataInput"
@@ -50,24 +50,24 @@
 
     <div class="buttons-section">
       <div class="buttons-row">
-        <button id="pasteBtn" class="btn" type="button" @click="handlePaste">
+        <button id="pasteBtn" class="btn btn-dashboard btn-dashboard--paste" type="button" @click="handlePaste">
           <i class="fas fa-paste"></i>
           <span>لصق البيانات</span>
         </button>
 
-        <button id="saveGoBtn" class="btn" type="button" @click="handleSaveAndGo">
+        <button id="saveGoBtn" class="btn btn-dashboard btn-dashboard--save" type="button" @click="handleSaveAndGo">
           <i class="fas fa-save"></i>
           <span>حفظ وانتقال لصفحة التحصيل</span>
         </button>
       </div>
 
       <div class="buttons-row">
-        <router-link id="goToArchiveBtn" to="/app/archive" class="btn">
+        <router-link id="goToArchiveBtn" to="/app/archive" class="btn btn-dashboard btn-dashboard--archive">
           <i class="fas fa-archive"></i>
           <span>الذهاب للأرشيف</span>
         </router-link>
 
-        <button id="clearBtn" class="btn" type="button" @click="handleClear">
+        <button id="clearBtn" class="btn btn-dashboard btn-dashboard--clear" type="button" @click="handleClear">
           <i class="fas fa-trash-alt"></i>
           <span>مسح البيانات</span>
         </button>
@@ -75,7 +75,7 @@
     </div>
 
 
-    <div v-if="!store.clientData" class="help-section">
+    <div class="help-section">
       <div class="help-card">
         <h3>📋 تعليمات الاستخدام</h3>
         <ul>
@@ -217,17 +217,7 @@ onMounted(() => {
 <style scoped>
 /* All styles imported from _unified-components.css */
 
-/* تنسيق صفوف الأزرار */
-.buttons-row {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.buttons-row:last-child {
-  margin-bottom: 0;
-}
+/* Buttons row layout moved to global buttons.css */
 
 /* شريط الحالة السفلي - تصميم احترافي حديث */
 .status-bar {
@@ -365,4 +355,27 @@ onMounted(() => {
   opacity: 0;
   transform: translateY(-10px);
 }
+
+/* Help card: ensure full-width centered block under buttons */
+.help-section {
+  display: flex;
+  justify-content: center;
+  padding: 12px 12px 28px;
+  width: 100%;
+}
+
+.help-card {
+  width: 100%;
+  max-width: 920px;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 6px 20px rgba(2,6,23,0.06);
+  text-align: right;
+}
+
+.help-card h3 { margin: 0 0 8px 0; }
+.help-card ul { margin: 0; padding-right: 14px; }
+.help-card li { margin-bottom: 6px; }
 </style>

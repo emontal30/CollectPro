@@ -44,6 +44,17 @@ thead th, .modern-table th, .collections-table th {
   font-family: "Noto Kufi Arabic", var(--font-family-sans);
 }
 
+/* Center headers for modern tables (Harvest, Archive, etc.) */
+.modern-table th,
+.collections-table th,
+thead th {
+  text-align: center !important;
+}
+
+/* Keep shop column cells right-aligned but header centered */
+.modern-table td.shop { text-align: right !important; }
+.modern-table th.shop { text-align: center !important; }
+
 /* 5. Table Cells (Td) */
 tbody td, .modern-table td, .collections-table td {
   padding: 12px;
@@ -66,8 +77,8 @@ tr:last-child td { border-bottom: none !important; }
 /* 6. Specific Column Styles (Harvest/Archive) */
 /* Shop Column - Always RTL */
 .shop, td.shop, th.shop {
-  width: 180px !important;
-  min-width: 180px;
+  width: 160px !important;
+  min-width: 160px;
   text-align: right !important;
   direction: rtl !important;
   font-weight: 700 !important;
@@ -82,14 +93,13 @@ tr:last-child td { border-bottom: none !important; }
 
 /* 7. Total Row (Sticky Bottom) */
 .total-row {
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  background: #00897B; /* Fallback */
-  background: var(--primary-light);
-  color: white;
+  position: static !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  background: var(--primary-light) !important;
+  color: white !important;
   font-weight: 800;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  box-shadow: none !important;
 }
 
 .total-row td {
@@ -100,10 +110,18 @@ tr:last-child td { border-bottom: none !important; }
   font-size: 1.1rem;
 }
 
+/* Ensure net total text is white for visibility */
+.total-row td.net,
+.total-row td.net.positive,
+.total-row td.net.negative,
+.total-row td.net.zero {
+  color: #ffffff !important;
+}
+
 /* 8. Net Column Coloring & Borders */
-td.net.positive { color: #007bff; font-weight: bold; }
-td.net.negative { color: #dc3545; font-weight: bold; }
-td.net.zero { color: #28a745; font-weight: bold; }
+td.net.positive { color: #007bff; font-weight: bold; white-space: nowrap !important; }
+td.net.negative { color: #dc3545; font-weight: bold; white-space: nowrap !important; }
+td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important; }
 
 /* Professional Negative Net Border System */
 .negative-net-border {
@@ -143,7 +161,56 @@ td.net.zero { color: #28a745; font-weight: bold; }
     font-size: 0.85rem;
   }
   .shop {
-    width: 140px !important;
-    min-width: 140px;
+    width: 120px !important;
+    min-width: 120px;
   }
+}
+
+/* ===== Ensure imported (readonly) rows and editable rows match visually ===== */
+.modern-table td .readonly-field,
+.modern-table td .readonly-amount {
+  display: block;
+  width: 100%;
+  padding: 5px 6px;
+  font-family: var(--font-family-mono);
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: inherit;
+  background: transparent;
+  text-align: center;
+}
+
+/* For the shop column keep RTL/right alignment for both inputs and readonly text */
+.modern-table td.shop .editable-input,
+.modern-table td.shop .readonly-field {
+  text-align: right !important;
+  direction: rtl !important;
+  padding-right: 12px;
+  font-weight: 700;
+}
+
+/* For code column ensure left-to-right numeric/code alignment when appropriate */
+.modern-table td.code .editable-input,
+.modern-table td.code .readonly-field {
+  text-align: center !important;
+  direction: ltr !important;
+  padding-left: 8px;
+  font-size: 0.75rem !important;
+  color: #6b7280 !important;
+  font-style: italic !important;
+}
+
+/* Inputs inside table should inherit same font-size/family as readonly cells */
+.modern-table td .editable-input,
+.modern-table td .amount-input,
+.modern-table td .centered-input {
+  font-family: var(--font-family-mono);
+  font-size: 0.95rem;
+}
+
+/* Center the total label inside the totals row (shop cell) without changing calculations */
+.modern-table .total-row td.shop {
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding-right: 12px !important; /* keep some spacing for RTL layout */
 }

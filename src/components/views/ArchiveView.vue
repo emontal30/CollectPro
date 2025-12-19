@@ -18,7 +18,7 @@
               v-for="dateItem in store.availableDates" 
               :key="dateItem.value" 
               :value="dateItem.value"
-              :class="{ 'cloud-date': dateItem.source === 'cloud' }"
+              :style="{ color: dateItem.source === 'cloud' ? '#1e3a8a' : '' }"
             >
               {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
             </option>
@@ -98,21 +98,10 @@
       </table>
     </div>
 
-    <div class="buttons">
-      <router-link to="/app/harvest" class="btn btn--back-to-harvest">
+      <router-link to="/app/harvest" class="btn btn-secondary btn--back-to-harvest">
         <i class="fas fa-arrow-left"></i>
         <span>العودة للتحصيلات</span>
       </router-link>
-
-      <button
-        class="btn btn--delete-archive"
-        :disabled="!store.selectedDate"
-        @click="handleDelete"
-      >
-        <i class="fas fa-trash-alt"></i>
-        <span>حذف الأرشيف الحالي</span>
-      </button>
-    </div>
 
     <BaseModal
       :show="showColumnSettings"
@@ -133,20 +122,20 @@
       </div>
 
       <template #footer>
-        <button class="btn btn--select-all" @click="selectAllColumns">
+        <button class="btn btn-secondary btn--select-all" @click="selectAllColumns">
           تحديد الكل
         </button>
-        <button class="btn btn--save-settings" @click="closeColumnSettings">
+        <button class="btn btn-primary btn--save-settings" @click="closeColumnSettings">
           حفظ
         </button>
       </template>
     </BaseModal>
 
-  </div>
+    </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, onActivated, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
@@ -265,11 +254,6 @@ onUnmounted(() => {
   if (authSubscription?.unsubscribe) authSubscription.unsubscribe();
 });
 
-onActivated(async () => {
-  // عند العودة للصفحة من الكاش (KeepAlive)، تأكد من تحديث القوائم
-  await store.loadAvailableDates();
-});
-
 // --- التفاعلات (Methods) ---
 
 const handleDateChange = async () => {
@@ -280,13 +264,6 @@ const handleDateChange = async () => {
     await store.loadArchiveByDate(store.selectedDate);
   } else {
     store.rows = [];
-  }
-};
-
-const handleDelete = async () => {
-  if (store.selectedDate) {
-    await store.deleteArchive(store.selectedDate);
-    // بعد الحذف، المتجر سيقوم بتحديث القوائم تلقائياً
   }
 };
 
@@ -322,12 +299,6 @@ const getNetIcon = (val) => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-/* تنسيق خاص للتواريخ السحابية في القائمة */
-.cloud-date {
-  color: #1e40af; /* أزرق داكن */
-  background-color: #eff6ff; /* خلفية زرقاء فاتحة جداً */
-  font-weight: 600;
-}
 
 /* تحسينات للشاشات الصغيرة */
 @media (max-width: 640px) {

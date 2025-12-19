@@ -80,7 +80,7 @@
                   <i class="fas fa-exclamation-triangle"></i>
                   <p>تنبيه: اشتراكك ينتهي خلال {{ store.daysRemaining }} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.</p>
                 </div>
-                <button class="btn-primary" @click="store.openRenewModal">
+                <button class="btn btn-primary" @click="store.openRenewModal">
                   <i class="fas fa-sync-alt"></i> تجديد الاشتراك
                 </button>
               </div>
@@ -90,7 +90,7 @@
                   <i class="fas fa-exclamation-triangle"></i>
                   <p>انتهت صلاحية اشتراكك. جدد الآن للاستمرار.</p>
                 </div>
-                <router-link to="/app/subscriptions" class="btn-primary">
+                <router-link to="/app/subscriptions" class="btn btn-primary">
                   <i class="fas fa-rocket"></i> اشترك الآن
                 </router-link>
               </div>
@@ -101,7 +101,7 @@
               </div>
             </template>
 
-            <router-link v-else to="/app/subscriptions" class="btn-primary">
+            <router-link v-else to="/app/subscriptions" class="btn btn-primary">
               <i class="fas fa-rocket"></i> اشترك الآن
             </router-link>
           </div>
@@ -178,7 +178,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>تجديد الاشتراك</h2>
-          <button class="close-modal" @click="store.isRenewModalOpen = false">&times;</button>
+          <button class="close-modal btn btn--icon" @click="store.isRenewModalOpen = false">&times;</button>
         </div>
         <div class="modal-body">
           
@@ -201,7 +201,7 @@
 
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" @click="store.isRenewModalOpen = false">إلغاء</button>
+          <button class="btn btn-secondary" @click="store.isRenewModalOpen = false">إلغاء</button>
         </div>
       </div>
     </div>
@@ -210,29 +210,13 @@
 </template>
 
 <script setup>
-import { onMounted, onActivated, watch } from 'vue';
+import { onMounted } from 'vue';
 import logger from '@/utils/logger.js'
-import { useRoute } from 'vue-router';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import Loader from '@/components/ui/Loader.vue';
 
 const store = useMySubscriptionStore();
-const route = useRoute();
-
-// When the route becomes active (or user navigates back), re-init to ensure fresh data
-onActivated(() => {
-  logger.info('MySubscription activated — re-initializing store');
-  store.init().catch(err => logger.error('Error re-initializing subscription on activate:', err));
-});
-
-// Watch route changes to re-init when the user navigates to this view
-watch(() => route.name, (newName) => {
-  if (newName === 'MySubscription') {
-    logger.info('Route changed to MySubscription — init store');
-    store.init().catch(err => logger.error('Error init on route change:', err));
-  }
-});
 
 // دالة للحصول على نص المدة
 function getDurationText(subscription) {
@@ -272,10 +256,8 @@ function getStatusText(status) {
 }
 
 onMounted(() => {
-  logger.info('📱 MySubscription view mounted, loading subscription data...');
-  store.init().then(() => {
-    logger.info('✅ Subscription data loaded');
-  }).catch(err => {
+  logger.info('📱 MySubscription view mounted, ensuring subscription data is loaded...');
+  store.init().catch(err => {
     logger.error('❌ Error loading subscription:', err);
   });
 });

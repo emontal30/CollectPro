@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth';
 import { supabase } from '@/supabase';
-import { addToSyncQueue, getQueueStats } from '@/services/archiveSyncQueue';
+import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { removeFromAllCaches, safeDeepClone, setSmartCache } from '@/services/cacheManager';
 import logger from '@/utils/logger.js';
 
@@ -18,9 +18,6 @@ export const useHarvestStore = defineStore('harvest', {
     error: null,
     searchQuery: '',
     isModified: false, // لتتبع التغييرات غير المحفوظة
-    
-    // إحصائيات المزامنة
-    syncQueueStats: { pendingCount: 0, totalRetries: 0, oldestItem: null }
   }),
 
   getters: {
@@ -70,6 +67,11 @@ export const useHarvestStore = defineStore('harvest', {
         return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
       }
     }
+    ,
+    // مبلغ التصفيرة: الفرق بين رصيد الماستر والحد المسموح (currentBalance - masterLimit)
+    resetAmount: (state) => {
+      return (parseFloat(state.currentBalance) || 0) - (parseFloat(state.masterLimit) || 0);
+    }
   },
 
   actions: {
@@ -110,9 +112,6 @@ export const useHarvestStore = defineStore('harvest', {
           }
         }
         
-        // تحديث إحصائيات المزامنة
-        this.updateSyncQueueStats();
-
       } catch (err) {
         logger.error('❌ Error initializing harvest store:', err);
         this.resetTable();
@@ -293,7 +292,6 @@ export const useHarvestStore = defineStore('harvest', {
         }
 
         // 6. التنظيف بعد النجاح
-        await this.updateSyncQueueStats();
         this.clearAll(); 
 
         return { 
@@ -342,8 +340,8 @@ export const useHarvestStore = defineStore('harvest', {
             shop: shopName,
             code: code,
             amount: transferAmount,
-            extra: 0,
-            collector: 0,
+            extra: null,
+            collector: null,
             net: 0 - transferAmount,
             isImported: true
           });
@@ -381,12 +379,6 @@ export const useHarvestStore = defineStore('harvest', {
     setCurrentBalance(balance) {
       this.currentBalance = parseFloat(balance) || 0;
       localStorage.setItem('currentBalance', this.currentBalance.toString());
-    },
-
-    async updateSyncQueueStats() {
-      try {
-        this.syncQueueStats = await getQueueStats();
-      } catch (error) { /* ignore */ }
     },
 
     formatNumber(num) {
