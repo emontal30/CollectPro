@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { supabase } from '@/supabase'; // استدعاء مباشر لضمان الدقة
+import { supabase } from '@/supabase'; 
 import { useAuthStore } from '@/stores/auth';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { useNotifications } from '@/composables/useNotifications';
@@ -19,7 +19,7 @@ export const useArchiveStore = defineStore('archive', () => {
   const authStore = useAuthStore();
 
   // --- Constants ---
-  const DB_PREFIX = 'arch_data_'; // تم توحيد التسمية lowercase لسهولة القراءة
+  const DB_PREFIX = 'arch_data_'; 
   const TABLE_NAME = 'daily_archives';
 
   // --- Computed ---
@@ -36,8 +36,7 @@ export const useArchiveStore = defineStore('archive', () => {
   // --- Actions ---
 
   /**
-   * 1. أرشفة بيانات اليوم
-   * يحفظ محلياً أولاً، ثم يحاول الرفع أو يضعه في الطابور
+   * 1. Archive Today's Data
    */
   async function archiveToday(dateStr, harvestData) {
     if (!harvestData || harvestData.length === 0) {
@@ -50,19 +49,18 @@ export const useArchiveStore = defineStore('archive', () => {
       const user = authStore.user;
       if (!user) throw new Error('المستخدم غير مسجل للدخول');
 
-      // تجهيز البيانات كـ JSON
       const archivePayload = {
         user_id: user.id,
         archive_date: dateStr,
-        data: harvestData, // المصفوفة كما هي
+        data: harvestData,
         updated_at: new Date().toISOString()
       };
 
-      // أ. الحفظ محلياً فوراً (Offline First)
+      // Save locally (using standard lowercase prefix)
       await localforage.setItem(`${DB_PREFIX}${dateStr}`, harvestData);
       logger.info(`✅ Saved locally: ${dateStr}`);
 
-      // ب. التحقق من الإنترنت والمزامنة
+      // Sync
       if (navigator.onLine) {
         await _uploadToSupabase(archivePayload);
         addNotification('تم الحفظ محلياً وعلى السحابة بنجاح ✅', 'success');
@@ -75,7 +73,6 @@ export const useArchiveStore = defineStore('archive', () => {
         addNotification('تم الحفظ على الهاتف 📱. سيتم الرفع عند توفر الإنترنت.', 'info');
       }
 
-      // تحديث القائمة لإظهار التاريخ الجديد
       await loadAvailableDates();
 
     } catch (err) {
@@ -86,9 +83,6 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /**
-   * دالة مساعدة داخلية للرفع إلى Supabase
-   */
   async function _uploadToSupabase(payload) {
     const { error } = await supabase
       .from(TABLE_NAME)
@@ -103,22 +97,24 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   /**
-   * 2. تحميل التواريخ المتاحة (المحلية + السحابية)
-   * هذا هو الجزء الذي تم إصلاحه ليقرأ من الجدول الصحيح
+   * 2. Load Available Dates (FIXED: Case Insensitive)
    */
   async function loadAvailableDates() {
     isLoading.value = true;
-    availableDates.value = []; // تصفير القائمة لمنع التكرار البصري أثناء التحميل
+    availableDates.value = [];
     const user = authStore.user;
 
     try {
-      // أ. جلب التواريخ المحلية
+      // A. Get Local Dates (Smart Check)
       const keys = await localforage.keys();
       const localDates = keys
-        .filter(k => k.startsWith(DB_PREFIX))
-        .map(k => k.replace(DB_PREFIX, ''));
+        .filter(k => k.toLowerCase().startsWith('arch_data_')) // Checks for 'arch_data_' OR 'arch_DATA_'
+        .map(k => {
+            // Remove prefix regardless of case to get the date
+            return k.replace(/arch_data_/i, ''); 
+        });
 
-      // ب. جلب التواريخ السحابية (إذا وجد نت ومستخدم)
+      // B. Get Cloud Dates
       let cloudDates = [];
       if (navigator.onLine && user) {
         const { data, error } = await supabase
@@ -134,18 +130,15 @@ export const useArchiveStore = defineStore('archive', () => {
         }
       }
 
-      // ج. دمج التواريخ وحذف التكرار
+      // C. Merge
       const uniqueDates = new Set([...localDates, ...cloudDates]);
 
-      // د. بناء القائمة النهائية مع تحديد المصدر (لتلوين السحابي بالأزرق)
       availableDates.value = Array.from(uniqueDates)
-        .sort((a, b) => new Date(b) - new Date(a)) // الأحدث أولاً
+        .sort((a, b) => new Date(b) - new Date(a))
         .map(date => {
           const isLocal = localDates.includes(date);
           return {
             value: date,
-            // إذا كان موجود محلياً، نعتبره محلي (الأولوية للسرعة).
-            // إذا كان سحابي فقط، نعطيه 'cloud' ليظهر بالأزرق
             source: isLocal ? 'local' : 'cloud'
           };
         });
@@ -154,15 +147,13 @@ export const useArchiveStore = defineStore('archive', () => {
 
     } catch (err) {
       logger.error('Load Dates Error:', err);
-      addNotification('تعذر تحميل قائمة التواريخ', 'error');
     } finally {
       isLoading.value = false;
     }
   }
 
   /**
-   * 3. عرض أرشيف تاريخ معين
-   * جلب ذكي: محلي أولاً، ثم سحابي مع التخزين (Caching)
+   * 3. Load Specific Archive Date (FIXED: Case Insensitive)
    */
   async function loadArchiveByDate(dateStr) {
     if (!dateStr) return;
@@ -173,16 +164,21 @@ export const useArchiveStore = defineStore('archive', () => {
     const user = authStore.user;
 
     try {
-      // أ. محاولة الجلب محلياً
-      const localData = await localforage.getItem(`${DB_PREFIX}${dateStr}`);
+      // A. Try to find the correct local key
+      const keys = await localforage.keys();
+      // Find key ending with this date, ignoring prefix case
+      const targetKey = keys.find(k => k.toLowerCase() === `arch_data_${dateStr}`);
+
+      let localData = null;
+      if (targetKey) {
+          localData = await localforage.getItem(targetKey);
+      }
       
       if (localData) {
-        // وجدنا البيانات محلياً
-        logger.info(`📂 Loaded from Cache: ${dateStr}`);
-        // دعم الهيكلية القديمة والجديدة (للأمان)
+        logger.info(`📂 Loaded from Cache (${targetKey}): ${dateStr}`);
         rows.value = localData.rows || localData; 
       } else {
-        // ب. غير موجود محلياً -> اطلب من السحابة
+        // B. Not local -> Fetch from Cloud
         if (navigator.onLine && user) {
            logger.info(`☁️ Fetching from Cloud: ${dateStr}`);
            
@@ -191,22 +187,20 @@ export const useArchiveStore = defineStore('archive', () => {
              .select('data')
              .eq('user_id', user.id)
              .eq('archive_date', dateStr)
-             .single(); // نتوقع صف واحد لأننا نستخدم JSONB
+             .single();
            
            if (error) throw error;
            
            if (data && data.data) {
-             const fetchedRows = data.data; // المصفوفة داخل عمود data
+             const fetchedRows = data.data;
              rows.value = fetchedRows;
              
-             // ج. تخزين البيانات محلياً للمستقبل (Cache)
+             // C. Cache locally (using new standard lowercase key)
              await localforage.setItem(`${DB_PREFIX}${dateStr}`, fetchedRows);
              
-             // تحديث حالة التاريخ في القائمة ليصبح محلياً (إزالة اللون الأزرق)
+             // Update source in list
              const dateItem = availableDates.value.find(d => d.value === dateStr);
              if (dateItem) dateItem.source = 'local';
-             
-             logger.info(`💾 Cached ${dateStr} locally`);
            }
         } else {
             addNotification('البيانات غير موجودة محلياً ولا يوجد اتصال بالإنترنت', 'warning');
@@ -221,22 +215,20 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   /**
-   * 4. تنظيف الأرشيف القديم (أكثر من 31 يوم)
+   * 4. Cleanup Old Archives
    */
   async function cleanupOldArchives() {
     try {
       const keys = await localforage.keys();
-      const archiveKeys = keys.filter(k => k.startsWith(DB_PREFIX));
+      const archiveKeys = keys.filter(k => k.toLowerCase().startsWith('arch_data_'));
       
       const today = new Date();
-      // 31 يوم بالمللي ثانية
       const limit = 31 * 24 * 60 * 60 * 1000; 
 
       for (const key of archiveKeys) {
-        const dateStr = key.replace(DB_PREFIX, '');
+        const dateStr = key.replace(/arch_data_/i, '');
         const dateObj = new Date(dateStr);
         
-        // التحقق من صحة التاريخ
         if (isNaN(dateObj.getTime())) continue; 
 
         if ((today - dateObj) > limit) {
@@ -249,7 +241,7 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  // تشغيل التنظيف مرة واحدة عند بدء التطبيق
+  // Run cleanup on init
   cleanupOldArchives();
 
   return {
@@ -262,7 +254,6 @@ export const useArchiveStore = defineStore('archive', () => {
     loadAvailableDates,
     loadArchiveByDate,
     cleanupOldArchives,
-    // تصدير دالة الرفع للاستخدام الخارجي إذا لزم الأمر (مثل Queue)
     uploadArchive: _uploadToSupabase 
   };
 });
