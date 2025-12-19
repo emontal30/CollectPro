@@ -84,7 +84,9 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   async function _uploadToSupabase(payload) {
-    const { error } = await supabase
+    logger.info(`Attempting to upsert archive for date: ${payload.archive_date}`, { payload });
+    
+    const { data, error, status, statusText } = await supabase
       .from(TABLE_NAME)
       .upsert({
         user_id: payload.user_id,
@@ -92,8 +94,27 @@ export const useArchiveStore = defineStore('archive', () => {
         data: payload.data
       }, { onConflict: 'user_id, archive_date' });
 
-    if (error) throw error;
-    logger.info(`☁️ Uploaded to Supabase: ${payload.archive_date}`);
+    // Log the full response from Supabase for debugging
+    logger.info('Supabase upsert response:', {
+      data: data,
+      error: error,
+      status: status,
+      statusText: statusText
+    });
+
+    if (error) {
+      logger.error('Supabase upsert failed with an error object.', error);
+      // Also notify the user with more specific feedback if possible
+      const { addNotification } = useNotifications();
+      let message = `فشل الرفع إلى السحابة: ${error.message}`;
+      if (error.code === '42501') { // permission_denied
+        message = 'فشل الرفع: لا توجد صلاحية للكتابة. يرجى مراجعة قواعد الأمان (RLS) في Supabase.';
+      }
+      addNotification(message, 'error');
+      throw error;
+    }
+
+    logger.info(`☁️ Successfully upserted to Supabase: ${payload.archive_date}`);
   }
 
   /**

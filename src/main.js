@@ -17,6 +17,7 @@ import './assets/css/unified-dark-mode.css'
 import { startAutoCleaning } from './services/cacheManager'
 import { setupCacheMonitor } from './services/cacheMonitor'
 import logger from '@/utils/logger.js'
+import { clearSyncQueue } from './services/archiveSyncQueue'; // Import the new function
 
 // 1. Create App Instance
 const app = createApp(App)
@@ -25,6 +26,18 @@ const pinia = createPinia()
 // 2. Install Plugins
 app.use(pinia)
 app.use(router)
+
+// --- One-Time Auto-Clear for Debugging ---
+const hasClearedQueue = localStorage.getItem('has_cleared_sync_queue_v1');
+if (!hasClearedQueue && import.meta.env.DEV) {
+  logger.warn('⚠️ Performing a one-time automatic clear of the sync queue for debugging.');
+  clearSyncQueue().then(() => {
+    localStorage.setItem('has_cleared_sync_queue_v1', 'true');
+    logger.info('✅ One-time clear complete.');
+  });
+}
+// --- End of One-Time Auto-Clear ---
+
 
 // 3. Global PWA Handler
 // Captures the install prompt event for use in UI components
