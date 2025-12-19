@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import api from '@/services/api';
+import { supabase } from '@/supabase'; // استدعاء مباشر لضمان الدقة
 import { useAuthStore } from '@/stores/auth';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { useNotifications } from '@/composables/useNotifications';
@@ -8,13 +8,21 @@ import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 
 export const useArchiveStore = defineStore('archive', () => {
+  // --- State ---
   const rows = ref([]);
   const availableDates = ref([]);
   const selectedDate = ref('');
   const isLoading = ref(false);
 
+  // --- Composables ---
   const { addNotification } = useNotifications();
+  const authStore = useAuthStore();
 
+  // --- Constants ---
+  const DB_PREFIX = 'arch_data_'; // تم توحيد التسمية lowercase لسهولة القراءة
+  const TABLE_NAME = 'daily_archives';
+
+  // --- Computed ---
   const totals = computed(() => {
     return rows.value.reduce((acc, row) => {
       acc.amount += Number(row.amount) || 0;
@@ -25,8 +33,12 @@ export const useArchiveStore = defineStore('archive', () => {
     }, { amount: 0, extra: 0, collector: 0, net: 0 });
   });
 
-  const DB_PREFIX = 'arch_DATA_';
+  // --- Actions ---
 
+  /**
+   * 1. أرشفة بيانات اليوم
+   * يحفظ محلياً أولاً، ثم يحاول الرفع أو يضعه في الطابور
+   */
   async function archiveToday(dateStr, harvestData) {
     if (!harvestData || harvestData.length === 0) {
       addNotification('لا توجد بيانات لأرشفتها', 'warning');
@@ -35,20 +47,37 @@ export const useArchiveStore = defineStore('archive', () => {
 
     isLoading.value = true;
     try {
-      // 1. Save locally immediately
-      await localforage.setItem(`${DB_PREFIX}${dateStr}`, harvestData);
-      logger.info(`✅ Saved to LocalForage: ${dateStr}`);
+      const user = authStore.user;
+      if (!user) throw new Error('المستخدم غير مسجل للدخول');
 
-      // 2. Handle online/offline sync
+      // تجهيز البيانات كـ JSON
+      const archivePayload = {
+        user_id: user.id,
+        archive_date: dateStr,
+        data: harvestData, // المصفوفة كما هي
+        updated_at: new Date().toISOString()
+      };
+
+      // أ. الحفظ محلياً فوراً (Offline First)
+      await localforage.setItem(`${DB_PREFIX}${dateStr}`, harvestData);
+      logger.info(`✅ Saved locally: ${dateStr}`);
+
+      // ب. التحقق من الإنترنت والمزامنة
       if (navigator.onLine) {
-        await uploadArchive(dateStr, harvestData);
-        addNotification('تم الحفظ على الهاتف وقاعدة البيانات بنجاح', 'success');
+        await _uploadToSupabase(archivePayload);
+        addNotification('تم الحفظ محلياً وعلى السحابة بنجاح ✅', 'success');
       } else {
-        await addToSyncQueue({ date: dateStr, data: harvestData });
-        addNotification('تم الحفظ على الهاتف. سيتم الرفع تلقائياً عند توفر الإنترنت', 'info');
+        await addToSyncQueue({ 
+            user_id: user.id, 
+            archive_date: dateStr, 
+            data: harvestData 
+        });
+        addNotification('تم الحفظ على الهاتف 📱. سيتم الرفع عند توفر الإنترنت.', 'info');
       }
 
+      // تحديث القائمة لإظهار التاريخ الجديد
       await loadAvailableDates();
+
     } catch (err) {
       logger.error('Archive Error:', err);
       addNotification(`فشل الأرشفة: ${err.message}`, 'error');
@@ -56,128 +85,172 @@ export const useArchiveStore = defineStore('archive', () => {
       isLoading.value = false;
     }
   }
-  
-  async function uploadArchive(dateStr, data) {
-    const authStore = useAuthStore();
-    const user = authStore.user;
-    if (!user) throw new Error('User not authenticated for upload.');
-  
-    const payload = {
-      user_id: user.id,
-      archive_date: dateStr,
-      data: data, 
-    };
-  
-    // Using upsert to prevent duplicates for the same date
-    const { error } = await api.archive.upsert(payload);
-    if (error) throw error;
-  
-    logger.info(`☁️ Successfully uploaded archive for ${dateStr}`);
-  }
-  
 
+  /**
+   * دالة مساعدة داخلية للرفع إلى Supabase
+   */
+  async function _uploadToSupabase(payload) {
+    const { error } = await supabase
+      .from(TABLE_NAME)
+      .upsert({
+        user_id: payload.user_id,
+        archive_date: payload.archive_date,
+        data: payload.data
+      }, { onConflict: 'user_id, archive_date' });
+
+    if (error) throw error;
+    logger.info(`☁️ Uploaded to Supabase: ${payload.archive_date}`);
+  }
+
+  /**
+   * 2. تحميل التواريخ المتاحة (المحلية + السحابية)
+   * هذا هو الجزء الذي تم إصلاحه ليقرأ من الجدول الصحيح
+   */
+  async function loadAvailableDates() {
+    isLoading.value = true;
+    availableDates.value = []; // تصفير القائمة لمنع التكرار البصري أثناء التحميل
+    const user = authStore.user;
+
+    try {
+      // أ. جلب التواريخ المحلية
+      const keys = await localforage.keys();
+      const localDates = keys
+        .filter(k => k.startsWith(DB_PREFIX))
+        .map(k => k.replace(DB_PREFIX, ''));
+
+      // ب. جلب التواريخ السحابية (إذا وجد نت ومستخدم)
+      let cloudDates = [];
+      if (navigator.onLine && user) {
+        const { data, error } = await supabase
+          .from(TABLE_NAME)
+          .select('archive_date')
+          .eq('user_id', user.id)
+          .order('archive_date', { ascending: false });
+
+        if (error) {
+          logger.error('Supabase Date Fetch Error:', error);
+        } else if (data) {
+          cloudDates = data.map(d => d.archive_date);
+        }
+      }
+
+      // ج. دمج التواريخ وحذف التكرار
+      const uniqueDates = new Set([...localDates, ...cloudDates]);
+
+      // د. بناء القائمة النهائية مع تحديد المصدر (لتلوين السحابي بالأزرق)
+      availableDates.value = Array.from(uniqueDates)
+        .sort((a, b) => new Date(b) - new Date(a)) // الأحدث أولاً
+        .map(date => {
+          const isLocal = localDates.includes(date);
+          return {
+            value: date,
+            // إذا كان موجود محلياً، نعتبره محلي (الأولوية للسرعة).
+            // إذا كان سحابي فقط، نعطيه 'cloud' ليظهر بالأزرق
+            source: isLocal ? 'local' : 'cloud'
+          };
+        });
+        
+      logger.info(`📅 Available dates loaded: ${availableDates.value.length}`);
+
+    } catch (err) {
+      logger.error('Load Dates Error:', err);
+      addNotification('تعذر تحميل قائمة التواريخ', 'error');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /**
+   * 3. عرض أرشيف تاريخ معين
+   * جلب ذكي: محلي أولاً، ثم سحابي مع التخزين (Caching)
+   */
+  async function loadArchiveByDate(dateStr) {
+    if (!dateStr) return;
+    
+    isLoading.value = true;
+    selectedDate.value = dateStr;
+    rows.value = [];
+    const user = authStore.user;
+
+    try {
+      // أ. محاولة الجلب محلياً
+      const localData = await localforage.getItem(`${DB_PREFIX}${dateStr}`);
+      
+      if (localData) {
+        // وجدنا البيانات محلياً
+        logger.info(`📂 Loaded from Cache: ${dateStr}`);
+        // دعم الهيكلية القديمة والجديدة (للأمان)
+        rows.value = localData.rows || localData; 
+      } else {
+        // ب. غير موجود محلياً -> اطلب من السحابة
+        if (navigator.onLine && user) {
+           logger.info(`☁️ Fetching from Cloud: ${dateStr}`);
+           
+           const { data, error } = await supabase
+             .from(TABLE_NAME)
+             .select('data')
+             .eq('user_id', user.id)
+             .eq('archive_date', dateStr)
+             .single(); // نتوقع صف واحد لأننا نستخدم JSONB
+           
+           if (error) throw error;
+           
+           if (data && data.data) {
+             const fetchedRows = data.data; // المصفوفة داخل عمود data
+             rows.value = fetchedRows;
+             
+             // ج. تخزين البيانات محلياً للمستقبل (Cache)
+             await localforage.setItem(`${DB_PREFIX}${dateStr}`, fetchedRows);
+             
+             // تحديث حالة التاريخ في القائمة ليصبح محلياً (إزالة اللون الأزرق)
+             const dateItem = availableDates.value.find(d => d.value === dateStr);
+             if (dateItem) dateItem.source = 'local';
+             
+             logger.info(`💾 Cached ${dateStr} locally`);
+           }
+        } else {
+            addNotification('البيانات غير موجودة محلياً ولا يوجد اتصال بالإنترنت', 'warning');
+        }
+      }
+    } catch (err) {
+      logger.error('Error loading archive data:', err);
+      addNotification('تعذر تحميل بيانات الأرشيف', 'error');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /**
+   * 4. تنظيف الأرشيف القديم (أكثر من 31 يوم)
+   */
   async function cleanupOldArchives() {
     try {
       const keys = await localforage.keys();
-      const archiveKeys = keys.filter(key => key.startsWith(DB_PREFIX));
-      const thirtyOneDaysAgo = new Date();
-      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
+      const archiveKeys = keys.filter(k => k.startsWith(DB_PREFIX));
+      
+      const today = new Date();
+      // 31 يوم بالمللي ثانية
+      const limit = 31 * 24 * 60 * 60 * 1000; 
 
       for (const key of archiveKeys) {
         const dateStr = key.replace(DB_PREFIX, '');
-        const archiveDate = new Date(dateStr);
-        if (archiveDate < thirtyOneDaysAgo) {
-          await localforage.removeItem(key);
-          logger.info(`🧹 Cleaned up old archive: ${key}`);
-        }
-      }
-    } catch (err) {
-      logger.error('Error cleaning up old archives:', err);
-    }
-  }
-
-  async function loadAvailableDates() {
-    logger.info('📅 Loading available archive dates...');
-    isLoading.value = true;
-    const authStore = useAuthStore();
-    const user = authStore.user;
-
-    try {
-      const localDates = [];
-      const keys = await localforage.keys();
-      keys.forEach(key => {
-        if (key.startsWith(DB_PREFIX)) {
-          localDates.push(key.replace(DB_PREFIX, ''));
-        }
-      });
-
-      let cloudDates = [];
-      if (navigator.onLine && user) {
-        const { dates, error } = await api.archive.getAvailableDates(user.id);
-
-        if (error) {
-          logger.error('Failed to fetch cloud dates:', error);
-          addNotification('فشل في جلب التواريخ السحابية', 'error');
-        } else {
-          cloudDates = dates || [];
-        }
-      }
-
-      const combinedDates = new Set([...localDates, ...cloudDates]);
-      
-      availableDates.value = Array.from(combinedDates)
-        .sort((a, b) => new Date(b) - new Date(a))
-        .map(date => ({
-          value: date,
-          source: localDates.includes(date) ? 'local' : 'cloud'
-        }));
-
-    } catch (err) {
-      logger.error('Failed to load available dates:', err);
-      addNotification('حدث خطأ فادح أثناء تحميل التواريخ', 'error');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function loadArchiveByDate(dateStr) {
-    if (!dateStr) return;
-    isLoading.value = true;
-    rows.value = [];
-    selectedDate.value = dateStr;
-    const authStore = useAuthStore();
-    const user = authStore.user;
-
-    try {
-      const localData = await localforage.getItem(`${DB_PREFIX}${dateStr}`);
-      if (localData) {
-        logger.info(`📌 Loaded from LocalForage: ${dateStr}`);
-        rows.value = localData;
-        return;
-      }
-
-      if (navigator.onLine && user) {
-        logger.info(`☁️ Fetching from Cloud: ${dateStr}`);
-        const { data, error } = await api.archive.getArchiveByDate(user.id, dateStr);
-
-        if (error) throw error;
+        const dateObj = new Date(dateStr);
         
-        rows.value = data;
-        await localforage.setItem(`${DB_PREFIX}${dateStr}`, data); // Cache for next time
-      } else if (!user) {
-        addNotification('يجب تسجيل الدخول لعرض الأرشيف السحابي', 'warning');
-      }
-      else {
-        addNotification('لا يوجد اتصال بالإنترنت لتحميل هذا الأرشيف', 'warning');
-      }
+        // التحقق من صحة التاريخ
+        if (isNaN(dateObj.getTime())) continue; 
 
+        if ((today - dateObj) > limit) {
+          await localforage.removeItem(key);
+          logger.info(`🧹 Cleaned up old archive: ${dateStr}`);
+        }
+      }
     } catch (err) {
-      logger.error('Error loading date:', err);
-      addNotification('حدث خطأ أثناء تحميل البيانات', 'error');
-    } finally {
-      isLoading.value = false;
+      logger.error('Cleanup error:', err);
     }
   }
+
+  // تشغيل التنظيف مرة واحدة عند بدء التطبيق
+  cleanupOldArchives();
 
   return {
     rows,
@@ -185,10 +258,11 @@ export const useArchiveStore = defineStore('archive', () => {
     selectedDate,
     isLoading,
     totals,
+    archiveToday,
     loadAvailableDates,
     loadArchiveByDate,
-    archiveToday,
     cleanupOldArchives,
-    uploadArchive,
+    // تصدير دالة الرفع للاستخدام الخارجي إذا لزم الأمر (مثل Queue)
+    uploadArchive: _uploadToSupabase 
   };
 });

@@ -14,14 +14,19 @@
           اختر التاريخ:
           <select v-model="store.selectedDate" class="archive-select" @change="handleDateChange">
             <option value="">-- اختر تاريخ --</option>
-            <option 
-              v-for="dateItem in store.availableDates" 
-              :key="dateItem.value" 
-              :value="dateItem.value"
-              :style="{ color: dateItem.source === 'cloud' ? '#1e3a8a' : '' }"
-            >
-              {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
-            </option>
+            <template v-if="store.availableDates.length > 0">
+              <option 
+                v-for="dateItem in store.availableDates" 
+                :key="dateItem.value" 
+                :value="dateItem.value"
+                :style="{ color: dateItem.source === 'cloud' ? '#1e3a8a' : '' }"
+              >
+                {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
+              </option>
+            </template>
+            <template v-else>
+              <option value="" disabled>لا يوجد أرشيف لعرضه</option>
+            </template>
           </select>
         </label>
       </div>
@@ -109,7 +114,7 @@
       @close="closeColumnSettings"
     >
       <div class="column-settings">
-        <div class="column-option" v-for="(label, key) in { shop: '🏪 المحل', code: '🔢 الكود', amount: '💵 مبلغ التحويل', extra: '📌 أخرى' }" :key="key">
+        <div v-for="(label, key) in { shop: '🏪 المحل', code: '🔢 الكود', amount: '💵 مبلغ التحويل', extra: '📌 أخرى' }" :key="key" class="column-option">
           <label>
             <input
               v-model="visibleColumns[key]"

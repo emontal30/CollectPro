@@ -64,6 +64,10 @@ tbody td, .modern-table td, .collections-table td {
   font-size: 0.95rem;
   transition: background 0.2s;
   height: 55px; /* Unified height */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 tbody tr:hover {
@@ -213,4 +217,16 @@ td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important;
   text-align: center !important;
   vertical-align: middle !important;
   padding-right: 12px !important; /* keep some spacing for RTL layout */
+}
+
+/* 10. Special Column Widths */
+.th-checkbox, .td-checkbox {
+    width: 60px !important;
+    min-width: 60px !important;
+    padding: 0 12px !important;
+}
+
+.col-subscription-days {
+    width: 100px !important;
+    min-width: 100px !important;
 }

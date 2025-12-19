@@ -69,7 +69,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function fetchStats() {
     try {
-      const statsData = await api.admin.getStats();
+      const statsData = await api.admin.getStats(filters.value);
 
       stats.value.totalUsers = statsData.totalUsers;
       stats.value.pendingRequests = statsData.pendingRequests;
@@ -77,6 +77,7 @@ export const useAdminStore = defineStore('admin', () => {
       stats.value.cancelled = statsData.cancelled;
       stats.value.expired = statsData.expired;
       stats.value.totalRevenue = statsData.totalRevenue;
+      stats.value.activeUsers = statsData.activeUsers;
 
       const totalSubs = stats.value.pendingRequests + stats.value.activeSubscriptions + stats.value.cancelled + stats.value.expired;
       if (totalSubs > 0) {
@@ -91,24 +92,7 @@ export const useAdminStore = defineStore('admin', () => {
         ];
       }
 
-      const daysAgo = new Date();
-      daysAgo.setDate(daysAgo.getDate() - filters.value.activeUsersPeriod);
-
-      const { data, error: dbError } = await supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('status', 'active')
-        .gte('updated_at', daysAgo.toISOString());
-
-      if (dbError) {
-        logger.warn('Failed to fetch active users:', dbError);
-        stats.value.activeUsers = 0;
-      } else {
-        const uniqueUsers = new Set(data?.map(sub => sub.user_id) || []);
-        stats.value.activeUsers = uniqueUsers.size;
-      }
-
-      prepareLineChartData();
+      await prepareLineChartData();
     } catch (e) {
       logger.warn('Error fetching stats:', e);
     }

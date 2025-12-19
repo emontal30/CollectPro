@@ -17,9 +17,9 @@
     </div>
 
     <ColumnVisibility
-      :columns="harvestColumns"
-      storageKey="columns.visibility.harvest"
       v-model="showColumnsHarvest"
+      :columns="harvestColumns"
+      storage-key="columns.visibility.harvest"
       @save="applySavedColumnsHarvest"
     />
 
@@ -33,7 +33,7 @@
           class="search-input"
         />
       </div>
-      <button class="btn-settings-table" @click="showColumnsHarvest = true" title="عرض/اخفاء الأعمدة">
+      <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showColumnsHarvest = true">
         <i class="fas fa-cog"></i>
       </button>
     </div>

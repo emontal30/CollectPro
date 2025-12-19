@@ -3,14 +3,38 @@ import { authService } from './authService.js';
 import logger from '@/utils/logger.js';
 
 export const adminService = {
-  async getStats() {
-    const [usersRes, pendingRes, activeRes, cancelledRes, expiredRes, revenueRes] = await Promise.all([
+  async getActiveUsersCount(periodInDays = 30) {
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - periodInDays);
+
+    const { data, error } = await apiInterceptor(
+      authService.supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('status', 'active')
+        .gte('updated_at', daysAgo.toISOString())
+    );
+    
+    if (error) {
+      logger.warn('Failed to fetch active users count:', error);
+      return 0;
+    }
+    
+    const uniqueUsers = new Set(data?.map(sub => sub.user_id) || []);
+    return uniqueUsers.size;
+  },
+
+  async getStats(filters = {}) {
+    const { activeUsersPeriod = 30 } = filters;
+
+    const [usersRes, pendingRes, activeRes, cancelledRes, expiredRes, revenueRes, activeUsersCountRes] = await Promise.all([
       apiInterceptor(authService.supabase.from('users').select('*', { count: 'exact', head: true })),
       apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
       apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active')),
       apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
       apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
-      apiInterceptor(authService.supabase.rpc('calculate_total_revenue'))
+      apiInterceptor(authService.supabase.rpc('calculate_total_revenue')),
+      this.getActiveUsersCount(activeUsersPeriod)
     ]);
 
     return {
@@ -19,7 +43,8 @@ export const adminService = {
       activeSubscriptions: activeRes.count || 0,
       cancelled: cancelledRes.count || 0,
       expired: expiredRes.count || 0,
-      totalRevenue: revenueRes.data || 0
+      totalRevenue: revenueRes.data || 0,
+      activeUsers: activeUsersCountRes || 0
     };
   },
 
