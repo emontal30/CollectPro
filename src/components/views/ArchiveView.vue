@@ -7,25 +7,37 @@
       icon="📄"
     />
 
+    <ColumnVisibility
+      v-model="showColumnsArchive"
+      :columns="archiveColumns"
+      storage-key="columns.visibility.archive"
+      @save="applySavedColumnsArchive"
+    />
+
     <div class="archive-controls">
       <div class="control-group">
         <label>
           <i class="fas fa-calendar-alt control-icon"></i>
           اختر التاريخ:
-          <select v-model="store.selectedDate" class="archive-select" @change="handleDateChange">
+          <select 
+            v-model="store.selectedDate" 
+            class="archive-select" 
+            @change="handleDateChange"
+            :disabled="store.isLoading"
+          >
             <option value="">-- اختر تاريخ --</option>
             <template v-if="store.availableDates.length > 0">
               <option 
                 v-for="dateItem in store.availableDates" 
                 :key="dateItem.value" 
                 :value="dateItem.value"
-                :style="{ color: dateItem.source === 'cloud' ? '#1e3a8a' : '' }"
+                :style="{ color: dateItem.source === 'cloud' ? 'var(--primary)' : '' }"
               >
                 {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
               </option>
             </template>
             <template v-else>
-              <option value="" disabled>لا يوجد أرشيف لعرضه</option>
+              <option value="" disabled>لا يوجد أرشيف لعرضه حالياً</option>
             </template>
           </select>
         </label>
@@ -41,7 +53,7 @@
             class="search-input"
           />
         </div>
-        <button class="btn-settings-table" title="إعدادات الأعمدة" @click="showColumnSettings = true">
+        <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showColumnsArchive = true">
           <i class="fas fa-cog"></i>
         </button>
       </div>
@@ -52,117 +64,121 @@
         <thead>
           <tr>
             <th class="header-cell date-header">📅 التاريخ</th>
-            <th v-if="visibleColumns.shop" class="header-cell shop-header">🏪 المحل</th>
-            <th v-if="visibleColumns.code" class="header-cell code-header">🔢 الكود</th>
-            <th v-if="visibleColumns.amount" class="header-cell amount-header">💵 التحويل</th>
-            <th v-if="visibleColumns.extra" class="header-cell extra-header">📌 اخرى</th>
-            <th class="header-cell collector-header">👤 المحصل</th>
-            <th class="header-cell net-header">✅ الصافي</th>
+            <th v-show="isVisibleArchive('shop')" class="header-cell shop-header">🏪 المحل</th>
+            <th v-show="isVisibleArchive('code')" class="header-cell code-header">🔢 الكود</th>
+            <th v-show="isVisibleArchive('amount')" class="header-cell amount-header">💵 التحويل</th>
+            <th v-show="isVisibleArchive('extra')" class="header-cell extra-header">📌 اخرى</th>
+            <th v-show="isVisibleArchive('collector')" class="header-cell collector-header">👤 المحصل</th>
+            <th v-show="isVisibleArchive('net')" class="header-cell net-header">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
+          <!-- يتم عرض اللودر في حال التحميل فقط -->
           <tr v-if="store.isLoading">
-            <td :colspan="totalColumns" class="text-center p-20">
-              <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+            <td colspan="7" class="text-center p-20">
+              <i class="fas fa-spinner fa-spin"></i> جاري استعادة البيانات...
             </td>
           </tr>
 
-          <tr v-for="(row, index) in filteredRows" :key="index">
-            <td class="date-cell">{{ store.selectedDate }}</td>
-            <td v-if="visibleColumns.shop" class="shop">{{ row.shop }}</td>
-            <td v-if="visibleColumns.code" class="code">{{ row.code }}</td>
-            <td v-if="visibleColumns.amount" class="amount">{{ store.formatNumber(row.amount) }}</td>
-            <td v-if="visibleColumns.extra" class="extra">{{ store.formatNumber(row.extra) }}</td>
-            <td class="collector">{{ store.formatNumber(row.collector) }}</td>
+          <template v-else>
+            <tr v-for="(row, index) in filteredRows" :key="index">
+              <td class="date-cell">{{ store.selectedDate }}</td>
+              <td v-show="isVisibleArchive('shop')">{{ row.shop }}</td>
+              <td v-show="isVisibleArchive('code')">{{ row.code }}</td>
+              <td v-show="isVisibleArchive('amount')">{{ formatNum(row.amount) }}</td>
+              <td v-show="isVisibleArchive('extra')">{{ formatNum(row.extra) }}</td>
+              <td v-show="isVisibleArchive('collector')">{{ formatNum(row.collector) }}</td>
+              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(row.net)">
+                {{ formatNum(row.net) }}
+                <i :class="getNetIcon(row.net)" class="mr-2 text-xs"></i>
+              </td>
+            </tr>
 
-            <td class="net numeric" :class="getNetClass(row.net)">
-              {{ store.formatNumber(row.net) }}
-              <i :class="getNetIcon(row.net)" class="mr-2 text-xs"></i>
-            </td>
-          </tr>
+            <tr v-if="filteredRows.length === 0">
+              <td colspan="7" class="no-data-row">
+                {{ store.selectedDate ? 'لا توجد بيانات لهذا اليوم' : 'يرجى اختيار تاريخ من القائمة أعلاه' }}
+              </td>
+            </tr>
 
-          <tr v-if="!store.isLoading && filteredRows.length === 0">
-            <td :colspan="totalColumns" class="no-data-row">
-              {{ store.rows.length === 0 ? 'لا توجد بيانات لهذا التاريخ' : 'لا توجد نتائج مطابقة للبحث' }}
-            </td>
-          </tr>
-
-          <tr v-if="filteredRows.length > 0" class="total-row">
-            <td class="total-label">الإجمالي</td>
-            <td v-if="visibleColumns.shop"></td>
-            <td v-if="visibleColumns.code"></td>
-            <td v-if="visibleColumns.amount" class="amount">{{ store.formatNumber(filteredTotals.amount) }}</td>
-            <td v-if="visibleColumns.extra" class="extra">{{ store.formatNumber(filteredTotals.extra) }}</td>
-            <td class="collector">{{ store.formatNumber(filteredTotals.collector) }}</td>
-            <td class="net numeric" :class="getNetClass(filteredTotals.net)">
-              {{ store.formatNumber(filteredTotals.net) }}
-              <i :class="getNetIcon(filteredTotals.net)" class="net-icon"></i>
-            </td>
-          </tr>
+            <tr v-if="filteredRows.length > 0" class="total-row">
+              <td class="total-label">الإجمالي</td>
+              <td v-show="isVisibleArchive('shop')"></td>
+              <td v-show="isVisibleArchive('code')"></td>
+              <td v-show="isVisibleArchive('amount')">{{ formatNum(filteredTotals.amount) }}</td>
+              <td v-show="isVisibleArchive('extra')">{{ formatNum(filteredTotals.extra) }}</td>
+              <td v-show="isVisibleArchive('collector')">{{ formatNum(filteredTotals.collector) }}</td>
+              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(filteredTotals.net)">
+                {{ formatNum(filteredTotals.net) }}
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
 
+    <div class="archive-actions">
       <router-link to="/app/harvest" class="btn btn-secondary btn--back-to-harvest">
         <i class="fas fa-arrow-left"></i>
         <span>العودة للتحصيلات</span>
       </router-link>
 
-    <BaseModal
-      :show="showColumnSettings"
-      title="إعدادات الأعمدة"
-      @close="closeColumnSettings"
-    >
-      <div class="column-settings">
-        <div v-for="(label, key) in { shop: '🏪 المحل', code: '🔢 الكود', amount: '💵 مبلغ التحويل', extra: '📌 أخرى' }" :key="key" class="column-option">
-          <label>
-            <input
-              v-model="visibleColumns[key]"
-              type="checkbox"
-              @change="saveColumnSettings"
-            />
-            {{ label }}
-          </label>
-        </div>
-      </div>
-
-      <template #footer>
-        <button class="btn btn-secondary btn--select-all" @click="selectAllColumns">
-          تحديد الكل
-        </button>
-        <button class="btn btn-primary btn--save-settings" @click="closeColumnSettings">
-          حفظ
-        </button>
-      </template>
-    </BaseModal>
-
+      <button 
+        v-if="store.selectedDate && !store.isLoading" 
+        class="btn btn-danger btn--delete-archive" 
+        @click="deleteCurrentArchive"
+      >
+        <i class="fas fa-trash-alt"></i>
+        <span>حذف هذا الأرشيف</span>
+      </button>
     </div>
+
+  </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, reactive, inject } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import BaseModal from '@/components/ui/BaseModal.vue';
-import api from '@/services/api';
+import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import logger from '@/utils/logger.js';
 
-// --- التهيئة ---
 const store = useArchiveStore();
-
-// --- الحالة المحلية (Local State) ---
 const searchQuery = ref('');
-const showColumnSettings = ref(false);
-const visibleColumns = ref({
-  shop: true,
-  code: true,
-  amount: true,
-  extra: true
-});
+const { confirm, addNotification } = inject('notifications');
 
-// --- الخصائص المحسوبة (Computed Properties) ---
+// ==========================================
+// 1. إعدادات الأعمدة
+// ==========================================
+const archiveColumns = [
+  { key: 'shop', label: '🏪 المحل' },
+  { key: 'code', label: '🔢 الكود' },
+  { key: 'amount', label: '💵 التحويل' },
+  { key: 'extra', label: '📌 اخرى' },
+  { key: 'collector', label: '👤 المحصل' },
+  { key: 'net', label: '✅ الصافي' }
+];
 
-// 1. فلترة البيانات محلياً (أداء أسرع)
+const showColumnsArchive = ref(false);
+const columnsVisibilityArchive = reactive({});
+
+function loadColumnsVisibilityArchive() {
+  const raw = localStorage.getItem('columns.visibility.archive');
+  const saved = raw ? JSON.parse(raw) : null;
+  archiveColumns.forEach(c => { 
+    columnsVisibilityArchive[c.key] = saved && typeof saved[c.key] === 'boolean' ? saved[c.key] : true; 
+  });
+}
+
+function isVisibleArchive(key) { return columnsVisibilityArchive[key] !== false; }
+
+function applySavedColumnsArchive(obj) { 
+  Object.keys(obj || {}).forEach(k => { columnsVisibilityArchive[k] = !!obj[k]; }); 
+}
+
+// ==========================================
+// 2. المنطق الأساسي
+// ==========================================
+
 const filteredRows = computed(() => {
   if (!searchQuery.value) return store.rows;
   const q = searchQuery.value.toLowerCase();
@@ -172,7 +188,6 @@ const filteredRows = computed(() => {
   );
 });
 
-// 2. إعادة حساب الإجماليات بناءً على الفلترة الحالية
 const filteredTotals = computed(() => {
   return filteredRows.value.reduce((acc, row) => {
     acc.amount += Number(row.amount) || 0;
@@ -183,88 +198,23 @@ const filteredTotals = computed(() => {
   }, { amount: 0, extra: 0, collector: 0, net: 0 });
 });
 
-// 3. حساب عدد الأعمدة لضبط الجدول (colspan)
-const totalColumns = computed(() => {
-  let count = 3; // date, collector, net (أعمدة ثابتة)
-  if (visibleColumns.value.shop) count++;
-  if (visibleColumns.value.code) count++;
-  if (visibleColumns.value.amount) count++;
-  if (visibleColumns.value.extra) count++;
-  return count;
-});
-
-// --- إدارة إعدادات الأعمدة ---
-const loadColumnSettings = () => {
-  const saved = localStorage.getItem('archiveColumnSettings');
-  if (saved) {
-    visibleColumns.value = { ...visibleColumns.value, ...JSON.parse(saved) };
-  }
-};
-
-const saveColumnSettings = () => {
-  localStorage.setItem('archiveColumnSettings', JSON.stringify(visibleColumns.value));
-};
-
-const selectAllColumns = () => {
-  visibleColumns.value = { shop: true, code: true, amount: true, extra: true };
-  saveColumnSettings();
-};
-
-const closeColumnSettings = () => {
-  showColumnSettings.value = false;
-  saveColumnSettings();
-};
-
-// --- دورة حياة المكون (Lifecycle Hooks) ---
-let authSubscription = null;
+const formatNum = (val) => Number(val || 0).toLocaleString();
 
 onMounted(async () => {
-  // إضافة كلاس لتنسيق الصفحة
-  document.body.classList.add('page-has-fixed-width');
-  logger.debug('🚀 ArchiveView Mounted');
-  
-  loadColumnSettings();
+  logger.info('🚀 ArchiveView Initializing...');
+  loadColumnsVisibilityArchive();
 
-  try {
-    // تحميل قائمة التواريخ المتاحة (محلي + سحابي)
-    await store.loadAvailableDates();
-    
-    // إذا كان هناك تاريخ محدد مسبقاً، قم بتحميل بياناته
-    if (store.selectedDate) {
-      await store.loadArchiveByDate(store.selectedDate);
-    }
-  } catch (error) {
-    logger.error('❌ Error initializing archive view:', error);
+  // تحميل قائمة التواريخ
+  await store.loadAvailableDates();
+
+  // إذا كان هناك تاريخ محدد، حمله
+  if (store.selectedDate) {
+    await store.loadArchiveByDate(store.selectedDate);
   }
-
-  // الاستماع لتغيرات تسجيل الدخول (لتحديث التواريخ السحابية)
-  const res = api.auth.onAuthStateChange(async (event) => {
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      logger.info('🔄 Auth changed, reloading archive dates...');
-      await store.loadAvailableDates();
-      // تحديث البيانات المعروضة إذا لزم الأمر
-      if (store.selectedDate) await store.loadArchiveByDate(store.selectedDate);
-    } else if (event === 'SIGNED_OUT') {
-      store.availableDates = [];
-      store.rows = [];
-    }
-  });
-  
-  // حفظ الاشتراك لإلغائه لاحقاً
-  authSubscription = res?.data?.subscription;
 });
-
-onUnmounted(() => {
-  document.body.classList.remove('page-has-fixed-width');
-  if (authSubscription?.unsubscribe) authSubscription.unsubscribe();
-});
-
-// --- التفاعلات (Methods) ---
 
 const handleDateChange = async () => {
-  logger.info('📅 Date selection changed:', store.selectedDate);
-  searchQuery.value = ""; // تصفير البحث عند تغيير اليوم
-  
+  searchQuery.value = "";
   if (store.selectedDate) {
     await store.loadArchiveByDate(store.selectedDate);
   } else {
@@ -272,43 +222,88 @@ const handleDateChange = async () => {
   }
 };
 
-// --- دوال التنسيق المساعدة ---
-const getNetClass = (val) => {
-  if (val > 0) return 'positive';
-  if (val < 0) return 'negative';
-  return 'zero';
-};
+const getNetClass = (val) => val > 0 ? 'positive' : (val < 0 ? 'negative' : 'zero');
+const getNetIcon = (val) => val > 0 ? 'fas fa-arrow-up' : (val < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 
-const getNetIcon = (val) => {
-  if (val > 0) return 'fas fa-arrow-up';
-  if (val < 0) return 'fas fa-arrow-down';
-  return 'fas fa-check';
+// ==========================================
+// 3. منطق الحذف
+// ==========================================
+const deleteCurrentArchive = async () => {
+  if (!store.selectedDate) return;
+
+  const result = await confirm({
+    title: 'تأكيد الحذف',
+    text: `هل أنت متأكد من حذف أرشيف يوم ${store.selectedDate}؟ سيتم حذفه من الهاتف وقاعدة البيانات نهائياً.`,
+    icon: 'warning',
+    confirmButtonText: 'نعم، احذف',
+    cancelButtonText: 'إلغاء',
+    confirmButtonColor: '#d33',
+  });
+
+  if (result.isConfirmed) {
+    const deleteResult = await store.deleteArchive(store.selectedDate);
+    if (deleteResult.success) {
+      addNotification(deleteResult.message, 'success');
+      searchQuery.value = '';
+    } else {
+      addNotification(deleteResult.message, 'error');
+    }
+  }
 };
 </script>
 
 <style scoped>
-.archive-page {
-  max-width: 1200px;
-  margin: 0 auto;
-}
+.archive-page { max-width: 1200px; margin: 0 auto; padding-bottom: 40px; }
+.archive-controls { display: flex; flex-direction: column; gap: 15px; padding: 25px; background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: var(--card-shadow); }
 
-.archive-controls {
+.btn-settings-table {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  padding: 0 10px;
+  transition: color 0.3s;
   display: flex;
-  flex-direction: column;
-  gap: 15px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.9));
-  border-radius: 16px;
-  border: 1px solid rgba(0, 121, 101, 0.1);
-  margin-bottom: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  align-items: center;
 }
 
+.btn-settings-table:hover {
+  color: var(--primary);
+}
 
-/* تحسينات للشاشات الصغيرة */
-@media (max-width: 640px) {
-  .archive-controls {
-    padding: 15px;
+.archive-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.btn--back-to-harvest {
+  min-width: 180px;
+}
+
+.btn--delete-archive {
+  background-color: #ef4444;
+  color: white;
+  min-width: 180px;
+}
+
+.btn--delete-archive:hover {
+  background-color: #dc2626;
+}
+
+@media (max-width: 600px) {
+  .archive-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn--back-to-harvest, 
+  .btn--delete-archive {
+    width: 100%;
   }
 }
 </style>

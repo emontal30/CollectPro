@@ -204,7 +204,7 @@
       </div>
 
       <div class="buttons-row">
-        <button class="btn btn-dashboard btn-dashboard--clear" @click="store.clearFields">
+        <button class="btn btn-dashboard btn-dashboard--clear" @click="store.clearAll">
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
@@ -222,12 +222,15 @@
 import { computed, onMounted, onActivated, watch, inject, ref, reactive, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
+import { useArchiveStore } from '@/stores/archiveStore';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import logger from '@/utils/logger.js'
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
+import localforage from 'localforage';
 
 const store = useHarvestStore();
+const archiveStore = useArchiveStore();
 const route = useRoute();
 const counterStore = useCounterStore();
 
@@ -253,11 +256,9 @@ function isVisibleHarvest(key){ return columnsVisibilityHarvest[key] !== false; 
 function applySavedColumnsHarvest(obj){ Object.keys(obj || {}).forEach(k => { columnsVisibilityHarvest[k] = !!obj[k]; }); }
 
 // نظام الإشعارات الموحد
-const { confirm, success, error, messages, addNotification } = inject('notifications');
+const { confirm, addNotification } = inject('notifications');
 
 // Initialize the store when the view mounts or becomes active
-// (Initialization is consolidated into the main onMounted below)
-
 onActivated(() => {
   logger.debug('Harvest view activated — initializing store');
   store.initialize && store.initialize();
@@ -271,13 +272,12 @@ watch(() => route.name, (newName) => {
   }
 });
 
-// مزامنة إجمالي المحصل مع صفحة عداد الأموال عند تحميل الصفحة وعند التركيز
+// مزامنة إجمالي المحصل مع صفحة عداد الأموال
 const syncWithCounterStore = () => {
   try {
     const totalCollected = store.totals.collector;
     localStorage.setItem('totalCollected', totalCollected.toString());
     
-    // إشعار counter store بالتحديث
     window.dispatchEvent(new CustomEvent('harvestDataUpdated', { 
       detail: { totalCollected } 
     }));
@@ -289,7 +289,6 @@ const syncWithCounterStore = () => {
 };
 
 onMounted(() => {
-  // محاولة تحميل بيانات جديدة عند فتح الصفحة (بدون إشعارات)
   store.initialize && store.initialize();
   try { loadColumnsVisibilityHarvest(); } catch (e) { logger.debug('no saved harvest columns'); }
 
@@ -298,25 +297,20 @@ onMounted(() => {
     logger.info('✅ تم تحميل البيانات من صفحة الإدخال');
   }
 
-  // مزامنة إجمالي المحصل مع صفحة عداد الأموال
   syncWithCounterStore();
 
-  // مراقبة عودة التركيز للصفحة
   const handleFocus = () => {
     syncWithCounterStore();
   };
 
   window.addEventListener('focus', handleFocus);
 
-  // تنظيف المراجع عند إلغاء تحميل المكوّن
   onBeforeUnmount(() => {
     window.removeEventListener('focus', handleFocus);
   });
 });
 
-// Check and add empty row if last row has data
 const checkAndAddEmptyRow = (index) => {
-  // Always ensure there's at least one empty row at the end
   if (index === store.rows.length - 1) {
     store.rows.push({
       id: Date.now(),
@@ -332,7 +326,6 @@ const checkAndAddEmptyRow = (index) => {
   }
 };
 
-// Update shop and save
 const updateShop = (row, index, event) => {
    row.shop = event.target.value;
    row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
@@ -340,7 +333,6 @@ const updateShop = (row, index, event) => {
    checkAndAddEmptyRow(index);
 };
 
-// Update code and save
 const updateCode = (row, index, event) => {
    row.code = event.target.value;
    row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
@@ -348,7 +340,6 @@ const updateCode = (row, index, event) => {
    checkAndAddEmptyRow(index);
 };
 
-// Update amount and save
 const updateAmount = (row, index, event) => {
    const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
    row.amount = value;
@@ -357,7 +348,6 @@ const updateAmount = (row, index, event) => {
    checkAndAddEmptyRow(index);
 };
 
-// Update extra and save
 const updateExtra = (row, index, event) => {
    const rawValue = event.target.value.replace(/,/g, '');
    const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
@@ -367,7 +357,6 @@ const updateExtra = (row, index, event) => {
    checkAndAddEmptyRow(index);
 };
 
-// Update collector and save
 const updateCollector = (row, index, event) => {
    const rawValue = event.target.value.replace(/,/g, '');
    const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
@@ -376,13 +365,11 @@ const updateCollector = (row, index, event) => {
    store.saveRowsToLocalStorage();
    checkAndAddEmptyRow(index);
    
-   // مزامنة فورية مع صفحة عداد الأموال
    setTimeout(() => {
      syncWithCounterStore();
    }, 50);
 };
 
-// Date formatting
 const currentDate = computed(() => {
   return new Date().toLocaleDateString("en-GB", {
     day: '2-digit', month: '2-digit', year: 'numeric'
@@ -393,10 +380,9 @@ const currentDay = computed(() => {
   return new Date().toLocaleDateString("ar-EG", { weekday: 'long' });
 });
 
-// Helper functions for colors and icons
 const formatInputNumber = (num) => {
    if (!num && num !== 0) return ''
-   if (num === 0) return '' // Show empty string for zero values
+   if (num === 0) return '' 
    return new Intl.NumberFormat('en-US', {
      minimumFractionDigits: 0,
      maximumFractionDigits: 2
@@ -404,48 +390,47 @@ const formatInputNumber = (num) => {
 };
 
 const getNetClass = (row) => {
-  if (!row) {
-    // Development-only error logging
-    if (import.meta.env.DEV) {
-      console.error('getNetClass called with undefined row');
-    }
-    return 'zero';
-  }
-  const net = row.collector - (row.amount + row.extra);
+  if (!row) return 'zero';
+  const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
   if (net > 0) return 'positive';
   if (net < 0) return 'negative';
   return 'zero';
 };
 
 const getNetIcon = (row) => {
-  const net = row.collector - (row.amount + row.extra);
+  const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
   if (net > 0) return 'fas fa-arrow-up';
   if (net < 0) return 'fas fa-arrow-down';
   return 'fas fa-check';
 };
 
 const getTotalNetClass = computed(() => {
-  if (store.totalNet > 0) return 'positive';
-  if (store.totalNet < 0) return 'negative';
+  const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
+  if (net > 0) return 'positive';
+  if (net < 0) return 'negative';
   return 'zero';
 });
 
 const getTotalNetIcon = computed(() => {
-  if (store.totalNet > 0) return 'fas fa-arrow-up';
-  if (store.totalNet < 0) return 'fas fa-arrow-down';
+  const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
+  if (net > 0) return 'fas fa-arrow-up';
+  if (net < 0) return 'fas fa-arrow-down';
   return 'fas fa-check';
 });
 
 // Archive today's data
 const archiveToday = async () => {
-  const todayStr = new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
+  // استخدام التاريخ المحلي الموحد للتحقق
+  const todayIso = archiveStore.getTodayLocal();
+  const localKey = `${archiveStore.DB_PREFIX}${todayIso}`;
+  
+  // التحقق من وجود أرشيف سابق في المخزن الفعلي (localforage)
+  const existingArchive = await localforage.getItem(localKey);
 
-  // رسالة تأكيد باستخدام النظام الموحد
   const confirmResult = await confirm({
-    title: localArchive[todayStr] ? 'تأكيد استبدال الأرشيف' : 'تأكيد الأرشفة',
-    text: localArchive[todayStr]
-      ? `توجد أرشيف سابق ليوم ${todayStr}. هل تريد استبداله بالبيانات الحالية؟`
+    title: existingArchive ? 'تأكيد استبدال الأرشيف' : 'تأكيد الأرشفة',
+    text: existingArchive 
+      ? `يوجد أرشيف سابق ليوم ${todayIso}. هل تريد استبداله بالبيانات الحالية؟`
       : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
     icon: 'question',
     confirmButtonText: 'أرشفة',
@@ -459,16 +444,13 @@ const archiveToday = async () => {
 
     if (result.success) {
       addNotification(result.message, 'success');
-      // تصفير الحقول بعد الأرشفة الناجحة
-      store.clearFields();
+      store.clearAll();
     } else {
       addNotification(result.message || 'فشل في الأرشفة', 'error');
     }
   } catch (error) {
     logger.error('Archive error:', error);
-    addNotification('حدث خطأ غير متوقع أثناء الأرشفة', 'error', {
-      suggestion: 'تأكد من وجود بيانات صحيحة وحاول مرة أخرى'
-    });
+    addNotification('حدث خطأ غير متوقع أثناء الأرشفة', 'error');
   }
 };
 </script>
@@ -582,13 +564,11 @@ const archiveToday = async () => {
 
 .calc-field { font-size: 1.35rem; font-weight: 800; color: var(--gray-900); text-align: center; }
 
-/* Reduce size for reset amount and total collected by one step */
 .reset-amount-field .calc-field,
 .total-collected-field .calc-field {
   font-size: 1.15rem;
 }
 
-/* small screens: stack */
 @media (max-width: 640px) {
   .summary-row.two-cols { flex-direction: column; }
   .summary-item { width: 100%; }

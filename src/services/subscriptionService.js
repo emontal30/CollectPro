@@ -9,7 +9,6 @@ export const subscriptionService = {
         .select('*')
         .order('price', { ascending: true })
     );
-
     return { plans: data, error };
   },
 
@@ -24,19 +23,15 @@ export const subscriptionService = {
           created_at: new Date().toISOString()
         })
     );
-
     return { data, error };
   },
 
   async getSubscription(userId) {
-    // First try to get active subscription
+    // محاولة جلب الاشتراك النشط أولاً
     let { data, error } = await apiInterceptor(
       authService.supabase
         .from('subscriptions')
-        .select(`
-          *,
-          subscription_plans:plan_id (name, name_ar)
-        `)
+        .select(`*, subscription_plans:plan_id (name, name_ar)`)
         .eq('user_id', userId)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
@@ -44,15 +39,12 @@ export const subscriptionService = {
         .maybeSingle()
     );
 
-    // If no active subscription, get the latest one
+    // إذا لم يوجد نشط، نجلب الأحدث أياً كانت حالته
     if (!data) {
       const result = await apiInterceptor(
         authService.supabase
           .from('subscriptions')
-          .select(`
-            *,
-            subscription_plans:plan_id (name, name_ar)
-          `)
+          .select(`*, subscription_plans:plan_id (name, name_ar)`)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -66,18 +58,16 @@ export const subscriptionService = {
   },
 
   async getSubscriptionHistory(userId) {
+    // جلب جميع الاشتراكات السابقة مرتبة من الأحدث إلى الأقدم
     const { data, error } = await apiInterceptor(
       authService.supabase
         .from('subscriptions')
-        .select(`
-          *,
-          subscription_plans:plan_id (name, name_ar)
-        `)
+        .select(`*, subscription_plans:plan_id (name, name_ar)`)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
     );
 
-    return { history: data, error };
+    return { history: data || [], error };
   },
 
   async updateSubscriptionStatus(subscriptionId, status) {
@@ -87,7 +77,6 @@ export const subscriptionService = {
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', subscriptionId)
     );
-
     return { data, error };
   },
 
@@ -99,7 +88,6 @@ export const subscriptionService = {
         .eq('id', subscriptionId)
         .single()
     );
-
     return { data, error };
   }
 };

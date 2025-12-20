@@ -1,63 +1,35 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import api from '@/services/api';
+import { apiInterceptor } from '@/services/apiInterceptor';
 import { supabase } from '@/supabase';
 import { useRouter } from 'vue-router';
 import { useNotifications } from '@/composables/useNotifications';
 import logger from '@/utils/logger.js'
 
 export const usePaymentStore = defineStore('payment', () => {
-  // --- الحالة (State) ---
+  // --- State ---
   const selectedPlan = ref(null);
-  const userData = ref({
-    name: '',
-    email: '',
-    id: ''
-  });
+  const userData = ref({ name: '', email: '', id: '' });
   const transactionId = ref('');
-  const paymentMethod = ref('vodafone-cash'); // القيمة الافتراضية
+  const paymentMethod = ref('vodafone-cash');
   const isLoading = ref(false);
   const router = useRouter();
 
-  // نظام الإشعارات الموحد
-  const { error, success, confirm, addNotification } = useNotifications();
+  const { error, success, confirm } = useNotifications();
 
-  // --- الإجراءات (Actions) ---
+  // --- Actions ---
 
-  // 1. تهيئة الصفحة وتحميل البيانات (بدون قيود)
   async function init() {
     const planId = localStorage.getItem('selectedPlanId');
     if (!planId) {
-      // في حالة عدم وجود خطة، نعود لصفحة الاشتراكات بهدوء
       router.push('/app/subscriptions');
       return;
     }
 
     isLoading.value = true;
     try {
-      await loadPlanDetails(planId);
-      // تحميل بيانات المستخدم اختياري
-      try {
-        await loadUserData();
-      } catch (userError) {
-        logger.warn('Could not load user data, continuing anyway:', userError);
-        // نستمر حتى بدون بيانات المستخدم
-      }
-    } catch (error) {
-      logger.error(error);
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // 2. تحميل تفاصيل الخطة
-  async function loadPlanDetails(planId) {
-    selectedPlan.value = await api.payment.getPlanDetails(planId);
-  }
-
-  // 3. تحميل بيانات المستخدم (اختياري ومرن)
-  async function loadUserData() {
-    try {
+      selectedPlan.value = await api.payment.getPlanDetails(planId);
       const { user } = await api.auth.getUser();
       if (user) {
         userData.value = {
@@ -65,30 +37,14 @@ export const usePaymentStore = defineStore('payment', () => {
           email: user.email || 'user@example.com',
           id: user.id || 'guest'
         };
-      } else {
-        // بيانات افتراضية للمستخدم غير المسجل
-        userData.value = {
-          name: 'زائر',
-          email: 'guest@example.com',
-          id: 'guest'
-        };
       }
-    } catch (error) {
-      logger.warn('Could not load user data, using defaults:', error);
-      userData.value = {
-        name: 'زائر',
-        email: 'guest@example.com',
-        id: 'guest'
-      };
+    } catch (err) {
+      logger.error('Payment init error:', err);
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  // 4. تغيير طريقة الدفع
-  function setPaymentMethod(method) {
-    paymentMethod.value = method;
-  }
-
-  // 5. إرسال طلب الدفع
   async function submitPayment() {
     if (!transactionId.value.trim()) {
       error('رقم عملية التحويل مطلوب');
@@ -100,26 +56,26 @@ export const usePaymentStore = defineStore('payment', () => {
       const { user } = await api.auth.getUser();
       if (!user) throw new Error("المستخدم غير مسجل دخوله.");
 
-      // التحقق من الاشتراكات النشطة
-      const { data: activeSubs } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active');
+      // التحقق من الاشتراكات النشطة (تم التحويل لـ apiInterceptor)
+      const { data: activeSubs, error: fetchError } = await apiInterceptor(
+        supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+      );
+
+      if (fetchError) throw fetchError;
 
       if (activeSubs && activeSubs.length > 0) {
         const confirmResult = await confirm({
           title: 'تحذير!',
           text: 'لديك اشتراك نشط بالفعل. هل أنت متأكد من رغبتك في المتابعة وإلغاء الاشتراك الحالي؟',
           icon: 'warning',
-          confirmButtonText: 'نعم، متابعة',
-          cancelButtonText: 'إلغاء'
+          confirmButtonText: 'نعم، متابعة'
         });
 
-        if (!confirmResult.isConfirmed) {
-          isLoading.value = false;
-          return;
-        }
+        if (!confirmResult.isConfirmed) return;
       }
 
       const { error: paymentError } = await api.payment.submitPayment(
@@ -133,13 +89,12 @@ export const usePaymentStore = defineStore('payment', () => {
       if (paymentError) throw paymentError;
 
       await success('تم إرسال طلب اشتراكك بنجاح. سيتم مراجعته وتفعيله خلال 24 ساعة.', 'تم بنجاح');
-
       localStorage.removeItem('selectedPlanId');
       router.push('/app/my-subscription');
 
     } catch (err) {
       logger.error(err);
-      error(`حدث خطأ أثناء إرسال الطلب: ${err.message}`);
+      error(`حدث خطأ: ${err.message || 'فشل الاتصال بالخادم'}`);
     } finally {
       isLoading.value = false;
     }
@@ -152,7 +107,6 @@ export const usePaymentStore = defineStore('payment', () => {
     paymentMethod,
     isLoading,
     init,
-    setPaymentMethod,
     submitPayment
   };
 });

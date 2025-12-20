@@ -1,31 +1,25 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (Fix: v3.2 - View Type Conflict Resolved)
--- الإصدار: 3.2 (تم إضافة DROP VIEW لحل تعارض الأنواع)
+-- COLLECTPRO - MASTER SCHEMA (v3.7 - RLS & Recursion Fix)
 -- ====================================================================
 
 -- #####################################################
 -- 1. التهيئة والتنظيف (Initial Setup & Cleanup)
 -- #####################################################
 
--- تفعيل التمديدات الضرورية
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- تنظيف العروض القديمة أولاً (هام جداً لحل مشكلة الخطأ 42P16)
+-- تنظيف العروض والوظائف القديمة
 DROP VIEW IF EXISTS public.admin_subscriptions_view CASCADE;
-
--- تنظيف الجداول القديمة لضمان عدم حدوث تضارب
-DROP TABLE IF EXISTS public.archive_data CASCADE;
-DROP TABLE IF EXISTS public.archive_dates CASCADE;
-
--- تنظيف الدوال القديمة
-DROP FUNCTION IF EXISTS public.manage_archive_dates CASCADE;
-DROP FUNCTION IF EXISTS public.get_dashboard_stats CASCADE;
+DROP FUNCTION IF EXISTS public.calculate_total_revenue CASCADE;
+DROP FUNCTION IF EXISTS public.update_statistics CASCADE;
+DROP FUNCTION IF EXISTS public.create_user_profile CASCADE;
+DROP FUNCTION IF EXISTS public.cleanup_old_archives CASCADE;
+DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
 -- #####################################################
 
--- [1] جدول المستخدمين (Users)
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
@@ -36,7 +30,15 @@ CREATE TABLE IF NOT EXISTS public.users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- [2] جدول المديرين (Admins)
+-- إضافة حقل role بأمان
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.users'::regclass AND attname = 'role') THEN
+        ALTER TABLE public.users ADD COLUMN role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin'));
+    END IF;
+END;
+$$;
+
 CREATE TABLE IF NOT EXISTS public.admins (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -45,7 +47,6 @@ CREATE TABLE IF NOT EXISTS public.admins (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- [3] جدول خطط الاشتراك (Subscription Plans)
 CREATE TABLE IF NOT EXISTS public.subscription_plans (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     name TEXT NOT NULL,
@@ -61,9 +62,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_subscription_plans_external_id ON public.subscription_plans (external_id);
 
--- [4] جدول الاشتراكات (Subscriptions)
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -77,10 +76,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions (status);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions (user_id);
 
--- [5] جدول الأرشيف الذكي (Daily Archives)
 CREATE TABLE IF NOT EXISTS public.daily_archives (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -89,14 +85,9 @@ CREATE TABLE IF NOT EXISTS public.daily_archives (
     total_amount NUMERIC DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-
-    -- القيد الحاسم لعملية Upsert
     CONSTRAINT daily_archives_user_date_unique UNIQUE(user_id, archive_date)
 );
-CREATE INDEX IF NOT EXISTS idx_daily_archives_lookup ON public.daily_archives (user_id, archive_date);
-CREATE INDEX IF NOT EXISTS idx_daily_archives_date_desc ON public.daily_archives (archive_date DESC);
 
--- [6] جدول الإحصائيات (Statistics)
 CREATE TABLE IF NOT EXISTS public.statistics (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     total_users INTEGER DEFAULT 0,
@@ -108,32 +99,7 @@ CREATE TABLE IF NOT EXISTS public.statistics (
 );
 
 -- #####################################################
--- 3. البيانات الأولية (Seed Data)
--- #####################################################
-
-DO $$
-BEGIN
-    -- إضافة المدير الافتراضي
-    INSERT INTO public.admins (email, full_name) 
-    VALUES ('emontal.33@gmail.com', 'Admin System')
-    ON CONFLICT (email) DO NOTHING;
-
-    -- إضافة خطط الاشتراك
-    INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
-    VALUES 
-        ('MONTH-1', 'خطة شهرية', 'خطة أساسية للمبتدئين', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات", "الأرشيف"]'::jsonb, TRUE, 30.00),
-        ('MONTH-3', 'خطة 3 شهور', 'خطة متقدمة (توفير)', 80.00, 90, 3, '["جميع الميزات الأساسية", "عداد الأموال", "إحصائيات"]'::jsonb, TRUE, 80.00),
-        ('YEAR-1', 'خطة سنوية', 'خطة احترافية (أفضل قيمة)', 360.00, 365, 12, '["جميع الميزات", "دعم فني", "تحديثات مجانية"]'::jsonb, TRUE, 360.00)
-    ON CONFLICT DO NOTHING;
-
-    -- تهيئة الإحصائيات
-    INSERT INTO public.statistics (id, total_users, active_subscriptions, total_revenue, pending_requests, last_sync)
-    VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
-    ON CONFLICT (id) DO NOTHING;
-END $$;
-
--- #####################################################
--- 4. سياسات الأمان (Row Level Security)
+-- 3. سياسات الأمان (Row Level Security)
 -- #####################################################
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -141,8 +107,8 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
+-- تنظيف السياسات القديمة
 DO $$ 
 DECLARE pol record;
 BEGIN 
@@ -151,33 +117,26 @@ BEGIN
     END LOOP;
 END $$;
 
--- سياسات المستخدمين
-CREATE POLICY "Users view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Admins view all users" ON public.users FOR SELECT 
-USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+-- سياسات المستخدمين (تم تحسينها لتجنب التكرار اللانهائي)
+CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Allow users to update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Allow admins to view all profiles" ON public.users FOR SELECT USING (role = 'admin');
+CREATE POLICY "Allow admins to manage everything" ON public.users FOR ALL USING (role = 'admin');
 
 -- سياسات الاشتراكات
-CREATE POLICY "Users view own subs" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users insert own subs" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins manage all subs" ON public.subscriptions FOR ALL 
-USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
 
 -- سياسات الأرشيف
-CREATE POLICY "Users manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Admins view archives" ON public.daily_archives FOR SELECT 
-USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
+CREATE POLICY "Users can manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
 
--- سياسات عامة
-CREATE POLICY "Public view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
-CREATE POLICY "Admins manage plans" ON public.subscription_plans FOR ALL 
-USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Admins manage stats" ON public.statistics FOR ALL 
-USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin' OR EXISTS (SELECT 1 FROM public.admins a WHERE a.email = auth.email()));
-CREATE POLICY "Admins view self" ON public.admins FOR SELECT USING (auth.email() = email);
+-- سياسات الخطط
+CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
 
 -- #####################################################
--- 5. الدوال والمنطق البرمجي
+-- 4. الدوال (Functions)
 -- #####################################################
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -190,30 +149,12 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
 RETURNS NUMERIC SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
-DECLARE
-    total NUMERIC := 0;
 BEGIN
-    SELECT COALESCE(SUM(sp.price_egp), 0) INTO total
-    FROM public.subscriptions s
-    JOIN public.subscription_plans sp ON s.plan_id = sp.id
-    WHERE s.status = 'active';
-    RETURN total;
+    RETURN (SELECT COALESCE(SUM(sp.price_egp), 0)
+            FROM public.subscriptions s
+            JOIN public.subscription_plans sp ON s.plan_id = sp.id
+            WHERE s.status = 'active');
 END;
-$$;
-
-CREATE OR REPLACE FUNCTION cleanup_old_archives()
-RETURNS TRIGGER AS $$
-BEGIN
-    DELETE FROM public.daily_archives
-    WHERE user_id = NEW.user_id
-    AND archive_date < (CURRENT_DATE - INTERVAL '31 days');
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION public.get_active_users_last_n_days(days int)
-RETURNS bigint LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT count(*) FROM public.users WHERE updated_at > (now() - (days || ' days')::interval);
 $$;
 
 CREATE OR REPLACE FUNCTION update_statistics()
@@ -232,8 +173,17 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.create_user_profile()
+RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO public.users (id, email, full_name, role)
+    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', 'user');
+    RETURN NEW;
+END;
+$$;
+
 -- #####################################################
--- 6. ربط التريجرز
+-- 5. التريجرز (Triggers)
 -- #####################################################
 
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
@@ -242,25 +192,41 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_archives_updated_at ON public.daily_archives;
-CREATE TRIGGER update_archives_updated_at BEFORE UPDATE ON public.daily_archives FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trigger_cleanup_archives ON public.daily_archives;
-CREATE TRIGGER trigger_cleanup_archives 
-AFTER INSERT ON public.daily_archives 
-FOR EACH ROW EXECUTE FUNCTION cleanup_old_archives();
-
 DROP TRIGGER IF EXISTS trigger_update_stats_subs ON public.subscriptions;
 CREATE TRIGGER trigger_update_stats_subs AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
 
 DROP TRIGGER IF EXISTS trigger_update_stats_users ON public.users;
 CREATE TRIGGER trigger_update_stats_users AFTER INSERT OR UPDATE OR DELETE ON public.users FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_user_profile();
+
+-- #####################################################
+-- 6. البيانات الأولية (Seed Data)
+-- #####################################################
+
+DO $$
+BEGIN
+    INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
+    VALUES 
+        ('MONTH-1', 'خطة شهرية', 'خطة أساسية للمبتدئين', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات", "الأرشيف"]'::jsonb, TRUE, 30.00),
+        ('MONTH-3', 'خطة 3 شهور', 'خطة متقدمة (توفير)', 80.00, 90, 3, '["جميع الميزات الأساسية", "عداد الأموال", "إحصائيات"]'::jsonb, TRUE, 80.00),
+        ('YEAR-1', 'خطة سنوية', 'خطة احترافية (أفضل قيمة)', 360.00, 365, 12, '["جميع الميزات", "دعم فني", "تحديثات مجانية"]'::jsonb, TRUE, 360.00)
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO public.statistics (id, total_users, active_subscriptions, total_revenue, pending_requests, last_sync)
+    VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
+    ON CONFLICT (id) DO NOTHING;
+
+    -- تعيين المدير
+    UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
+END $$;
+
 -- #####################################################
 -- 7. العروض (Views)
 -- #####################################################
 
-CREATE VIEW public.admin_subscriptions_view AS
+CREATE OR REPLACE VIEW public.admin_subscriptions_view AS
 SELECT
     s.id, s.user_id, COALESCE(u.full_name, u.email) AS user_name,
     s.plan_id, sp.name AS plan_name, sp.name_ar AS plan_name_ar,
@@ -269,22 +235,8 @@ FROM public.subscriptions s
 LEFT JOIN public.users u ON s.user_id = u.id
 LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id;
 
+-- منح الصلاحيات
 GRANT SELECT ON public.admin_subscriptions_view TO authenticated, service_role;
-
--- #####################################################
--- 8. إصلاحات البيانات
--- #####################################################
-
-DO $$
-BEGIN
-    UPDATE public.users SET provider = '["google"]'::jsonb 
-    WHERE provider IS NULL OR provider = '[]'::jsonb;
-    
-    DELETE FROM public.subscriptions s 
-    WHERE s.user_id IS NOT NULL 
-    AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id = s.user_id);
-END $$;
-
--- =====================================================
--- تم التنفيذ بنجاح - النظام جاهز
--- =====================================================
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;

@@ -1,328 +1,237 @@
 <template>
-  <div class="my-subscription-page">
+  <div class="my-subscription-page container">
     
     <PageHeader 
-      title="اشتراكي" 
-      subtitle="عرض وتفاصيل اشتراكك الحالي"
-      icon="👤"
+      title="إدارة اشتراكي" 
+      subtitle="تحكم في باقتك وتابع تاريخ عملياتك"
+      icon="🛡️"
     />
 
-    <div class="subscription-container">
-      <div v-if="store.isLoading" class="subscription-card">
-        <div class="subscription-details">
-          <Loader message="جاري تحميل بيانات اشتراكك..." />
-        </div>
-      </div>
-
-      <div v-else>
-        <div class="subscription-card">
-          <div class="subscription-header">
-            <h2><i class="fas fa-shield-alt"></i> حالة اشتراكك</h2>
-            
-            <div v-if="store.subscription">
-              <span class="status-badge" :class="`status-${store.subscription.status}`">
-                {{ store.statusText }}
-              </span>
-            </div>
-            <div v-else>
-              <span class="status-badge status-expired">لا يوجد اشتراك</span>
-            </div>
+    <div class="content-grid">
+      <!-- Card 1: Current Status -->
+      <section class="card status-card animate-fade-in">
+        <div class="card-header bg-primary-gradient">
+          <div class="header-icon"><i class="fas fa-crown"></i></div>
+          <div class="header-text">
+            <h3>الاشتراك الحالي</h3>
+            <span class="plan-badge">{{ store.planName }}</span>
           </div>
+          <div class="status-indicator">
+             <span class="badge" :class="`badge-${store.subscription?.status || 'none'}`">
+               {{ store.statusText }}
+             </span>
+          </div>
+        </div>
 
+        <div class="card-body">
           <div v-if="store.subscription" class="subscription-details">
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-cube"></i> نوع الخطة:</span>
-              <span class="detail-value">
-                {{ store.subscription.subscription_plans?.name_ar || store.subscription.plan_name }}
-              </span>
+            <div class="detail-item">
+              <span class="label"><i class="fas fa-calendar-day"></i> يبدأ في</span>
+              <span class="value">{{ formatDate(store.subscription.start_date) }}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-calendar-alt"></i> تاريخ البدء:</span>
-              <span class="detail-value">{{ store.formatDate(store.subscription.start_date) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label"><i class="fas fa-calendar-check"></i> تاريخ الانتهاء:</span>
-              <span class="detail-value">{{ store.formatDate(store.subscription.end_date) }}</span>
-            </div>
-            <div class="detail-row">
-               <span class="detail-label"><i class="fas fa-info-circle"></i> الحالة:</span>
-               <span class="detail-value">{{ store.statusText }}</span>
-            </div>
-            <div class="detail-row">
-               <span class="detail-label"><i class="fas fa-hourglass-half"></i> الأيام المتبقية:</span>
-               <span 
-                 id="days-remaining" 
-                 class="detail-value" 
-                 :class="store.daysClass"
-               >
-                 {{ store.daysRemaining > 0 ? `${store.daysRemaining} يوم` : 'اشتراك منتهي' }}
-               </span>
-            </div>
-          </div>
-
-          <div v-else class="subscription-details">
-             <div class="no-subscription">
-               <i class="fas fa-info-circle"></i>
-               <p>أنت غير مشترك حاليًا في أي باقة.</p>
-             </div>
-          </div>
-
-          <div class="subscription-actions">
-            
-            <div v-if="store.subscription?.status === 'pending'" class="action-info">
-              <i class="fas fa-clock"></i>
-              <p>طلبك قيد المراجعة. سيتم تفعيل اشتراكك خلال 24 ساعة.</p>
-            </div>
-
-            <template v-else-if="store.subscription?.status === 'active'">
-              <div v-if="store.daysRemaining <= 7 && store.daysRemaining > 0">
-                <div class="action-warning">
-                  <i class="fas fa-exclamation-triangle"></i>
-                  <p>تنبيه: اشتراكك ينتهي خلال {{ store.daysRemaining }} أيام. يرجى تجديد الاشتراك لتجنب انقطاع الخدمة.</p>
-                </div>
-                <button class="btn btn-primary" @click="store.openRenewModal">
-                  <i class="fas fa-sync-alt"></i> تجديد الاشتراك
-                </button>
-              </div>
-              
-              <div v-else-if="store.daysRemaining <= 0">
-                <div class="action-warning">
-                  <i class="fas fa-exclamation-triangle"></i>
-                  <p>انتهت صلاحية اشتراكك. جدد الآن للاستمرار.</p>
-                </div>
-                <router-link to="/app/subscriptions" class="btn btn-primary">
-                  <i class="fas fa-rocket"></i> اشترك الآن
-                </router-link>
-              </div>
-
-              <div v-else class="action-success">
-                <i class="fas fa-check-circle"></i>
-                <p>اشتراكك نشط ومستمر. متبقي {{ store.daysRemaining }} يوم.</p>
-              </div>
-            </template>
-
-            <router-link v-else to="/app/subscriptions" class="btn btn-primary">
-              <i class="fas fa-rocket"></i> اشترك الآن
-            </router-link>
-          </div>
-        </div>
-
-        <div class="subscription-history">
-          <div class="history-header">
-            <h2><i class="fas fa-history"></i> تاريخ الاشتراكات</h2>
-            <div class="history-stats">
-              <span class="total-subscriptions">{{ store.history.length }} اشتراك</span>
-            </div>
-          </div>
-          
-          <div class="table-container">
-            <div class="table-wrapper">
-              <table id="history-table" class="modern-table">
-                <thead>
-                  <tr>
-                    <th><i class="fas fa-cube"></i> نوع الخطة</th>
-                    <th><i class="fas fa-calendar-alt"></i> تاريخ البدء</th>
-                    <th><i class="fas fa-calendar-check"></i> تاريخ الانتهاء</th>
-                    <th><i class="fas fa-info-circle"></i> الحالة</th>
-                  </tr>
-                </thead>
-                <tbody v-if="store.history.length > 0">
-                  <tr v-for="(sub, index) in store.history" :key="sub.id" :class="`row-${sub.status}`">
-                    <td>
-                      <div class="plan-info">
-                        <div class="plan-icon">
-                          <i class="fas fa-cube"></i>
-                        </div>
-                        <div class="plan-details">
-                          <span class="plan-name">{{ sub.subscription_plans?.name_ar || sub.plan_name }}</span>
-                          <span class="plan-duration">{{ getDurationText(sub) }}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="date-cell">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>{{ store.formatDate(sub.start_date) }}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="date-cell">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>{{ store.formatDate(sub.end_date) }}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="status-badge" :class="`status-${sub.status}`">
-                        <i class="fas" :class="getStatusIcon(sub.status)"></i>
-                        {{ getStatusText(sub.status) }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="detail-item">
+              <span class="label"><i class="fas fa-calendar-check"></i> ينتهي في</span>
+              <span class="value">{{ formatDate(store.subscription.end_date) }}</span>
             </div>
             
-            <div v-if="store.history.length === 0" class="no-data">
-              <div class="no-data-icon">
-                <i class="fas fa-inbox"></i>
-              </div>
-              <h3>لا يوجد تاريخ اشتراكات</h3>
-              <p>لم تقم بإنشاء أي اشتراكات بعد</p>
+            <div class="divider"></div>
+            
+            <div class="remaining-section">
+               <h4 class="remaining-title">الأيام المتبقية</h4>
+               <div class="days-counter" :class="store.daysClass">
+                 <span class="number">{{ store.daysRemaining }}</span>
+                 <span class="unit">يوم</span>
+               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="store.isRenewModalOpen" class="modal show">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>تجديد الاشتراك</h2>
-          <button class="close-modal btn btn--icon" @click="store.isRenewModalOpen = false">&times;</button>
-        </div>
-        <div class="modal-body">
-          
-           <div v-if="store.loadingPlans">
-             <Loader message="جاري تحميل الخطط..." />
-           </div>
-          
-          <div v-else class="renew-plans">
-            <div 
-              v-for="plan in store.renewalPlans" 
-              :key="plan.id" 
-              class="renew-plan"
-              @click="store.selectRenewalPlan(plan.planIdentifier)"
-            >
-              <h3>{{ plan.displayName }}</h3>
-              <div class="plan-price">{{ plan.price }} ج.م</div>
-              <div class="plan-offer">{{ plan.features }}</div>
-            </div>
+          <div v-else class="empty-state">
+            <i class="fas fa-ghost"></i>
+            <p>لا يوجد اشتراك نشط حالياً</p>
           </div>
+        </div>
 
+        <div class="card-footer">
+          <router-link v-if="!store.isSubscribed || store.daysRemaining <= 0" to="/app/subscriptions" class="btn btn-primary btn-block">
+             <i class="fas fa-rocket"></i> اشترك الآن
+          </router-link>
+          
+          <router-link v-else-if="store.daysRemaining <= 7" to="/app/subscriptions" class="btn btn-warning btn-block">
+             <i class="fas fa-sync"></i> تجديد الاشتراك
+          </router-link>
+          
+          <div v-else class="subscription-active-msg">
+            <i class="fas fa-check-circle"></i> اشتراكك مفعل وبحالة جيدة
+          </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="store.isRenewModalOpen = false">إلغاء</button>
+      </section>
+
+      <!-- Card 2: History -->
+      <section class="card history-card animate-fade-in delay-1">
+        <div class="card-header border-bottom">
+          <h3 class="text-main"><i class="fas fa-history text-primary"></i> سجل الاشتراكات</h3>
         </div>
-      </div>
+        <div class="card-body no-padding">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>الباقة</th>
+                  <th>الفترة</th>
+                  <th class="text-center">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="sub in store.history" :key="sub.id">
+                  <td class="font-bold text-main">{{ sub.subscription_plans?.name_ar || sub.plan_name }}</td>
+                  <td>
+                    <div class="date-range-box text-muted">
+                      <span>{{ formatDate(sub.start_date) }}</span>
+                      <i class="fas fa-long-arrow-alt-left"></i>
+                      <span>{{ formatDate(sub.end_date) }}</span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge badge-sm" :class="`badge-${sub.status}`">
+                      {{ getArabicStatus(sub.status) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="store.history.length === 0">
+                  <td colspan="3" class="text-center py-20 text-muted">لا يوجد سجل سابق</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
-
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue';
-import logger from '@/utils/logger.js'
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import Loader from '@/components/ui/Loader.vue';
 
 const store = useMySubscriptionStore();
 
-// دالة للحصول على نص المدة
-function getDurationText(subscription) {
-  if (!subscription.start_date || !subscription.end_date) return '';
-  
-  const start = new Date(subscription.start_date);
-  const end = new Date(subscription.end_date);
-  const diffTime = Math.abs(end - start);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 30) return 'شهري';
-  if (diffDays === 90) return 'ربع سنوي';
-  if (diffDays === 365) return 'سنوي';
-  return `${diffDays} يوم`;
-}
+const formatDate = (date) => {
+  if (!date) return '---';
+  return new Date(date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+};
 
-// دالة للحصول على أيقونة الحالة
-function getStatusIcon(status) {
-  const icons = {
-    active: 'fa-check-circle',
-    pending: 'fa-clock',
-    expired: 'fa-times-circle',
-    cancelled: 'fa-times-circle'
-  };
-  return icons[status] || 'fa-question-circle';
-}
-
-// دالة للحصول على نص الحالة
-function getStatusText(status) {
-  const texts = {
-    active: 'نشط',
-    pending: 'قيد المراجعة',
-    expired: 'منتهي',
-    cancelled: 'ملغي'
-  };
-  return texts[status] || 'غير معروف';
-}
+const getArabicStatus = (status) => {
+  const map = { active: 'نشط', pending: 'معلق', cancelled: 'ملغي', expired: 'منتهي' };
+  return map[status] || status;
+};
 
 onMounted(() => {
-  logger.info('📱 MySubscription view mounted, ensuring subscription data is loaded...');
-  store.init().catch(err => {
-    logger.error('❌ Error loading subscription:', err);
-  });
+  store.init();
 });
 </script>
 
 <style scoped>
-.my-subscription-page {
-  width: 100%;
-  animation: fadeIn 0.5s ease-in-out;
-  padding-bottom: 50px;
-}
+/* --- Layout Structure --- */
+.my-subscription-page { padding-bottom: 40px; }
+.content-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; margin-top: 20px; }
+@media (max-width: 992px) { .content-grid { grid-template-columns: 1fr; } }
 
-.subscription-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.subscription-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: var(--card-shadow);
+/* --- Unified Card Design --- */
+.card {
+  background: var(--white);
+  border-radius: var(--border-radius-xl, 16px);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
   overflow: hidden;
-  margin-bottom: 30px;
-  border: 1px solid rgba(0, 121, 101, 0.1);
+  height: fit-content;
   transition: var(--transition);
 }
 
-.subscription-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--card-shadow-hover);
-}
+.card-header { padding: 20px; display: flex; align-items: center; gap: 15px; }
+.bg-primary-gradient { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; }
+.header-icon { width: 45px; height: 45px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.header-text h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+.plan-badge { font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 20px; }
+.status-indicator { margin-right: auto; }
 
-.subscription-header {
-  padding: 25px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.card-body { padding: 24px; background: var(--white); } /* Added more padding for breathing room */
+.card-body.no-padding { padding: 0; }
 
 .subscription-details {
-  padding: 20px;
-  background: #fafafa;
+  padding: 5px 10px; /* Internal spacing to prevent items from sticking to card edge */
 }
 
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 15px 10px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+.detail-item { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 15px 5px; /* Better vertical spacing */
 }
+.detail-item .label { color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
+.detail-item .value { font-weight: 700; color: var(--text-main); }
 
-.detail-value {
-  font-weight: 600;
-  background: white;
-  padding: 4px 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+.divider { height: 1px; background: var(--border-color); margin: 20px 0; opacity: 0.5; }
+
+.remaining-section { text-align: center; padding: 15px 0; }
+.remaining-title { color: var(--primary); font-size: 1.1rem; font-weight: 800; margin-bottom: 15px; }
+.days-counter { display: inline-flex; flex-direction: column; padding: 20px 40px; border-radius: 24px; min-width: 160px; box-shadow: var(--shadow-md); }
+.days-counter .number { font-size: 3.5rem; font-weight: 900; line-height: 1; }
+.days-counter .unit { font-size: 1.1rem; font-weight: 700; margin-top: 8px; opacity: 0.9; }
+
+/* Dynamic Indicators */
+.high-days { background: rgba(0, 121, 101, 0.08); color: var(--primary); }
+.medium-days { background: rgba(243, 156, 18, 0.1); color: var(--warning); }
+.low-days { background: rgba(231, 76, 60, 0.1); color: var(--danger); animation: pulse 2s infinite; }
+.expired-days { background: var(--gray-200); color: var(--gray-600); }
+
+.card-footer { padding: 24px; background: var(--gray-100); border-top: 1px solid var(--border-color); }
+.subscription-active-msg { text-align: center; color: var(--primary); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* --- Table Styles --- */
+.modern-table { width: 100%; border-collapse: collapse; }
+.modern-table th { background: var(--gray-100); padding: 18px 24px; text-align: right; font-size: 0.9rem; color: var(--text-muted); border-bottom: 1px solid var(--border-color); }
+.modern-table td { padding: 20px 24px; border-bottom: 1px solid var(--border-color); }
+.date-range-box { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+
+/* --- Badges --- */
+.badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.badge-active { background: var(--success); }
+.badge-pending { background: var(--warning); }
+.badge-expired, .badge-cancelled { background: var(--gray-500); }
+
+/* --- Strict Dark Mode Overrides (High Accuracy) --- */
+:global(body.dark-mode) .card { 
+  background: #1e1e1e !important; 
+  border-color: #333 !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4) !important;
 }
+:global(body.dark-mode) .card-body { 
+  background: #1e1e1e !important; 
+}
+:global(body.dark-mode) .card-footer { 
+  background: #252525 !important; 
+  border-top-color: #333 !important; 
+}
+:global(body.dark-mode) .modern-table th { 
+  background: #252525 !important; 
+  color: #aaa !important;
+  border-bottom-color: #333 !important;
+}
+:global(body.dark-mode) .modern-table td { 
+  border-bottom-color: #2a2a2a !important; 
+}
+:global(body.dark-mode) .detail-item .label { color: #bbb !important; }
+:global(body.dark-mode) .detail-item .value { color: #fff !important; }
+:global(body.dark-mode) .remaining-title { color: var(--primary-light) !important; }
+:global(body.dark-mode) .text-main { color: #fff !important; }
+:global(body.dark-mode) .text-muted { color: #aaa !important; }
+:global(body.dark-mode) .divider { background: #333 !important; opacity: 1; }
+:global(body.dark-mode) .days-counter.expired-days { background: #333 !important; color: #888 !important; }
+:global(body.dark-mode) .empty-state { color: #777 !important; }
 
-/* Days Remaining Indicators */
-.low-days { background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white; animation: pulse 2s infinite; }
-.medium-days { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: white; }
-.high-days { background: linear-gradient(135deg, #10b981, #059669) !important; color: white; }
-
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
 </style>

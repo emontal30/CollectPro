@@ -1,27 +1,26 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth';
+import { useArchiveStore } from './archiveStore';
 import { supabase } from '@/supabase';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
-import { removeFromAllCaches, safeDeepClone, setSmartCache } from '@/services/cacheManager';
+import { safeDeepClone } from '@/services/cacheManager';
+import { apiInterceptor } from '@/services/apiInterceptor';
 import logger from '@/utils/logger.js';
+import localforage from 'localforage';
 
 export const useHarvestStore = defineStore('harvest', {
   state: () => ({
-    // البيانات الأساسية
     rows: [],
     currentDate: new Date().toISOString().split('T')[0],
-    
-    // إعدادات وحالة إضافية (مدمجة من الكود القديم)
     masterLimit: 100000,
     currentBalance: 0,
     isLoading: false,
     error: null,
     searchQuery: '',
-    isModified: false, // لتتبع التغييرات غير المحفوظة
+    isModified: false,
   }),
 
   getters: {
-    // حساب الإجماليات
     totals: (state) => {
       const rows = state.rows || [];
       return rows.reduce((acc, row) => {
@@ -32,19 +31,11 @@ export const useHarvestStore = defineStore('harvest', {
         return acc;
       }, { amount: 0, extra: 0, collector: 0, net: 0 });
     },
-
-    // عدد السجلات
-    rowCount: (state) => (state.rows || []).length,
-
-    // تصفية البيانات (للبحث داخل الجدول الحالي)
+    
     filteredRows: (state) => {
       let data = state.rows || [];
-      
-      // إذا كان الجدول فارغاً، نعيد مصفوفة فارغة
       if (data.length === 0) return [];
-
       if (!state.searchQuery) return data;
-
       const query = state.searchQuery.toLowerCase();
       return data.filter(row =>
         (row.shop && row.shop.toLowerCase().includes(query)) ||
@@ -52,194 +43,83 @@ export const useHarvestStore = defineStore('harvest', {
       );
     },
 
-    // حالة الرصيد (للوحة التحكم - ميزة قديمة تم الحفاظ عليها)
     resetStatus: (state) => {
       const totalCollected = state.totals.collector || 0;
-      // الرصيد الحالي - الحد المسموح
-      const resetVal = state.currentBalance - (state.masterLimit || 0);
+      const resetVal = (state.currentBalance || 0) - (state.masterLimit || 0);
       const combinedValue = totalCollected + resetVal;
       
-      if (combinedValue === 0) {
-        return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
-      } else if (combinedValue < 0) {
-        return { val: combinedValue, text: 'عجز 🔴', color: '#ef4444' };
-      } else {
-        return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
-      }
-    }
-    ,
-    // مبلغ التصفيرة: الفرق بين رصيد الماستر والحد المسموح (currentBalance - masterLimit)
-    resetAmount: (state) => {
-      return (parseFloat(state.currentBalance) || 0) - (parseFloat(state.masterLimit) || 0);
-    }
+      if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
+      else if (combinedValue < 0) return { val: combinedValue, text: 'عجز 🔴', color: '#ef4444' };
+      else return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
+    },
+    
+    resetAmount: (state) => (parseFloat(state.currentBalance) || 0) - (parseFloat(state.masterLimit) || 0),
+    
+    totalNet: (state) => state.totals.collector - (state.totals.amount + state.totals.extra)
   },
 
   actions: {
-    // ==========================================================
-    // 1. إدارة البيانات المحلية (CRUD)
-    // ==========================================================
-
-    /**
-     * تهيئة المخزن عند بدء التطبيق
-     */
     async initialize() {
-      logger.debug('🚀 Initializing Harvest Store...');
-      
       try {
-        // 1. تحميل الإعدادات القديمة
         this.loadMasterLimit();
         const savedBalance = localStorage.getItem('currentBalance');
-        if (savedBalance) {
-          this.currentBalance = parseFloat(savedBalance);
-        }
+        if (savedBalance) this.currentBalance = parseFloat(savedBalance);
 
-        // 2. محاولة تحميل بيانات "مستوردة" جديدة (من صفحة اللصق)
         const hasImportedData = await this.loadDataFromStorage();
-        
         if (!hasImportedData) {
-          // 3. إذا لم يوجد استيراد، حمل البيانات المحفوظة سابقاً
           const savedRows = localStorage.getItem('harvest_rows');
           if (savedRows) {
-            try {
-              this.rows = JSON.parse(savedRows);
-              logger.info(`📦 Loaded ${this.rows.length} rows from localStorage`);
-            } catch (e) {
-              this.resetTable();
-            }
+            try { this.rows = JSON.parse(savedRows); } catch (e) { this.resetTable(); }
           } else {
-            // 4. إذا لم يوجد شيء، ابدأ بجدول فارغ
             this.resetTable();
           }
         }
-        
       } catch (err) {
-        logger.error('❌ Error initializing harvest store:', err);
         this.resetTable();
       }
     },
 
-    /**
-     * إضافة صف جديد
-     */
-    addRow() {
-      this.rows.push({
-        id: Date.now() + Math.random(), // ID فريد
-        serial: this.rows.length + 1,
-        shop: '',
-        code: '',
-        amount: '',
-        extra: '',
-        collector: '',
-        net: 0,
-        isImported: false
-      });
-      this.saveRowsToLocalStorage();
-    },
-
-    /**
-     * حذف صف
-     */
-    removeRow(index) {
-      if (index >= 0 && index < this.rows.length) {
-        this.rows.splice(index, 1);
-        if (this.rows.length === 0) this.addRow(); // لا تترك الجدول فارغاً
-        this.saveRowsToLocalStorage();
-      }
-    },
-
-    /**
-     * حساب الصافي لصف معين وتحديث الحالة
-     */
-    calculateRowNet(row) {
-      const amount = parseFloat(row.amount) || 0;
-      const extra = parseFloat(row.extra) || 0;
-      const collector = parseFloat(row.collector) || 0;
-      row.net = collector - (amount + extra);
-      this.isModified = true;
-      this.saveRowsToLocalStorage(); 
-    },
-
-    /**
-     * إعادة تعيين الجدول لصف واحد فارغ
-     */
     resetTable() {
-      this.rows = [{
-        id: Date.now(),
-        shop: '',
-        code: '',
-        amount: '',
-        extra: '',
-        collector: '',
-        net: 0
-      }];
+      this.rows = [{ id: Date.now(), shop: '', code: '', amount: '', extra: '', collector: '', net: 0 }];
       this.saveRowsToLocalStorage();
     },
 
-    /**
-     * مسح كل البيانات (تنظيف كامل)
-     * تقوم بتصفير الجدول والرصيد
-     */
     clearAll() {
       this.resetTable();
       this.searchQuery = '';
-      this.currentBalance = 0; // تصفير الرصيد أيضاً
+      this.currentBalance = 0;
       localStorage.removeItem('currentBalance');
       this.isModified = false;
-      logger.info('🧹 Harvest table cleared');
     },
 
-    /**
-     * دالة التوافق مع الكود القديم (Alias)
-     * تحل مشكلة TypeError: store.clearFields is not a function
-     */
     clearFields() {
       this.clearAll();
     },
 
-    /**
-     * حفظ الصفوف في LocalStorage
-     */
     async saveRowsToLocalStorage() {
       try {
-        const key = 'harvest_rows';
         const cleanedRows = safeDeepClone(this.rows);
-        
-        localStorage.setItem(key, JSON.stringify(cleanedRows));
+        localStorage.setItem('harvest_rows', JSON.stringify(cleanedRows));
         this.isModified = true;
-
-        // نسخة احتياطية في الخلفية (IndexedDB)
-        setSmartCache(key, cleanedRows, 'indexedDB').catch(() => {});
-
       } catch (error) {
-        logger.error('❌ Error saving rows:', error);
+        logger.error('Error saving rows:', error);
       }
     },
-
-    // ==========================================================
-    // 2. الأرشفة الذكية (Smart Archive)
-    // ==========================================================
 
     async archiveTodayData() {
       try {
         this.isLoading = true;
-
-        // 1. التحقق من المصادقة
         const authStore = useAuthStore();
-        if (!authStore.isAuthenticated) {
-          throw new Error('يجب تسجيل الدخول أولاً');
-        }
-        const user = authStore.user;
+        const archiveStore = useArchiveStore();
 
-        // 2. فلترة الصفوف (استبعاد الصفوف الفارغة)
+        if (!authStore.isAuthenticated) throw new Error('يجب تسجيل الدخول أولاً');
+
         const validRows = this.rows.filter(r => 
           r.shop || r.code || (parseFloat(r.amount) > 0) || (parseFloat(r.collector) > 0)
         );
 
-        if (validRows.length === 0) {
-          return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
-        }
+        if (validRows.length === 0) return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
 
-        // 3. تحضير البيانات
         const cleanRows = safeDeepClone(validRows).map(row => ({
           shop: row.shop || '',
           code: row.code || '',
@@ -249,80 +129,64 @@ export const useHarvestStore = defineStore('harvest', {
           net: parseFloat(row.net) || 0
         }));
 
-        const isoDate = new Date(this.currentDate).toISOString().split('T')[0];
-        const localDateStr = new Date(this.currentDate).toLocaleDateString("en-GB"); 
+        const localDateStr = archiveStore.getTodayLocal();
+        const localKey = `arch_data_${localDateStr}`;
 
-        // 4. الحفظ المحلي (LocalStorage Archive)
-        const localArchive = JSON.parse(localStorage.getItem("archiveData") || "{}");
-        const tsvData = cleanRows.map(r => 
-          `${r.shop}\t${r.code}\t${r.amount}\t${r.extra}\t${r.collector}\t${r.net}`
-        ).join("\n");
+        // 1. الحفظ المحلي الفوري
+        await localforage.setItem(localKey, cleanRows);
         
-        localArchive[localDateStr] = tsvData;
-        localStorage.setItem("archiveData", JSON.stringify(localArchive));
+        // 2. تحديث قائمة التواريخ محلياً
+        await archiveStore.loadAvailableDates();
 
-        // 5. الحفظ السحابي (Supabase)
-        let savedToServer = false;
-        
+        // 3. الحفظ السحابي
         const dbPayload = {
-          user_id: user.id,
-          archive_date: isoDate,
-          data: cleanRows, // تخزين JSON كامل
-          total_amount: this.totals.net
+          user_id: authStore.user.id,
+          archive_date: localDateStr,
+          data: cleanRows,
+          total_amount: (this.totals.collector || 0) - ((this.totals.amount || 0) + (this.totals.extra || 0)),
+          updated_at: new Date()
         };
 
-        if (navigator.onLine && !import.meta.env.DEV) {
-          try {
-            const { error } = await supabase
-              .from('daily_archives')
-              .upsert(dbPayload, { onConflict: 'user_id, archive_date' });
+        let message = '';
 
-            if (error) throw error;
-            savedToServer = true;
-          
-          } catch (err) {
-            logger.warn('⚠️ Cloud sync failed, queueing:', err.message);
+        if (navigator.onLine) {
+          const { error } = await apiInterceptor(
+            supabase
+              .from('daily_archives')
+              .upsert(dbPayload, { onConflict: 'user_id, archive_date' })
+          );
+
+          if (!error) {
+            message = 'تم أرشفة اليوم بنجاح على الهاتف وسحابياً ✅';
+            await archiveStore.loadAvailableDates();
+          } else {
             await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+            message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
           }
         } else {
-          // وضع عدم الاتصال
-          if (!import.meta.env.DEV) {
-             await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-          }
+          await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+          message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
         }
 
-        // 6. التنظيف بعد النجاح
-        this.clearAll(); 
-
-        return { 
-          success: true, 
-          message: savedToServer ? 'تمت الأرشفة بنجاح ✅' : 'تم الحفظ محلياً 💾. سيتم المزامنة لاحقاً.' 
-        };
+        return { success: true, message };
 
       } catch (error) {
         logger.error('💥 Archive Error:', error);
-        return { success: false, message: error.message };
+        return { success: false, message: error.message || 'فشل في الأرشفة' };
       } finally {
         this.isLoading = false;
       }
     },
 
-    // ==========================================================
-    // 3. أدوات مساعدة
-    // ==========================================================
-
     parseRawDataToRows(rawData) {
       if (!rawData) return [];
       const lines = rawData.split("\n");
       const parsedRows = [];
-      
       lines.forEach((line, index) => {
         const trimmedLine = line.trim();
         if (!trimmedLine || trimmedLine.includes("المسلسل")) return;
-
         const parts = trimmedLine.split("\t");
         if (parts.length < 2) return;
-
         let shopName = parts[1].trim();
         let code = parts[2] ? parts[2].trim() : "";
         const match = shopName.match(/(.+?):\s*(\d+)/);
@@ -330,9 +194,7 @@ export const useHarvestStore = defineStore('harvest', {
           shopName = match[1].trim();
           code = match[2].trim();
         }
-
         const transferAmount = parseFloat(parts[3]?.replace(/,/g, '') || 0);
-
         if (transferAmount !== 0) {
           parsedRows.push({
             id: Date.now() + index,
@@ -357,13 +219,21 @@ export const useHarvestStore = defineStore('harvest', {
         if (newRows.length > 0) {
           this.rows = newRows;
           this.addRow();
-          await removeFromAllCaches("harvestData");
           localStorage.removeItem("harvestData");
           this.saveRowsToLocalStorage();
           return true;
         }
       }
       return false;
+    },
+
+    addRow() {
+      this.rows.push({
+        id: Date.now() + Math.random(),
+        serial: this.rows.length + 1,
+        shop: '', code: '', amount: '', extra: '', collector: '', net: 0, isImported: false
+      });
+      this.saveRowsToLocalStorage();
     },
 
     setMasterLimit(limit) {
@@ -382,10 +252,7 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     formatNumber(num) {
-      return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }).format(num || 0);
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num || 0);
     }
   }
 });

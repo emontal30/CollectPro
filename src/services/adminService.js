@@ -3,103 +3,79 @@ import { authService } from './authService.js';
 import logger from '@/utils/logger.js';
 
 export const adminService = {
-  async getActiveUsersCount(periodInDays = 30) {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - periodInDays);
+  /**
+   * 1. جلب الإحصائيات العامة (محسنة لتقليل عدد الطلبات)
+   */
+  async getStats() {
+    try {
+      const [usersCount, subsStats, revenueRes] = await Promise.all([
+        apiInterceptor(authService.supabase.from('users').select('id', { count: 'exact', head: true })),
+        apiInterceptor(authService.supabase.from('subscriptions').select('status, user_id')),
+        apiInterceptor(authService.supabase.rpc('calculate_total_revenue'))
+      ]);
 
-    const { data, error } = await apiInterceptor(
-      authService.supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('status', 'active')
-        .gte('updated_at', daysAgo.toISOString())
-    );
-    
-    if (error) {
-      logger.warn('Failed to fetch active users count:', error);
-      return 0;
+      const subs = subsStats.data || [];
+      
+      return {
+        totalUsers: usersCount.count || 0,
+        pendingRequests: subs.filter(s => s.status === 'pending').length,
+        activeSubscriptions: subs.filter(s => s.status === 'active').length,
+        cancelled: subs.filter(s => s.status === 'cancelled').length,
+        expired: subs.filter(s => s.status === 'expired').length,
+        totalRevenue: revenueRes.data || 0,
+        activeUsers: new Set(subs.filter(s => s.status === 'active').map(s => s.user_id)).size
+      };
+    } catch (err) {
+      logger.error('Error fetching admin stats:', err);
+      return {};
     }
-    
-    const uniqueUsers = new Set(data?.map(sub => sub.user_id) || []);
-    return uniqueUsers.size;
   },
 
-  async getStats(filters = {}) {
-    const { activeUsersPeriod = 30 } = filters;
-
-    const [usersRes, pendingRes, activeRes, cancelledRes, expiredRes, revenueRes, activeUsersCountRes] = await Promise.all([
-      apiInterceptor(authService.supabase.from('users').select('*', { count: 'exact', head: true })),
-      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
-      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active')),
-      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
-      apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
-      apiInterceptor(authService.supabase.rpc('calculate_total_revenue')),
-      this.getActiveUsersCount(activeUsersPeriod)
-    ]);
-
-    return {
-      totalUsers: usersRes.count || 0,
-      pendingRequests: pendingRes.count || 0,
-      activeSubscriptions: activeRes.count || 0,
-      cancelled: cancelledRes.count || 0,
-      expired: expiredRes.count || 0,
-      totalRevenue: revenueRes.data || 0,
-      activeUsers: activeUsersCountRes || 0
-    };
-  },
-
-  async getMonthlyChartData() {
-    const { data } = await apiInterceptor(
-      authService.supabase
-        .from('subscriptions')
-        .select('created_at')
-        .order('created_at', { ascending: true })
-    );
-
-    if (!data) return { labels: [], values: [] };
-
-    const monthsCount = {};
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const last5Months = [];
-
-    const today = new Date();
-    for (let i = 4; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
-      last5Months.push(key);
-      monthsCount[key] = 0;
-    }
-
-    data.forEach(sub => {
-      const d = new Date(sub.created_at);
-      const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
-      if (monthsCount[key] !== undefined) {
-        monthsCount[key]++;
-      }
-    });
-
-    return {
-      labels: last5Months,
-      values: last5Months.map(k => monthsCount[k])
-    };
-  },
-
+  /**
+   * 2. جلب طلبات الاشتراك المعلقة
+   */
   async getPendingSubscriptions() {
     const { data } = await apiInterceptor(
       authService.supabase
         .from('subscriptions')
         .select(`
-        *,
-        users:user_id (full_name, email),
-        subscription_plans:plan_id (name, name_ar, price_egp)
-      `)
+          *,
+          users:user_id (full_name, email),
+          subscription_plans:plan_id (name, name_ar, price_egp, duration_months)
+        `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
     );
-
     return data || [];
   },
 
+  /**
+   * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم
+   */
+  async getUsers() {
+    const { data, error } = await apiInterceptor(
+      authService.supabase
+        .from('users')
+        .select('*, subscriptions(id, status, end_date)')
+        .order('created_at', { ascending: false })
+    );
+
+    if (error) return [];
+
+    return (data || []).map(user => {
+      const activeSub = user.subscriptions?.find(s => s.status === 'active');
+      return {
+        ...user,
+        hasActiveSub: !!activeSub,
+        activeSubId: activeSub?.id,
+        expiryDate: activeSub?.end_date || null
+      };
+    });
+  },
+
+  /**
+   * 4. جلب جميع الاشتراكات مع الفلترة
+   */
   async getAllSubscriptions(filters = {}) {
     let query = authService.supabase
       .from('subscriptions')
@@ -113,128 +89,172 @@ export const adminService = {
     if (filters.status && filters.status !== 'all') {
       query = query.eq('status', filters.status);
     }
-    if (filters.planType && filters.planType !== 'all') {
-      query = query.eq('plan_id', filters.planType);
-    }
-
+    
     if (filters.expiry === 'expiring_soon') {
       const today = new Date().toISOString();
       const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      query = query.gte('end_date', today);
-      query = query.lte('end_date', sevenDaysFromNow);
+      query = query.gte('end_date', today).lte('end_date', sevenDaysFromNow);
     }
 
     const { data } = await apiInterceptor(query);
     return data || [];
   },
 
-  async getUsers() {
-    const { data, error } = await apiInterceptor(
-      authService.supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false, nullsFirst: false })
-    );
+  /**
+   * 5. معالجة تفعيل/إلغاء الاشتراك (منع التكرار)
+   */
+  async handleSubscriptionAction(id, action) {
+    const now = new Date();
 
-    if (error) {
-      logger.error('Error fetching users:', error);
-      return [];
+    if (action === 'approve') {
+      // جلب بيانات الطلب الحالي
+      const { data: sub } = await apiInterceptor(
+        authService.supabase
+          .from('subscriptions')
+          .select('user_id, plan_id, subscription_plans(duration_months)')
+          .eq('id', id)
+          .single()
+      );
+
+      if (!sub) return { error: 'الطلب غير موجود' };
+
+      // إبطال أي اشتراك نشط قديم
+      await authService.supabase
+        .from('subscriptions')
+        .update({ status: 'cancelled', updated_at: now.toISOString() })
+        .eq('user_id', sub.user_id)
+        .eq('status', 'active');
+
+      const months = sub?.subscription_plans?.duration_months || 1;
+      const end = new Date(now);
+      end.setMonth(now.getMonth() + months);
+
+      return await apiInterceptor(
+        authService.supabase
+          .from('subscriptions')
+          .update({ 
+            status: 'active', 
+            start_date: now.toISOString(), 
+            end_date: end.toISOString(),
+            updated_at: now.toISOString()
+          })
+          .eq('id', id)
+      );
+    } 
+    
+    if (action === 'reject' || action === 'delete') {
+      return await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('id', id));
+    } 
+    
+    if (action === 'cancel') {
+      return await apiInterceptor(
+        authService.supabase
+          .from('subscriptions')
+          .update({ status: 'cancelled', updated_at: now.toISOString() })
+          .eq('id', id)
+      );
     }
 
-    const { data: activeSubs, error: subsError } = await apiInterceptor(
+    if (action === 'reactivate') {
+        return await apiInterceptor(
+          authService.supabase
+            .from('subscriptions')
+            .update({ status: 'active', updated_at: now.toISOString() })
+            .eq('id', id)
+        );
+    }
+  },
+
+  /**
+   * 6. تفعيل يدوي أو إضافة أيام (محسنة)
+   */
+  async activateManualSubscription(userId, days) {
+    const now = new Date();
+    
+    // أ. البحث عن اشتراك نشط حالياً
+    const { data: activeSub } = await apiInterceptor(
       authService.supabase
         .from('subscriptions')
-        .select('user_id')
+        .select('id, end_date')
+        .eq('user_id', userId)
         .eq('status', 'active')
+        .maybeSingle()
     );
 
-    if (subsError) {
-      logger.error('Error fetching active subscriptions:', subsError);
-    }
+    if (activeSub) {
+      // تحديث: إضافة أيام للاشتراك الحالي
+      let newEnd = new Date(activeSub.end_date);
+      if (newEnd < now) newEnd = now; // إذا كان منتهياً تقنياً ولكنه نشط في السيستم
+      
+      newEnd.setDate(newEnd.getDate() + Number(days));
 
-    const activeUserIds = new Set(activeSubs?.map(s => s.user_id) || []);
-
-    return (data || []).map(user => ({
-      ...user,
-      hasActiveSub: activeUserIds.has(user.id)
-    }));
-  },
-
-  async handleSubscriptionAction(id, action) {
-    let updateData = {};
-
-    switch(action) {
-      case 'approve':
-        const { data: sub } = await apiInterceptor(authService.supabase.from('subscriptions').select('plan_id').eq('id', id).single());
-        if (!sub) return { success: false, error: 'Subscription not found' };
-
-        const { data: plan } = await apiInterceptor(authService.supabase.from('subscription_plans').select('duration_months').eq('id', sub.plan_id).single());
-
-        const start = new Date();
-        const end = new Date(start);
-        end.setMonth(start.getMonth() + (plan?.duration_months || 1));
-
-        updateData = { status: 'active', start_date: start, end_date: end };
-        break;
-      case 'reject':
-      case 'cancel':
-        updateData = { status: action === 'reject' ? 'cancelled' : 'cancelled', end_date: new Date() };
-        break;
-      case 'reactivate':
-        updateData = { status: 'active' };
-        break;
-      case 'delete':
-        break;
-    }
-
-    if (action === 'reject' || action === 'delete') {
-      await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('id', id));
+      return await apiInterceptor(
+        authService.supabase
+          .from('subscriptions')
+          .update({ 
+            end_date: newEnd.toISOString(), 
+            updated_at: now.toISOString() 
+          })
+          .eq('id', activeSub.id)
+      );
     } else {
-      await apiInterceptor(authService.supabase.from('subscriptions').update(updateData).eq('id', id));
-    }
+      // إنشاء: اشتراك جديد تماماً
+      const end = new Date(now);
+      end.setDate(now.getDate() + Number(days));
 
-    return { success: true };
+      const { data: plan } = await apiInterceptor(
+        authService.supabase.from('subscription_plans').select('id').limit(1).maybeSingle()
+      );
+      
+      if (!plan) return { error: { message: "لا توجد خطط معرفة" } };
+
+      // تنظيف أي طلبات معلقة
+      await authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
+
+      return await apiInterceptor(
+        authService.supabase.from('subscriptions').insert({
+          user_id: userId,
+          plan_id: plan.id,
+          plan_name: 'اشتراك يدوي',
+          price: 0,
+          status: 'active',
+          start_date: now.toISOString(),
+          end_date: end.toISOString(),
+          transaction_id: `MANUAL-${Date.now()}`
+        })
+      );
+    }
   },
 
-  // --- التعديل الرئيسي هنا: إصلاح تفعيل الاشتراك اليدوي ---
-  async activateManualSubscription(userId, days) {
-    const start = new Date();
-    const end = new Date(start);
-    end.setDate(start.getDate() + Number(days));
-
-    // 1. جلب معرف خطة صالح (لتجنب خطأ null value violates not-null constraint)
-    // نأخذ أول خطة متاحة فقط كمرجع (placeholder)
-    const { data: plan } = await apiInterceptor(
+  async getMonthlyChartData() {
+    const { data } = await apiInterceptor(
       authService.supabase
-        .from('subscription_plans')
-        .select('id')
-        .limit(1)
-        .single()
+        .from('subscriptions')
+        .select('created_at')
+        .order('created_at', { ascending: true })
     );
-    
-    // إذا لم توجد خطط، لا يمكننا إنشاء اشتراك بسبب قيود قاعدة البيانات
-    if (!plan) {
-      logger.error("No plans found to assign to manual subscription");
-      return { error: { message: "لا توجد خطط معرفة في النظام لربط الاشتراك بها" } };
+
+    if (!data) return { labels: [], values: [] };
+
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const monthsCount = {};
+    const last5Months = [];
+    const today = new Date();
+
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
+      last5Months.push(key);
+      monthsCount[key] = 0;
     }
 
-    // 2. حذف أي طلبات معلقة لتجنب التعارض
-    await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending'));
+    data.forEach(sub => {
+      const d = new Date(sub.created_at);
+      const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
+      if (monthsCount[key] !== undefined) monthsCount[key]++;
+    });
 
-    // 3. إدراج الاشتراك الجديد مع plan_id الصالح
-    const { error } = await apiInterceptor(authService.supabase.from('subscriptions').insert({
-      user_id: userId,
-      plan_id: plan.id, // تم إضافة هذا الحقل الضروري
-      plan_name: 'اشتراك يدوي',
-      plan_period: `${days} يوم`,
-      price: 0,
-      status: 'active',
-      start_date: start,
-      end_date: end,
-      transaction_id: `MANUAL-${Date.now()}`
-    }));
-
-    return { error };
+    return { labels: last5Months, values: last5Months.map(k => monthsCount[k]) };
   }
 }
 

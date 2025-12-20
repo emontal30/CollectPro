@@ -1,45 +1,75 @@
-/**
- * API Interceptor v2 - Unrecoverable Error Handler
- * =====================================================
- * This simplified interceptor wraps a Supabase query. It no longer attempts
- * to refresh tokens, relying instead on the Supabase client's built-in
- * session management.
- *
- * Its sole responsibility is to catch critical 401 (Unauthorized) errors,
- * which signify that the session is truly invalid and Supabase's automatic
- * refresh has failed. When this occurs, it triggers a global logout
- * to ensure the user is redirected to the login page and the app's
- * state is cleanly reset.
- */
 import { useAuthStore } from '@/stores/auth';
 import logger from '@/utils/logger.js';
 
 /**
- * Wraps a Supabase API call and handles unrecoverable 401 errors.
- * @param {Promise} apiCall - A Supabase query promise, e.g., supabase.from(...).select(...).
- * @returns {Promise<Object>} The result from the Supabase query { data, error }.
+ * Wraps a Supabase API call and handles critical errors like 401 (Unauthorized) 
+ * or network connection failures.
  */
 export async function apiInterceptor(apiCall) {
-  const result = await apiCall;
-
-  // Check for a 401 Unauthorized error.
-  // We interpret this as a definitive session failure.
-  if (result?.error?.status === 401) {
-    logger.error('🚨 Interceptor caught a 401 Unauthorized error. Session is invalid. Forcing logout.');
-
-    // Use a dynamic import for the store to avoid circular dependency issues
-    // at the module level, as stores often import services that use this interceptor.
-    const authStore = useAuthStore();
-    
-    // Trigger a global logout. The auth store will handle state cleanup
-    // and redirection to the login page.
-    await authStore.logout();
-    
-    // It's crucial to return the original error so the calling function
-    // knows the request failed.
-    return result;
+  // الحماية المبكرة: إذا كان الجهاز أوفلاين صراحةً، لا تحاول حتى إرسال الطلب
+  if (!navigator.onLine) {
+    return { 
+      data: null, 
+      error: { 
+        message: 'لا يوجد اتصال بالإنترنت (وضع الأوفلاين نشط)', 
+        status: 'offline',
+        silent: true 
+      } 
+    };
   }
 
-  // For any other case (success or other errors), return the result directly.
-  return result;
+  try {
+    const result = await apiCall;
+
+    // 1. Handle 401 Unauthorized (Session expired/invalid)
+    if (result?.error?.status === 401) {
+      logger.error('🚨 401 Unauthorized: Session is invalid. Forcing logout.');
+      const authStore = useAuthStore();
+      await authStore.logout();
+      return result;
+    }
+
+    // 2. Handle cases where Supabase returns an error object without status
+    if (result?.error) {
+      // تجاهل تحذيرات الشبكة العادية في الكونسول
+      const isNetworkError = result.error.message === 'Failed to fetch' || 
+                             result.error.message?.includes('Network Error') ||
+                             result.error.status === 'ERR_NAME_NOT_RESOLVED';
+
+      if (!isNetworkError) {
+        logger.warn('⚠️ Supabase Error:', result.error.message);
+      } else {
+        return { 
+          data: null, 
+          error: { 
+            message: 'فشل الاتصال بالخادم (مشكلة شبكة)', 
+            status: 'network_error',
+            silent: true
+          } 
+        };
+      }
+    }
+
+    return result;
+  } catch (err) {
+    // 3. Handle Network/Fetch Errors (e.g., "Failed to fetch")
+    const isNetworkErr = err.message?.includes('fetch') || 
+                         err.name === 'TypeError' || 
+                         err.message?.includes('Network');
+                         
+    if (isNetworkErr) {
+      logger.info('ℹ️ Network info: Server unreachable, using local mode.');
+      return { 
+        data: null, 
+        error: { 
+          message: 'فشل الاتصال بالخادم. يرجى التأكد من اتصالك بالإنترنت.', 
+          status: 'network_error',
+          silent: true
+        } 
+      };
+    }
+
+    logger.error('🔥 Unexpected API Interceptor Error:', err);
+    return { data: null, error: err };
+  }
 }

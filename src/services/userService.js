@@ -1,5 +1,6 @@
-import { apiInterceptor } from './api.js';
+import { apiInterceptor } from './apiInterceptor.js';
 import { authService } from './authService.js';
+import logger from '@/utils/logger.js';
 
 export const userService = {
   async getUser() {
@@ -12,34 +13,59 @@ export const userService = {
     return { data, error };
   },
 
+  /**
+   * مزامنة بيانات المستخدم مع جدول public.users
+   * وإرجاع بيانات الملف الشخصي (بما في ذلك الدور)
+   */
   async syncUserProfile(userData) {
+    // إذا لم يكن هناك إنترنت، لا تحاول المزامنة ولا تعتبرها خطأ قاتلاً
+    if (!navigator.onLine) {
+      return { profile: null, error: null, isOffline: true };
+    }
+
     try {
-      const { error } = await apiInterceptor(
+      // 1. محاولة جلب المستخدم الحالي
+      let { data: profile, error } = await apiInterceptor(
         authService.supabase
           .from('users')
-          .select('id')
+          .select('*')
           .eq('id', userData.id)
-          .single()
+          .maybeSingle()
       );
 
-      // If user doesn't exist, add them
-      if (error && error.code === 'PGRST116') {
-        const fullName = userData.user_metadata?.full_name || userData.email;
+      // إذا فشل الاتصال (Failed to fetch)
+      if (error && (error.status === 'network_error' || error.message?.includes('fetch'))) {
+        return { profile: null, error: null, isOffline: true };
+      }
+
+      // 2. إذا لم يكن موجوداً، قم بإنشائه
+      if (!profile && !error) {
+        const fullName = userData.user_metadata?.full_name || userData.email?.split('@')[0] || 'مستخدم جديد';
         const providers = userData.app_metadata?.providers || [];
-        const { error: insertError } = await apiInterceptor(
+        
+        const { data: newProfile, error: insertError } = await apiInterceptor(
           authService.supabase.from('users').insert({
             id: userData.id,
             full_name: fullName,
             email: userData.email,
             provider: providers,
-            password_hash: '' // Required field in your old database
-          })
+            role: 'user' // القيمة الافتراضية
+          }).select('*').single()
         );
-        return { error: insertError };
+
+        if (insertError) throw insertError;
+        profile = newProfile;
+        logger.info('🆕 New user profile created for:', userData.email);
       }
-      return { error };
+
+      return { profile, error: error };
     } catch (err) {
-      return { error: err };
+      // صمت أخطاء الشبكة المتوقعة
+      if (err.message?.includes('fetch')) {
+         return { profile: null, error: null, isOffline: true };
+      }
+      logger.error('❌ syncUserProfile Error:', err);
+      return { profile: null, error: err };
     }
   }
 };

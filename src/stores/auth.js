@@ -10,16 +10,17 @@ import api from '@/services/api';
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
   const user = ref(null)
+  const userProfile = ref(null) // إضافة لتخزين بيانات الملف الشخصي (بما في ذلك الدور)
   const isLoading = ref(false)
   const isInitialized = ref(false)
   const authWarning = ref('')
 
   const { addNotification } = useNotifications()
-  const SESSION_DURATION = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+  const SESSION_DURATION = 48 * 60 * 60 * 1000; // 48 hours
 
   // --- Getters ---
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.email === 'emontal.33@gmail.com')
+  const isAdmin = computed(() => userProfile.value?.role === 'admin')
 
   // --- Actions ---
 
@@ -27,13 +28,26 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('last_active_time', Date.now().toString());
   }
 
+  /**
+   * مزامنة ملف تعريف المستخدم وجلب بياناته
+   */
   async function syncUserProfile(userData) {
     if (!userData) return
     try {
-      await api.user.syncUserProfile(userData)
-      logger.debug('✅ User profile synced')
+      const result = await api.user.syncUserProfile(userData)
+      // إذا كان أوفلاين، نستخدم بيانات محلية بسيطة أو نتركها فارغة
+      if (result.isOffline) {
+        logger.info('📡 Offline: Using basic user session data.');
+        return;
+      }
+      if (result.error) throw result.error
+      userProfile.value = result.profile
+      logger.debug('✅ User profile synced & loaded:', result.profile?.role)
     } catch (err) {
-      logger.error('Profile Sync Warning:', err)
+      // لا نحذر في الكونسول إذا كان خطأ شبكة متوقع
+      if (!err.message?.includes('fetch')) {
+         logger.warn('Profile Sync Warning:', err)
+      }
     }
   }
 
@@ -62,13 +76,12 @@ export const useAuthStore = defineStore('auth', () => {
       if (error) throw error;
 
       if (session?.user) {
-        logger.debug('✅ Session restored/active for:', session.user.email);
         user.value = session.user;
         updateLastActivity();
-        
-        syncUserProfile(session.user);
+        await syncUserProfile(session.user);
       } else {
         user.value = null;
+        userProfile.value = null;
       }
 
       supabase.auth.onAuthStateChange(async (event, session) => {
@@ -82,14 +95,20 @@ export const useAuthStore = defineStore('auth', () => {
           }
         } else if (event === 'SIGNED_OUT') {
           user.value = null;
+          userProfile.value = null;
           localStorage.removeItem('last_active_time');
           localStorage.removeItem('app_last_route');
         }
       });
 
     } catch (err) {
-      logger.error('💥 Auth Init Error:', err);
-      authWarning.value = 'تعذر الاتصال بخدمة المصادقة';
+      // إذا كان الخطأ بسبب الشبكة عند التشغيل لأول مرة
+      if (err.message?.includes('fetch') || err.name === 'TypeError') {
+        logger.info('📡 Initialized in Offline Mode');
+      } else {
+        logger.error('💥 Auth Init Error:', err);
+        authWarning.value = 'تعذر الاتصال بخدمة المصادقة';
+      }
       user.value = null;
     } finally {
       isInitialized.value = true;
@@ -104,11 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app/dashboard`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
+          redirectTo: `${window.location.origin}/app/dashboard`
         }
       });
       if (error) throw error;
@@ -121,17 +136,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function getUser() {
-    if (user.value) return user.value;
-    try {
-      const { data } = await supabase.auth.getUser();
-      user.value = data.user;
-      return user.value;
-    } catch (e) {
-      return null;
-    }
-  }
-
   async function logout(redirect = true) {
     isLoading.value = true;
     try {
@@ -140,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
       logger.warn('Logout warning:', err);
     } finally {
       user.value = null;
+      userProfile.value = null;
       localStorage.removeItem('last_active_time');
       localStorage.removeItem('app_last_route');
       const subStore = useMySubscriptionStore();
@@ -150,12 +155,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function clearAuthWarning() {
-    authWarning.value = '';
-  }
-
   return {
     user,
+    userProfile,
     isLoading,
     isInitialized,
     authWarning,
@@ -163,9 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     initializeAuth,
     loginWithGoogle,
-    getUser,
     logout,
-    clearAuthWarning,
     syncUserProfile
   };
 });
