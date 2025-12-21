@@ -16,7 +16,7 @@
 .payment-page {
   width: 100%;
   max-width: 1100px; /* عرض موحد لجميع الصفحات */
-  min-width: 700px;  /* الحد الأدنى للعرض المطلوب */
+  min-width: 768px;  /* الحد الأدنى للعرض المطلوب تم تحديثه إلى 768 بكسل */
   margin: 0 auto;
   padding: 20px;
   animation: fadeIn 0.5s ease-in-out;
@@ -319,7 +319,6 @@
 
 @media (max-width: 768px) {
   .summary-row { flex-direction: column; gap: 12px; }
-  /* .stats-container stays grid with 1fr handled by repeat(auto-fit) */
   .page-container, 
   .harvest-page, 
   .dashboard-page, 
@@ -329,7 +328,6 @@
   .my-subscription-page,
   .payment-page {
     padding: 12px;
-    /* نترك الـ min-width فعالاً كما طلب المستخدم لضمان المساحة الكافية */
   }
 }
 
