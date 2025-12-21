@@ -166,8 +166,8 @@ const handleLogout = async () => {
 .sidebar {
     position: fixed;
     top: 0;
-    right: -280px;
-    width: 280px;
+    right: calc(var(--sidebar-width) * -1); /* استخدام المتغير للعرض المخفي */
+    width: var(--sidebar-width); /* استخدام المتغير الموحد */
     height: 100vh;
     background: var(--primary, #007965);
     color: #fff;
@@ -365,4 +365,11 @@ const handleLogout = async () => {
 }
 
 .overlay.active { opacity: 1; visibility: visible; }
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 100%; /* العرض كامل على الشاشات الصغيرة جداً */
+        right: -100%;
+    }
+}
 </style>
