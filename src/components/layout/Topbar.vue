@@ -30,6 +30,7 @@ const toggleSidebar = () => {
   top: 0;
   left: 0;
   width: 100%;
+  min-width: 768px; /* تأكيد الحد الأدنى للعرض */
   height: 70px;
   z-index: 1002;
   display: flex;

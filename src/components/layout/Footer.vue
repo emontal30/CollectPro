@@ -5,7 +5,7 @@
       <p class="developer-info">
         تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
         <span class="footer-separator">|</span>
-        <span class="version-badge">v2.8.3</span>
+        <span class="version-badge">v2.2.1</span>
       </p>
     </div>
   </div>
@@ -34,6 +34,7 @@ onMounted(() => {
   box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 10;
+  min-width: 768px; /* تأكيد الحد الأدنى للعرض */
 }
 
 .footer-content {
