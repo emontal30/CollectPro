@@ -3,207 +3,195 @@
     
     <PageHeader 
       title="عداد الأموال" 
-      subtitle="حساب وتتبع الفئات النقدية والكميات"
+      subtitle="حساب وتتبع الفئات النقدية والكميات بدقة"
       icon="🧮"
     />
 
     <div class="counter-container">
-      <div class="counters-wrapper">
-        <div class="counter-card">
-          <h2 class="counter-title"><span>العداد الأول</span></h2>
-          <div class="cp-table">
-            <div class="table-wrap w-full">
-              <table class="counter-table w-full">
-                <thead>
-                  <tr>
-                    <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
-                    <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
-                    <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="val in store.denominations" :key="'c1-'+val">
-                    <td class="total-cell num highlight-text">
-                      {{ store.formatNumber(val * (store.counter1[val] || 0)) }}
-                    </td>
-                    <td>
-                      <input
-                        :value="formatWithCommas(store.counter1[val])"
-                        type="text"
-                        inputmode="numeric"
-                        pattern="[0-9,]*"
-                        class="input-field centered-number"
-                        @input="onRawInput($event, val, 1)"
-                        @blur="onBlurFormat(val, 1)"
-                      />
-                    </td>
-                    <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
-                  </tr>
-                </tbody>
-              </table>
+      <div class="counters-grid">
+        <!-- العداد الأول -->
+        <div class="counter-card main-card">
+          <div class="card-header centered-header">
+            <h2 class="counter-title">العداد الأول</h2>
+            <button @click="toggleSort(1)" class="sort-btn header-action" :title="sortOrder1 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
+              <i :class="sortOrder1 === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
+            </button>
+          </div>
+          
+          <div class="table-container">
+            <table class="modern-counter-table">
+              <thead>
+                <tr>
+                  <th>الإجمالي</th>
+                  <th>العدد</th>
+                  <th>الفئة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="val in sortedDenominations1" :key="'c1-'+val" :class="'row-val-' + val">
+                  <td class="total-cell">{{ store.formatNumber(val * (store.counter1[val] || 0)) }}</td>
+                  <td>
+                    <input
+                      :value="formatWithCommas(store.counter1[val])"
+                      type="text"
+                      inputmode="numeric"
+                      class="input-field"
+                      @input="onRawInput($event, val, 1)"
+                      @blur="onBlurFormat(val, 1)"
+                    />
+                  </td>
+                  <td class="category-cell" :class="'cat-' + val">
+                    <span class="val-badge">{{ val }}</span>
+                    <span class="val-unit">جنيه</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card-footer-stats">
+            <div class="stat-item">
+              <span class="stat-label">الإجمالي</span>
+              <span class="stat-value">{{ store.formatNumber(store.total1) }}</span>
+            </div>
+            <div class="stat-item small">
+              <span class="stat-label">الفكة</span>
+              <span class="stat-value">{{ store.formatNumber(store.smallCount1) }}</span>
             </div>
           </div>
-          <!-- شريط إجمالي العداد الأول -->
-          <div class="counter-totals">
-            <div class="counter-total">
-              <div class="counter-total-label"><i class="fas fa-calculator"></i> الإجمالي</div>
-              <div class="counter-total-value">{{ store.formatNumber(store.total1) }} <span class="currency-label">EG</span></div>
+        </div>
+
+        <!-- العداد الثاني -->
+        <div class="counter-card main-card">
+          <div class="card-header centered-header">
+            <h2 class="counter-title">العداد الثاني</h2>
+            <button @click="toggleSort(2)" class="sort-btn header-action" :title="sortOrder2 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
+              <i :class="sortOrder2 === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
+            </button>
+          </div>
+          
+          <div class="table-container">
+            <table class="modern-counter-table">
+              <thead>
+                <tr>
+                  <th>الإجمالي</th>
+                  <th>العدد</th>
+                  <th>الفئة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="val in sortedDenominations2" :key="'c2-'+val" :class="'row-val-' + val">
+                  <td class="total-cell">{{ store.formatNumber(val * (store.counter2[val] || 0)) }}</td>
+                  <td>
+                    <input
+                      :value="formatWithCommas(store.counter2[val])"
+                      type="text"
+                      inputmode="numeric"
+                      class="input-field"
+                      @input="onRawInput($event, val, 2)"
+                      @blur="onBlurFormat(val, 2)"
+                    />
+                  </td>
+                  <td class="category-cell" :class="'cat-' + val">
+                    <span class="val-badge">{{ val }}</span>
+                    <span class="val-unit">جنيه</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card-footer-stats">
+            <div class="stat-item">
+              <span class="stat-label">الإجمالي</span>
+              <span class="stat-value">{{ store.formatNumber(store.total2) }}</span>
             </div>
-            <div class="counter-total">
-              <div class="counter-total-label"><i class="fas fa-coins"></i> الفكة</div>
-              <div class="counter-total-value small-text">{{ store.formatNumber(store.smallCount1) }} <span class="currency-label">EG</span></div>
+            <div class="stat-item small">
+              <span class="stat-label">الفكة</span>
+              <span class="stat-value">{{ store.formatNumber(store.smallCount2) }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="second-counter-container">
-        <div class="counters-wrapper">
-          <div class="counter-card">
-            <h2 class="counter-title"><span>العداد الثاني</span></h2>
-            <div class="cp-table">
-              <div class="table-wrap w-full">
-                <table class="counter-table w-full">
-                  <thead>
-                    <tr>
-                      <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
-                      <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
-                      <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="val in store.denominations" :key="'c2-'+val">
-                      <td class="total-cell num highlight-text">
-                        {{ store.formatNumber(val * (store.counter2[val] || 0)) }}
-                      </td>
-                      <td>
-                        <input
-                          :value="formatWithCommas(store.counter2[val])"
-                          type="text"
-                          inputmode="numeric"
-                          pattern="[0-9,]*"
-                          class="input-field centered-number"
-                          @input="onRawInput($event, val, 2)"
-                          @blur="onBlurFormat(val, 2)"
-                        />
-                      </td>
-                      <td class="ltr category-label" :data-val="val">{{ val }} جنيه</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <!-- شريط إجمالي العداد الثاني -->
-            <div class="counter-totals">
-              <div class="counter-total">
-                <div class="counter-total-label"><i class="fas fa-calculator"></i> الإجمالي</div>
-                <div class="counter-total-value">{{ store.formatNumber(store.total2) }} <span class="currency-label">EG</span></div>
-              </div>
-              <div class="counter-total">
-                <div class="counter-total-label"><i class="fas fa-coins"></i> الفكة</div>
-                <div class="counter-total-value small-text">{{ store.formatNumber(store.smallCount2) }} <span class="currency-label">EG</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <!-- الملخص الكلي -->
       <div class="summary-section">
-        <h2 class="summary-title">ملخص إجمالي</h2>
-        <!-- أول سطر: ثلاثة إجماليات في صف واحد بعرض الحاوية بالكامل -->
-        <div class="summary-row summary-row-3">
-          <div class="summary-item">
-            <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الأول</div>
-            <div class="summary-value">{{ store.formatNumber(store.total1) }} <span class="currency-label">EG</span></div>
+        <div class="summary-header centered-header">
+          <i class="fas fa-chart-pie"></i>
+          <h2 class="counter-title">ملخص إجمالي</h2>
+        </div>
+        
+        <div class="summary-grid">
+          <div class="summary-card primary">
+            <span class="label">إجمالي العدادات</span>
+            <span class="value">{{ store.formatNumber(store.grandTotal) }} <small>ج.م</small></span>
           </div>
-          <div class="summary-item">
-            <div class="summary-label"><i class="fas fa-calculator"></i> إجمالي العداد الثاني</div>
-            <div class="summary-value">{{ store.formatNumber(store.total2) }} <span class="currency-label">EG</span></div>
+          <div class="summary-card">
+            <span class="label">إجمالي المحصل</span>
+            <span class="value">{{ store.formatNumber(store.totalCollected) }} <small>ج.م</small></span>
           </div>
-          <div class="summary-item">
-            <div class="summary-label"><i class="fas fa-coins"></i> اجمالى الفكه </div>
-            <div class="summary-value">{{ store.formatNumber(store.totalSmall) }} <span class="currency-label">EG</span></div>
+          <div class="summary-card" :class="store.status.class">
+            <span class="label">الحالة ({{ store.status.text }})</span>
+            <span class="value">{{ store.formatNumber(store.status.val) }} <small>ج.م</small></span>
           </div>
         </div>
-        <!-- ثاني سطر: المجموع الكلي بعرض الحاوية بالكامل -->
-        <div class="summary-row">
-          <div class="summary-item summary-item-total">
-            <div class="summary-label"><i class="fas fa-plus-circle"></i> المجموع الكلي</div>
-            <div class="summary-value">{{ store.formatNumber(store.grandTotal) }} <span class="currency-label">EG</span></div>
+
+        <div class="summary-sub-grid">
+          <div class="sub-card">
+            <span class="label">إجمالي الفكة</span>
+            <span class="value">{{ store.formatNumber(store.totalSmall) }}</span>
           </div>
-        </div>
-        <!-- فاصل -->
-        <div class="summary-divider"></div>
-        <!-- ثالث سطر: إجمالي المحصل ومبلغ التصفيرة في صف واحد بعرض الحاوية بالكامل -->
-        <div class="summary-row summary-row-2">
-          <div class="summary-item summary-item-collected">
-            <div class="summary-label"><i class="fas fa-hand-holding-usd"></i> إجمالي المحصل</div>
-            <div class="summary-value">{{ store.formatNumber(store.totalCollected) }} <span class="currency-label">EG</span></div>
-          </div>
-          <div class="summary-item summary-item-clearance">
-            <div class="summary-label"><i class="fas fa-ticket-alt"></i> مبلغ التصفيرة</div>
-            <div class="summary-value">{{ store.formatNumber(store.clearanceAmount) }} <span class="currency-label">EG</span></div>
-          </div>
-        </div>
-        <!-- رابع سطر: مربع الحالة بعرض الحاوية بالكامل -->
-        <div class="summary-row">
-          <div class="summary-item summary-item-status">
-            <div class="summary-label"><i class="fas fa-info-circle"></i> الحاله</div>
-            <div class="summary-value" :class="store.status.class">
-              <span class="status-number">{{ store.formatNumber(store.status.val) }}</span> {{ store.status.text }}
-            </div>
+          <div class="sub-card">
+            <span class="label">مبلغ التصفيرة</span>
+            <span class="value">{{ store.formatNumber(store.clearanceAmount) }}</span>
           </div>
         </div>
       </div>
 
+      <!-- ملخص الفئات -->
       <div class="categories-section">
-        <div class="categories-summary">
-          <h3 class="categories-title">ملخص الفئات</h3>
-          <div class="cp-table">
-              <div class="table-wrap w-full">
-              <table class="categories-table w-full">
-                <thead>
-                  <tr>
-                    <th class="num whitespace-nowrap"><i class="fas fa-calculator"></i> الإجمالي</th>
-                    <th class="num whitespace-nowrap"><i class="fas fa-hashtag"></i> العدد</th>
-                    <th class="ltr whitespace-nowrap"><i class="fas fa-coins"></i> الفئة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="cat in store.categoriesSummary" v-show="cat.qty > 0" :key="'cat-'+cat.value">
-                    <td class="total-cell num highlight-text">{{ store.formatNumber(cat.total) }}</td>
-                    <td class="num">{{ store.formatNumber(cat.qty) }}</td>
-                    <td class="ltr category-label" :data-val="cat.value">{{ cat.value }} جنيه</td>
-                  </tr>
-                  <tr v-if="store.categoriesSummary.every(c => c.qty === 0)">
-                    <td colspan="3" class="no-data-msg">لا توجد بيانات لعرضها</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <!-- شريط اجمالي لملخص الفئات -->
-          <div class="counter-totals">
-            <div class="counter-total">
-              <div class="counter-total-label"><i class="fas fa-calculator"></i> إجمالي الفئات</div>
-              <div class="counter-total-value">{{ store.formatNumber(store.grandTotal) }} <span class="currency-label">EG</span></div>
-            </div>
-            <div class="counter-total">
-              <div class="counter-total-label"><i class="fas fa-coins"></i> إجمالى الفكه</div>
-              <div class="counter-total-value small-text">{{ store.formatNumber(store.totalSmall) }} <span class="currency-label">EG</span></div>
-            </div>
-          </div>
+        <div class="card-header centered-header">
+          <h2 class="counter-title">ملخص الفئات</h2>
+          <button @click="toggleSort(3)" class="sort-btn header-action">
+             <i :class="sortOrderSummary === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
+          </button>
+        </div>
+        
+        <div class="table-container categories-export">
+          <table class="modern-counter-table summary-table">
+            <thead>
+              <tr>
+                <th>الإجمالي</th>
+                <th>العدد</th>
+                <th>الفئة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="cat in sortedCategoriesSummary" v-show="cat.qty > 0" :key="'cat-'+cat.value" :class="'row-val-' + cat.value">
+                <td class="total-cell highlight">{{ store.formatNumber(cat.total) }}</td>
+                <td class="qty-cell">{{ store.formatNumber(cat.qty) }}</td>
+                <td class="category-cell" :class="'cat-' + cat.value">
+                  <span class="val-badge">{{ cat.value }}</span>
+                  <span class="val-unit">جنيه</span>
+                </td>
+              </tr>
+              <tr v-if="store.categoriesSummary.every(c => c.qty === 0)">
+                <td colspan="3" class="no-data">لا توجد بيانات مسجلة</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
+      <!-- أزرار التحكم -->
       <div class="action-buttons">
-        <button class="btn" @click="handleResetAll">
-          <i class="fas fa-undo"></i>
-          <span>إعادة تعيين الكل</span>
+        <button class="action-btn reset" @click="handleResetAll">
+          <i class="fas fa-undo-alt"></i>
+          <span>إعادة تعيين</span>
         </button>
-        <button class="btn" @click="exportData">
-          <i class="fas fa-share-alt"></i>
-          <span>تصدير ملخص الفئات</span>
+        <button class="action-btn export" @click="exportData">
+          <i class="fas fa-file-export"></i>
+          <span>تصدير الملخص</span>
         </button>
       </div>
 
@@ -212,382 +200,445 @@
 </template>
 
 <script setup>
-import { inject, onMounted, onUnmounted } from 'vue';
+import { inject, onMounted, ref, computed } from 'vue';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import logger from '@/utils/logger.js'
+import html2canvas from 'html2canvas';
 
 const store = useCounterStore();
 
-// دالة لمزامنة إجمالي المحصل من صفحة التحصيلات
-const syncTotalCollected = () => {
-  store.updateTotalCollected();
-  logger.debug('تم تشغيل مزامنة إجمالي المحصل');
+// حالات الترتيب
+const sortOrder1 = ref('desc');
+const sortOrder2 = ref('desc');
+const sortOrderSummary = ref('desc');
+
+const toggleSort = (id) => {
+  if (id === 1) sortOrder1.value = sortOrder1.value === 'desc' ? 'asc' : 'desc';
+  if (id === 2) sortOrder2.value = sortOrder2.value === 'desc' ? 'asc' : 'desc';
+  if (id === 3) sortOrderSummary.value = sortOrderSummary.value === 'desc' ? 'asc' : 'desc';
 };
 
-// مزامنة عند تحميل الصفحة
-onMounted(() => {
-  syncTotalCollected();
-  
-  // مراقبة عودة التركيز للصفحة
-  const handleFocus = () => {
-    syncTotalCollected();
-  };
-  
-  window.addEventListener('focus', handleFocus);
-  
-  // تخزين المرجع لإزالته عند إلغاء التحميل
-  window.addEventListener('beforeunload', () => {
-    window.removeEventListener('focus', handleFocus);
-  });
+const sortedDenominations1 = computed(() => {
+  const denoms = [...store.denominations];
+  return sortOrder1.value === 'desc' ? denoms.sort((a, b) => b - a) : denoms.sort((a, b) => a - b);
 });
 
-// نظام الإشعارات الموحد
-const { confirm, error, messages, addNotification } = inject('notifications');
+const sortedDenominations2 = computed(() => {
+  const denoms = [...store.denominations];
+  return sortOrder2.value === 'desc' ? denoms.sort((a, b) => b - a) : denoms.sort((a, b) => a - b);
+});
 
-// وظيفة التصدير (تتطلب html2canvas)
-// ملاحظة: يجب تثبيت html2canvas أولاً: npm install html2canvas
-import html2canvas from 'html2canvas';
+const sortedCategoriesSummary = computed(() => {
+  const summary = [...store.categoriesSummary];
+  return sortOrderSummary.value === 'desc' 
+    ? summary.sort((a, b) => b.value - a.value) 
+    : summary.sort((a, b) => a.value - b.value);
+});
+
+// نظام الإشعارات
+const { confirm, addNotification } = inject('notifications');
+
+const syncTotalCollected = () => {
+  store.updateTotalCollected();
+};
+
+onMounted(() => {
+  syncTotalCollected();
+  window.addEventListener('focus', syncTotalCollected);
+});
 
 const exportData = async () => {
-  const element = document.querySelector('.categories-summary'); // أو أي عنصر تريد تصديره
-  if (!element) {
-    addNotification('لم يتم العثور على عنصر ملخص الفئات', 'error');
-    return;
-  }
+  const element = document.querySelector('.categories-export');
+  if (!element) return;
 
   try {
     const canvas = await html2canvas(element, {
-      backgroundColor: 'var(--bg-white, #ffffff)',
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('--content-bg') || '#ffffff',
       scale: 2,
-      useCORS: true
     });
 
     canvas.toBlob(blob => {
-      if (navigator.share && navigator.canShare) {
-        const file = new File([blob], `money-counter-${Date.now()}.png`, { type: 'image/png' });
-        navigator.share({
-          title: 'ملخص عداد الأموال',
-          files: [file]
-        }).then(() => {
-          // تم حذف رسالة النجاح
-        }).catch(error => {
-          logger.error('Share failed:', error);
-          addNotification('❌ فشل المشاركة', 'error', 3000);
-        });
-      } else {
-        // Fallback للتحميل المباشر
+      if (blob && navigator.share) {
+        const file = new File([blob], `counter-${Date.now()}.png`, { type: 'image/png' });
+        navigator.share({ title: 'ملخص الفئات', files: [file] });
+      } else if (blob) {
         const link = document.createElement('a');
-        link.download = `money-counter-${Date.now()}.png`;
-        link.href = canvas.toDataURL();
+        link.download = `counter-${Date.now()}.png`;
+        link.href = URL.createObjectURL(blob);
         link.click();
-        addNotification('✅ تم التحميل بنجاح', 'success', 3000);
       }
     });
-  } catch (error) {
-    logger.error('Export failed:', error);
-    addNotification('❌ فشل التصدير', 'error', 3000);
+  } catch (err) {
+    addNotification('فشل التصدير', 'error');
   }
 };
 
-// دالة إعادة التعيين مع تأكيد
 const handleResetAll = async () => {
   const result = await confirm({
-    title: 'تأكيد إعادة التعيين',
-    text: 'هل أنت متأكد من إعادة تعيين جميع العدادات؟ هذا الإجراء لا يمكن التراجع عنه.',
+    title: 'تأكيد الحذف',
+    text: 'هل تريد تصفير جميع العدادات؟',
     icon: 'warning',
-    confirmButtonText: 'إعادة التعيين',
-    confirmButtonColor: 'var(--danger, #dc3545)'
+    confirmButtonText: 'تصفير الكل'
   });
 
   if (result.isConfirmed) {
     store.resetAll();
-    addNotification('تم إعادة تعيين جميع العدادات بنجاح', 'success');
+    addNotification('تم تصفير العدادات', 'success');
   }
 };
 
-// حفظ البيانات إلى localStorage عند تغييرها
-import { watch } from 'vue';
-
-// مراقبة تغيير قيم الماستر والحفظ التلقائي
-watch(() => store.masterLimit, (newVal) => {
-  localStorage.setItem('masterLimit', newVal.toString());
-});
-
-watch(() => store.currentBalance, (newVal) => {
-  localStorage.setItem('currentBalance', newVal.toString());
-});
-
-watch(() => store.totalCollected, (newVal) => {
-  localStorage.setItem('totalCollected', newVal.toString());
-});
-
-// -----------------------
-// Formatting helpers for numeric inputs (thousand separators)
-// -----------------------
 const formatWithCommas = (value) => {
-  if (value === null || value === undefined || value === '') return '';
-  const num = Number(value);
-  if (Number.isNaN(num)) return '';
-  // Show empty string for zero so inputs appear empty by default
-  if (num === 0) return '';
-  // use en-US to get comma separators
-  return new Intl.NumberFormat('en-US').format(num);
+  if (!value || value === 0) return '';
+  return new Intl.NumberFormat('en-US').format(value);
 };
 
 const parseNumber = (str) => {
-  if (str === null || str === undefined) return 0;
-  // remove commas and non-digit (allow minus)
-  const cleaned = String(str).replace(/,/g, '').replace(/[^0-9.-]/g, '');
-  const n = Number(cleaned);
-  return Number.isNaN(n) ? 0 : n;
+  const cleaned = String(str).replace(/,/g, '').replace(/[^0-9]/g, '');
+  return parseInt(cleaned) || 0;
 };
 
 const onRawInput = (event, val, counterIdx) => {
-  // keep underlying model numeric while allowing user typing
-  const raw = event.target.value;
-  const parsed = parseNumber(raw);
-  if (counterIdx === 1) {
-    store.counter1[val] = parsed;
-  } else {
-    store.counter2[val] = parsed;
-  }
+  const parsed = parseNumber(event.target.value);
+  if (counterIdx === 1) store.counter1[val] = parsed;
+  else store.counter2[val] = parsed;
 };
 
 const onBlurFormat = (val, counterIdx) => {
-  // Force re-render of formatted value (value binding uses formatWithCommas)
-  if (counterIdx === 1) {
-    store.counter1[val] = Number(store.counter1[val]) || 0;
-  } else {
-    store.counter2[val] = Number(store.counter2[val]) || 0;
-  }
+  if (counterIdx === 1) store.counter1[val] = Number(store.counter1[val]) || 0;
+  else store.counter2[val] = Number(store.counter2[val]) || 0;
 };
 </script>
 
 <style scoped>
-/* All styles imported from _unified-components.css */
+.counter-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
 
-/* Center all table headers */
-th {
+.counter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 15px;
+}
+
+/* Grids */
+.counters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .counters-grid { grid-template-columns: 1fr; }
+}
+
+/* Cards */
+.counter-card {
+  background: var(--white);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  transition: var(--transition);
+}
+
+.centered-header {
+  padding: 15px 20px;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.counter-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0;
+  color: white !important;
   text-align: center;
 }
 
-/* Center all three columns */
-td:nth-child(1), td:nth-child(2), td:nth-child(3) {
+.header-action {
+  position: absolute;
+  left: 15px;
+}
+
+/* Sort Button */
+.sort-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.sort-btn:hover {
+  background: white;
+  color: var(--primary);
+}
+
+/* Tables */
+.table-container {
+  overflow-x: auto;
+}
+
+.modern-counter-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modern-counter-table th {
+  background: #f1f5f9;
+  padding: 14px;
+  font-size: 0.9rem;
+  color: var(--primary-dark);
+  font-weight: 800;
+  text-align: center;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.modern-counter-table td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+
+/* Inputs */
+.input-field {
+  width: 100%;
+  max-width: 100px;
+  padding: 8px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  background: var(--white);
+  transition: var(--transition);
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+  outline: none;
+}
+
+/* Category styling (No background, just colored text) */
+.category-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 900;
+}
+
+.val-badge {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.cat-200 .val-badge { color: #1a4d2e; }
+.cat-100 .val-badge { color: #2c3e50; }
+.cat-50 .val-badge { color: #d35400; }
+.cat-20 .val-badge { color: #2980b9; }
+.cat-10 .val-badge { color: #8e44ad; }
+.cat-5 .val-badge { color: #27ae60; }
+.cat-1 .val-badge { color: #7f8c8d; }
+
+.val-unit { font-size: 0.75rem; color: var(--gray-500); font-weight: normal; }
+
+/* Total cells */
+.total-cell {
+  font-weight: 800;
+  color: var(--gray-900);
+  font-size: 1rem;
+}
+
+.total-cell.highlight {
+  color: var(--primary);
+}
+
+/* Stats in Card Footer */
+.card-footer-stats {
+  padding: 15px 20px;
+  background: var(--gray-50);
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label { font-size: 0.75rem; color: var(--gray-600); font-weight: 700; }
+.stat-value { font-size: 1.2rem; font-weight: 900; color: var(--primary); }
+.stat-item.small .stat-value { font-size: 1rem; color: var(--gray-700); }
+
+/* Summary Section */
+.summary-section {
+  background: var(--white);
+  border-radius: var(--border-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gray-200);
+}
+
+.summary-header {
+  gap: 12px;
+}
+
+.summary-header i { font-size: 1.3rem; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+.summary-card {
+  padding: 15px;
+  border-radius: 12px;
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--gray-200);
   text-align: center;
 }
 
-/* Make table header icons very light gray */
-th i {
-  color: #f5f5f5;
+.summary-card.primary {
+  background: rgba(var(--primary-rgb), 0.05);
+  border-color: var(--primary-light);
 }
 
-/* ====== COUNTER TOTALS STYLING ====== */
-.counter-totals {
+.summary-card .label { font-size: 0.8rem; color: var(--gray-600); font-weight: 700; }
+.summary-card .value { font-size: 1.4rem; font-weight: 900; color: var(--gray-900); }
+
+.summary-card.status-surplus .value { color: var(--success); }
+.summary-card.status-deficit .value { color: var(--danger); }
+
+.summary-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding: 0 20px 20px;
+}
+
+.sub-card {
+  padding: 10px 15px;
+  background: var(--gray-100);
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background: #f9fafb;
-  border-top: 2px solid rgba(0, 121, 101, 0.3);
 }
 
-.counter-total {
-  text-align: center;
-}
+.sub-card .label { font-size: 0.85rem; color: var(--gray-700); }
+.sub-card .value { font-weight: 800; color: var(--gray-900); }
 
-.counter-total-label {
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.counter-total-label.small-text {
-  font-size: 0.75rem !important;
-  color: #999;
-}
-
-.counter-total-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #333;
-}
-
-.counter-total-value.small-text {
-  font-size: 0.9rem !important;
-  font-weight: 600 !important;
-}
-
-/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
-.counter-table .centered-number,
-.categories-table .centered-number {
-  text-align: center !important;
-  direction: ltr !important;
-  font-variant-numeric: tabular-nums;
-}
-
-/* حواف دائرية لشريط الملخص الإجمالي في الوضع النهاري فقط */
-.summary-section {
-  border-radius: 12px;
-}
-
-/* Night mode rule migrated to src/assets/css/unified-dark-mode.css */
-
-/* ====== RESPONSIVE DESIGN FOR SMALL SCREENS ====== */
-
-/* إصلاح مشكلة الفراغ في جدول ملخص الفئات للشاشات الصغيرة */
-@media (max-width: 768px) {
-  .counter-page {
-    padding: 10px;
-  }
-  
-  .counter-container {
-    padding: 10px;
-  }
-  
-  /* تحسين عرض الجداول على الشاشات الصغيرة */
-  .cp-table {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-  }
-  
-  .counter-table,
-  .categories-table {
-    min-width: 100%;
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 0.9rem;
-  }
-  
-  /* تقليل حجم الخطوط في الشاشات الصغيرة */
-  .counter-table th,
-  .categories-table th {
-    padding: 8px 4px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .counter-table td,
-  .categories-table td {
-    padding: 6px 4px;
-    font-size: 0.8rem;
-    word-break: break-word;
-  }
-  
-  /* تحسين عرض الأعمدة الثلاثة */
-  .counter-table th,
-  .counter-table td {
-    width: 33.33%;
-  }
-  
-  /* تحسين عرض ملخص الفئات */
-  .categories-section {
-    margin-top: 20px;
-  }
-  
-  .categories-table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  
-  /* إصلاح مشكلة الفراغ في الشاشات الصغيرة جداً */
-  .categories-table th,
-  .categories-table td {
-    min-width: auto;
-    text-align: center;
-  }
-  
-  .categories-table .category-label {
-    white-space: normal;
-  }
-  
-  /* تحسين عرض المدخلات في الشاشات الصغيرة */
-  .input-field {
-    width: 100% !important;
-    font-size: 0.8rem !important;
-    padding: 4px 2px !important;
-    box-sizing: border-box;
-  }
-}
-
-/* إصلاح للشاشات الصغيرة جداً */
-@media (max-width: 480px) {
-  .counter-table,
-  .categories-table {
-    min-width: 100%;
-    width: 100%;
-    font-size: 0.75rem;
-  }
-  
-  .counter-table th,
-  .categories-table th {
-    padding: 6px 2px;
-    font-size: 0.7rem;
-  }
-  
-  .counter-table td,
-  .categories-table td {
-    padding: 4px 2px;
-    font-size: 0.7rem;
-  }
-  
-  .input-field {
-    width: 100% !important;
-    font-size: 0.7rem !important;
-    padding: 3px 1px !important;
-  }
-  
-  /* إخفاء النصوص الطويلة في الشاشات الصغيرة */
-  .summary-label {
-    font-size: 0.8rem !important;
-  }
-  
-  .summary-value {
-    font-size: 1rem !important;
-  }
-}
-
-/* تحسين عرض الجداول بشكل عام */
-.table-wrap {
-  position: relative;
+/* Categories Section specifically */
+.categories-section {
+  background: var(--white);
+  border-radius: var(--border-radius-xl);
   overflow: hidden;
-  width: 100%;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-md);
 }
 
-.cp-table {
-  position: relative;
-  width: 100%;
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 20px;
 }
 
-/* إصلاح مشكلة overflow للشاشات الصغيرة */
-@media (max-width: 768px) {
-  .categories-summary {
-    overflow-x: auto;
-  }
-  
-  .counter-table,
-  .categories-table {
-    table-layout: fixed;
-    width: 100%;
-  }
-  
-  /* ضمان عرض المحتوى بدون فراغ */
-  .categories-table th:nth-child(1),
-  .categories-table td:nth-child(1) {
-    width: 33.33%;
-  }
-  
-  .categories-table th:nth-child(2),
-  .categories-table td:nth-child(2) {
-    width: 33.33%;
-  }
-  
-  .categories-table th:nth-child(3),
-  .categories-table td:nth-child(3) {
-    width: 33.34%;
-  }
+.action-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: var(--transition);
 }
+
+.action-btn.reset { background: #fdf2f2; color: #cf2222; border: 1px solid #f8d7da; }
+.action-btn.reset:hover { background: #cf2222; color: white; }
+
+.action-btn.export { background: var(--primary); color: white; }
+.action-btn.export:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+/* Dark Mode Overrides */
+body.dark .counter-card, 
+body.dark .summary-section,
+body.dark .categories-section,
+body.dark .sub-card,
+body.dark .summary-card {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+}
+
+body.dark .centered-header {
+  /* Fix: Use solid background for dark mode to avoid the transparent/box issue */
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+/* Ensure title doesn't have transparency in dark mode */
+body.dark .counter-title {
+  background: none !important;
+  -webkit-text-fill-color: white !important;
+  text-fill-color: white !important;
+  box-shadow: none !important;
+  border: none !important;
+  color: white !important;
+  text-shadow: none !important;
+}
+
+body.dark .modern-counter-table th {
+  background: rgba(255,255,255,0.05);
+  color: var(--primary-light);
+  border-bottom-color: var(--dark-border);
+}
+
+body.dark .modern-counter-table td {
+  border-bottom-color: rgba(255,255,255,0.05);
+}
+
+body.dark .input-field {
+  background: var(--dark-bg);
+  color: white;
+  border-color: var(--gray-700);
+}
+
+body.dark .total-cell { color: #f1f5f9; }
+body.dark .stat-value { color: var(--primary-light); }
+body.dark .summary-card .value { color: white; }
+body.dark .card-footer-stats { background: rgba(0,0,0,0.2); }
+
+/* Keep denomination colors visible in dark mode */
+body.dark .cat-200 .val-badge { color: #4ade80; }
+body.dark .cat-100 .val-badge { color: #60a5fa; }
+body.dark .cat-50 .val-badge { color: #fb923c; }
+body.dark .cat-20 .val-badge { color: #5eead4; }
+body.dark .cat-10 .val-badge { color: #c084fc; }
+body.dark .cat-5 .val-badge { color: #4ade80; }
+body.dark .cat-1 .val-badge { color: #94a3b8; }
 </style>
