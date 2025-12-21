@@ -12,7 +12,7 @@
   --warning: #f39c12;
   --danger: #e74c3c;
   --info: #3498db;
-  --secondary: var(--warning); /* Compatibility alias */
+  --secondary: #64748b; /* Adjusted to gray for consistency with secondary buttons */
 
   /* ====== درجات الرمادي (Grayscales) ====== */
   --gray-100: #f8f9fa;
@@ -28,14 +28,15 @@
   /* ====== خلفيات وألوان خاصة (Backgrounds) ====== */
   --light-bg: var(--gray-100);
   --content-bg: #f5f7fa;
+  --surface-bg: #ffffff;
   --white: #ffffff;
   --highlight-td: #EEEEEE;
   --total-row-bg: #e8f5e8;
 
   /* ====== الخطوط (Typography) ====== */
-  --font-family-sans: 'Cairo', 'Tajawal', 'Noto Naskh Arabic', system-ui, -apple-system, sans-serif;
+  --font-family-sans: 'Cairo', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'Courier New', SFMono-Regular, monospace;
-  --base-font-size: 16px; /* Adjusted for better readability */
+  --base-font-size: 16px;
 
   /* ====== الحدود والزوايا (Borders & Radius) ====== */
   --border-radius-sm: 4px;
@@ -83,4 +84,48 @@
   --header-height: 60px;
   --footer-height: 60px;
   --sidebar-width: 250px;
+
+  /* ====== Dark Mode Overrides Placeholders (Light defaults) ====== */
+  --dark-surface: rgba(255, 255, 255, 0.7);
+  --dark-border: rgba(0, 0, 0, 0.08);
+  --dark-shadow: rgba(0, 0, 0, 0.1);
+  --header-gradient: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+/* ====== DARK MODE OVERRIDES ====== */
+body.dark {
+  /* --- Core Palette --- */
+  --light-bg: #0f172a;
+  --content-bg: #1e293b;
+  --surface-bg: #1e293b;
+  --white: #1e293b;
+  
+  /* --- Text Colors --- */
+  --gray-900: #f1f5f9;
+  --gray-800: #e2e8f0;
+  --gray-700: #cbd5e1;
+  --gray-600: #94a3b8;
+  --gray-500: #64748b;
+  --gray-300: #334155;
+  --gray-100: #020617;
+
+  /* --- Brand Colors --- */
+  --primary: #2dd4bf;
+  --primary-dark: #0d9488;
+  --primary-light: #5eead4;
+  
+  /* --- Status Colors --- */
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #10b981;
+  --info: #3b82f6;
+
+  /* --- Specific Dark Mode Tokens --- */
+  --dark-surface: rgba(30, 41, 59, 0.7);
+  --dark-border: rgba(255, 255, 255, 0.08);
+  --dark-shadow: rgba(0, 0, 0, 0.5);
+  --table-header-bg: linear-gradient(135deg, #0f172a, #1e293b);
+  --table-row-hover: rgba(45, 212, 191, 0.05);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --header-gradient: linear-gradient(45deg, #ffffff 30%, #2dd4bf 100%);
 }

@@ -3,21 +3,13 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-/* --- Global Design System (Visual Integrity) --- */
-import './assets/css/variables.css'
-import './assets/css/base.css'
-import './assets/css/utilities.css'
-import './assets/css/buttons.css'
-import './assets/css/forms.css'
-import './assets/css/tables.css'
-import './assets/css/components.css'
-import './assets/css/unified-dark-mode.css'
+/* --- Global Design System (Single Entry Point) --- */
+import './assets/css/main.css'
 
 /* --- Services & Utils --- */
 import { startAutoCleaning } from './services/cacheManager'
 import { setupCacheMonitor } from './services/cacheMonitor'
 import logger from '@/utils/logger.js'
-import { clearSyncQueue } from './services/archiveSyncQueue';
 
 // 1. Create App Instance
 const app = createApp(App)
@@ -27,16 +19,6 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
-// --- One-Time Auto-Clear for Debugging ---
-const hasClearedQueue = localStorage.getItem('has_cleared_sync_queue_v1');
-if (!hasClearedQueue && import.meta.env.DEV) {
-  logger.warn('⚠️ Performing a one-time automatic clear of the sync queue for debugging.');
-  clearSyncQueue().then(() => {
-    localStorage.setItem('has_cleared_sync_queue_v1', 'true');
-    logger.info('✅ One-time clear complete.');
-  });
-}
-
 // 3. Global PWA Handler
 window.addEventListener('beforeinstallprompt', (e) => {
   logger.info('🚀 Global: Captured beforeinstallprompt event');
@@ -44,10 +26,48 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.deferredPrompt = e; 
 });
 
+/**
+ * دالة ذكية للتحقق من وجود تحديثات جديدة
+ * متوافقة مع بنية المشروع وتستخدم سجلات النظام
+ */
+function setupUpdateListener() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      logger.info('♻️ New Service Worker Controller detected. Refreshing...');
+      // يمكن هنا إظهار إشعار بدلاً من التحديث التلقائي
+      // window.location.reload(); 
+    });
+
+    // مراقبة التحديثات المتاحة
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker) {
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  logger.info('✨ New content is available; please refresh.');
+                  // سيقوم نظام الإشعارات في المكونات بالتعامل مع التنبيهات لاحقاً
+                }
+              };
+            }
+          };
+        }
+      } catch (err) {
+        logger.error('❌ Service Worker registration check failed:', err);
+      }
+    });
+  }
+}
+
 // 4. Initialize Background Services
 logger.info('🧠 Initializing Smart Cache System...');
 startAutoCleaning(5 * 60 * 1000);
+setupUpdateListener();
 
+// Enable Cache Monitor in Development only
 if (import.meta.env.DEV) {
   setupCacheMonitor();
 }

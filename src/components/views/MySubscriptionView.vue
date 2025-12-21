@@ -17,8 +17,9 @@
             <span class="plan-badge">{{ store.planName }}</span>
           </div>
           <div class="status-indicator">
-             <span class="badge" :class="`badge-${store.subscription?.status || 'none'}`">
-               {{ store.statusText }}
+             <span class="badge" :class="`badge-${store.ui.class}`">
+               <i v-if="store.isSubscribed && store.ui.class === 'active'" class="fas fa-circle pulse-dot"></i>
+               {{ store.ui.statusText }}
              </span>
           </div>
         </div>
@@ -38,7 +39,7 @@
             
             <div class="remaining-section">
                <h4 class="remaining-title">الأيام المتبقية</h4>
-               <div class="days-counter" :class="store.daysClass">
+               <div class="days-counter" :class="store.ui.class">
                  <span class="number">{{ store.daysRemaining }}</span>
                  <span class="unit">يوم</span>
                </div>
@@ -60,15 +61,18 @@
           </router-link>
           
           <div v-else class="subscription-active-msg">
-            <i class="fas fa-check-circle"></i> اشتراكك مفعل وبحالة جيدة
+            <i class="fas fa-check-circle pulse-icon"></i> اشتراكك مفعل وبحالة جيدة
           </div>
         </div>
       </section>
 
       <!-- Card 2: History -->
       <section class="card history-card animate-fade-in delay-1">
-        <div class="card-header border-bottom">
-          <h3 class="text-main"><i class="fas fa-history text-primary"></i> سجل الاشتراكات</h3>
+        <div class="card-header bg-primary-gradient">
+          <div class="header-icon"><i class="fas fa-history"></i></div>
+          <div class="header-text">
+            <h3>سجل الاشتراكات</h3>
+          </div>
         </div>
         <div class="card-body no-padding">
           <div class="table-responsive">
@@ -154,18 +158,18 @@ onMounted(() => {
 .plan-badge { font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 20px; }
 .status-indicator { margin-right: auto; }
 
-.card-body { padding: 24px; background: var(--white); } /* Added more padding for breathing room */
+.card-body { padding: 24px; background: var(--white); } 
 .card-body.no-padding { padding: 0; }
 
 .subscription-details {
-  padding: 5px 10px; /* Internal spacing to prevent items from sticking to card edge */
+  padding: 5px 10px; 
 }
 
 .detail-item { 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  padding: 15px 5px; /* Better vertical spacing */
+  padding: 15px 5px; 
 }
 .detail-item .label { color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
 .detail-item .value { font-weight: 700; color: var(--text-main); }
@@ -174,18 +178,35 @@ onMounted(() => {
 
 .remaining-section { text-align: center; padding: 15px 0; }
 .remaining-title { color: var(--primary); font-size: 1.1rem; font-weight: 800; margin-bottom: 15px; }
-.days-counter { display: inline-flex; flex-direction: column; padding: 20px 40px; border-radius: 24px; min-width: 160px; box-shadow: var(--shadow-md); }
+.days-counter { display: inline-flex; flex-direction: column; padding: 20px 40px; border-radius: 24px; min-width: 160px; box-shadow: var(--shadow-md); transition: all 0.3s ease; }
 .days-counter .number { font-size: 3.5rem; font-weight: 900; line-height: 1; }
 .days-counter .unit { font-size: 1.1rem; font-weight: 700; margin-top: 8px; opacity: 0.9; }
 
-/* Dynamic Indicators */
-.high-days { background: rgba(0, 121, 101, 0.08); color: var(--primary); }
-.medium-days { background: rgba(243, 156, 18, 0.1); color: var(--warning); }
-.low-days { background: rgba(231, 76, 60, 0.1); color: var(--danger); animation: pulse 2s infinite; }
-.expired-days { background: var(--gray-200); color: var(--gray-600); }
+/* Dynamic Indicators Aligned with Sidebar Logic */
+.days-counter.active { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); }
+.days-counter.warning { background: rgba(254, 202, 87, 0.1); color: #feca57; border: 1px solid rgba(254, 202, 87, 0.2); animation: pulse 2s infinite; }
+.days-counter.expired { background: rgba(255, 107, 107, 0.1); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.2); }
+.days-counter.pending { background: rgba(155, 155, 155, 0.1); color: var(--gray-500); border: 1px solid rgba(155, 155, 155, 0.2); }
 
 .card-footer { padding: 24px; background: var(--gray-100); border-top: 1px solid var(--border-color); }
 .subscription-active-msg { text-align: center; color: var(--primary); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Pulse animations */
+.pulse-icon { animation: pulse 2s infinite; }
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  font-size: 8px;
+  color: #fff;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
 
 /* --- Table Styles --- */
 .modern-table { width: 100%; border-collapse: collapse; }
@@ -194,10 +215,10 @@ onMounted(() => {
 .date-range-box { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
 
 /* --- Badges --- */
-.badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.badge-active { background: var(--success); }
-.badge-pending { background: var(--warning); }
-.badge-expired, .badge-cancelled { background: var(--gray-500); }
+.badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.badge-active { background: var(--success, #2ecc71); }
+.badge-pending, .badge-warning { background: var(--warning, #feca57); }
+.badge-expired, .badge-cancelled { background: var(--gray-500, #95a5a6); }
 
 /* --- Strict Dark Mode Overrides (High Accuracy) --- */
 :global(body.dark-mode) .card { 
@@ -226,7 +247,8 @@ onMounted(() => {
 :global(body.dark-mode) .text-main { color: #fff !important; }
 :global(body.dark-mode) .text-muted { color: #aaa !important; }
 :global(body.dark-mode) .divider { background: #333 !important; opacity: 1; }
-:global(body.dark-mode) .days-counter.expired-days { background: #333 !important; color: #888 !important; }
+:global(body.dark-mode) .days-counter.expired { background: rgba(255, 107, 107, 0.05); }
+:global(body.dark-mode) .days-counter.pending { background: rgba(255, 255, 255, 0.05); color: #888; }
 :global(body.dark-mode) .empty-state { color: #777 !important; }
 
 @keyframes pulse {

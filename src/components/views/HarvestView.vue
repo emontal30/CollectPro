@@ -8,12 +8,12 @@
     />
 
     <div class="date-display">
-      <i class="fas fa-calendar-alt date-icon"></i>
-      <span class="date-label">اليوم:</span>
-      <span class="date-value">{{ currentDay }}</span>
-      <span class="date-separator">|</span>
-      <span class="date-label">التاريخ:</span>
-      <span class="date-value">{{ currentDate }}</span>
+      <i class="fas fa-calendar-alt text-primary"></i>
+      <span class="font-bold">اليوم:</span>
+      <span class="text-primary font-bold">{{ currentDay }}</span>
+      <span class="text-muted">|</span>
+      <span class="font-bold">التاريخ:</span>
+      <span class="text-primary font-bold">{{ currentDate }}</span>
     </div>
 
     <ColumnVisibility
@@ -42,12 +42,12 @@
       <table class="modern-table w-full">
         <thead>
           <tr>
-            <th v-show="isVisibleHarvest('shop')" class="shop whitespace-nowrap">🏪 المحل</th>
-            <th v-show="isVisibleHarvest('code')" class="code whitespace-nowrap">🔢 الكود</th>
-            <th v-show="isVisibleHarvest('amount')" class="amount whitespace-nowrap">💵 التحويل</th>
-            <th v-show="isVisibleHarvest('extra')" class="extra whitespace-nowrap">📌 اخرى</th>
-            <th v-show="isVisibleHarvest('collector')" class="collector whitespace-nowrap">👤 المحصل</th>
-            <th v-show="isVisibleHarvest('net')" class="net highlight whitespace-nowrap">✅ الصافي</th>
+            <th v-show="isVisibleHarvest('shop')" class="shop">🏪 المحل</th>
+            <th v-show="isVisibleHarvest('code')" class="code">🔢 الكود</th>
+            <th v-show="isVisibleHarvest('amount')" class="amount">💵 التحويل</th>
+            <th v-show="isVisibleHarvest('extra')" class="extra">📌 اخرى</th>
+            <th v-show="isVisibleHarvest('collector')" class="collector">👤 المحصل</th>
+            <th v-show="isVisibleHarvest('net')" class="net highlight">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
@@ -93,7 +93,7 @@
               />
             </td>
 
-            <td v-show="isVisibleHarvest('net')" class="net numeric centered-text" :class="getNetClass(row)">
+            <td v-show="isVisibleHarvest('net')" class="net numeric" :class="getNetClass(row)">
               {{ store.formatNumber((parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) ) }}
               <i :class="getNetIcon(row)"></i>
             </td>
@@ -102,10 +102,10 @@
           <tr class="total-row">
             <td v-show="isVisibleHarvest('shop')" class="shop">الإجمالي</td>
             <td v-show="isVisibleHarvest('code')" class="code"></td>
-            <td v-show="isVisibleHarvest('amount')" class="amount centered-text">{{ store.formatNumber(store.totals.amount) }}</td>
-            <td v-show="isVisibleHarvest('extra')" class="extra centered-text">{{ store.formatNumber(store.totals.extra) }}</td>
-            <td v-show="isVisibleHarvest('collector')" class="collector centered-text">{{ store.formatNumber(store.totals.collector) }}</td>
-            <td v-show="isVisibleHarvest('net')" class="net numeric centered-text" :class="getTotalNetClass">
+            <td v-show="isVisibleHarvest('amount')" class="amount text-center">{{ store.formatNumber(store.totals.amount) }}</td>
+            <td v-show="isVisibleHarvest('extra')" class="extra text-center">{{ store.formatNumber(store.totals.extra) }}</td>
+            <td v-show="isVisibleHarvest('collector')" class="collector text-center">{{ store.formatNumber(store.totals.collector) }}</td>
+            <td v-show="isVisibleHarvest('net')" class="net numeric" :class="getTotalNetClass">
               {{ store.formatNumber((parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0)) ) }}
               <i :class="getTotalNetIcon"></i>
             </td>
@@ -116,14 +116,14 @@
 
     <div class="summary-container">
       <section id="summary">
-        <h2 class="summary-title"><i class="fas fa-file-invoice-dollar summary-title-icon"></i> ملخص البيان</h2>
+        <h2 class="summary-title"><i class="fas fa-file-invoice-dollar summary-title-icon text-primary"></i> ملخص البيان</h2>
         <div class="summary-divider" aria-hidden="true"></div>
         <div class="summary-grid">
           <div class="summary-row two-cols">
-            <div class="summary-item master-limit-field">
+            <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-crown field-icon master-icon"></i>
-                <strong>ليمت الماستر</strong>
+                <i class="fas fa-crown text-primary"></i>
+                <strong class="mx-2">ليمت الماستر</strong>
               </div>
               <input
                 type="text"
@@ -136,10 +136,10 @@
               />
             </div>
 
-            <div class="summary-item current-balance-field">
+            <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-wallet field-icon balance-icon"></i>
-                <strong>رصيد الماستر الحالي</strong>
+                <i class="fas fa-wallet text-primary"></i>
+                <strong class="mx-2">رصيد الماستر الحالي</strong>
               </div>
               <input
                 type="text"
@@ -154,38 +154,37 @@
           </div>
 
           <div class="summary-row two-cols">
-            <div class="summary-item reset-amount-field">
+            <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-undo-alt field-icon reset-icon"></i>
-                <strong>مبلغ التصفيرة</strong>
+                <i class="fas fa-undo-alt text-warning"></i>
+                <strong class="mx-2">مبلغ التصفيرة</strong>
               </div>
-              <div class="summary-value calc-field" :class="{ 'positive': store.resetAmount > 0, 'negative': store.resetAmount < 0 }">
+              <div class="calc-field" :class="{ 'text-success': store.resetAmount > 0, 'text-danger': store.resetAmount < 0 }">
                 {{ store.formatNumber(store.resetAmount) }}
               </div>
             </div>
 
-            <div class="summary-item total-collected-field">
+            <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-coins field-icon coins-icon"></i>
-                <strong>إجمالي المحصل</strong>
+                <i class="fas fa-coins text-warning"></i>
+                <strong class="mx-2">إجمالي المحصل</strong>
               </div>
-              <div class="summary-value calc-field">{{ store.formatNumber(store.totals.collector) }}</div>
+              <div class="calc-field text-primary">{{ store.formatNumber(store.totals.collector) }}</div>
             </div>
           </div>
 
           <div class="summary-row full">
-            <div class="summary-item reset-status-field full-width">
+            <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-check-circle field-icon status-icon"></i>
-                <strong>حالة التصفيرة</strong>
+                <i class="fas fa-check-circle text-success"></i>
+                <strong class="mx-2">حالة التصفيرة</strong>
               </div>
-              <div class="summary-value calc-field" :style="{ color: store.resetStatus.color }">
+              <div class="calc-field" :style="{ color: store.resetStatus.color }">
                 {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }}
                 &nbsp;{{ store.resetStatus.text }}
               </div>
             </div>
           </div>
-
         </div>
       </section>
     </div>
@@ -197,7 +196,7 @@
           <span>صفحة الإدخال</span>
         </router-link>
 
-        <router-link id="goToArchiveBtn" to="/app/archive" class="btn btn-dashboard btn-dashboard--archive">
+        <router-link to="/app/archive" class="btn btn-dashboard btn-dashboard--archive">
           <i class="fas fa-archive"></i>
           <span>الذهاب للأرشيف</span>
         </router-link>
@@ -223,18 +222,15 @@ import { computed, onMounted, onActivated, watch, inject, ref, reactive, onBefor
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
-import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import logger from '@/utils/logger.js'
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import localforage from 'localforage';
+import logger from '@/utils/logger.js';
 
 const store = useHarvestStore();
 const archiveStore = useArchiveStore();
 const route = useRoute();
-const counterStore = useCounterStore();
 
-// Columns config for harvest page
 const harvestColumns = [
   { key: 'shop', label: '🏪 المحل' },
   { key: 'code', label: '🔢 الكود' },
@@ -252,326 +248,86 @@ function loadColumnsVisibilityHarvest(){
 }
 
 function isVisibleHarvest(key){ return columnsVisibilityHarvest[key] !== false; }
-
 function applySavedColumnsHarvest(obj){ Object.keys(obj || {}).forEach(k => { columnsVisibilityHarvest[k] = !!obj[k]; }); }
 
-// نظام الإشعارات الموحد
 const { confirm, addNotification } = inject('notifications');
 
-// Initialize the store when the view mounts or becomes active
-onActivated(() => {
-  logger.debug('Harvest view activated — initializing store');
-  store.initialize && store.initialize();
-});
-
-// Watch route changes to re-initialize when navigating to Harvest
+onActivated(() => store.initialize && store.initialize());
 watch(() => route.name, (newName) => {
-  if (newName === 'Harvest') {
-    logger.debug('Route changed to Harvest — initialize store');
-    store.initialize && store.initialize();
-  }
+  if (newName === 'Harvest') store.initialize && store.initialize();
 });
 
-// مزامنة إجمالي المحصل مع صفحة عداد الأموال
 const syncWithCounterStore = () => {
   try {
     const totalCollected = store.totals.collector;
     localStorage.setItem('totalCollected', totalCollected.toString());
-    
-    window.dispatchEvent(new CustomEvent('harvestDataUpdated', { 
-      detail: { totalCollected } 
-    }));
-    
-    logger.info('🔄 تم مزامنة إجمالي المحصل مع صفحة عداد الأموال:', totalCollected);
+    window.dispatchEvent(new CustomEvent('harvestDataUpdated', { detail: { totalCollected } }));
   } catch (error) {
-    logger.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
+    logger.error('Sync error:', error);
   }
 };
 
 onMounted(() => {
   store.initialize && store.initialize();
-  try { loadColumnsVisibilityHarvest(); } catch (e) { logger.debug('no saved harvest columns'); }
-
-  const dataLoaded = store.loadDataFromStorage();
-  if (dataLoaded) {
-    logger.info('✅ تم تحميل البيانات من صفحة الإدخال');
-  }
-
+  loadColumnsVisibilityHarvest();
+  store.loadDataFromStorage();
   syncWithCounterStore();
-
-  const handleFocus = () => {
-    syncWithCounterStore();
-  };
-
-  window.addEventListener('focus', handleFocus);
-
-  onBeforeUnmount(() => {
-    window.removeEventListener('focus', handleFocus);
-  });
+  window.addEventListener('focus', syncWithCounterStore);
+  onBeforeUnmount(() => window.removeEventListener('focus', syncWithCounterStore));
 });
 
 const checkAndAddEmptyRow = (index) => {
   if (index === store.rows.length - 1) {
-    store.rows.push({
-      id: Date.now(),
-      shop: '',
-      code: '',
-      amount: 0,
-      extra: null,
-      collector: null,
-      net: 0,
-      isImported: false
-    });
+    store.rows.push({ id: Date.now(), shop: '', code: '', amount: 0, extra: null, collector: null, net: 0, isImported: false });
     store.saveRowsToLocalStorage();
   }
 };
 
-const updateShop = (row, index, event) => {
-   row.shop = event.target.value;
-   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-   store.saveRowsToLocalStorage();
-   checkAndAddEmptyRow(index);
-};
+const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
+const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
+const updateAmount = (row, index, event) => { row.amount = parseFloat(event.target.value.replace(/,/g, '')) || 0; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
+const updateExtra = (row, index, event) => { row.extra = parseFloat(event.target.value.replace(/,/g, '')) || null; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
+const updateCollector = (row, index, event) => { row.collector = parseFloat(event.target.value.replace(/,/g, '')) || null; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); syncWithCounterStore(); };
 
-const updateCode = (row, index, event) => {
-   row.code = event.target.value;
-   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-   store.saveRowsToLocalStorage();
-   checkAndAddEmptyRow(index);
-};
+const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
+const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
 
-const updateAmount = (row, index, event) => {
-   const value = parseFloat(event.target.value.replace(/,/g, '')) || 0;
-   row.amount = value;
-   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-   store.saveRowsToLocalStorage();
-   checkAndAddEmptyRow(index);
-};
-
-const updateExtra = (row, index, event) => {
-   const rawValue = event.target.value.replace(/,/g, '');
-   const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
-   row.extra = value;
-   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-   store.saveRowsToLocalStorage();
-   checkAndAddEmptyRow(index);
-};
-
-const updateCollector = (row, index, event) => {
-   const rawValue = event.target.value.replace(/,/g, '');
-   const value = rawValue === '' ? null : parseFloat(rawValue) || 0;
-   row.collector = value;
-   row.net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-   store.saveRowsToLocalStorage();
-   checkAndAddEmptyRow(index);
-   
-   setTimeout(() => {
-     syncWithCounterStore();
-   }, 50);
-};
-
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString("en-GB", {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
-});
-
-const currentDay = computed(() => {
-  return new Date().toLocaleDateString("ar-EG", { weekday: 'long' });
-});
-
-const formatInputNumber = (num) => {
-   if (!num && num !== 0) return ''
-   if (num === 0) return '' 
-   return new Intl.NumberFormat('en-US', {
-     minimumFractionDigits: 0,
-     maximumFractionDigits: 2
-   }).format(num);
-};
-
+const formatInputNumber = (num) => (!num && num !== 0) || num === 0 ? '' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
 const getNetClass = (row) => {
-  if (!row) return 'zero';
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  if (net > 0) return 'positive';
-  if (net < 0) return 'negative';
-  return 'zero';
+  return net > 0 ? 'positive' : (net < 0 ? 'negative' : 'zero');
 };
-
 const getNetIcon = (row) => {
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  if (net > 0) return 'fas fa-arrow-up';
-  if (net < 0) return 'fas fa-arrow-down';
-  return 'fas fa-check';
+  return net > 0 ? 'fas fa-arrow-up' : (net < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 };
-
 const getTotalNetClass = computed(() => {
   const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
-  if (net > 0) return 'positive';
-  if (net < 0) return 'negative';
-  return 'zero';
+  return net > 0 ? 'positive' : (net < 0 ? 'negative' : 'zero');
 });
-
 const getTotalNetIcon = computed(() => {
   const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
-  if (net > 0) return 'fas fa-arrow-up';
-  if (net < 0) return 'fas fa-arrow-down';
-  return 'fas fa-check';
+  return net > 0 ? 'fas fa-arrow-up' : (net < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 });
 
-// Archive today's data
 const archiveToday = async () => {
-  // استخدام التاريخ المحلي الموحد للتحقق
   const todayIso = archiveStore.getTodayLocal();
-  const localKey = `${archiveStore.DB_PREFIX}${todayIso}`;
-  
-  // التحقق من وجود أرشيف سابق في المخزن الفعلي (localforage)
-  const existingArchive = await localforage.getItem(localKey);
-
+  const existingArchive = await localforage.getItem(`${archiveStore.DB_PREFIX}${todayIso}`);
   const confirmResult = await confirm({
     title: existingArchive ? 'تأكيد استبدال الأرشيف' : 'تأكيد الأرشفة',
-    text: existingArchive 
-      ? `يوجد أرشيف سابق ليوم ${todayIso}. هل تريد استبداله بالبيانات الحالية؟`
-      : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
+    text: existingArchive ? `يوجد أرشيف سابق ليوم ${todayIso}. هل تريد استبداله؟` : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
     icon: 'question',
     confirmButtonText: 'أرشفة',
-    confirmButtonColor: 'var(--primary, #007965)'
+    confirmButtonColor: 'var(--primary)'
   });
-
   if (!confirmResult.isConfirmed) return;
-
-  try {
-    const result = await store.archiveTodayData();
-
-    if (result.success) {
-      addNotification(result.message, 'success');
-      store.clearAll();
-    } else {
-      addNotification(result.message || 'فشل في الأرشفة', 'error');
-    }
-  } catch (error) {
-    logger.error('Archive error:', error);
-    addNotification('حدث خطأ غير متوقع أثناء الأرشفة', 'error');
-  }
+  const result = await store.archiveTodayData();
+  if (result.success) { addNotification(result.message, 'success'); store.clearAll(); }
+  else addNotification(result.message, 'error');
 };
 </script>
+
 <style scoped>
-.harvest-page { 
-  max-width: 800px; 
-}
-
-.date-display {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  justify-content: center;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: linear-gradient(135deg, rgba(0, 121, 101, 0.1), rgba(0, 121, 101, 0.05));
-  border-radius: 12px;
-  border: 1px solid rgba(0, 121, 101, 0.2);
-}
-
-.date-value {
-  font-weight: 700;
-  color: var(--primary);
-  font-size: 1.1rem;
-}
-
-.summary-container {
-  margin: 30px 0;
-  padding: 22px;
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  border: 1px solid rgba(0, 121, 101, 0.08);
-}
-
-.summary-title {
-  text-align: center;
-  font-size: 1.15rem;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--gray-900);
-}
-
-.summary-title-icon {
-  font-size: 1.6rem;
-  color: var(--primary);
-}
-
-.summary-divider {
-  display: block;
-  width: 85%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(0, 121, 101, 0.22), transparent);
-  border: none;
-  margin: 10px auto 18px;
-  border-radius: 3px;
-}
-
-.summary-grid { display: block; }
-
-.summary-row { margin-bottom: 12px; }
-
-.summary-row.two-cols {
-  display: flex;
-  gap: 12px;
-}
-
-.summary-row.full { display: block; }
-
-.summary-item {
-  flex: 1 1 0;
-  min-width: 180px;
-  text-align: center;
-  padding: 14px;
-  background: linear-gradient(45deg, rgba(0,121,101,0.03), rgba(243,156,18,0.03));
-  border-radius: 10px;
-  border: 1px solid rgba(0,121,101,0.08);
-}
-
-.summary-item.full-width { width: 100%; }
-
-.field-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-.field-icon { font-size: 1.05rem; opacity: 0.95; }
-.master-icon { color: var(--primary); }
-.balance-icon { color: #0ea5a4; }
-.reset-icon { color: #f59e0b; }
-.coins-icon { color: #fbbf24; }
-.status-icon { color: #10b981; }
-
-.bold-input {
-  width: 100%;
-  padding: 8px 10px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,0.07);
-  background: transparent;
-  text-align: center;
-}
-
-.calc-field { font-size: 1.35rem; font-weight: 800; color: var(--gray-900); text-align: center; }
-
-.reset-amount-field .calc-field,
-.total-collected-field .calc-field {
-  font-size: 1.15rem;
-}
-
-@media (max-width: 640px) {
-  .summary-row.two-cols { flex-direction: column; }
-  .summary-item { width: 100%; }
-  .summary-title { font-size: 1rem; }
-}
+/* All specialized styles moved to _unified-components.css or utilities.css */
+.mx-2 { margin: 0 8px; }
 </style>

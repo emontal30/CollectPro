@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { supabase } from '@/supabase'
 import logger from '@/utils/logger.js'
 
 // Lazy Loading Components
@@ -86,38 +87,57 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // 1. Ensure Auth Initialized
-  if (!authStore.isInitialized) {
-    await authStore.initializeAuth()
-  }
-
-  const isLoggedIn = authStore.isAuthenticated
-  const requiresAuth = to.matched.some(r => r.meta.requiresAuth)
-  const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
-  const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin)
-
-  // 2. Already Logged In -> Redirect to last page
-  if (isLoggedIn && requiresGuest) {
-    const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
-    logger.info(`👤 User logged in, restoring to: ${lastRoute}`);
-    return next(lastRoute);
-  }
-
-  // 3. Protected Routes
-  if (requiresAuth) {
-    if (!isLoggedIn) {
-      logger.warn('🛡️ Access denied. Redirecting to Login.')
-      return next('/')
+  try {
+    // 1. Ensure Auth Initialized
+    if (!authStore.isInitialized) {
+      await authStore.initializeAuth()
     }
 
-    // Admin Check
-    if (requiresAdmin && !authStore.isAdmin) {
-      logger.warn('⚠️ Admin access denied.')
-      return next({ name: 'Dashboard' })
-    }
-  }
+    const requiresAuth = to.matched.some(r => r.meta.requiresAuth)
+    const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
 
-  next()
+    // 2. Check session only if needed to avoid hanging
+    if (requiresAuth) {
+      // نستخدم getSession() فقط إذا لم يكن هناك مستخدم في الستور أو للتأكد من صلاحية الجلسة
+      // قمنا بإضافة محاولة سريعة لتجنب التعليق
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        logger.warn('🔒 Session invalid or expired. Redirecting to login.');
+        authStore.user = null;
+        authStore.userProfile = null;
+        if (to.path !== '/') return next('/');
+        return next();
+      } else {
+        authStore.user = session.user;
+      }
+    }
+
+    const isLoggedIn = authStore.isAuthenticated
+
+    // 3. Already Logged In -> Redirect to last page
+    if (isLoggedIn && requiresGuest) {
+      const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
+      // تجنب حلقة مفرغة إذا كان lastRoute هو نفس الصفحة الحالية
+      if (lastRoute === to.path) return next();
+      return next(lastRoute);
+    }
+
+    // 4. Admin Check
+    if (requiresAuth) {
+      const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin)
+      if (requiresAdmin && !authStore.isAdmin) {
+        logger.warn('⚠️ Admin access denied.')
+        return next({ name: 'Dashboard' })
+      }
+    }
+
+    next()
+  } catch (err) {
+    logger.error('🚀 Router Guard Error:', err);
+    // في حالة حدوث خطأ كارثي، اسمح بالانتقال لتجنب تجميد الواجهة أو وجه للرئيسية
+    next();
+  }
 })
 
 // --- Page Tracker ---

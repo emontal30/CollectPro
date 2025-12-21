@@ -45,6 +45,14 @@ export const usePaymentStore = defineStore('payment', () => {
     }
   }
 
+  /**
+   * تعيين طريقة الدفع المختارة
+   */
+  function setPaymentMethod(method) {
+    paymentMethod.value = method;
+    logger.debug(`💳 Payment method changed to: ${method}`);
+  }
+
   async function submitPayment() {
     if (!transactionId.value.trim()) {
       error('رقم عملية التحويل مطلوب');
@@ -56,7 +64,6 @@ export const usePaymentStore = defineStore('payment', () => {
       const { user } = await api.auth.getUser();
       if (!user) throw new Error("المستخدم غير مسجل دخوله.");
 
-      // التحقق من الاشتراكات النشطة (تم التحويل لـ apiInterceptor)
       const { data: activeSubs, error: fetchError } = await apiInterceptor(
         supabase
           .from('subscriptions')
@@ -107,6 +114,7 @@ export const usePaymentStore = defineStore('payment', () => {
     paymentMethod,
     isLoading,
     init,
+    setPaymentMethod,
     submitPayment
   };
 });

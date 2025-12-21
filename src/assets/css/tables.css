@@ -14,7 +14,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--surface-bg);
   min-width: 600px; /* Prevent squashing on mobile */
   table-layout: fixed; /* Default to fixed */
 }
@@ -23,7 +23,7 @@ table {
 .modern-table, .collections-table, .archive-table, .counter-table {
   width: 100%;
   text-align: center;
-  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  background: var(--surface-bg);
   border: 2px solid var(--primary);
   border-radius: var(--border-radius);
   overflow: hidden;
@@ -41,7 +41,7 @@ thead th, .modern-table th, .collections-table th {
   z-index: 10;
   white-space: nowrap;
   border-bottom: 1px solid rgba(255,255,255,0.15);
-  font-family: "Noto Kufi Arabic", var(--font-family-sans);
+  font-family: var(--font-family-sans);
 }
 
 /* Center headers for modern tables (Harvest, Archive, etc.) */
@@ -58,8 +58,8 @@ thead th {
 /* 5. Table Cells (Td) */
 tbody td, .modern-table td, .collections-table td {
   padding: 12px;
-  border-bottom: 1px solid rgba(0, 121, 101, 0.1);
-  border-right: 1px solid rgba(0, 121, 101, 0.1);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   vertical-align: middle;
   font-size: 0.95rem;
   transition: background 0.2s;
@@ -68,6 +68,7 @@ tbody td, .modern-table td, .collections-table td {
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  color: var(--gray-900);
 }
 
 tbody tr:hover {
@@ -97,13 +98,13 @@ tr:last-child td { border-bottom: none !important; }
 
 /* 7. Total Row (Sticky Bottom) */
 .total-row {
-  position: static !important;
-  bottom: auto !important;
-  z-index: auto !important;
+  position: static;
+  bottom: auto;
+  z-index: auto;
   background: var(--primary-light) !important;
   color: white !important;
   font-weight: 800;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .total-row td {
@@ -112,6 +113,7 @@ tr:last-child td { border-bottom: none !important; }
   border-right: 1px solid rgba(0,0,0,0.1) !important;
   font-family: var(--font-family-sans);
   font-size: 1.1rem;
+  color: white !important;
 }
 
 /* Ensure net total text is white for visibility */
@@ -123,9 +125,9 @@ tr:last-child td { border-bottom: none !important; }
 }
 
 /* 8. Net Column Coloring & Borders */
-td.net.positive { color: #007bff; font-weight: bold; white-space: nowrap !important; }
-td.net.negative { color: #dc3545; font-weight: bold; white-space: nowrap !important; }
-td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important; }
+td.net.positive { color: #3b82f6; font-weight: bold; white-space: nowrap !important; }
+td.net.negative { color: var(--danger); font-weight: bold; white-space: nowrap !important; }
+td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !important; }
 
 /* Professional Negative Net Border System */
 .negative-net-border {
@@ -200,7 +202,7 @@ td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important;
   direction: ltr !important;
   padding-left: 8px;
   font-size: 0.75rem !important;
-  color: #6b7280 !important;
+  color: var(--gray-600) !important;
   font-style: italic !important;
 }
 
@@ -210,6 +212,7 @@ td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important;
 .modern-table td .centered-input {
   font-family: var(--font-family-mono);
   font-size: 0.95rem;
+  color: inherit;
 }
 
 /* Center the total label inside the totals row (shop cell) without changing calculations */
@@ -229,4 +232,14 @@ td.net.zero { color: #28a745; font-weight: bold; white-space: nowrap !important;
 .col-subscription-days {
     width: 100px !important;
     min-width: 100px !important;
+}
+
+/* 11. Dark Mode Specific Overrides for Total Row */
+body.dark .total-row {
+  background: var(--table-header-bg) !important;
+}
+
+body.dark .total-row td {
+  color: #ffffff !important;
+  border-top: 2px solid rgba(255,255,255,0.1) !important;
 }

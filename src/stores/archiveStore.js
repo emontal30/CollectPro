@@ -7,12 +7,14 @@ import { apiInterceptor } from '@/services/apiInterceptor';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
+import { supabase } from '@/supabase';
 
 export const useArchiveStore = defineStore('archive', () => {
   const rows = ref([]);
   const availableDates = ref([]);
   const selectedDate = ref('');
   const isLoading = ref(false);
+  const isGlobalSearching = ref(false); // حالة للبحث الشامل
 
   const { addNotification } = useNotifications();
   const authStore = useAuthStore();
@@ -29,9 +31,6 @@ export const useArchiveStore = defineStore('archive', () => {
     }, { amount: 0, extra: 0, collector: 0, net: 0 });
   });
 
-  /**
-   * الحصول على التاريخ المحلي للجهاز
-   */
   function getTodayLocal() {
     const d = new Date();
     const offset = d.getTimezoneOffset();
@@ -39,11 +38,15 @@ export const useArchiveStore = defineStore('archive', () => {
     return localDate.toISOString().split('T')[0];
   }
 
-  /**
-   * تحميل قائمة التواريخ المتاحة
-   */
   async function loadAvailableDates() {
     try {
+      if (!authStore.user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          authStore.user = session.user;
+        }
+      }
+
       const user = authStore.user;
       const allKeys = await localforage.keys();
       const localDates = allKeys
@@ -52,7 +55,6 @@ export const useArchiveStore = defineStore('archive', () => {
 
       let cloudDates = [];
       
-      // محاولة الجلب من السحاب إذا كان أونلاين عبر الخدمة المتخصصة
       if (navigator.onLine && user) {
         const { dates, error } = await apiInterceptor(
           api.archive.getAvailableDates(user.id)
@@ -64,13 +66,10 @@ export const useArchiveStore = defineStore('archive', () => {
       }
 
       const dateMap = new Map();
-      
-      // دمج المحلي
       localDates.forEach(d => { 
         if (d && d.length >= 10) dateMap.set(d, { value: d, source: 'local' }); 
       });
 
-      // دمج السحابي
       cloudDates.forEach(d => {
         if (d) {
           if (dateMap.has(d)) dateMap.get(d).source = 'synced'; 
@@ -87,30 +86,31 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /**
-   * تحميل بيانات يوم معين
-   */
   async function loadArchiveByDate(dateStr) {
     if (!dateStr) return;
     isLoading.value = true;
     selectedDate.value = dateStr;
+    isGlobalSearching.value = false;
     
     try {
+      if (!authStore.user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) authStore.user = session.user;
+      }
+
       const user = authStore.user;
       const localKey = `${DB_PREFIX}${dateStr}`;
-      
-      // الأولوية للمحلي
       const localData = await localforage.getItem(localKey);
       
       if (localData) {
-        rows.value = Array.isArray(localData) ? localData : (localData.rows || []);
+        rows.value = (Array.isArray(localData) ? localData : (localData.rows || [])).map(r => ({...r, date: dateStr}));
       } else if (navigator.onLine && user) {
         const { data, error } = await apiInterceptor(
           api.archive.getArchiveByDate(user.id, dateStr)
         );
 
         if (!error && data) {
-          rows.value = data;
+          rows.value = data.map(r => ({...r, date: dateStr}));
           await localforage.setItem(localKey, data);
         } else {
           rows.value = [];
@@ -127,77 +127,77 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   /**
-   * رفع الأرشيف (تستخدم من قبل واجهة المستخدم أو الطابور)
+   * البحث في جميع الأرشيفات المتاحة محلياً
    */
+  async function searchInAllArchives(query) {
+    if (!query || query.length < 2) return;
+    
+    isLoading.value = true;
+    isGlobalSearching.value = true;
+    const q = query.toLowerCase();
+    const results = [];
+
+    try {
+      const allKeys = await localforage.keys();
+      const archKeys = allKeys.filter(k => k.startsWith(DB_PREFIX));
+
+      for (const key of archKeys) {
+        const dateStr = key.replace(DB_PREFIX, '');
+        const data = await localforage.getItem(key);
+        const records = Array.isArray(data) ? data : (data.rows || []);
+        
+        const matches = records.filter(r => 
+          (r.shop && r.shop.toLowerCase().includes(q)) || 
+          (r.code && r.code.toString().toLowerCase().includes(q))
+        ).map(r => ({ ...r, date: dateStr }));
+        
+        results.push(...matches);
+      }
+
+      rows.value = results;
+      selectedDate.value = ''; // إلغاء اختيار التاريخ المحدد أثناء البحث الشامل
+    } catch (err) {
+      logger.error('❌ Global Search Error:', err);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function uploadArchive(payload) {
     const { user_id, archive_date, data } = payload;
     const { error } = await apiInterceptor(
       api.archive.saveDailyArchive(user_id, archive_date, data)
     );
-
     if (error) throw error;
     return true;
   }
 
-  /**
-   * حذف الأرشيف (محلياً وسحابياً مع دعم الأوفلاين)
-   */
   async function deleteArchive(dateStr) {
     if (!dateStr) return { success: false, message: 'لا يوجد تاريخ محدد' };
-    
     isLoading.value = true;
     try {
       const user = authStore.user;
-      
-      // 1. الحذف المحلي الفوري دائماً أولاً لضمان سرعة الاستجابة للمستخدم
       await localforage.removeItem(`${DB_PREFIX}${dateStr}`);
-      
-      // إذا كان هذا هو التاريخ المعروض حالياً، قم بتفريغ الجدول
       if (selectedDate.value === dateStr) {
         rows.value = [];
         selectedDate.value = '';
       }
-
-      // 2. محاولة الحذف السحابي (أو الجدولة للطابور)
       if (user) {
         if (navigator.onLine) {
           try {
-            const { error } = await apiInterceptor(
-              api.archive.deleteArchiveByDate(user.id, dateStr)
-            );
-            
-            // إذا فشل الحذف بسبب الشبكة، نضعه في طابور المزامنة
+            const { error } = await apiInterceptor(api.archive.deleteArchiveByDate(user.id, dateStr));
             if (error && (error.status === 'offline' || error.status === 'network_error' || error.silent)) {
-              await addToSyncQueue({
-                type: 'delete_archive',
-                payload: { user_id: user.id, archive_date: dateStr }
-              });
-            } else if (error) {
-              // خطأ آخر غير الشبكة (مثل صلاحيات)، نلقيه للمعالجة في الـ catch
-              throw error;
-            }
+              await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
+            } else if (error) throw error;
           } catch (netErr) {
-             // في حال حدوث خطأ غير متوقع أثناء محاولة الاتصال
-             await addToSyncQueue({
-               type: 'delete_archive',
-               payload: { user_id: user.id, archive_date: dateStr }
-             });
+             await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
           }
         } else {
-           // إضافة طلب حذف للطابور إذا كان أوفلاين صراحة
-           await addToSyncQueue({
-             type: 'delete_archive',
-             payload: { user_id: user.id, archive_date: dateStr }
-           });
+           await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
         }
       }
-
-      // تحديث قائمة التواريخ
       await loadAvailableDates();
-      
-      const statusMsg = (navigator.onLine) ? 'بنجاح' : 'محلياً (سيتم المزامنة لاحقاً)';
-      return { success: true, message: `تم حذف الأرشيف ${statusMsg} 🗑️` };
-      
+      return { success: true, message: `تم حذف الأرشيف بنجاح 🗑️` };
     } catch (err) {
       logger.error('❌ ArchiveStore: deleteArchive Error:', err);
       return { success: false, message: 'فشل في حذف الأرشيف' };
@@ -211,9 +211,11 @@ export const useArchiveStore = defineStore('archive', () => {
     availableDates, 
     selectedDate, 
     isLoading, 
+    isGlobalSearching,
     totals,
     loadAvailableDates, 
     loadArchiveByDate, 
+    searchInAllArchives,
     deleteArchive,
     uploadArchive,
     getTodayLocal,

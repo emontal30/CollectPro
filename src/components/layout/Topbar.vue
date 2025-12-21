@@ -17,13 +17,6 @@
 <script setup>
 import { useSidebarStore } from '@/stores/sidebarStore'
 
-const props = defineProps({
-  pageTitle: {
-    type: String,
-    default: ''
-  }
-})
-
 const sidebarStore = useSidebarStore()
 
 const toggleSidebar = () => {
@@ -42,107 +35,73 @@ const toggleSidebar = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  direction: ltr;
-  padding: 15px 20px;
+  direction: ltr; /* Keeps logo on left and menu on right consistently */
+  padding: 0 20px;
   background: var(--primary, #007965);
   color: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  overflow: hidden;
 }
 
 /* Logo section */
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header-logo {
-  height: 40px;
+  height: 42px;
   width: auto;
   display: block;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .header-logo:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 .app-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: white;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
   letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-}
-
-/* Header controls section */
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .menu-toggle {
-  background: none;
-  border: none;
-  color: inherit;
-  padding: 8px;
-  cursor: pointer;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Dark mode toggle button */
-.dark-mode-toggle {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 8px 12px;
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
   cursor: pointer;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  outline: none;
-  border-radius: 8px;
   transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
 }
 
-.dark-mode-toggle:hover {
+.menu-toggle:hover {
   background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
+  transform: translateY(-2px);
 }
 
-.dark-mode-toggle:active {
-  transform: scale(0.95);
+.menu-toggle:active {
+  transform: translateY(0);
 }
-
-/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
-/* Fix content overlap with fixed topbar remains global (body padding set elsewhere) */
 
 /* Mobile responsiveness */
-@media (max-width: 1024px) {
-  .header-content {
-    padding: 14px 18px;
-  }
-  
-  .header-logo {
-    height: 38px;
-  }
-}
-
 @media (max-width: 768px) {
   .header-content {
-    padding: 12px 15px;
+    padding: 0 15px;
+    height: 65px;
   }
   
   .header-logo {
@@ -150,39 +109,23 @@ const toggleSidebar = () => {
   }
   
   .app-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
+  }
+
+  .menu-toggle {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
   }
 }
 
 @media (max-width: 480px) {
-  .header-content {
-    padding: 10px 12px;
-  }
-  
   .header-logo {
-    height: 30px;
+    height: 32px;
   }
   
   .app-title {
-    font-size: 1rem;
-  }
-  
-  .logo-section {
-    gap: 8px;
-  }
-}
-
-@media (max-width: 360px) {
-  .header-content {
-    padding: 8px 10px;
-  }
-  
-  .header-logo {
-    height: 28px;
-  }
-  
-  .app-title {
-    font-size: 0.9rem;
+    font-size: 1.1rem;
   }
 }
 </style>

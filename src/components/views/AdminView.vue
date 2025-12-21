@@ -15,8 +15,8 @@
           <h3>{{ stat.label }}</h3>
           <p class="stat-value">{{ store.stats[key] || 0 }} {{ stat.unit }}</p>
           
-          <div v-if="key === 'activeUsers'" class="stat-filter-wrapper">
-             <select v-model="store.filters.activeUsersPeriod" class="stat-select" @change="store.fetchStats">
+          <div v-if="key === 'activeUsers'" class="mt-2">
+             <select v-model="store.filters.activeUsersPeriod" class="archive-select p-1 text-xs" @change="store.fetchStats">
                <option :value="1">آخر 24 ساعة</option>
                <option :value="7">آخر 7 أيام</option>
                <option :value="30">آخر 30 يوم</option>
@@ -28,23 +28,28 @@
 
     <!-- Users Table -->
     <div class="admin-section">
-      <div class="section-header">
-        <div class="header-main">
+      <div class="admin-section-header">
+        <div class="d-flex align-center gap-3">
           <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
           <div class="bulk-actions" v-if="selectedUsers.length > 0">
-            <input v-model.number="bulkDays" type="number" class="bulk-input" placeholder="أيام الاشتراك">
-            <button class="btn-bulk" @click="handleBulkActivate">تفعيل للمحددين ({{ selectedUsers.length }})</button>
+            <input v-model.number="bulkDays" type="number" class="bulk-input" placeholder="أيام">
+            <button class="btn btn-secondary btn-sm p-1" @click="handleBulkActivate">تفعيل للمحددين ({{ selectedUsers.length }})</button>
           </div>
         </div>
       </div>
-      <div class="table-header-info">
-        <input v-model="store.filters.usersSearch" type="text" class="filter-select users-search-input" placeholder="ابحث بالاسم أو البريد" />
+      
+      <div class="p-3 bg-light border-bottom">
+        <div class="search-input-wrapper w-full">
+           <i class="fas fa-search control-icon"></i>
+           <input v-model="store.filters.usersSearch" type="text" class="search-input" placeholder="ابحث بالاسم أو البريد" />
+        </div>
       </div>
-      <div class="table-container">
-        <table id="logged-in-users-table">
+
+      <div class="table-wrapper m-0 rounded-none shadow-none">
+        <table id="logged-in-users-table" class="modern-table">
           <thead>
             <tr>
-              <th class="text-center col-selection">
+              <th class="th-checkbox">
                 <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll">
               </th>
               <th>المستخدم</th>
@@ -56,14 +61,14 @@
           </thead>
           <tbody>
             <tr v-for="user in filteredUsers" :key="user.id">
-              <td class="text-center col-selection">
+              <td class="td-checkbox">
                 <input type="checkbox" v-model="selectedUsers" :value="user.id">
               </td>
               <td>
                 <div class="user-info-cell">
-                  <div class="user-name">{{ user.full_name || 'مستخدم' }}</div>
-                  <div class="user-email">{{ user.email }}</div>
-                  <div class="user-id-text">ID: {{ user.id?.slice(0, 8) }}</div>
+                  <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
+                  <div class="user-email text-xs text-muted">{{ user.email }}</div>
+                  <div class="user-short-id">ID: {{ user.id.slice(0, 8) }}</div>
                 </div>
               </td>
               <td>{{ store.formatDate(user.created_at) }}</td>
@@ -72,11 +77,11 @@
                 <span v-else class="status-badge status-cancelled">غير نشط</span>
               </td>
               <td class="col-subscription-days">
-                <input v-model="user.manualDays" type="number" class="subscription-days-input" placeholder="أيام">
+                <input v-model="user.manualDays" type="number" class="editable-input w-full" placeholder="أيام">
               </td>
-              <td class="col-actions text-center">
+              <td class="text-center">
                 <button 
-                  class="action-btn manual-activate"
+                  class="btn btn--icon"
                   :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
                   @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
                   <i class="fas fa-play-circle"></i>
@@ -85,21 +90,21 @@
             </tr>
           </tbody>
         </table>
-        <div v-if="filteredUsers.length === 0" class="no-data"><p>لا يوجد مستخدمون مطابقون للبحث</p></div>
       </div>
     </div>
 
     <!-- Pending Subscriptions -->
     <div class="admin-section">
-      <div class="section-header">
+      <div class="admin-section-header">
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
-      <div class="table-container">
-        <table v-if="store.pendingSubscriptions.length > 0">
+      <div class="table-wrapper m-0 rounded-none shadow-none">
+        <table class="modern-table" v-if="store.pendingSubscriptions.length > 0">
           <thead>
             <tr>
               <th>المستخدم</th>
               <th>الخطة</th>
+              <th>رقم العملية</th>
               <th>تاريخ الطلب</th>
               <th class="text-center">الإجراءات</th>
             </tr>
@@ -108,51 +113,50 @@
             <tr v-for="sub in store.pendingSubscriptions" :key="sub.id">
               <td>
                 <div class="user-info-cell">
-                  <div class="user-name">{{ sub.users?.full_name || 'مستخدم' }}</div>
-                  <div class="user-email">{{ sub.users?.email }}</div>
-                  <div class="user-id-text">ID: {{ sub.user_id?.slice(0, 8) }}</div>
+                  <div class="user-name font-bold">{{ sub.users?.full_name || 'مستخدم' }}</div>
+                  <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
+                  <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
                 </div>
               </td>
               <td>{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
+              <td class="font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
               <td>{{ store.formatDate(sub.created_at) }}</td>
-              <td class="actions-cell">
-                <button class="action-btn approve" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
-                <button class="action-btn reject" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
+              <td class="text-center d-flex justify-center gap-2">
+                <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
+                <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
               </td>
             </tr>
           </tbody>
         </table>
-        <div v-else class="no-data"><p>لا توجد طلبات معلقة</p></div>
+        <div v-else class="no-data p-5 text-center text-muted"><p>لا توجد طلبات معلقة</p></div>
       </div>
     </div>
 
     <!-- All Subscriptions -->
     <div class="admin-section">
-       <div class="section-header">
+       <div class="admin-section-header">
         <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
       </div>
-      <div class="table-header-info">
-        <div class="filter-container">
-          <select v-model="store.filters.status" class="filter-select" @change="store.fetchAllSubscriptions(true)">
+      <div class="p-3 bg-light border-bottom d-flex gap-2">
+          <select v-model="store.filters.status" class="archive-select" style="max-width: 200px" @change="store.fetchAllSubscriptions(true)">
             <option value="all">كل الحالات</option>
             <option value="active">نشط</option>
             <option value="expired">منتهي</option>
             <option value="cancelled">معلق</option>
           </select>
-           <select v-model="store.filters.expiry" class="filter-select" @change="store.fetchAllSubscriptions(true)">
+           <select v-model="store.filters.expiry" class="archive-select" style="max-width: 200px" @change="store.fetchAllSubscriptions(true)">
             <option value="all">كل الصلاحيات</option>
             <option value="expiring_soon">قارب على الانتهاء (7 أيام)</option>
           </select>
-        </div>
       </div>
-      <div class="table-container">
-        <table>
+      <div class="table-wrapper m-0 rounded-none shadow-none">
+        <table class="modern-table">
           <thead>
             <tr>
               <th>المستخدم</th>
               <th>الحالة</th>
               <th>تاريخ الانتهاء</th>
-              <th class="text-center">الأيام المتبقية</th>
+              <th class="text-center">الأيام</th>
               <th class="text-center">إجراء</th>
             </tr>
           </thead>
@@ -160,9 +164,9 @@
             <tr v-for="sub in store.allSubscriptions" :key="sub.id">
               <td>
                 <div class="user-info-cell">
-                  <div class="user-name">{{ sub.users?.full_name || sub.users?.email }}</div>
-                  <div class="user-email">{{ sub.users?.email }}</div>
-                  <div class="user-id-text">ID: {{ sub.user_id?.slice(0, 8) }}</div>
+                  <div class="user-name font-bold">{{ sub.users?.full_name || sub.users?.email }}</div>
+                  <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
+                  <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
                 </div>
               </td>
               <td>
@@ -173,18 +177,18 @@
               <td>{{ store.formatDate(sub.end_date) }}</td>
               <td class="text-center font-bold">
                 <span v-if="sub.status === 'active'" :style="{ color: getRemainingDaysColor(sub.end_date) }">
-                  {{ calculateRemainingDays(sub.end_date) }} يوم
+                  {{ calculateRemainingDays(sub.end_date) }}
                 </span>
                 <span v-else>-</span>
               </td>
-              <td class="actions-cell">
-                 <button v-if="sub.status === 'active'" class="action-btn deactivate" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')">
+              <td class="text-center d-flex justify-center gap-2">
+                 <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')">
                    <i class="fas fa-pause"></i>
                  </button>
-                 <button v-if="sub.status === 'cancelled'" class="action-btn reactivate" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')">
+                 <button v-if="sub.status === 'cancelled'" class="btn btn--icon text-success" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')">
                    <i class="fas fa-play"></i>
                  </button>
-                <button class="action-btn delete" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')">
+                <button class="btn btn--icon text-danger" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')">
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
@@ -203,7 +207,7 @@ import PageHeader from '@/components/layout/PageHeader.vue';
 import { useNotifications } from '@/composables/useNotifications';
 
 const store = useAdminStore();
-const { confirm, success, error } = useNotifications();
+const { confirm, addNotification } = useNotifications();
 
 const adminStats = {
   totalUsers: { label: 'إجمالي المستخدمين', icon: 'fas fa-users', unit: '' },
@@ -213,7 +217,6 @@ const adminStats = {
   totalRevenue: { label: 'إجمالي الإيرادات', icon: 'fas fa-money-bill-wave', unit: 'ج.م' },
 };
 
-// --- Bulk Actions logic ---
 const selectedUsers = ref([]);
 const bulkDays = ref(null);
 
@@ -231,7 +234,7 @@ const toggleSelectAll = () => {
 
 const handleBulkActivate = async () => {
   if (!bulkDays.value || bulkDays.value < 1) {
-    return error('يرجى إدخال عدد أيام صحيح للتفعيل الجماعي');
+    return addNotification('يرجى إدخال عدد أيام صحيح', 'error');
   }
 
   const result = await confirm({
@@ -243,7 +246,6 @@ const handleBulkActivate = async () => {
   if (result.isConfirmed) {
     let successCount = 0;
     for (const userId of selectedUsers.value) {
-      // Logic for bulk activation (can be optimized but keeping simple for now)
       try {
         await store.activateManualSubscription(userId, bulkDays.value, false, true);
         successCount++;
@@ -254,12 +256,11 @@ const handleBulkActivate = async () => {
     
     selectedUsers.value = [];
     bulkDays.value = null;
-    success(`تم تفعيل الاشتراك بنجاح لـ ${successCount} مستخدم.`);
+    addNotification(`تم تفعيل الاشتراك لـ ${successCount} مستخدم.`, 'success');
     await store.loadDashboardData();
   }
 };
 
-// Filtering & Helpers
 const filteredUsers = computed(() => {
   if (!store.filters.usersSearch) return store.usersList;
   const q = store.filters.usersSearch.toLowerCase();
@@ -279,8 +280,8 @@ const calculateRemainingDays = (endDate) => {
 
 const getRemainingDaysColor = (endDate) => {
   const days = calculateRemainingDays(endDate);
-  if (days <= 3) return '#e74c3c';
-  if (days <= 7) return '#f39c12';
+  if (days <= 3) return '#ef4444';
+  if (days <= 7) return '#f59e0b';
   return 'inherit';
 };
 
@@ -290,46 +291,40 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-dashboard { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
-.stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
-.stat-card { background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; position: relative; }
-.stat-icon { font-size: 1.8rem; color: var(--primary); }
-.stat-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); margin: 0; }
+.bulk-input { 
+  width: 70px; 
+  padding: 4px 8px; 
+  border-radius: 6px; 
+  border: 1px solid rgba(255,255,255,0.3); 
+  background: rgba(255,255,255,0.1); 
+  color: white;
+  font-weight: bold;
+}
+.bulk-input::placeholder { color: rgba(255,255,255,0.6); }
 
-.stat-filter-wrapper { margin-top: 10px; }
-.stat-select { padding: 4px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.8rem; outline: none; }
+.status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
+.status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
-.admin-section { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 32px; }
-.section-header { background: var(--primary); padding: 20px; color: white; border-radius: 12px 12px 0 0; }
-.header-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+.user-info-cell { text-align: right; }
+.user-short-id { 
+  display: inline-block;
+  font-size: 10px;
+  color: var(--gray-600);
+  font-family: var(--font-family-mono);
+  background: var(--gray-100);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
 
-.bulk-actions { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 8px; }
-.bulk-input { width: 80px; padding: 6px; border-radius: 4px; border: none; outline: none; color: #333; }
-.btn-bulk { background: #fff; color: var(--primary); border: none; padding: 6px 12px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-.btn-bulk:hover { background: #eef; }
+body.dark .user-short-id {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gray-400);
+}
 
-.table-header-info { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
-.filter-select, .users-search-input { padding: 10px; border-radius: 8px; border: 1px solid #ced4da; min-width: 200px; }
-.table-container { padding: 20px; overflow-x: auto; }
-
-.col-selection { width: 40px; max-width: 40px; padding-left: 8px !important; padding-right: 8px !important; }
-.col-actions { text-align: center !important; vertical-align: middle !important; }
-.action-btn { display: inline-flex; justify-content: center; align-items: center; width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; margin: 0 auto; }
-.action-btn.manual-activate { background: var(--primary); color: white; }
-.action-btn.deactivate { background: #f39c12; color: white; }
-.action-btn.reactivate { background: var(--success); color: white; }
-.action-btn.delete { background: #343a40; color: white; }
-
-.actions-cell { display: flex; gap: 8px; justify-content: center; align-items: center; }
-.status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
-.status-active { background: rgba(39, 174, 96, 0.1); color: var(--success); }
-.status-cancelled { background: rgba(243, 156, 18, 0.1); color: #f39c12; }
-.no-data { text-align: center; padding: 40px; color: var(--gray-500); }
-.text-center { text-align: center !important; }
-
-/* User Info Styling */
-.user-info-cell { text-align: right; display: flex; flex-direction: column; gap: 2px; }
-.user-name { font-weight: 600; color: #333; }
-.user-email { font-size: 0.85rem; color: #666; }
-.user-id-text { font-size: 0.7rem; color: #999; font-family: var(--font-family-mono); }
+/* Dark mode specific for child components not handled by global */
+body.dark .bg-light { background-color: #0f172a !important; border-color: #334155 !important; }
+body.dark .border-bottom { border-color: #334155 !important; }
 </style>

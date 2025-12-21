@@ -10,7 +10,7 @@ import api from '@/services/api';
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
   const user = ref(null)
-  const userProfile = ref(null) // إضافة لتخزين بيانات الملف الشخصي (بما في ذلك الدور)
+  const userProfile = ref(null) 
   const isLoading = ref(false)
   const isInitialized = ref(false)
   const authWarning = ref('')
@@ -28,87 +28,72 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('last_active_time', Date.now().toString());
   }
 
-  /**
-   * مزامنة ملف تعريف المستخدم وجلب بياناته
-   */
+  function cleanUrlHash() {
+    if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+      logger.info('🧹 Cleaning sensitive data from URL hash');
+      window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
+  }
+
   async function syncUserProfile(userData) {
     if (!userData) return
     try {
       const result = await api.user.syncUserProfile(userData)
-      // إذا كان أوفلاين، نستخدم بيانات محلية بسيطة أو نتركها فارغة
-      if (result.isOffline) {
-        logger.info('📡 Offline: Using basic user session data.');
-        return;
-      }
+      if (result.isOffline) return;
       if (result.error) throw result.error
       userProfile.value = result.profile
-      logger.debug('✅ User profile synced & loaded:', result.profile?.role)
     } catch (err) {
-      // لا نحذر في الكونسول إذا كان خطأ شبكة متوقع
-      if (!err.message?.includes('fetch')) {
-         logger.warn('Profile Sync Warning:', err)
-      }
+      logger.warn('Profile Sync Warning:', err.message)
     }
   }
 
-  /**
-   * تهيئة المصادقة
-   */
   async function initializeAuth() {
     if (isInitialized.value) return
     
     isLoading.value = true;
     try {
-      logger.info('🚀 Initializing Auth...');
-
+      // 1. التحقق من مدة الجلسة يدوياً قبل أي شيء
       const lastActiveTime = localStorage.getItem('last_active_time');
       if (lastActiveTime) {
         const timeSinceLastActive = Date.now() - parseInt(lastActiveTime, 10);
         if (timeSinceLastActive > SESSION_DURATION) {
-          logger.info('🛑 Session expired. Logging out.');
-          await logout(false);
+          logger.info('🛑 Session expired by duration. Logging out.');
+          await logout();
           return;
         }
       }
 
+      // 2. الحصول على الجلسة الحالية بصورة آمنة
       const { data: { session }, error } = await supabase.auth.getSession();
-      
       if (error) throw error;
 
       if (session?.user) {
         user.value = session.user;
         updateLastActivity();
         await syncUserProfile(session.user);
-      } else {
-        user.value = null;
-        userProfile.value = null;
+        cleanUrlHash();
       }
 
+      // 3. الاستماع لتغييرات الحالة (دخول، خروج، تحديث توكن)
       supabase.auth.onAuthStateChange(async (event, session) => {
         logger.debug(`🔔 Auth Event: ${event}`);
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          user.value = session?.user || null;
-          if (user.value) {
+          if (session?.user) {
+            user.value = session.user;
             updateLastActivity();
-            await syncUserProfile(user.value);
+            // لا ننتظر المزامنة هنا لعدم تعطيل الواجهة
+            syncUserProfile(session.user);
           }
         } else if (event === 'SIGNED_OUT') {
           user.value = null;
           userProfile.value = null;
           localStorage.removeItem('last_active_time');
-          localStorage.removeItem('app_last_route');
         }
       });
 
     } catch (err) {
-      // إذا كان الخطأ بسبب الشبكة عند التشغيل لأول مرة
-      if (err.message?.includes('fetch') || err.name === 'TypeError') {
-        logger.info('📡 Initialized in Offline Mode');
-      } else {
-        logger.error('💥 Auth Init Error:', err);
-        authWarning.value = 'تعذر الاتصال بخدمة المصادقة';
-      }
+      logger.error('💥 Auth Init Error:', err);
       user.value = null;
     } finally {
       isInitialized.value = true;
@@ -118,40 +103,40 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function loginWithGoogle() {
     isLoading.value = true;
-    authWarning.value = '';
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app/dashboard`
+          redirectTo: `${window.location.origin}/app/dashboard`,
+          queryParams: { prompt: 'select_account', access_type: 'offline' }
         }
       });
       if (error) throw error;
-      updateLastActivity();
     } catch (err) {
-      logger.error('Login Error:', err);
       addNotification('فشل تسجيل الدخول: ' + err.message, 'error');
-      authWarning.value = 'حدث خطأ أثناء الاتصال بجوجل';
       isLoading.value = false;
     }
   }
 
-  async function logout(redirect = true) {
+  async function logout() {
     isLoading.value = true;
     try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      logger.warn('Logout warning:', err);
-    } finally {
+      // مسح البيانات محلياً أولاً لضمان عدم التعليق في حالة فشل الشبكة عند الخروج
       user.value = null;
       userProfile.value = null;
       localStorage.removeItem('last_active_time');
       localStorage.removeItem('app_last_route');
+      
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
+
+      await supabase.auth.signOut();
+    } catch (err) {
+      logger.warn('Logout warning (possibly already signed out):', err);
+    } finally {
       isInitialized.value = false;
       isLoading.value = false;
-      if (redirect) router.replace('/');
+      window.location.href = '/';
     }
   }
 
@@ -160,12 +145,10 @@ export const useAuthStore = defineStore('auth', () => {
     userProfile,
     isLoading,
     isInitialized,
-    authWarning,
     isAuthenticated,
     isAdmin,
     initializeAuth,
     loginWithGoogle,
-    logout,
-    syncUserProfile
+    logout
   };
 });

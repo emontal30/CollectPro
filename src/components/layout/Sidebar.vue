@@ -35,18 +35,18 @@
 
         <div class="subscription-container">
           <h4 class="subscription-title">
-            {{ subStore.isSubscribed ? subStore.planName : 'حالة الاشتراك' }}
+            {{ subStore.planName }}
           </h4>
           <div class="subscription-info">
+            <!-- استخدام الهيئة الموحدة من المتجر مباشرة -->
             <div
               class="subscription-days-simple"
-              :class="subscriptionStatusClass"
+              :class="subStore.ui.class"
             >
-              <i class="fas" :class="subscriptionIcon"></i>
+              <i class="fas" :class="subStore.ui.icon"></i>
               <span id="days-left">
-                {{ subStore.isSubscribed ? subStore.daysRemaining : 'مجاني' }}
+                {{ subStore.ui.label }}
               </span>
-              <span v-if="subStore.isSubscribed"> يوم متبقي</span>
             </div>
           </div>
         </div>
@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue';
+import { computed, inject, onMounted } from 'vue';
 import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
@@ -124,7 +124,6 @@ const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const subStore = useMySubscriptionStore();
 
-// نظام الإشعارات الموحد
 const { confirm, addNotification } = inject('notifications');
 
 const isDarkMode = computed(() => settingsStore.darkMode);
@@ -133,20 +132,11 @@ const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
 };
 
-// حساب كلاس الحالة بناءً على بيانات المتجر الجديد للحفاظ على التنسيق القديم
-const subscriptionStatusClass = computed(() => {
-  if (!subStore.isSubscribed) return 'pending'; // اللون الأبيض (الافتراضي)
-  if (subStore.daysRemaining <= 0) return 'expired'; // اللون الأحمر
-  if (subStore.daysRemaining <= 7) return 'warning'; // اللون البرتقالي
-  return ''; // الافتراضي
-});
-
-// أيقونة الحالة
-const subscriptionIcon = computed(() => {
-  if (!subStore.isSubscribed) return 'fa-clock';
-  if (subStore.daysRemaining <= 0) return 'fa-times-circle';
-  if (subStore.daysRemaining <= 7) return 'fa-exclamation-circle';
-  return 'fa-check-circle';
+onMounted(async () => {
+  // تهيئة بيانات الاشتراك فور تحميل الشريط الجانبي
+  if (authStore.user) {
+    await subStore.init(authStore.user);
+  }
 });
 
 const handleLogout = async () => {
@@ -161,10 +151,7 @@ const handleLogout = async () => {
   if (!result.isConfirmed) return;
 
   try {
-    await authStore.logout(); // استخدام authStore للخروج
-    addNotification('تم تسجيل الخروج بنجاح', 'success');
-    // التوجيه يتم تلقائياً في authStore، ولكن للتأكيد:
-    window.location.href = '/';
+    await authStore.logout();
   } catch (error) {
     logger.error('Logout failed:', error);
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
@@ -173,25 +160,22 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* استيراد المتغيرات الأساسية */
-/* تأكد من أن المتغيرات مثل --primary معرفة في ملف global css */
-
-/* 🎨 الشريط الجانبي - من sidebar.css */
+/* بقية التنسيقات كما هي في الكود الأصلي */
 .sidebar {
     position: fixed;
-    top: 70px; /* يبدأ من أسفل الشريط العلوي مباشرة */
+    top: 0;
     right: -280px;
     width: 280px;
-    height: calc(100vh - 70px);
+    height: 100vh;
     background: var(--primary, #007965);
     color: #fff;
     display: flex;
     flex-direction: column;
-    padding-top: 20px;
-    transition: right 0.3s ease, transform 0.3s ease;
+    padding-top: 80px;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1009;
-    transform: translateX(0);
     overflow-y: auto;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.1);
 }
 
 .sidebar.active {
@@ -199,365 +183,146 @@ const handleLogout = async () => {
 }
 
 .sidebar-header {
-    padding: 0 15px;
-    margin-bottom: 20px;
+    padding: 0 10px;
+    margin-bottom: 15px;
 }
 
-/* User Box Styles */
 .user-box {
-    background: rgba(255,255,255,0.05);
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin: 0 15px 15px 15px;
-    border: 1px solid rgba(255,255,255,0.08);
-    transition: all 0.2s ease;
+    padding: 5px;
 }
 
-.user-box:hover {
-    background: rgba(255,255,255,0.08);
-}
-
-/* User Data Container */
 .user-data-container {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px 15px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   transition: all 0.3s ease;
 }
 
-.user-data-container:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.user-meta { width: 100%; }
-
 .user-name {
-    font-weight: 600;
-    font-size: 18px;
+    font-weight: 700;
+    font-size: 1.1rem;
     color: #ffffff;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-email {
-    font-size: 13px;
+    font-size: 0.8rem;
     color: rgba(255,255,255,0.8);
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     display: block;
+    word-break: break-all;
 }
 
 .user-id {
-    font-size: 11px;
-    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
     font-family: monospace;
-    background: rgba(255,255,255,0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: inline-block;
+    background: rgba(0,0,0,0.2);
+    padding: 3px 8px;
+    border-radius: 6px;
 }
 
 .user-id-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
 }
 
 .dark-mode-toggle-small {
-    background: none;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
-    padding: 4px;
-    color: rgba(255, 255, 255, 0.6);
+    width: 30px;
+    height: 30px;
+    color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    transition: all 0.3s ease;
-    border-radius: 0;
+    font-size: 14px;
+    border-radius: 8px;
 }
 
-.dark-mode-toggle-small:hover {
-    color: white;
-}
-
-/* Subscription Container */
 .subscription-container {
-  background: rgba(0, 121, 101, 0.2);
-  border: 1px solid rgba(0, 121, 101, 0.3);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  transition: all 0.3s ease;
-}
-
-.subscription-container:hover {
-  background: rgba(0, 121, 101, 0.3);
-  border-color: rgba(0, 121, 101, 0.5);
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .subscription-title {
-  color: #ffffff;
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
   font-weight: 600;
-  margin: 0 0 8px 0;
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
-.subscription-info {
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  padding: 0;
-  margin: 0;
+  margin: 0 0 6px 0;
+  text-align: right;
 }
 
 .subscription-days-simple {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
   color: #ffffff;
 }
 
-.subscription-days-simple i {
-  color: #ffffff;
-  font-size: 14px;
-}
-
-/* حالات الاشتراك (ألوان) */
+/* الألوان بناءً على الكلاس القادم من المتجر */
 .subscription-days-simple.expired { color: #ff6b6b; }
-.subscription-days-simple.expired i { color: #ff6b6b; }
-.subscription-days-simple.pending { color: #ffffff; }
-.subscription-days-simple.pending i { color: #ffffff; }
-.subscription-days-simple.warning { color: #f39c12; }
-.subscription-days-simple.warning i { color: #f39c12; }
-
-/* Logout Container */
-.logout-container {
-  background: rgba(220, 53, 69, 0.1);
-  border: 1px solid rgba(220, 53, 69, 0.3);
-  border-radius: 12px;
-  padding: 8px;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.logout-container:hover {
-  background: rgba(220, 53, 69, 0.2);
-  border-color: rgba(220, 53, 69, 0.5);
-}
+.subscription-days-simple.warning { color: #feca57; }
+.subscription-days-simple.active { color: #2ecc71; }
+.subscription-days-simple.pending { color: rgba(255,255,255,0.7); }
 
 .logout-btn {
-  background: #dc3545;
+  background: rgba(220, 53, 69, 0.9);
   border: none;
-  border-radius: 10px;
-  padding: 10px 15px;
+  border-radius: 12px;
+  padding: 12px;
   color: white;
   font-weight: 600;
-  font-size: 13px;
+  width: 100%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+  gap: 10px;
 }
 
-.logout-btn:hover {
-  background: #c82333;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.5);
-}
-
-.logout-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
-}
-
-.logout-btn::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-  opacity: 0;
-  pointer-events: none;
-  border-radius: 10px;
-}
-
-.logout-btn:active::after {
-  animation: logoutPulse 0.6s ease-out;
-}
-
-.logout-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-.logout-btn:disabled:hover {
-  background: #dc3545;
-  transform: none;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-/* Dark mode toggle button - Classic Style */
-.dark-mode-toggle {
-  background: none;
-  border: none;
-  padding: 8px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  transition: all 0.3s ease;
-  width: auto;
-  margin-bottom: 8px;
-  border-radius: 0;
-}
-
-.dark-mode-toggle:hover {
-  color: white;
-}
-
-/* Navigation Links */
-.sidebar-content { flex: 1; overflow-y: auto; }
-.nav-links { list-style: none; padding: 0 15px; }
-
+.nav-links { list-style: none; padding: 0; }
 .nav-links a {
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 20px 15px;
-    margin: 5px 15px;
-    border-radius: 12px;
-    color: #fff;
+    padding: 14px 25px;
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
-    transition: all 0.15s ease;
-    font-size: 18px;
-    font-weight: 500;
-    position: relative;
-    overflow: hidden;
 }
-
-.nav-links a::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.1);
-    transition: right 0.15s ease;
-}
-
-.nav-links a:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateX(5px);
-}
-
-.nav-links a:hover::before { right: 100%; }
 
 .nav-links a.active {
-    background: rgba(255, 255, 255, 0.2);
-    border-left: 4px solid #f39c12;
-    transform: translateX(8px);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    font-weight: 700;
 }
 
-.nav-links a i {
-    font-size: 22px;
-    min-width: 27px;
-    text-align: center;
-}
-
-/* Overlay */
 .overlay {
   position: fixed;
-  top: 70px;
+  top: 0;
   right: 0;
   width: 100%;
-  height: calc(100vh - 70px);
-  background: rgba(0, 0, 0, 0.4);
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   opacity: 0;
   visibility: hidden;
-  transition: 0.15s ease;
   z-index: 1008;
 }
 
-.overlay.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-@keyframes logoutPulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.1);
-  }
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .sidebar {
-    right: -290px;
-  }
-  .sidebar.active { right: 0; }
-  
-  .overlay {
-    top: 70px;
-    height: calc(100vh - 70px);
-  }
-}
-
-@media (max-width: 768px) {
-    .sidebar { top: 70px; height: calc(100vh - 70px); }
-    .overlay { top: 70px; height: calc(100vh - 70px); }
-}
-
-@media (max-width: 480px) {
-    .sidebar {
-      width: 100vw;
-      right: -100vw;
-      top: 70px;
-      height: calc(100vh - 70px);
-      border-radius: 0;
-    }
-    .sidebar.active { right: 0; }
-    
-    .overlay {
-      top: 70px;
-      height: calc(100vh - 70px);
-    }
-}
+.overlay.active { opacity: 1; visibility: visible; }
 </style>

@@ -2,83 +2,35 @@
 /* Target: body.dark */
 /* Purpose: Visual overrides ONLY (Colors, Shadows, Gradients). No layout changes. */
 
-/* =========================================
-   1. VARIABLES OVERRIDES (Color Palette)
-   ========================================= */
-body.dark {
-  /* --- Core Backgrounds --- */
-  --light-bg: #0f172a;            /* Deep Slate Blue (Main Body) */
-  --content-bg: #1e293b;          /* Lighter Slate (Containers) */
-  --white: #1e293b;               /* Surface Color */
-  
-  /* --- Text Colors --- */
-  --gray-900: #f1f5f9;            /* Headings */
-  --gray-600: #94a3b8;            /* Body Text */
-  --gray-300: #334155;            /* Borders */
-  --gray-100: #020617;            /* Input Backgrounds */
-
-  /* --- Brand Colors (Neon/Glow adjustments) --- */
-  --primary: #2dd4bf;             /* Teal-400 (Brighter for dark mode) */
-  --primary-dark: #0d9488;        /* Teal-600 */
-  --primary-light: #5eead4;       /* Teal-200 */
-  
-  /* --- Status Colors --- */
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #10b981;
-  --info: #3b82f6;
-
-  /* --- Specific Dark Mode Tokens --- */
-  --dark-surface: #1e293b;
-  --dark-surface-hover: #334155;
-  --dark-border: rgba(255, 255, 255, 0.08);
-  --dark-shadow: rgba(0, 0, 0, 0.5);
-  --table-header-bg: linear-gradient(135deg, #0f172a, #1e293b);
-  --table-row-hover: rgba(45, 212, 191, 0.05); /* Teal hint on hover */
-}
-
-/* =========================================
-   2. BASE & TYPOGRAPHY
-   ========================================= */
 body.dark {
   background-color: var(--light-bg);
   color: var(--gray-600);
 }
 
-/* 2.1 Main Page Titles (Text Gradient) */
+/* =========================================
+   1. BASE & TYPOGRAPHY
+   ========================================= */
+
+/* 1.1 Main Page Titles (Modern Gradient) */
 body.dark h1, 
 body.dark h2,
 body.dark .page-title,
 body.dark .section-header h2 {
-  background: linear-gradient(45deg, #ffffff 30%, #2dd4bf 100%); /* White to Teal */
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  text-fill-color: transparent !important;
+  background: var(--header-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-fill-color: transparent;
   text-shadow: 0 2px 10px rgba(45, 212, 191, 0.1); 
-  font-weight: 800 !important;
+  font-weight: 800;
 }
 
 body.dark h3, body.dark h4, body.dark h5, body.dark h6 {
-  color: var(--gray-900) !important;
+  color: var(--gray-900);
 }
 
 body.dark a { color: var(--primary); }
 body.dark a:hover { color: var(--primary-light); }
-
-/* 2.2 Component Titles Fix (The Box Fix) */
-/* Instead of solid background, use dark bg with accent border */
-body.dark .counter-title,
-body.dark .summary-title,
-body.dark .categories-title,
-body.dark .plan-header,
-body.dark .section-title {
-  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
-  border: 1px solid rgba(45, 212, 191, 0.2) !important;
-  color: var(--primary) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-  text-shadow: none !important;
-}
 
 /* Scrollbars */
 body.dark ::-webkit-scrollbar-track { background-color: #0f172a; }
@@ -86,78 +38,84 @@ body.dark ::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 
 body.dark ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
 
 /* =========================================
-   3. MODERN LAYOUT GRADIENTS
+   2. MODERN LAYOUT SURFACES (Glassmorphism)
    ========================================= */
 
-/* Header (topbar) — restricted to header element only to avoid affecting .header-content elsewhere */
+body.dark .input-container,
+body.dark .archive-controls,
+body.dark .date-display,
+body.dark .summary-container,
+body.dark .buttons-container,
+body.dark .stat-card,
+body.dark .admin-section,
+body.dark .help-card,
+body.dark .subscription-card,
+body.dark .plan-card,
+body.dark .counter-card {
+  background: var(--dark-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--dark-border);
+  box-shadow: 0 10px 30px var(--dark-shadow);
+}
+
+/* Header (topbar) */
 body.dark header,
 body.dark header .header-content {
-  background-color: var(--dark-surface) !important;
-  border-bottom: 1px solid var(--dark-border) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  background-color: var(--dark-surface);
+  border-bottom: 1px solid var(--dark-border);
+  box-shadow: 0 4px 20px var(--dark-shadow);
   backdrop-filter: blur(10px);
 }
 
-/* Sidebar: Vertical Deep Gradient */
+/* Sidebar */
 body.dark .sidebar,
 body.dark .main-sidebar {
-  background: linear-gradient(180deg, #111827 0%, #0f172a 80%, #064e3b 100%) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: linear-gradient(180deg, #111827 0%, #0f172a 80%, #064e3b 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
 }
 
 /* Sidebar Active Links */
 body.dark .sidebar .nav-link.active,
 body.dark .sidebar a.active {
-  background: linear-gradient(270deg, rgba(45, 212, 191, 0.15) 0%, transparent 100%) !important;
-  border-right: 3px solid var(--primary) !important;
-  color: #fff !important;
+  background: linear-gradient(270deg, rgba(45, 212, 191, 0.15) 0%, transparent 100%);
+  border-right: 3px solid var(--primary);
+  color: #fff;
 }
 
 /* Footer */
 body.dark .footer {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-  color: #64748b !important;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: #64748b;
 }
 
-/* Buttons dark-mode rules moved to src/assets/css/buttons.css
-   to centralize all button styles (light + dark) in a single component file.
-*/
-
 /* =========================================
-   5. FORMS & INPUTS
+   3. FORMS, INPUTS & CONTROLS
    ========================================= */
 body.dark input, 
 body.dark textarea, 
 body.dark select,
+body.dark .archive-select,
+body.dark .bulk-input,
 body.dark .search-input-wrapper {
-  background-color: #020617 !important; /* Very dark slate */
-  border-color: #334155 !important;
-  color: #f8fafc !important;
+  background-color: var(--gray-100);
+  border-color: var(--gray-300);
+  color: #f8fafc;
 }
 
-body.dark input::placeholder { color: #475569 !important; }
+body.dark input::placeholder { color: #475569; }
 
 body.dark input:focus, 
 body.dark textarea:focus, 
 body.dark select:focus {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2) !important; /* Teal Ring */
-  background-color: #0f172a !important;
-}
-
-body.dark .search-input-wrapper {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
-}
-
-body.dark .archive-controls {
-  background: linear-gradient(135deg, #1e1e1e, #252525);
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+  background-color: #0f172a;
 }
 
 /* =========================================
-   6. TABLES SYSTEM
+   4. TABLES SYSTEM
    ========================================= */
 body.dark table,
 body.dark .modern-table,
@@ -167,7 +125,7 @@ body.dark .collections-table {
 }
 
 body.dark thead th {
-  background: linear-gradient(180deg, #1e293b, #0f172a);
+  background: var(--table-header-bg);
   color: #e2e8f0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -179,63 +137,60 @@ body.dark tbody td {
 }
 
 body.dark .shop {
-    color: var(--primary-light) !important;
-}
-
-/* Negative Net Glow Effect (Red) */
-body.dark .negative-net-border::before {
-  background: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.2);
+    color: var(--primary-light);
 }
 
 /* Total Row Styles */
 body.dark .total-row {
-  /* reuse table header background for consistent navy tone */
-  background: var(--table-header-bg) !important;
+  background: var(--table-header-bg);
 }
 
-/* Total row text color (all cells) in dark mode */
 body.dark .total-row,
 body.dark .total-row td {
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 body.dark .total-row-negative {
-  background: #7f1d1d !important; /* Red Dark */
-}
-
-body.dark .total-row-negative::before {
-  background: #ef4444;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.7);
+  background: #7f1d1d; /* Red Dark */
 }
 
 /* =========================================
-   7. COMPONENTS (Cards, Modals, Alerts)
+   5. COMPONENT SPECIFICS (Summary, Stats, Badges)
    ========================================= */
 
-/* Cards */
-body.dark .subscription-card,
-body.dark .plan-card,
-body.dark .stat-card,
-body.dark .summary-container,
-body.dark .counter-card,
-body.dark .categories-section,
-body.dark .second-counter-container {
-  background: #1e293b !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+body.dark .summary-item,
+body.dark .stat-icon,
+body.dark .bg-light {
+  background: #0f172a;
+  border-color: var(--gray-300);
 }
 
-body.dark .subscription-header {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+body.dark .summary-title,
+body.dark .stat-value {
+  color: #f1f5f9;
+  background: none;
+  -webkit-text-fill-color: initial;
+  text-shadow: none;
 }
 
-body.dark .subscription-details,
-body.dark .detail-value {
-  background: #0f172a !important;
-  color: #e2e8f0;
+body.dark .stat-content h3,
+body.dark .field-header {
+  color: #94a3b8;
 }
+
+body.dark .bold-input,
+body.dark .calc-field {
+  color: var(--primary-light);
+}
+
+body.dark .admin-section-header {
+  background: #0f766e;
+}
+
+/* Status Badges - Themed for Dark mode */
+body.dark .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+body.dark .status-cancelled { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+body.dark .status-expired { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
 /* Modals */
 body.dark .modal-content,
@@ -273,42 +228,10 @@ body.dark .alert-warning, body.dark .status-message.warning {
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
-/* Payment Options */
-body.dark .payment-option {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark .payment-option:hover,
-body.dark .payment-option.active {
-  background: rgba(45, 212, 191, 0.1);
-  border-color: var(--primary);
-}
-
-/* Charts Backgrounds */
-body.dark .chart-container {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Summary Items */
-body.dark .summary-item {
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-body.dark .summary-value {
-  color: #f1f5f9;
-}
-
-/* Page header (per-page title card) — align with topbar/footer surfaces */
+/* Page header */
 body.dark .page-header {
-  background: linear-gradient(180deg, var(--content-bg) 0%, var(--light-bg) 100%) !important;
-  border: 1px solid var(--dark-border) !important;
-  color: var(--gray-900) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-}
-
-body.dark .page-header .header-content {
-  background: transparent !important;
+  background: linear-gradient(180deg, var(--content-bg) 0%, var(--light-bg) 100%);
+  border: 1px solid var(--dark-border);
+  color: var(--gray-900);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }

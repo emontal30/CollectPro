@@ -16,31 +16,30 @@
 
     <div class="archive-controls">
       <div class="control-group">
-        <label>
-          <i class="fas fa-calendar-alt control-icon"></i>
+        <label class="font-bold mb-2 d-flex align-center gap-2">
+          <i class="fas fa-calendar-alt text-primary"></i>
           اختر التاريخ:
-          <select 
-            v-model="store.selectedDate" 
-            class="archive-select" 
-            @change="handleDateChange"
-            :disabled="store.isLoading"
-          >
-            <option value="">-- اختر تاريخ --</option>
-            <template v-if="store.availableDates.length > 0">
-              <option 
-                v-for="dateItem in store.availableDates" 
-                :key="dateItem.value" 
-                :value="dateItem.value"
-                :style="{ color: dateItem.source === 'cloud' ? 'var(--primary)' : '' }"
-              >
-                {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
-              </option>
-            </template>
-            <template v-else>
-              <option value="" disabled>لا يوجد أرشيف لعرضه حالياً</option>
-            </template>
-          </select>
         </label>
+        <select 
+          v-model="store.selectedDate" 
+          class="archive-select" 
+          @change="handleDateChange"
+          :disabled="store.isLoading || searchQuery.length >= 2"
+        >
+          <option value="">{{ searchQuery.length >= 2 ? '-- وضع البحث الشامل نشط --' : '-- اختر تاريخ --' }}</option>
+          <template v-if="store.availableDates.length > 0">
+            <option 
+              v-for="dateItem in store.availableDates" 
+              :key="dateItem.value" 
+              :value="dateItem.value"
+            >
+              {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
+            </option>
+          </template>
+          <template v-else>
+            <option value="" disabled>لا يوجد أرشيف لعرضه حالياً</option>
+          </template>
+        </select>
       </div>
 
       <div class="search-control">
@@ -49,8 +48,9 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="ابحث في المحل أو الكود"
+            placeholder="ابحث في كل الأرشيف (المحل/الكود)..."
             class="search-input"
+            @input="handleSearch"
           />
         </div>
         <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showColumnsArchive = true">
@@ -59,30 +59,36 @@
       </div>
     </div>
 
+    <!-- تنبيه عند البحث الشامل -->
+    <div v-if="store.isGlobalSearching && searchQuery" class="search-info-banner">
+      <i class="fas fa-info-circle"></i>
+      نتائج البحث عن "{{ searchQuery }}" في جميع التواريخ المتاحة
+      <button @click="clearSearch" class="btn-clear-search">إلغاء البحث</button>
+    </div>
+
     <div class="table-wrapper">
       <table class="modern-table w-full">
         <thead>
           <tr>
-            <th class="header-cell date-header">📅 التاريخ</th>
-            <th v-show="isVisibleArchive('shop')" class="header-cell shop-header">🏪 المحل</th>
-            <th v-show="isVisibleArchive('code')" class="header-cell code-header">🔢 الكود</th>
-            <th v-show="isVisibleArchive('amount')" class="header-cell amount-header">💵 التحويل</th>
-            <th v-show="isVisibleArchive('extra')" class="header-cell extra-header">📌 اخرى</th>
-            <th v-show="isVisibleArchive('collector')" class="header-cell collector-header">👤 المحصل</th>
-            <th v-show="isVisibleArchive('net')" class="header-cell net-header">✅ الصافي</th>
+            <th class="date-header">📅 التاريخ</th>
+            <th v-show="isVisibleArchive('shop')" class="shop">🏪 المحل</th>
+            <th v-show="isVisibleArchive('code')" class="code">🔢 الكود</th>
+            <th v-show="isVisibleArchive('amount')" class="amount">💵 التحويل</th>
+            <th v-show="isVisibleArchive('extra')" class="extra">📌 اخرى</th>
+            <th v-show="isVisibleArchive('collector')" class="collector">👤 المحصل</th>
+            <th v-show="isVisibleArchive('net')" class="net highlight">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
-          <!-- يتم عرض اللودر في حال التحميل فقط -->
           <tr v-if="store.isLoading">
-            <td colspan="7" class="text-center p-20">
-              <i class="fas fa-spinner fa-spin"></i> جاري استعادة البيانات...
+            <td colspan="7" class="text-center p-3">
+              <i class="fas fa-spinner fa-spin text-primary"></i> جاري استعادة البيانات...
             </td>
           </tr>
 
           <template v-else>
-            <tr v-for="(row, index) in filteredRows" :key="index">
-              <td class="date-cell">{{ store.selectedDate }}</td>
+            <tr v-for="(row, index) in store.rows" :key="index">
+              <td class="date-cell">{{ row.date || store.selectedDate }}</td>
               <td v-show="isVisibleArchive('shop')">{{ row.shop }}</td>
               <td v-show="isVisibleArchive('code')">{{ row.code }}</td>
               <td v-show="isVisibleArchive('amount')">{{ formatNum(row.amount) }}</td>
@@ -90,25 +96,25 @@
               <td v-show="isVisibleArchive('collector')">{{ formatNum(row.collector) }}</td>
               <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(row.net)">
                 {{ formatNum(row.net) }}
-                <i :class="getNetIcon(row.net)" class="mr-2 text-xs"></i>
+                <i :class="getNetIcon(row.net)"></i>
               </td>
             </tr>
 
-            <tr v-if="filteredRows.length === 0">
-              <td colspan="7" class="no-data-row">
-                {{ store.selectedDate ? 'لا توجد بيانات لهذا اليوم' : 'يرجى اختيار تاريخ من القائمة أعلاه' }}
+            <tr v-if="store.rows.length === 0">
+              <td colspan="7" class="text-center p-3 text-muted">
+                {{ store.isGlobalSearching ? 'لم يتم العثور على نتائج للبحث' : (store.selectedDate ? 'لا توجد بيانات لهذا اليوم' : 'يرجى اختيار تاريخ أو كتابة اسم محل للبحث') }}
               </td>
             </tr>
 
-            <tr v-if="filteredRows.length > 0" class="total-row">
-              <td class="total-label">الإجمالي</td>
+            <tr v-if="store.rows.length > 0" class="total-row">
+              <td class="shop">الإجمالي</td>
               <td v-show="isVisibleArchive('shop')"></td>
               <td v-show="isVisibleArchive('code')"></td>
-              <td v-show="isVisibleArchive('amount')">{{ formatNum(filteredTotals.amount) }}</td>
-              <td v-show="isVisibleArchive('extra')">{{ formatNum(filteredTotals.extra) }}</td>
-              <td v-show="isVisibleArchive('collector')">{{ formatNum(filteredTotals.collector) }}</td>
-              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(filteredTotals.net)">
-                {{ formatNum(filteredTotals.net) }}
+              <td v-show="isVisibleArchive('amount')">{{ formatNum(store.totals.amount) }}</td>
+              <td v-show="isVisibleArchive('extra')">{{ formatNum(store.totals.extra) }}</td>
+              <td v-show="isVisibleArchive('collector')">{{ formatNum(store.totals.collector) }}</td>
+              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(store.totals.net)">
+                {{ formatNum(store.totals.net) }}
               </td>
             </tr>
           </template>
@@ -116,27 +122,29 @@
       </table>
     </div>
 
-    <div class="archive-actions">
-      <router-link to="/app/harvest" class="btn btn-secondary btn--back-to-harvest">
-        <i class="fas fa-arrow-left"></i>
-        <span>العودة للتحصيلات</span>
-      </router-link>
+    <div class="buttons-container">
+      <div class="buttons-row">
+        <router-link to="/app/harvest" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i>
+          <span>العودة للتحصيلات</span>
+        </router-link>
 
-      <button 
-        v-if="store.selectedDate && !store.isLoading" 
-        class="btn btn-danger btn--delete-archive" 
-        @click="deleteCurrentArchive"
-      >
-        <i class="fas fa-trash-alt"></i>
-        <span>حذف هذا الأرشيف</span>
-      </button>
+        <button 
+          v-if="store.selectedDate && !store.isLoading && !store.isGlobalSearching" 
+          class="btn btn-danger" 
+          @click="deleteCurrentArchive"
+        >
+          <i class="fas fa-trash-alt"></i>
+          <span>حذف هذا الأرشيف</span>
+        </button>
+      </div>
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref, computed, reactive, inject } from 'vue';
+import { onMounted, ref, reactive, inject } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
@@ -146,9 +154,8 @@ const store = useArchiveStore();
 const searchQuery = ref('');
 const { confirm, addNotification } = inject('notifications');
 
-// ==========================================
-// 1. إعدادات الأعمدة
-// ==========================================
+let searchTimeout = null;
+
 const archiveColumns = [
   { key: 'shop', label: '🏪 المحل' },
   { key: 'code', label: '🔢 الكود' },
@@ -175,39 +182,12 @@ function applySavedColumnsArchive(obj) {
   Object.keys(obj || {}).forEach(k => { columnsVisibilityArchive[k] = !!obj[k]; }); 
 }
 
-// ==========================================
-// 2. المنطق الأساسي
-// ==========================================
-
-const filteredRows = computed(() => {
-  if (!searchQuery.value) return store.rows;
-  const q = searchQuery.value.toLowerCase();
-  return store.rows.filter(row => 
-    (row.shop && row.shop.toLowerCase().includes(q)) || 
-    (row.code && row.code.toString().toLowerCase().includes(q))
-  );
-});
-
-const filteredTotals = computed(() => {
-  return filteredRows.value.reduce((acc, row) => {
-    acc.amount += Number(row.amount) || 0;
-    acc.extra += Number(row.extra) || 0;
-    acc.collector += Number(row.collector) || 0;
-    acc.net += Number(row.net) || 0;
-    return acc;
-  }, { amount: 0, extra: 0, collector: 0, net: 0 });
-});
-
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
 onMounted(async () => {
   logger.info('🚀 ArchiveView Initializing...');
   loadColumnsVisibilityArchive();
-
-  // تحميل قائمة التواريخ
   await store.loadAvailableDates();
-
-  // إذا كان هناك تاريخ محدد، حمله
   if (store.selectedDate) {
     await store.loadArchiveByDate(store.selectedDate);
   }
@@ -222,12 +202,30 @@ const handleDateChange = async () => {
   }
 };
 
+const handleSearch = () => {
+  clearTimeout(searchTimeout);
+  if (searchQuery.value.length >= 2) {
+    searchTimeout = setTimeout(() => {
+      store.searchInAllArchives(searchQuery.value);
+    }, 400); // تأخير بسيط لتحسين الأداء
+  } else if (searchQuery.value.length === 0) {
+    if (store.selectedDate) {
+      store.loadArchiveByDate(store.selectedDate);
+    } else {
+      store.rows = [];
+      store.isGlobalSearching = false;
+    }
+  }
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  handleSearch();
+};
+
 const getNetClass = (val) => val > 0 ? 'positive' : (val < 0 ? 'negative' : 'zero');
 const getNetIcon = (val) => val > 0 ? 'fas fa-arrow-up' : (val < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 
-// ==========================================
-// 3. منطق الحذف
-// ==========================================
 const deleteCurrentArchive = async () => {
   if (!store.selectedDate) return;
 
@@ -237,7 +235,7 @@ const deleteCurrentArchive = async () => {
     icon: 'warning',
     confirmButtonText: 'نعم، احذف',
     cancelButtonText: 'إلغاء',
-    confirmButtonColor: '#d33',
+    confirmButtonColor: 'var(--danger)',
   });
 
   if (result.isConfirmed) {
@@ -253,57 +251,39 @@ const deleteCurrentArchive = async () => {
 </script>
 
 <style scoped>
-.archive-page { max-width: 1200px; margin: 0 auto; padding-bottom: 40px; }
-.archive-controls { display: flex; flex-direction: column; gap: 15px; padding: 25px; background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: var(--card-shadow); }
+.search-info-banner {
+  background: var(--primary-light, #e0f2fe);
+  color: var(--primary-dark, #0369a1);
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  border: 1px solid var(--primary-border, #bae6fd);
+}
 
-.btn-settings-table {
-  background: none;
-  border: none;
+.btn-clear-search {
+  margin-right: auto;
+  background: white;
+  border: 1px solid var(--primary-border);
+  padding: 4px 10px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 1.2rem;
-  color: var(--text-secondary);
-  padding: 0 10px;
-  transition: color 0.3s;
-  display: flex;
-  align-items: center;
+  font-size: 0.8rem;
+  transition: all 0.2s;
 }
 
-.btn-settings-table:hover {
+.btn-clear-search:hover {
+  background: var(--danger-light, #fee2e2);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.date-cell {
+  font-weight: 600;
   color: var(--primary);
-}
-
-.archive-actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  margin-top: 30px;
-  flex-wrap: wrap;
-}
-
-.btn--back-to-harvest {
-  min-width: 180px;
-}
-
-.btn--delete-archive {
-  background-color: #ef4444;
-  color: white;
-  min-width: 180px;
-}
-
-.btn--delete-archive:hover {
-  background-color: #dc2626;
-}
-
-@media (max-width: 600px) {
-  .archive-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .btn--back-to-harvest, 
-  .btn--delete-archive {
-    width: 100%;
-  }
+  white-space: nowrap;
 }
 </style>

@@ -56,8 +56,12 @@
           </div>
 
           <div class="footer-info">
-            <p> <span id="year">{{ currentYear }}</span> جميع الحقوق محفوظة.</p>
-            <p>تم التصميم والتطوير بواسطة | <strong class="text-primary">أيمن حافظ</strong> v2.8.4</p>
+            <p class="copyright">© <span id="year">{{ currentYear }}</span> جميع الحقوق محفوظة.</p>
+            <p class="developer-info">
+              تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
+              <span class="footer-separator">|</span>
+              <span class="version-badge">v2.8.4</span>
+            </p>
           </div>
 
         </div>
@@ -492,12 +496,28 @@ const installApp = async () => {
   margin: 8px 0;
 }
 
+.developer-name {
+  color: var(--primary, #007965);
+  font-weight: 700;
+}
+
+.footer-separator {
+  margin: 0 5px;
+  opacity: 0.5;
+}
+
+.version-badge {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
 @keyframes rotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* =========================================
    8. استجابة الشاشات الصغيرة (Mobile)
    ========================================= */

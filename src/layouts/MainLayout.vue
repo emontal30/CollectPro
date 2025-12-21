@@ -8,14 +8,14 @@
 
     <!-- الهيدر -->
     <header>
-      <Topbar :page-title="pageTitle" />
+      <Topbar />
     </header>
 
     <Sidebar />
 
     <!-- Main content area -->
     <main>
-      <div class="content">
+      <div class="content-wrapper">
         <router-view v-slot="{ Component }">
           <KeepAlive include="DashboardView,HarvestView">
             <component :is="Component" />
@@ -32,8 +32,7 @@
 </template>
 
 <script setup>
-import { computed, provide, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { provide, onMounted, watch } from 'vue';
 import Topbar from '@/components/layout/Topbar.vue';
 import Sidebar from '@/components/layout/Sidebar.vue';
 import Footer from '@/components/layout/Footer.vue';
@@ -41,35 +40,51 @@ import NotificationContainer from '@/components/ui/NotificationContainer.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 
-const route = useRoute();
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
-
-// Initialize UI and Settings stores when the main layout is mounted
-onMounted(() => {
-  if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
-  if (settingsStore?.loadSettings) settingsStore.loadSettings();
-});
-
-// نظام الإشعارات الموحد
+const subStore = useMySubscriptionStore();
 const notifications = useNotifications();
 
 // توفير نظام الإشعارات للمكونات الفرعية
 provide('notifications', notifications);
 
-// Dynamic page titles
-const pageTitle = computed(() => {
-  const titles = {
-    '/dashboard': 'إدخال البيانات 📝',
-    '/harvest': 'التحصيلات 📊',
-    '/archive': 'الأرشيف 📚',
-    '/counter': 'عداد الأموال 🧮',
-    '/subscriptions': 'الاشتراكات 💳',
-    '/my-subscription': 'اشتراكي 🛡️',
-    '/admin': 'لوحة التحكم 👑'
-  };
-  return titles[route.path] || 'CollectPro';
+// دالة التحقق من قرب انتهاء الاشتراك
+const checkSubscriptionExpiry = () => {
+  // التأكد من أن البيانات محملة وأن هناك اشتراك نشط
+  if (!subStore.isInitialized || !subStore.isSubscribed) return;
+
+  const days = subStore.daysRemaining;
+  const HAS_SHOWN_ALERT = sessionStorage.getItem('subscription_expiry_alert_shown');
+
+  // التنبيه إذا كان متبقي 3 أيام أو أقل ولم يتم إظهاره في هذه الجلسة
+  if (days <= 3 && days > 0 && !HAS_SHOWN_ALERT) {
+    notifications.addNotification(
+      `تنبيه: اشتراكك ينتهي خلال ${days === 1 ? 'يوم واحد' : days === 2 ? 'يومين' : days + ' أيام'}. يرجى التجديد لضمان استمرار الخدمة.`,
+      'warning',
+      10000 // يبقى لمدة 10 ثوانٍ
+    );
+    sessionStorage.setItem('subscription_expiry_alert_shown', 'true');
+  }
+};
+
+// عند تحميل التخطيط الأساسي
+onMounted(async () => {
+  if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
+  if (settingsStore?.loadSettings) settingsStore.loadSettings();
+  
+  // التحقق من الاشتراك فور التهيئة
+  if (subStore.isInitialized) {
+    checkSubscriptionExpiry();
+  }
+});
+
+// مراقبة تهيئة المتجر لإظهار التنبيه فور توفر البيانات
+watch(() => subStore.isInitialized, (val) => {
+  if (val) {
+    checkSubscriptionExpiry();
+  }
 });
 </script>
 
@@ -77,7 +92,9 @@ const pageTitle = computed(() => {
 /* Main Layout Styles */
 .main-layout {
   min-height: 100vh;
-  font-family: 'Cairo', sans-serif;
+  display: flex;
+  flex-direction: column;
+  background: var(--light-bg, #f8fafc);
 }
 
 /* Alert container */
@@ -90,60 +107,18 @@ const pageTitle = computed(() => {
   pointer-events: none;
 }
 
-.alert {
-  background: white;
-  border-radius: 8px;
-  padding: 15px 20px;
-  margin-bottom: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.95rem;
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: all 0.3s ease;
-  pointer-events: auto;
-  min-width: 300px;
-  max-width: 500px;
-}
-
-.alert.show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.alert-info {
-  border-left: 4px solid var(--primary);
-  color: var(--primary);
-}
-
-.alert-success {
-  border-left: 4px solid var(--success);
-  color: var(--success);
-}
-
-.alert-warning {
-  border-left: 4px solid var(--secondary);
-  color: var(--secondary);
-}
-
-.alert-error {
-  border-left: 4px solid var(--danger);
-  color: var(--danger);
-}
-
 /* Main content */
 main {
-  min-height: 100vh;
+  flex: 1;
+  padding-top: 70px; /* Space for Topbar */
   display: flex;
-  background: var(--light-bg);
-  padding-top: 80px;
+  flex-direction: column;
 }
 
-.content {
+.content-wrapper {
   flex: 1;
   padding: 20px;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -151,21 +126,12 @@ main {
 /* Footer */
 footer {
   margin-top: auto;
-  background: transparent;
 }
-
-/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .alert {
-    min-width: 250px;
-    max-width: 90vw;
-    font-size: 0.9rem;
-  }
-
-  .content {
-    padding: 15px;
+  .content-wrapper {
+    padding: 15px 10px;
   }
 }
 </style>
