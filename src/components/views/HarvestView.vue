@@ -24,6 +24,10 @@
     />
 
     <div class="search-control">
+      <div class="customer-count-badge" v-show="isVisibleHarvest('shop')">
+        <div class="count-label">عدد العملاء</div>
+        <div class="count-value">{{ store.customerCount }}</div>
+      </div>
       <div class="search-input-wrapper">
         <i class="fas fa-search control-icon"></i>
         <input
@@ -128,7 +132,7 @@
               <input
                 type="text"
                 :value="store.masterLimit !== 100000 ? formatInputNumber(store.masterLimit) : ''"
-                class="bold-input"
+                class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
                 @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
@@ -144,7 +148,7 @@
               <input
                 type="text"
                 :value="store.currentBalance ? formatInputNumber(store.currentBalance) : ''"
-                class="bold-input"
+                class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل رصيد الماستر الحالي"
                 @input="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
@@ -203,7 +207,7 @@
       </div>
 
       <div class="buttons-row">
-        <button class="btn btn-dashboard btn-dashboard--clear" @click="store.clearAll">
+        <button class="btn btn-dashboard btn-dashboard--clear" @click="confirmClearAll">
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
@@ -310,6 +314,22 @@ const getTotalNetIcon = computed(() => {
   return net > 0 ? 'fas fa-arrow-up' : (net < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 });
 
+const confirmClearAll = async () => {
+  const result = await confirm({
+    title: 'تأكيد تفريغ الحقول',
+    text: 'هل أنت متأكد من مسح جميع البيانات الحالية في الجدول؟ لا يمكن التراجع عن هذه الخطوة.',
+    icon: 'warning',
+    confirmButtonText: 'نعم، مسح الكل',
+    cancelButtonText: 'إلغاء',
+    confirmButtonColor: '#dc3545'
+  });
+
+  if (result.isConfirmed) {
+    store.clearAll();
+    addNotification('تم تفريغ الحقول بنجاح', 'info');
+  }
+};
+
 const archiveToday = async () => {
   const todayIso = archiveStore.getTodayLocal();
   const existingArchive = await localforage.getItem(`${archiveStore.DB_PREFIX}${todayIso}`);
@@ -330,4 +350,47 @@ const archiveToday = async () => {
 <style scoped>
 /* All specialized styles moved to _unified-components.css or utilities.css */
 .mx-2 { margin: 0 8px; }
+
+.customer-count-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px 12px;
+  min-width: 80px;
+  box-shadow: var(--shadow-sm);
+}
+
+.count-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.count-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .search-control {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .customer-count-badge {
+    order: 2;
+    flex: 1;
+  }
+  .search-input-wrapper {
+    order: 1;
+    width: 100%;
+  }
+  .btn-settings-table {
+    order: 3;
+  }
+}
 </style>

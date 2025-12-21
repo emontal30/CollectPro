@@ -8,8 +8,13 @@
   <div id="sidebar" class="sidebar" :class="{ active: store.isOpen }">
 
     <div class="sidebar-header">
-      <div class="user-box">
+      <!-- App Brand Box -->
+      <div class="brand-box">
+        <h1 class="brand-name">Collect <span class="brand-highlight">Pro</span></h1>
+        <img src="/favicon.svg" alt="Collect Pro Logo" class="brand-logo" />
+      </div>
 
+      <div class="user-box">
         <div class="user-data-container">
           <div class="user-meta">
             <span id="user-name" class="user-name">
@@ -38,7 +43,6 @@
             {{ subStore.planName }}
           </h4>
           <div class="subscription-info">
-            <!-- استخدام الهيئة الموحدة من المتجر مباشرة -->
             <div
               class="subscription-days-simple"
               :class="subStore.ui.class"
@@ -133,7 +137,6 @@ const toggleDarkMode = () => {
 };
 
 onMounted(async () => {
-  // تهيئة بيانات الاشتراك فور تحميل الشريط الجانبي
   if (authStore.user) {
     await subStore.init(authStore.user);
   }
@@ -160,7 +163,6 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* بقية التنسيقات كما هي في الكود الأصلي */
 .sidebar {
     position: fixed;
     top: 0;
@@ -171,7 +173,7 @@ const handleLogout = async () => {
     color: #fff;
     display: flex;
     flex-direction: column;
-    padding-top: 80px;
+    padding-top: 20px;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1009;
     overflow-y: auto;
@@ -185,6 +187,45 @@ const handleLogout = async () => {
 .sidebar-header {
     padding: 0 10px;
     margin-bottom: 15px;
+}
+
+/* App Brand Box Styles */
+.brand-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  /* ظل أصفر كناري خفيف جداً يحدد الأطراف فقط دون توهج عالي */
+  filter: drop-shadow(0 0 2px rgba(255, 239, 0, 0.5));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.brand-box:hover .brand-logo {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 4px rgba(255, 239, 0, 0.7));
+}
+
+.brand-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.5px;
+  font-family: var(--font-family-sans);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.brand-highlight {
+  color: #2dd4bf;
 }
 
 .user-box {
@@ -274,7 +315,6 @@ const handleLogout = async () => {
   color: #ffffff;
 }
 
-/* الألوان بناءً على الكلاس القادم من المتجر */
 .subscription-days-simple.expired { color: #ff6b6b; }
 .subscription-days-simple.warning { color: #feca57; }
 .subscription-days-simple.active { color: #2ecc71; }

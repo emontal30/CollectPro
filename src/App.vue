@@ -1,26 +1,44 @@
 <template>
-  <router-view />
+  <div id="app-container">
+    <router-view />
+    
+    <!-- مكونات النظام العالمية -->
+    <InstallPrompt />
+    <NotificationContainer />
+    <OfflineBanner />
+  </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, provide } from 'vue';
 import { initializeSyncListener } from '@/services/archiveSyncQueue';
+import { useNotifications } from '@/composables/useNotifications';
 import logger from '@/utils/logger';
 
-// عند بدء تشغيل التطبيق بالكامل
+// استيراد المكونات العالمية
+import InstallPrompt from '@/components/ui/InstallPrompt.vue';
+import NotificationContainer from '@/components/ui/NotificationContainer.vue';
+import OfflineBanner from '@/components/ui/OfflineBanner.vue';
+
+// إعداد نظام التنبيهات العالمي وتوفيره لكافة المكونات
+const notifications = useNotifications();
+provide('notifications', notifications);
+
 onMounted(() => {
   logger.info('🚀 App Mounted - System Initialized');
   
+  // إضافة كلاس محمل للجسم بعد تحميل التطبيق
+  document.body.classList.add('loaded');
+  
   // تشغيل مستمع المزامنة التلقائية
-  // هذا يضمن أنه لو فتح المستخدم التطبيق وكان هناك بيانات معلقة (Offline Data)
-  // سيتم رفعها تلقائياً بمجرد استشعار الإنترنت
   initializeSyncListener();
 });
 </script>
 
 <style>
-/* يمكن وضع التنسيقات العالمية هنا إذا لزم الأمر، 
-  ولكن يفضل الاعتماد على ملفات CSS الموجودة في assets/css 
-  التي تم استدعاؤها في main.js
-*/
+/* تضمن هذه التنسيقات ظهور المكونات في الطبقة العليا */
+#app-container {
+  min-height: 100vh;
+  position: relative;
+}
 </style>

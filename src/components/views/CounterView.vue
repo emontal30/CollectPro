@@ -121,29 +121,31 @@
           <h2 class="counter-title">ملخص إجمالي</h2>
         </div>
         
-        <div class="summary-grid">
+        <div class="summary-grid consolidated-summary">
+          <!-- السطر الأول -->
           <div class="summary-card primary">
             <span class="label">إجمالي العدادات</span>
             <span class="value">{{ store.formatNumber(store.grandTotal) }} <small>ج.م</small></span>
           </div>
           <div class="summary-card">
+            <span class="label">إجمالي الفكة</span>
+            <span class="value">{{ store.formatNumber(store.totalSmall) }} <small>ج.م</small></span>
+          </div>
+
+          <!-- السطر الثاني -->
+          <div class="summary-card">
+            <span class="label">مبلغ التصفيرة</span>
+            <span class="value">{{ store.formatNumber(store.clearanceAmount) }} <small>ج.م</small></span>
+          </div>
+          <div class="summary-card">
             <span class="label">إجمالي المحصل</span>
             <span class="value">{{ store.formatNumber(store.totalCollected) }} <small>ج.م</small></span>
           </div>
-          <div class="summary-card" :class="store.status.class">
+
+          <!-- السطر الثالث -->
+          <div class="summary-card full-width" :class="store.status.class">
             <span class="label">الحالة ({{ store.status.text }})</span>
             <span class="value">{{ store.formatNumber(store.status.val) }} <small>ج.م</small></span>
-          </div>
-        </div>
-
-        <div class="summary-sub-grid">
-          <div class="sub-card">
-            <span class="label">إجمالي الفكة</span>
-            <span class="value">{{ store.formatNumber(store.totalSmall) }}</span>
-          </div>
-          <div class="sub-card">
-            <span class="label">مبلغ التصفيرة</span>
-            <span class="value">{{ store.formatNumber(store.clearanceAmount) }}</span>
           </div>
         </div>
       </div>
@@ -180,6 +182,17 @@
               </tr>
             </tbody>
           </table>
+          
+          <div class="card-footer-stats" v-if="!store.categoriesSummary.every(c => c.qty === 0)">
+            <div class="stat-item">
+              <span class="stat-label">الإجمالي</span>
+              <span class="stat-value">{{ store.formatNumber(store.grandTotal) }}</span>
+            </div>
+            <div class="stat-item small">
+              <span class="stat-label">الفكة</span>
+              <span class="stat-value">{{ store.formatNumber(store.totalSmall) }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -502,11 +515,15 @@ const onBlurFormat = (val, counterIdx) => {
 
 .summary-header i { font-size: 1.3rem; }
 
-.summary-grid {
+.consolidated-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 15px;
   padding: 20px;
+}
+
+.consolidated-summary .full-width {
+  grid-column: span 2;
 }
 
 .summary-card {
@@ -530,25 +547,6 @@ const onBlurFormat = (val, counterIdx) => {
 
 .summary-card.status-surplus .value { color: var(--success); }
 .summary-card.status-deficit .value { color: var(--danger); }
-
-.summary-sub-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  padding: 0 20px 20px;
-}
-
-.sub-card {
-  padding: 10px 15px;
-  background: var(--gray-100);
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sub-card .label { font-size: 0.85rem; color: var(--gray-700); }
-.sub-card .value { font-weight: 800; color: var(--gray-900); }
 
 /* Categories Section specifically */
 .categories-section {
@@ -589,7 +587,6 @@ const onBlurFormat = (val, counterIdx) => {
 body.dark .counter-card, 
 body.dark .summary-section,
 body.dark .categories-section,
-body.dark .sub-card,
 body.dark .summary-card {
   background: var(--dark-surface);
   border-color: var(--dark-border);

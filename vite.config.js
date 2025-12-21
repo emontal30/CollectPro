@@ -9,17 +9,16 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackAllowlist: [/^\/$/],
       },
       includeAssets: [
-        'favicon.ico', 
-        'apple-touch-icon.png', 
-        'masked-icon.svg',
-        'install-prompt.js',
-        'install-prompt.css'
+        'favicon.ico',
+        'logo-momkn.png',
+        'ios/apple-touch-icon-180x180.png'
       ],
       manifest: {
         name: 'CollectPro - نظام إدارة التحصيلات',
@@ -76,6 +75,9 @@ export default defineConfig({
     sourcemap: true,
     minify: 'esbuild',
     target: 'es2015',
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
   },
   server: {
     port: 3001,

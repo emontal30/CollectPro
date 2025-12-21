@@ -4,12 +4,12 @@ import logger from '@/utils/logger.js'
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     darkMode: false,
-    zoomLevel: 4 // 0-8 scale, 4 = normal
+    zoomLevel: 5 // 0 to 10 scale, 5 = normal (16px)
   }),
 
   getters: {
     zoomClass: (state) => {
-      const levels = ['8xs', '7xs', '6xs', '5xs', 'xs', 'sm', 'base', 'normal', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl']
+      const levels = ['6xs', '5xs', 'xs', 'sm', 'base', 'normal', 'lg', 'xl', '2xl', '3xl', '4xl']
       return `zoom-${levels[state.zoomLevel] || 'normal'}`
     }
   },
@@ -26,12 +26,12 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     setZoomLevel(level) {
-      this.zoomLevel = Math.max(0, Math.min(8, level))
+      this.zoomLevel = Math.max(0, Math.min(10, level))
       this.applySettings()
     },
 
     zoomIn() {
-      if (this.zoomLevel < 8) {
+      if (this.zoomLevel < 10) {
         this.zoomLevel++
         this.applySettings()
       }
@@ -45,17 +45,21 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     applySettings() {
-      // Apply dark mode to body (unified dark mode system uses body.dark)
+      // Apply dark mode to body
       if (this.darkMode) {
         document.body.classList.add('dark')
       } else {
         document.body.classList.remove('dark')
       }
 
-      // Apply zoom level (remove old, add new)
-      const zoomClasses = ['zoom-8xs', 'zoom-7xs', 'zoom-6xs', 'zoom-5xs', 'zoom-xs', 'zoom-sm', 'zoom-base', 'zoom-normal', 'zoom-lg', 'zoom-xl', 'zoom-2xl', 'zoom-3xl', 'zoom-4xl', 'zoom-5xl', 'zoom-6xl']
-      document.body.className = document.body.className.replace(/zoom-\w+/g, '').trim()
-      document.body.classList.add(zoomClasses[this.zoomLevel] || 'zoom-normal')
+      // Apply zoom level to HTML element for rem scaling
+      const zoomClasses = ['zoom-6xs', 'zoom-5xs', 'zoom-xs', 'zoom-sm', 'zoom-base', 'zoom-normal', 'zoom-lg', 'zoom-xl', 'zoom-2xl', 'zoom-3xl', 'zoom-4xl']
+      
+      const html = document.documentElement;
+      // Remove all zoom classes
+      zoomClasses.forEach(cls => html.classList.remove(cls));
+      // Add current zoom class
+      html.classList.add(zoomClasses[this.zoomLevel] || 'zoom-normal');
 
       this.saveSettings()
     },
@@ -72,11 +76,12 @@ export const useSettingsStore = defineStore('settings', {
       if (settings) {
         try {
           const parsed = JSON.parse(settings)
-          this.darkMode = parsed.darkMode || false
-          this.zoomLevel = parsed.zoomLevel || 4
+          this.darkMode = typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false
+          this.zoomLevel = typeof parsed.zoomLevel === 'number' ? parsed.zoomLevel : 5
           this.applySettings()
         } catch (error) {
           logger.error('Error loading settings:', error)
+          this.applySettings()
         }
       } else {
         this.applySettings()

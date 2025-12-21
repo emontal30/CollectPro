@@ -32,6 +32,10 @@ export const useHarvestStore = defineStore('harvest', {
       }, { amount: 0, extra: 0, collector: 0, net: 0 });
     },
     
+    customerCount: (state) => {
+      return (state.rows || []).filter(row => row.shop && row.shop.trim() !== '').length;
+    },
+    
     filteredRows: (state) => {
       let data = state.rows || [];
       if (data.length === 0) return [];

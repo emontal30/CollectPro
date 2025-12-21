@@ -16,7 +16,7 @@ table {
   border-collapse: collapse;
   background: var(--surface-bg);
   min-width: 600px; /* Prevent squashing on mobile */
-  table-layout: fixed; /* Default to fixed */
+  table-layout: fixed; /* Reverted back to fixed layout */
 }
 
 /* 3. Modern & Legacy Table Classes Merged */
@@ -88,6 +88,13 @@ tr:last-child td { border-bottom: none !important; }
   direction: rtl !important;
   font-weight: 700 !important;
   padding-right: 12px !important;
+}
+
+/* Code Column - Fixed width to accommodate large numbers */
+.code, td.code, th.code {
+  width: 110px !important; /* Set to a specific width that fits common codes */
+  min-width: 110px;
+  white-space: nowrap;
 }
 
 /* Date Column */
@@ -169,6 +176,10 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
   .shop {
     width: 120px !important;
     min-width: 120px;
+  }
+  .code {
+    width: 90px !important;
+    min-width: 90px;
   }
 }
 
