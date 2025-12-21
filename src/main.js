@@ -17,7 +17,7 @@ import './assets/css/unified-dark-mode.css'
 import { startAutoCleaning } from './services/cacheManager'
 import { setupCacheMonitor } from './services/cacheMonitor'
 import logger from '@/utils/logger.js'
-import { clearSyncQueue } from './services/archiveSyncQueue'; // Import the new function
+import { clearSyncQueue } from './services/archiveSyncQueue';
 
 // 1. Create App Instance
 const app = createApp(App)
@@ -36,11 +36,8 @@ if (!hasClearedQueue && import.meta.env.DEV) {
     logger.info('✅ One-time clear complete.');
   });
 }
-// --- End of One-Time Auto-Clear ---
-
 
 // 3. Global PWA Handler
-// Captures the install prompt event for use in UI components
 window.addEventListener('beforeinstallprompt', (e) => {
   logger.info('🚀 Global: Captured beforeinstallprompt event');
   e.preventDefault(); 
@@ -48,11 +45,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 // 4. Initialize Background Services
-// Start cache cleaning (every 5 minutes) without blocking the main thread
 logger.info('🧠 Initializing Smart Cache System...');
 startAutoCleaning(5 * 60 * 1000);
 
-// Enable Cache Monitor in Development only
 if (import.meta.env.DEV) {
   setupCacheMonitor();
 }

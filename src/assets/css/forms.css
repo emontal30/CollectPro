@@ -1,2 +1,161 @@
-/* Wrapper: forms.css -> delegates to components/search.css (search is used for forms/inputs in this project) */
-@import './components/search.css';
+/* ====== FORMS & INPUTS COMPONENT ====== */
+/* Replaces search.css and includes all input styles */
+
+/* 1. Base Input Styles */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+select,
+.input-base {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--gray-300);
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: var(--font-family-sans);
+  background: white;
+  transition: var(--transition);
+  color: var(--gray-900);
+}
+
+input:focus, textarea:focus, select:focus, .input-base:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 121, 101, 0.2);
+}
+
+input:disabled, .readonly-input {
+  background-color: var(--gray-100);
+  color: var(--gray-600);
+  cursor: default;
+}
+
+/* 2. Search Component Styles */
+.search-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: nowrap;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 600px;
+  border: 2px solid rgba(0, 121, 101, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px;
+  box-shadow: 0 4px 15px rgba(0, 121, 101, 0.08);
+  transition: all 0.3s ease;
+}
+
+.search-input-wrapper:hover, .search-input-wrapper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 6px 20px rgba(0, 121, 101, 0.15);
+}
+
+.search-input {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: 48px;
+  font-weight: 500;
+}
+
+.search-input::placeholder {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+/* 3. Data Entry Inputs (Large Areas) */
+.data-input {
+  width: 100%;
+  padding: 25px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-family: var(--font-family-mono);
+  direction: rtl;
+  text-align: right;
+  min-height: 350px;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.data-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0, 121, 101, 0.1);
+}
+
+/* 4. Table Inputs (Harvest/Archive) */
+.editable-input, .amount-input, .centered-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-family: var(--font-family-mono);
+  font-weight: bold;
+  padding: 5px;
+}
+
+.editable-input:focus, .amount-input:focus {
+  background: rgba(255, 255, 255, 0.9);
+  outline: 2px solid var(--secondary);
+  border-radius: 4px;
+}
+
+/* 5. Select Dropdowns */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007965' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: left 10px center;
+  background-size: 16px;
+  padding-left: 30px;
+}
+
+/* 6. Form Groups & Labels */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.required { color: var(--danger); }
+
+.control-group label {
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Input Info (Counters) */
+.input-info {
+  display: flex;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  direction: rtl;
+}
+
+.char-count, .line-count {
+  background: var(--gray-100);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-300);
+}

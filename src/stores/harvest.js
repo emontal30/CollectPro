@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth';
 import { useArchiveStore } from './archiveStore';
-import { supabase } from '@/supabase';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { safeDeepClone } from '@/services/cacheManager';
 import { apiInterceptor } from '@/services/apiInterceptor';
+import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 
@@ -151,9 +151,7 @@ export const useHarvestStore = defineStore('harvest', {
 
         if (navigator.onLine) {
           const { error } = await apiInterceptor(
-            supabase
-              .from('daily_archives')
-              .upsert(dbPayload, { onConflict: 'user_id, archive_date' })
+            api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data)
           );
 
           if (!error) {

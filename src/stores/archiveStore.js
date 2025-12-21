@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { supabase } from '@/supabase'; 
 import { useAuthStore } from '@/stores/auth';
 import { useNotifications } from '@/composables/useNotifications';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { apiInterceptor } from '@/services/apiInterceptor';
+import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 
@@ -18,7 +18,6 @@ export const useArchiveStore = defineStore('archive', () => {
   const authStore = useAuthStore();
 
   const DB_PREFIX = 'arch_data_'; 
-  const TABLE_NAME = 'daily_archives';
 
   const totals = computed(() => {
     return rows.value.reduce((acc, row) => {
@@ -53,18 +52,14 @@ export const useArchiveStore = defineStore('archive', () => {
 
       let cloudDates = [];
       
-      // محاولة الجلب من السحاب إذا كان أونلاين عبر الـ interceptor
+      // محاولة الجلب من السحاب إذا كان أونلاين عبر الخدمة المتخصصة
       if (navigator.onLine && user) {
-        const { data, error } = await apiInterceptor(
-          supabase
-            .from(TABLE_NAME)
-            .select('archive_date')
-            .eq('user_id', user.id)
-            .order('archive_date', { ascending: false })
+        const { dates, error } = await apiInterceptor(
+          api.archive.getAvailableDates(user.id)
         );
         
-        if (!error && data) {
-          cloudDates = data.map(d => d.archive_date);
+        if (!error && dates) {
+          cloudDates = dates;
         }
       }
 
@@ -111,17 +106,12 @@ export const useArchiveStore = defineStore('archive', () => {
         rows.value = Array.isArray(localData) ? localData : (localData.rows || []);
       } else if (navigator.onLine && user) {
         const { data, error } = await apiInterceptor(
-          supabase
-            .from(TABLE_NAME)
-            .select('data')
-            .eq('user_id', user.id)
-            .eq('archive_date', dateStr)
-            .maybeSingle()
+          api.archive.getArchiveByDate(user.id, dateStr)
         );
 
-        if (!error && data?.data) {
-          rows.value = data.data;
-          await localforage.setItem(localKey, data.data);
+        if (!error && data) {
+          rows.value = data;
+          await localforage.setItem(localKey, data);
         } else {
           rows.value = [];
         }
@@ -142,14 +132,7 @@ export const useArchiveStore = defineStore('archive', () => {
   async function uploadArchive(payload) {
     const { user_id, archive_date, data } = payload;
     const { error } = await apiInterceptor(
-      supabase
-        .from(TABLE_NAME)
-        .upsert({
-          user_id,
-          archive_date,
-          data,
-          updated_at: new Date()
-        }, { onConflict: 'user_id, archive_date' })
+      api.archive.saveDailyArchive(user_id, archive_date, data)
     );
 
     if (error) throw error;
@@ -180,7 +163,7 @@ export const useArchiveStore = defineStore('archive', () => {
         if (navigator.onLine) {
           try {
             const { error } = await apiInterceptor(
-              supabase.from(TABLE_NAME).delete().eq('user_id', user.id).eq('archive_date', dateStr)
+              api.archive.deleteArchiveByDate(user.id, dateStr)
             );
             
             // إذا فشل الحذف بسبب الشبكة، نضعه في طابور المزامنة
@@ -217,8 +200,6 @@ export const useArchiveStore = defineStore('archive', () => {
       
     } catch (err) {
       logger.error('❌ ArchiveStore: deleteArchive Error:', err);
-      // حتى لو فشل السحاب بشكل قطعي، لا نريد إظهار رسالة فشل إذا تم الحذف محلياً بنجاح
-      // ولكن هنا نفترض حدوث خطأ برمجي كبير
       return { success: false, message: 'فشل في حذف الأرشيف' };
     } finally {
       isLoading.value = false;

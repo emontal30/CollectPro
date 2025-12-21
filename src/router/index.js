@@ -12,7 +12,6 @@ const CounterView = () => import('@/components/views/CounterView.vue')
 const SubscriptionsView = () => import('@/components/views/SubscriptionsView.vue')
 const MySubscriptionView = () => import('@/components/views/MySubscriptionView.vue')
 const PaymentView = () => import('@/components/views/PaymentView.vue')
-// Admin Component
 const AdminView = () => import('@/components/views/AdminView.vue')
 
 const routes = [
@@ -74,9 +73,6 @@ const routes = [
       }
     ]
   },
-  // Legacy Redirects
-  { path: '/index.html', redirect: '/' },
-  { path: '/dashboard.html', redirect: { name: 'Dashboard' } },
   // Catch All
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
