@@ -60,11 +60,13 @@ body.dark .counter-card {
 
 /* Header (topbar) */
 body.dark header,
-body.dark header .header-content {
-  background-color: var(--dark-surface);
+body.dark .header-content {
+  background-color: var(--dark-surface) !important;
   border-bottom: 1px solid var(--dark-border);
   box-shadow: 0 4px 20px var(--dark-shadow);
   backdrop-filter: blur(10px);
+  /* التأكد من ثبات المقاسات في الوضع الليلي */
+  min-width: 768px;
 }
 
 /* Sidebar */
@@ -88,6 +90,8 @@ body.dark .footer {
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   color: #64748b;
+  /* التأكد من ثبات المقاسات في الوضع الليلي */
+  min-width: 768px;
 }
 
 /* =========================================

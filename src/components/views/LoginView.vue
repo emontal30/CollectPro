@@ -1,5 +1,7 @@
 <template>
   <div class="login-wrapper" :class="{ 'loading': store.isLoading }">
+    <!-- خلفية متحركة (اختياري) -->
+    <div class="animated-bg"></div>
     
     <div id="alert-container" class="alert-container"></div>
 
@@ -85,69 +87,42 @@ onMounted(() => {
 });
 
 const handleInstallPromptLogic = () => {
-  // 1. التحقق أولاً: هل التطبيق مثبت بالفعل؟ (Standalone Mode)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (isStandalone) {
-    logger.info('LoginView: App is already installed (standalone mode)');
     showInstallButton.value = false;
     return;
   }
 
-  // 2. التحقق من الحدث المخزن عالمياً (إذا حدث قبل تحميل المكون)
   if (window.deferredPrompt) {
-    logger.info('LoginView: Found global deferredPrompt - showing install button');
     showInstallButton.value = true;
     return;
   }
 
-  // 3. الاستماع للحدث محلياً كاحتياطي (للحالات النادرة)
   const handleInstallPrompt = (e) => {
-    logger.info('LoginView: Captured beforeinstallprompt event (fallback)');
     e.preventDefault();
-    window.deferredPrompt = e; // تخزين عالمي
+    window.deferredPrompt = e;
     showInstallButton.value = true;
-    // إزالة المستمع بعد التقاط الحدث
     window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
   };
 
   window.addEventListener('beforeinstallprompt', handleInstallPrompt);
 
-  // تنظيف في حال عدم ظهور الحدث (fallback بعد 3 ثوان)
   setTimeout(() => {
     if (!showInstallButton.value && !window.deferredPrompt) {
-      logger.info('LoginView: No install prompt captured within 3 seconds');
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
     }
   }, 3000);
 };
 
 const installApp = async () => {
-  if (!window.deferredPrompt) {
-    logger.warn('LoginView: No deferredPrompt available for installation');
-    return;
-  }
-
+  if (!window.deferredPrompt) return;
   try {
-    // إظهار نافذة التثبيت الأصلية للمتصفح
     window.deferredPrompt.prompt();
-
-    // انتظار رد المستخدم
     const { outcome } = await window.deferredPrompt.userChoice;
-
-    logger.info(`LoginView: User response to install prompt: ${outcome}`);
-
-    // تصفير المتغيرات لأن الحدث لا يستخدم إلا مرة واحدة
     window.deferredPrompt = null;
     showInstallButton.value = false;
-
-    if (outcome === 'accepted') {
-      logger.info('LoginView: App installation accepted');
-    } else {
-      logger.info('LoginView: App installation dismissed');
-    }
   } catch (error) {
     logger.error('LoginView: Error during app installation:', error);
-    // تصفير في حالة الخطأ أيضاً
     window.deferredPrompt = null;
     showInstallButton.value = false;
   }
@@ -161,17 +136,16 @@ const installApp = async () => {
 .login-wrapper {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   min-height: 100vh;
+  min-height: 100dvh; /* لدعم الهواتف الحديثة */
   width: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
   font-family: 'Cairo', sans-serif;
   direction: rtl;
   overflow-x: hidden;
+  position: relative;
 }
 
-/* خلفية متحركة */
-.login-wrapper::before {
+/* خلفية متحركة تحسين الأداء */
+.animated-bg {
   content: '';
   position: fixed;
   top: -50%;
@@ -188,33 +162,30 @@ const installApp = async () => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
-  box-sizing: border-box;
   z-index: 1;
 }
 
 .login-container {
-  width: 100%;
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  padding: 20px;
 }
 
 .login-card {
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-  padding: 50px 40px;
-  width: 90%;
-  max-width: 450px;
-  min-width: 320px;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  padding: 60px 40px;
+  width: 100%;
+  max-width: 480px;
   text-align: center;
   position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -230,55 +201,36 @@ const installApp = async () => {
 }
 
 .logo-img {
-  height: 80px;
+  height: 90px;
   width: auto;
-  margin-bottom: 30px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 5px 10px rgba(0, 121, 101, 0.2));
+  margin-bottom: 25px;
+  filter: drop-shadow(0 5px 15px rgba(0, 121, 101, 0.2));
   display: block;
   margin-left: auto;
   margin-right: auto;
 }
 
-.logo-img:hover {
-  transform: scale(1.05);
-}
-
 .app-name {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 800;
   color: var(--primary, #007965);
-  margin: 0 0 15px;
+  margin: 0 0 10px;
   letter-spacing: -0.5px;
-  position: relative;
-  display: inline-block;
-}
-
-.app-name::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 10%;
-  width: 80%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--primary, #007965), transparent);
-  border-radius: 3px;
 }
 
 .subtitle {
-  color: #666;
+  color: #64748b;
   font-size: 16px;
   margin: 0;
   font-weight: 500;
 }
 
 /* =========================================
-   3. زر تسجيل الدخول (Google) - إصلاح السطر الواحد
+   3. أزرار تسجيل الدخول
    ========================================= */
 .btn-container {
   width: 100%;
-  max-width: 350px;
-  margin: 35px auto 25px;
+  margin: 35px 0 20px;
 }
 
 .google-login-btn {
@@ -291,94 +243,59 @@ const installApp = async () => {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 20px rgba(0, 121, 101, 0.3);
-  position: relative;
-  overflow: hidden;
-  font-family: 'Cairo', sans-serif;
-
-  /* Force Single Line Layout */
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-wrap: nowrap !important;
-  gap: 12px;
-}
-
-.google-login-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.google-login-btn:hover:not(:disabled)::before {
-  left: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 121, 101, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
 }
 
 .google-login-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #006d56 0%, #007965 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 25px rgba(0, 121, 101, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(0, 121, 101, 0.3);
 }
 
 .google-login-btn i {
-  /* أيقونة ثابتة الحجم لا تنكمش */
-  font-size: 24px;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  font-size: 22px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
+  background: white;
   color: #ea4335;
-  flex-shrink: 0; /* هام جداً */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.google-login-btn span {
-  white-space: nowrap; /* يمنع التفاف النص */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 /* =========================================
    4. الروابط والفواصل
    ========================================= */
 .privacy-policy {
-  margin-top: 25px;
+  margin-top: 20px;
   font-size: 13px;
-  color: #888;
-  line-height: 1.5;
+  color: #94a3b8;
 }
 
 .privacy-policy a {
   color: var(--primary, #007965);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .privacy-divider {
-  display: block;
-  width: 85%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 121, 101, 0.2), transparent);
+  width: 100%;
+  height: 1px;
+  background: #f1f5f9;
   border: none;
-  margin: 30px auto;
+  margin: 30px 0;
 }
 
 /* =========================================
-   5. زر التثبيت (Install App) - إصلاح السطر الواحد
+   5. زر التثبيت
    ========================================= */
 .install-app-section {
-  margin-top: 20px;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -386,174 +303,89 @@ const installApp = async () => {
 
 .install-app-btn {
   width: 100%;
-  max-width: 280px; /* تقليل العرض ليكون أصغر */
+  max-width: 320px;
   height: 80px;
-  background: linear-gradient(135deg, var(--primary, #007965) 0%, #00a085 100%);
-  border: none;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 0 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 121, 101, 0.3);
-  position: relative;
-  overflow: hidden;
-
-  /* Force Single Line Layout */
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important; /* العودة للتوزيع للسماح بتوسيط النص */
-  flex-wrap: nowrap !important;
+  display: flex;
+  align-items: center;
   gap: 15px;
+  transition: all 0.2s ease;
 }
 
 .install-app-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 121, 101, 0.4);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
-/* الأيقونة (يمين) */
 .install-app-icon {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  background: white;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  flex-shrink: 0; /* لا تنكمش */
-  order: 1;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-.install-app-icon img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
+.install-app-icon img { width: 28px; height: 28px; }
 
-/* النصوص (وسط) */
 .install-btn-content {
+  flex: 1;
+  text-align: right;
   display: flex;
   flex-direction: column;
-  align-items: center; /* توسيط النصوص */
-  text-align: center; /* توسيط النص */
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  order: 2;
 }
 
-.install-btn-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 2px;
-  white-space: nowrap; /* سطر واحد */
-}
+.install-btn-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+.install-btn-subtitle { font-size: 12px; color: #64748b; }
 
-.install-btn-subtitle {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap; /* سطر واحد */
-}
-
-/* سهم التحميل (يسار) */
-.download-icon {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  order: 3;
-}
-
-.download-icon i {
-  font-size: 20px;
-  color: white;
-  opacity: 0.8;
-}
+.download-icon { color: var(--primary, #007965); font-size: 18px; }
 
 /* =========================================
-   6. الفوتر والرسوم المتحركة
+   6. الفوتر
    ========================================= */
 .footer-info {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(0, 121, 101, 0.1);
-  text-align: center;
+  margin-top: 40px;
   font-size: 12px;
-  color: #666;
-  line-height: 1.6;
+  color: #94a3b8;
   width: 100%;
 }
 
-.footer-info p {
-  margin: 8px 0;
-}
-
-.developer-name {
-  color: var(--primary, #007965);
-  font-weight: 700;
-}
-
-.footer-separator {
-  margin: 0 5px;
-  opacity: 0.5;
-}
-
-.version-badge {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-}
+.developer-name { color: #475569; font-weight: 700; }
 
 @keyframes rotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* =========================================
-   8. استجابة الشاشات الصغيرة (Mobile)
+   7. استجابة الهواتف (مهم جداً للتحرر)
    ========================================= */
-@media (max-width: 480px) {
-  .login-page { 
-    padding: 0; 
+@media (max-width: 600px) {
+  .login-container {
+    padding: 0; /* إلغاء الحواف في الموبايل */
   }
-  
-  .login-card { 
-    padding: 40px 20px; 
-    min-width: auto; 
-    width: 100%; 
-    min-height: 100vh; 
-    border-radius: 0; 
+
+  .login-card {
+    border-radius: 0; /* الكارد يملأ الزوايا */
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 40px 25px;
     box-shadow: none;
     border: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    max-width: none;
   }
-  
-  .logo-img { height: 60px; }
-  .app-name { font-size: 24px; }
-  
-  .btn-container { max-width: 100%; margin-top: 25px; }
-  .google-login-btn { padding: 12px 16px; font-size: 14px; }
-  .google-login-btn i { width: 30px; height: 30px; font-size: 18px; min-width: 30px; }
-  
-  .install-app-btn { height: 70px; padding: 0 15px; }
-  .install-app-icon { width: 40px; height: 40px; min-width: 40px; }
-  .install-app-icon img { width: 24px; height: 24px; }
-  .install-btn-title { font-size: 14px; }
-  .install-btn-subtitle { font-size: 11px; }
+
+  .logo-img { height: 70px; }
+  .app-name { font-size: 28px; }
   
   .footer-info {
-    margin-top: auto; /* دفع الفوتر لأسفل الصفحة */
+    margin-top: auto; /* دفع الفوتر لأسفل الشاشة */
     padding-bottom: 20px;
   }
 }

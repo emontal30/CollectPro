@@ -37,37 +37,6 @@
             </div>
           </div>
         </div>
-
-        <div class="subscription-container">
-          <h4 class="subscription-title">
-            {{ subStore.planName }}
-          </h4>
-          <div class="subscription-info">
-            <div
-              class="subscription-days-simple"
-              :class="subStore.ui.class"
-            >
-              <i class="fas" :class="subStore.ui.icon"></i>
-              <span id="days-left">
-                {{ subStore.ui.label }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="logout-container">
-          <button
-            id="logout-btn"
-            class="logout-btn btn btn-danger"
-            type="button"
-            :disabled="authStore.isLoading"
-            @click.stop="handleLogout"
-          >
-            <i class="fas fa-sign-out-alt"></i>
-            <span>{{ authStore.isLoading ? 'جاري الخروج...' : 'تسجيل الخروج' }}</span>
-          </button>
-        </div>
-
       </div>
     </div>
 
@@ -110,6 +79,39 @@
           </router-link>
         </li>
       </ul>
+    </div>
+
+    <!-- تذييل الشريط الجانبي - يحتوي على زر الخروج وحالة الاشتراك -->
+    <div class="sidebar-footer">
+      <div class="logout-container">
+        <button
+          id="logout-btn"
+          class="logout-btn btn btn-danger"
+          type="button"
+          :disabled="authStore.isLoading"
+          @click.stop="handleLogout"
+        >
+          <i class="fas fa-sign-out-alt"></i>
+          <span>{{ authStore.isLoading ? 'جاري الخروج...' : 'تسجيل الخروج' }}</span>
+        </button>
+      </div>
+
+      <div class="subscription-container">
+        <h4 class="subscription-title">
+          حالة الاشتراك: {{ subStore.planName }}
+        </h4>
+        <div class="subscription-info">
+          <div
+            class="subscription-days-simple"
+            :class="subStore.ui.class"
+          >
+            <i class="fas" :class="subStore.ui.icon"></i>
+            <span id="days-left">
+              {{ subStore.ui.label }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -290,12 +292,23 @@ const handleLogout = async () => {
     border-radius: 8px;
 }
 
+.sidebar-content {
+    flex: 1;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .subscription-container {
   background: rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 12px;
-  margin-bottom: 12px;
+  margin-top: 12px;
 }
 
 .subscription-title {
@@ -319,6 +332,10 @@ const handleLogout = async () => {
 .subscription-days-simple.warning { color: #feca57; }
 .subscription-days-simple.active { color: #2ecc71; }
 .subscription-days-simple.pending { color: rgba(255,255,255,0.7); }
+
+.logout-container {
+    margin-bottom: 5px;
+}
 
 .logout-btn {
   background: rgba(220, 53, 69, 0.9);

@@ -1,21 +1,18 @@
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <router-view />
-    </div>
+  <div class="auth-layout">
+    <router-view />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-
-const currentYear = ref(new Date().getFullYear())
-
-onMounted(() => {
-  currentYear.value = new Date().getFullYear()
-})
+/* لا حاجة لمنطق إضافي هنا حالياً */
 </script>
 
 <style scoped>
-/* Auth layout specific styles */
+.auth-layout {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 </style>

@@ -34,8 +34,8 @@ onMounted(() => {
   box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 10;
-  /* تم إزالة min-width: 768px ليتناسب مع عرض الشاشة الحقيقي */
   width: 100%;
+  min-width: 768px; /* ضمان امتداد الفوتر ليغطي عرض الديسكتوب بالكامل */
 }
 
 .footer-content {
@@ -87,8 +87,6 @@ onMounted(() => {
     font-size: 12px;
     padding: 12px 10px;
     margin-top: 30px;
-    /* ضمان أن الفوتر يغطي العرض الكامل المتاح في المتصفح */
-    min-width: 100%;
   }
 }
 </style>

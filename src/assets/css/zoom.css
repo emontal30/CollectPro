@@ -1,23 +1,23 @@
 /* ====== ZOOM SYSTEM ====== */
 /* 
    إعادة الهيكلة: 
-   المستوى 5 هو الافتراضي (14px)
+   المستوى صفر هو الافتراضي (18px)
    تحته 5 مستويات أصغر وفوقه 5 مستويات أكبر
 */
 
 /* الأصغر */
 html.zoom-lvl0 { font-size: 9px !important; }
 html.zoom-lvl1 { font-size: 10px !important; }
-html.zoom-lvl2 { font-size: 11px !important; }
-html.zoom-lvl3 { font-size: 12px !important; }
-html.zoom-lvl4 { font-size: 13px !important; }
+html.zoom-lvl2 { font-size: 12px !important; }
+html.zoom-lvl3 { font-size: 14px !important; }
+html.zoom-lvl4 { font-size: 16px !important; }
 
 /* الافتراضي (كان زوم 3 سابقاً) */
-html.zoom-lvl5 { font-size: 14px !important; }
+html.zoom-lvl5 { font-size: 18px !important; }
 
 /* الأكبر */
-html.zoom-lvl6 { font-size: 15px !important; }
-html.zoom-lvl7 { font-size: 16px !important; }
-html.zoom-lvl8 { font-size: 18px !important; }
-html.zoom-lvl9 { font-size: 20px !important; }
-html.zoom-lvl10 { font-size: 22px !important; }
+html.zoom-lvl6 { font-size: 19px !important; }
+html.zoom-lvl7 { font-size: 20px !important; }
+html.zoom-lvl8 { font-size: 22px !important; }
+html.zoom-lvl9 { font-size: 24px !important; }
+html.zoom-lvl10 { font-size: 26px !important; }

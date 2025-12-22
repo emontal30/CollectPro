@@ -28,11 +28,12 @@ const toggleSidebar = () => {
 
 <style scoped>
 .header-content {
-  position: fixed;
+  /* تغيير الوضع إلى sticky ليدعم التمرير الأفقي في وضع الديسكتوب */
+  position: sticky;
   top: 0;
   left: 0;
   width: 100%;
-  /* تم إزالة min-width لضمان بقاء الهيدر ضمن حدود شاشة الموبايل المرئية */
+  min-width: 768px; /* ضمان امتداد الهيدر في وضع الديسكتوب */
   height: 70px;
   z-index: 1002;
   background: var(--primary, #007965);
@@ -110,6 +111,7 @@ const toggleSidebar = () => {
 @media (max-width: 768px) {
   .header-content {
     height: 65px;
+    /* في وضع الديسكتوب الإجباري، يظل الـ min-width هو المتحكم */
   }
   
   .header-container {

@@ -113,14 +113,14 @@ watch(() => subStore.isInitialized, (val) => {
 /* Main content */
 main {
   flex: 1;
-  padding-top: 70px; /* Space for Topbar */
   display: flex;
   flex-direction: column;
 }
 
 .content-wrapper {
   flex: 1;
-  padding: 20px;
+  /* تقليل الهامش العلوي ليصبح أكثر تناسقاً مع الهيدر Sticky */
+  padding: 10px 20px 20px 20px; 
   width: 100%;
   margin: 0 auto;
 }
@@ -129,13 +129,4 @@ main {
 footer {
   margin-top: auto;
 }
-
-/* Mobile responsiveness - تم تعطيلها لخدمة وضع سطح المكتب */
-/* 
-@media (max-width: 768px) {
-  .content-wrapper {
-    padding: 15px 10px;
-  }
-}
-*/
 </style>
