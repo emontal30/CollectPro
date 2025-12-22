@@ -1,16 +1,18 @@
 <template>
   <!-- 🔝 الشريط العلوي -->
   <div class="header-content">
-    <!-- Logo and App Name on the left -->
-    <div class="logo-section">
-      <img src="/logo-momkn.png" alt="شعار التطبيق" class="header-logo" />
-      <span class="app-title">CollectPro</span>
-    </div>
+    <div class="header-container">
+      <!-- Logo and App Name on the left -->
+      <div class="logo-section">
+        <img src="/logo-momkn.png" alt="شعار التطبيق" class="header-logo" />
+        <span class="app-title">CollectPro</span>
+      </div>
 
-    <!-- Menu toggle on the right -->
-    <button class="menu-toggle" title="فتح القائمة" @click="toggleSidebar">
-      <i class="fas fa-bars"></i>
-    </button>
+      <!-- Menu toggle on the right -->
+      <button class="menu-toggle" title="فتح القائمة" @click="toggleSidebar">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -30,19 +32,23 @@ const toggleSidebar = () => {
   top: 0;
   left: 0;
   width: 100%;
-  /* التوافق مع عرض الموبايل الإجباري */
-  min-width: 768px; 
+  /* تم إزالة min-width لضمان بقاء الهيدر ضمن حدود شاشة الموبايل المرئية */
   height: 70px;
   z-index: 1002;
+  background: var(--primary, #007965);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.header-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  direction: ltr; /* Keeps logo on left and menu on right consistently */
+  height: 100%;
   padding: 0 20px;
-  background: var(--primary, #007965);
-  color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  width: 100%;
+  margin: 0 auto;
+  direction: ltr; /* يحافظ على الشعار يساراً والزر يميناً */
 }
 
 /* Logo section */
@@ -88,6 +94,7 @@ const toggleSidebar = () => {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .menu-toggle:hover {
@@ -99,13 +106,16 @@ const toggleSidebar = () => {
   transform: translateY(0);
 }
 
-/* Mobile responsiveness - تم تعديلها لتناسب العرض الإجباري */
+/* Mobile responsiveness */
 @media (max-width: 768px) {
   .header-content {
-    padding: 0 15px;
     height: 65px;
   }
   
+  .header-container {
+    padding: 0 15px;
+  }
+
   .header-logo {
     height: 35px;
   }

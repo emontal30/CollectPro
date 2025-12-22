@@ -5,7 +5,7 @@
       <p class="developer-info">
         تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
         <span class="footer-separator">|</span>
-        <span class="version-badge">v2.2.1</span>
+        <span class="version-badge">v2.2.3</span>
       </p>
     </div>
   </div>
@@ -34,8 +34,7 @@ onMounted(() => {
   box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 10;
-  /* التوافق مع عرض الموبايل الإجباري */
-  min-width: 768px;
+  /* تم إزالة min-width: 768px ليتناسب مع عرض الشاشة الحقيقي */
   width: 100%;
 }
 
@@ -82,12 +81,14 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Mobile responsiveness - تم تعديلها لتناسب العرض الإجباري */
+/* Mobile responsiveness */
 @media (max-width: 768px) {
   .footer {
     font-size: 12px;
     padding: 12px 10px;
     margin-top: 30px;
+    /* ضمان أن الفوتر يغطي العرض الكامل المتاح في المتصفح */
+    min-width: 100%;
   }
 }
 </style>

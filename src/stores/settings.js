@@ -4,13 +4,12 @@ import logger from '@/utils/logger.js'
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     darkMode: false,
-    zoomLevel: 5 // 0 to 10 scale, 5 = normal (16px)
+    zoomLevel: 5 // 0 to 10 scale, 5 is the new default (14px)
   }),
 
   getters: {
     zoomClass: (state) => {
-      const levels = ['6xs', '5xs', 'xs', 'sm', 'base', 'normal', 'lg', 'xl', '2xl', '3xl', '4xl']
-      return `zoom-${levels[state.zoomLevel] || 'normal'}`
+      return `zoom-lvl${state.zoomLevel}`
     }
   },
 
@@ -52,14 +51,19 @@ export const useSettingsStore = defineStore('settings', {
         document.body.classList.remove('dark')
       }
 
-      // Apply zoom level to HTML element for rem scaling
-      const zoomClasses = ['zoom-6xs', 'zoom-5xs', 'zoom-xs', 'zoom-sm', 'zoom-base', 'zoom-normal', 'zoom-lg', 'zoom-xl', 'zoom-2xl', 'zoom-3xl', 'zoom-4xl']
-      
+      // Apply zoom level to HTML element
       const html = document.documentElement;
-      // Remove all zoom classes
-      zoomClasses.forEach(cls => html.classList.remove(cls));
+      
+      // Remove any class starting with zoom-lvl
+      const classes = Array.from(html.classList);
+      classes.forEach(cls => {
+        if (cls.startsWith('zoom-lvl')) {
+          html.classList.remove(cls);
+        }
+      });
+      
       // Add current zoom class
-      html.classList.add(zoomClasses[this.zoomLevel] || 'zoom-normal');
+      html.classList.add(`zoom-lvl${this.zoomLevel}`);
 
       this.saveSettings()
     },
@@ -77,7 +81,8 @@ export const useSettingsStore = defineStore('settings', {
         try {
           const parsed = JSON.parse(settings)
           this.darkMode = typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false
-          this.zoomLevel = typeof parsed.zoomLevel === 'number' ? parsed.zoomLevel : 5
+          // التأكد من أن الزوم القديم (إذا كان مخزناً) سيتم تحويله للقيمة الافتراضية الجديدة 5 إذا لم يكن صالحاً
+          this.zoomLevel = (typeof parsed.zoomLevel === 'number' && parsed.zoomLevel >= 0 && parsed.zoomLevel <= 10) ? parsed.zoomLevel : 5
           this.applySettings()
         } catch (error) {
           logger.error('Error loading settings:', error)

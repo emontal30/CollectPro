@@ -1,38 +1,23 @@
 /* ====== ZOOM SYSTEM ====== */
-/* Zoom scales based on base font size */
-.zoom-8xs { font-size: 10px !important; }
-.zoom-7xs { font-size: 11px !important; }
-.zoom-6xs { font-size: 12px !important; }
-.zoom-5xs { font-size: 13px !important; }
-.zoom-xs { font-size: 14px !important; }
-.zoom-sm { font-size: 15px !important; }
-.zoom-base { font-size: 16px !important; }
-.zoom-normal { font-size: 16px !important; }
-.zoom-lg { font-size: 18px !important; }
-.zoom-xl { font-size: 20px !important; }
-.zoom-2xl { font-size: 22px !important; }
-.zoom-3xl { font-size: 24px !important; }
-.zoom-4xl { font-size: 26px !important; }
-.zoom-5xl { font-size: 28px !important; }
-.zoom-6xl { font-size: 30px !important; }
+/* 
+   إعادة الهيكلة: 
+   المستوى 5 هو الافتراضي (14px)
+   تحته 5 مستويات أصغر وفوقه 5 مستويات أكبر
+*/
 
-/* Apply to root elements to scale everything */
-body.zoom-8xs, body.zoom-8xs * { font-size: inherit; }
-/* ... Note: It's better to just set it on body and use relative units (rem/em) in the app ... */
-/* But since many parts might use px, we will target the html font-size */
+/* الأصغر */
+html.zoom-lvl0 { font-size: 9px !important; }
+html.zoom-lvl1 { font-size: 10px !important; }
+html.zoom-lvl2 { font-size: 11px !important; }
+html.zoom-lvl3 { font-size: 12px !important; }
+html.zoom-lvl4 { font-size: 13px !important; }
 
-html.zoom-8xs { font-size: 10px !important; }
-html.zoom-7xs { font-size: 11px !important; }
-html.zoom-6xs { font-size: 12px !important; }
-html.zoom-5xs { font-size: 13px !important; }
-html.zoom-xs { font-size: 14px !important; }
-html.zoom-sm { font-size: 15px !important; }
-html.zoom-base { font-size: 16px !important; }
-html.zoom-normal { font-size: 16px !important; }
-html.zoom-lg { font-size: 18px !important; }
-html.zoom-xl { font-size: 20px !important; }
-html.zoom-2xl { font-size: 22px !important; }
-html.zoom-3xl { font-size: 24px !important; }
-html.zoom-4xl { font-size: 26px !important; }
-html.zoom-5xl { font-size: 28px !important; }
-html.zoom-6xl { font-size: 30px !important; }
+/* الافتراضي (كان زوم 3 سابقاً) */
+html.zoom-lvl5 { font-size: 14px !important; }
+
+/* الأكبر */
+html.zoom-lvl6 { font-size: 15px !important; }
+html.zoom-lvl7 { font-size: 16px !important; }
+html.zoom-lvl8 { font-size: 18px !important; }
+html.zoom-lvl9 { font-size: 20px !important; }
+html.zoom-lvl10 { font-size: 22px !important; }

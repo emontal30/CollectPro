@@ -60,7 +60,7 @@
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
               <span class="footer-separator">|</span>
-              <span class="version-badge">v2.8.4</span>
+              <span class="version-badge">v2.2.3</span>
             </p>
           </div>
 
@@ -522,8 +522,23 @@ const installApp = async () => {
    8. استجابة الشاشات الصغيرة (Mobile)
    ========================================= */
 @media (max-width: 480px) {
-  .login-page { padding: 20px; }
-  .login-card { padding: 30px 20px; min-width: auto; width: 100%; }
+  .login-page { 
+    padding: 0; 
+  }
+  
+  .login-card { 
+    padding: 40px 20px; 
+    min-width: auto; 
+    width: 100%; 
+    min-height: 100vh; 
+    border-radius: 0; 
+    box-shadow: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
   .logo-img { height: 60px; }
   .app-name { font-size: 24px; }
   
@@ -536,5 +551,10 @@ const installApp = async () => {
   .install-app-icon img { width: 24px; height: 24px; }
   .install-btn-title { font-size: 14px; }
   .install-btn-subtitle { font-size: 11px; }
+  
+  .footer-info {
+    margin-top: auto; /* دفع الفوتر لأسفل الصفحة */
+    padding-bottom: 20px;
+  }
 }
 </style>
