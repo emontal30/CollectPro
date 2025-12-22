@@ -5,7 +5,7 @@
    1. PAGE WRAPPERS & LAYOUT STRUCTURE
    ========================================= */
 
-/* Unified Page Container for all views */
+/* Unified Fixed Width Page Container for all views */
 .page-container, 
 .harvest-page, 
 .dashboard-page, 
@@ -14,9 +14,7 @@
 .admin-dashboard,
 .my-subscription-page,
 .payment-page {
-  width: 100%;
-  max-width: 1100px; /* عرض موحد لجميع الصفحات */
-  min-width: 768px;  /* الحد الأدنى للعرض المطلوب تم تحديثه إلى 768 بكسل */
+  width: 768px; /* عرض ثابت كما طلب المستخدم */
   margin: 0 auto;
   padding: 20px;
   animation: fadeIn 0.5s ease-in-out;
