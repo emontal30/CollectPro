@@ -34,6 +34,9 @@ onMounted(() => {
   box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 10;
+  /* التوافق مع عرض الموبايل الإجباري */
+  min-width: 768px;
+  width: 100%;
 }
 
 .footer-content {
@@ -79,27 +82,12 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Mobile responsiveness */
+/* Mobile responsiveness - تم تعديلها لتناسب العرض الإجباري */
 @media (max-width: 768px) {
   .footer {
     font-size: 12px;
     padding: 12px 10px;
     margin-top: 30px;
-  }
-  
-  .developer-info {
-    gap: 6px;
-  }
-}
-
-@media (max-width: 480px) {
-  .footer {
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
-  }
-  
-  .footer-separator {
-    display: none; /* Hide separator on very small screens if wrap happens */
   }
 }
 </style>

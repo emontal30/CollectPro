@@ -30,6 +30,8 @@ const toggleSidebar = () => {
   top: 0;
   left: 0;
   width: 100%;
+  /* التوافق مع عرض الموبايل الإجباري */
+  min-width: 768px; 
   height: 70px;
   z-index: 1002;
   display: flex;
@@ -97,7 +99,7 @@ const toggleSidebar = () => {
   transform: translateY(0);
 }
 
-/* Mobile responsiveness */
+/* Mobile responsiveness - تم تعديلها لتناسب العرض الإجباري */
 @media (max-width: 768px) {
   .header-content {
     padding: 0 15px;
@@ -116,20 +118,6 @@ const toggleSidebar = () => {
     width: 40px;
     height: 40px;
     font-size: 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-logo {
-    height: 32px;
-  }
-  
-  .app-title {
-    font-size: 1.1rem;
-  }
-  
-  .logo-section {
-    gap: 8px;
   }
 }
 </style>
