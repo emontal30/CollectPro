@@ -95,7 +95,9 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
-  overflow-x: hidden; /* تم تغييرها من auto إلى hidden لمنع التمرير الأفقي في الشاشات الصغيرة */
+  /* إجبار المتصفح على عرض سطح المكتب */
+  min-width: 1280px;
+  overflow-x: auto;
 }
 
 /* Alert container */
@@ -120,7 +122,6 @@ main {
   flex: 1;
   padding: 20px;
   width: 100%;
-  max-width: 100vw; /* ضمان عدم تجاوز العرض */
   margin: 0 auto;
 }
 
@@ -129,10 +130,12 @@ footer {
   margin-top: auto;
 }
 
-/* Mobile responsiveness */
+/* Mobile responsiveness - تم تعطيلها لخدمة وضع سطح المكتب */
+/* 
 @media (max-width: 768px) {
   .content-wrapper {
     padding: 15px 10px;
   }
 }
+*/
 </style>
