@@ -95,8 +95,8 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
-  /* إجبار المتصفح على عرض سطح المكتب */
-  min-width: 1280px;
+  /* إجبار المتصفح على عرض سطح المكتب المصغر بعرض 768px */
+  min-width: 768px;
   overflow-x: auto;
 }
 

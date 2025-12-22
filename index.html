@@ -6,11 +6,11 @@
     (function() {
       var viewport = document.createElement('meta');
       viewport.name = "viewport";
-      if (screen.width < 1024) {
-        // إذا كان العرض أقل من 1024px (موبايل)، إجبار عرض سطح المكتب
-        viewport.content = "width=1280, user-scalable=yes";
+      if (screen.width < 768) {
+        // إذا كان العرض أقل من 768px (موبايل)، إجبار عرض سطح المكتب المصغر
+        viewport.content = "width=768, user-scalable=yes";
       } else {
-        // ديسك توب، الإعداد الطبيعي
+        // تابلت أو ديسك توب، الإعداد الطبيعي
         viewport.content = "width=device-width, initial-scale=1.0";
       }
       document.getElementsByTagName('head')[0].appendChild(viewport);
