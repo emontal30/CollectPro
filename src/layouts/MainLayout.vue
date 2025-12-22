@@ -95,8 +95,7 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
-  /* Added overflow-x: auto to allow the layout to exceed screen width when min-width is applied */
-  overflow-x: auto;
+  overflow-x: hidden; /* تم تغييرها من auto إلى hidden لمنع التمرير الأفقي في الشاشات الصغيرة */
 }
 
 /* Alert container */
@@ -121,6 +120,7 @@ main {
   flex: 1;
   padding: 20px;
   width: 100%;
+  max-width: 100vw; /* ضمان عدم تجاوز العرض */
   margin: 0 auto;
 }
 

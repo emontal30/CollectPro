@@ -15,8 +15,8 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: var(--surface-bg);
-  min-width: 600px; /* Prevent squashing on mobile */
-  table-layout: fixed; /* Reverted back to fixed layout */
+  min-width: 600px; /* تم تقليل الحد الأدنى ليتناسب أكثر مع الموبايل */
+  table-layout: fixed;
 }
 
 /* 3. Modern & Legacy Table Classes Merged */
@@ -92,7 +92,7 @@ tr:last-child td { border-bottom: none !important; }
 
 /* Code Column - Fixed width to accommodate large numbers */
 .code, td.code, th.code {
-  width: 110px !important; /* Set to a specific width that fits common codes */
+  width: 110px !important; 
   min-width: 110px;
   white-space: nowrap;
 }
@@ -180,6 +180,11 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
   .code {
     width: 90px !important;
     min-width: 90px;
+  }
+  
+  /* تقليل الحد الأدنى للجدول في الموبايل ليسمح بالتمرير بشكل سليم */
+  table {
+    min-width: 500px;
   }
 }
 

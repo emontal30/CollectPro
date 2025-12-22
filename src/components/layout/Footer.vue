@@ -34,7 +34,6 @@ onMounted(() => {
   box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
   position: relative;
   z-index: 10;
-  min-width: 768px; /* تأكيد الحد الأدنى للعرض */
 }
 
 .footer-content {
