@@ -4,6 +4,7 @@
     
     <!-- مكونات النظام العالمية -->
     <InstallPrompt />
+    <ReloadPrompt />
     <NotificationContainer />
     <OfflineBanner />
   </div>
@@ -17,6 +18,7 @@ import logger from '@/utils/logger';
 
 // استيراد المكونات العالمية
 import InstallPrompt from '@/components/ui/InstallPrompt.vue';
+import ReloadPrompt from '@/components/ui/ReloadPrompt.vue';
 import NotificationContainer from '@/components/ui/NotificationContainer.vue';
 import OfflineBanner from '@/components/ui/OfflineBanner.vue';
 

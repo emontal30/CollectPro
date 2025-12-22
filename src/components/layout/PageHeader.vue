@@ -4,7 +4,7 @@
       <!-- Professional Zoom Selector -->
       <div class="zoom-selector-wrapper">
         <div class="zoom-dropdown">
-          <button @click="toggleZoomMenu" class="zoom-trigger-btn" :class="{ 'active': isMenuOpen }" title="ضبط حجم الخط">
+          <button @click.stop="toggleZoomMenu" class="zoom-trigger-btn" :class="{ 'active': isMenuOpen }" title="ضبط حجم الخط">
             <span class="zoom-icon">
               <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
             </span>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 
 const settingsStore = useSettingsStore();
@@ -100,22 +100,6 @@ const resetZoom = () => {
   settingsStore.setZoomLevel(5);
   closeZoomMenu();
 };
-
-// Simple directive-like logic for clicking outside
-const handleClickOutside = (event) => {
-  const dropdown = document.querySelector('.zoom-dropdown');
-  if (dropdown && !dropdown.contains(event.target)) {
-    closeZoomMenu();
-  }
-};
-
-onMounted(() => {
-  document.addEventListener('mousedown', handleClickOutside);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('mousedown', handleClickOutside);
-});
 </script>
 
 <style scoped>

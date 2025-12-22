@@ -15,11 +15,29 @@ import logger from '@/utils/logger.js'
 const app = createApp(App)
 const pinia = createPinia()
 
-// 2. Install Plugins
+// 2. Global Directives
+// Directive to handle clicking outside of an element
+app.directive('click-outside', {
+  mounted(el, binding) {
+    el.clickOutsideEvent = (event) => {
+      // Check if the click was outside the element and its children
+      if (!(el === event.target || el.contains(event.target))) {
+        // Call the method provided in the directive's value
+        binding.value(event);
+      }
+    };
+    document.addEventListener('click', el.clickOutsideEvent);
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el.clickOutsideEvent);
+  },
+});
+
+// 3. Install Plugins
 app.use(pinia)
 app.use(router)
 
-// 3. Global PWA Handler
+// 4. Global PWA Handler
 window.addEventListener('beforeinstallprompt', (e) => {
   logger.info('🚀 Global: Captured beforeinstallprompt event');
   e.preventDefault(); 
@@ -34,11 +52,8 @@ function setupUpdateListener() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       logger.info('♻️ New Service Worker Controller detected. Refreshing...');
-      // يمكن هنا إظهار إشعار بدلاً من التحديث التلقائي
-      // window.location.reload(); 
     });
 
-    // مراقبة التحديثات المتاحة
     window.addEventListener('load', async () => {
       try {
         const registration = await navigator.serviceWorker.getRegistration();
@@ -49,7 +64,6 @@ function setupUpdateListener() {
               installingWorker.onstatechange = () => {
                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   logger.info('✨ New content is available; please refresh.');
-                  // سيقوم نظام الإشعارات في المكونات بالتعامل مع التنبيهات لاحقاً
                 }
               };
             }
@@ -62,16 +76,15 @@ function setupUpdateListener() {
   }
 }
 
-// 4. Initialize Background Services
+// 5. Initialize Background Services
 logger.info('🧠 Initializing Smart Cache System...');
 startAutoCleaning(5 * 60 * 1000);
 setupUpdateListener();
 
-// Enable Cache Monitor in Development only
 if (import.meta.env.DEV) {
   setupCacheMonitor();
 }
 
-// 5. Mount Application
+// 6. Mount Application
 app.mount('#app')
 logger.info('✅ Application Mounted Successfully');
