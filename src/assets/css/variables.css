@@ -12,7 +12,7 @@
   --warning: #f39c12;
   --danger: #e74c3c;
   --info: #3498db;
-  --secondary: #64748b; /* Adjusted to gray for consistency with secondary buttons */
+  --secondary: #64748b;
 
   /* ====== درجات الرمادي (Grayscales) ====== */
   --gray-100: #f8f9fa;
@@ -81,15 +81,20 @@
   --alert-border-radius: var(--border-radius);
 
   /* ====== تخطيط الصفحة (Layout Dimensions) ====== */
-  --header-height: 60px;
+  --header-height: 70px;
   --footer-height: 60px;
-  --sidebar-width: 320px; /* تم زيادة العرض من 300px إلى 320px بناءً على طلب المستخدم */
+  --sidebar-width: 320px;
+  --app-min-width: 768px;
 
-  /* ====== Dark Mode Overrides Placeholders (Light defaults) ====== */
+  /* ====== Dark Mode Overrides Placeholders ====== */
   --dark-surface: rgba(255, 255, 255, 0.7);
   --dark-border: rgba(0, 0, 0, 0.08);
   --dark-shadow: rgba(0, 0, 0, 0.1);
   --header-gradient: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  
+  /* ألوان الهيدر والفوتر الافتراضية */
+  --header-bg: var(--primary);
+  --footer-bg: var(--primary);
 }
 
 /* ====== DARK MODE OVERRIDES ====== */
@@ -128,4 +133,8 @@ body.dark {
   --table-row-hover: rgba(45, 212, 191, 0.05);
   --border-color: rgba(255, 255, 255, 0.1);
   --header-gradient: linear-gradient(45deg, #ffffff 30%, #2dd4bf 100%);
+  
+  /* ألوان الهيدر والفوتر في الوضع الليلي */
+  --header-bg: var(--dark-surface);
+  --footer-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
 }

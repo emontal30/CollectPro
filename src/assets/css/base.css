@@ -57,10 +57,11 @@ body {
 main {
   flex: 1;
   width: 100%;
-  /* Removed max-width here as it's handled in _unified-components.css */
   margin: 0 auto;
   padding: 20px;
-  padding-top: 80px; /* Space for fixed header */
+  /* تقليل المسافة العلوية من 80px إلى 20px لأن الهيدر sticky وليس fixed */
+  /* هذا سيجعل العنوان أقرب بكثير للتوب بار */
+  padding-top: 15px; 
 }
 
 /* Typography Helpers */

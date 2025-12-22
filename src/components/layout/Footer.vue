@@ -5,7 +5,7 @@
       <p class="developer-info">
         تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
         <span class="footer-separator">|</span>
-        <span class="version-badge">v2.2.3</span>
+        <span class="version-badge">v2.2.4</span>
       </p>
     </div>
   </div>
@@ -26,7 +26,7 @@ onMounted(() => {
   text-align: center;
   padding: 15px 15px;
   margin-top: 40px;
-  background: var(--primary, #007965);
+  background: var(--footer-bg, var(--primary));
   color: white;
   font-size: 13px;
   border-top-left-radius: 20px;
@@ -35,7 +35,7 @@ onMounted(() => {
   position: relative;
   z-index: 10;
   width: 100%;
-  min-width: 768px; /* ضمان امتداد الفوتر ليغطي عرض الديسكتوب بالكامل */
+  transition: background 0.3s ease;
 }
 
 .footer-content {
@@ -43,7 +43,8 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  max-width: 800px;
+  width: 100%;
+  max-width: var(--app-min-width, 768px); /* توحيد العرض مع الصفحات */
   margin: 0 auto;
 }
 

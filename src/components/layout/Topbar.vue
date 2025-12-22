@@ -28,17 +28,16 @@ const toggleSidebar = () => {
 
 <style scoped>
 .header-content {
-  /* تغيير الوضع إلى sticky ليدعم التمرير الأفقي في وضع الديسكتوب */
   position: sticky;
   top: 0;
   left: 0;
   width: 100%;
-  min-width: 768px; /* ضمان امتداد الهيدر في وضع الديسكتوب */
-  height: 70px;
+  height: var(--header-height, 70px);
   z-index: 1002;
-  background: var(--primary, #007965);
+  background: var(--header-bg, var(--primary));
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  transition: background 0.3s ease;
 }
 
 .header-container {
@@ -48,8 +47,9 @@ const toggleSidebar = () => {
   height: 100%;
   padding: 0 20px;
   width: 100%;
+  max-width: var(--app-min-width, 768px); /* توحيد العرض مع الصفحات */
   margin: 0 auto;
-  direction: ltr; /* يحافظ على الشعار يساراً والزر يميناً */
+  direction: ltr;
 }
 
 /* Logo section */
@@ -103,15 +103,10 @@ const toggleSidebar = () => {
   transform: translateY(-2px);
 }
 
-.menu-toggle:active {
-  transform: translateY(0);
-}
-
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .header-content {
-    height: 65px;
-    /* في وضع الديسكتوب الإجباري، يظل الـ min-width هو المتحكم */
+    height: calc(var(--header-height, 70px) - 5px);
   }
   
   .header-container {

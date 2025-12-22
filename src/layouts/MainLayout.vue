@@ -7,14 +7,14 @@
     <NotificationContainer />
 
     <!-- الهيدر -->
-    <header>
+    <header class="app-header">
       <Topbar />
     </header>
 
     <Sidebar />
 
     <!-- Main content area -->
-    <main>
+    <main class="app-main">
       <div class="content-wrapper">
         <router-view v-slot="{ Component }">
           <KeepAlive include="DashboardView,HarvestView">
@@ -25,7 +25,7 @@
     </main>
 
     <!-- الفوتر -->
-    <footer>
+    <footer class="app-footer">
       <Footer />
     </footer>
   </div>
@@ -47,60 +47,47 @@ const settingsStore = useSettingsStore();
 const subStore = useMySubscriptionStore();
 const notifications = useNotifications();
 
-// توفير نظام الإشعارات للمكونات الفرعية
 provide('notifications', notifications);
 
-// دالة التحقق من قرب انتهاء الاشتراك
 const checkSubscriptionExpiry = () => {
-  // التأكد من أن البيانات محملة وأن هناك اشتراك نشط
   if (!subStore.isInitialized || !subStore.isSubscribed) return;
-
   const days = subStore.daysRemaining;
   const HAS_SHOWN_ALERT = sessionStorage.getItem('subscription_expiry_alert_shown');
-
-  // التنبيه إذا كان متبقي 3 أيام أو أقل ولم يتم إظهاره في هذه الجلسة
   if (days <= 3 && days > 0 && !HAS_SHOWN_ALERT) {
     notifications.addNotification(
       `تنبيه: اشتراكك ينتهي خلال ${days === 1 ? 'يوم واحد' : days === 2 ? 'يومين' : days + ' أيام'}. يرجى التجديد لضمان استمرار الخدمة.`,
       'warning',
-      10000 // يبقى لمدة 10 ثوانٍ
+      10000
     );
     sessionStorage.setItem('subscription_expiry_alert_shown', 'true');
   }
 };
 
-// عند تحميل التخطيط الأساسي
 onMounted(async () => {
   if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
   if (settingsStore?.loadSettings) settingsStore.loadSettings();
-  
-  // التحقق من الاشتراك فور التهيئة
-  if (subStore.isInitialized) {
-    checkSubscriptionExpiry();
-  }
+  if (subStore.isInitialized) checkSubscriptionExpiry();
 });
 
-// مراقبة تهيئة المتجر لإظهار التنبيه فور توفر البيانات
 watch(() => subStore.isInitialized, (val) => {
-  if (val) {
-    checkSubscriptionExpiry();
-  }
+  if (val) checkSubscriptionExpiry();
 });
 </script>
 
 <style scoped>
-/* Main Layout Styles */
 .main-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
-  /* إجبار المتصفح على عرض سطح المكتب المصغر بعرض 768px */
-  min-width: 768px;
-  overflow-x: auto;
+  width: 100%;
+  margin: 0 auto;
+  min-width: var(--app-min-width, 768px);
+  position: relative;
+  /* لضمان التوسط في الشاشات الكبيرة جداً */
+  align-items: center;
 }
 
-/* Alert container */
 .alert-container {
   position: fixed;
   top: 80px;
@@ -110,23 +97,32 @@ watch(() => subStore.isInitialized, (val) => {
   pointer-events: none;
 }
 
-/* Main content */
-main {
+.app-header, .app-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  align-items: center;
 }
 
 .content-wrapper {
   flex: 1;
-  /* تقليل الهامش العلوي ليصبح أكثر تناسقاً مع الهيدر Sticky */
-  padding: 10px 20px 20px 20px; 
   width: 100%;
+  max-width: var(--app-min-width, 768px);
   margin: 0 auto;
+  /* تم إزالة padding الأفقي هنا لأنه موجود بالفعل داخل مكونات الصفحات */
+  padding-top: 0;
+  padding-bottom: 20px;
 }
 
-/* Footer */
-footer {
+.app-footer {
   margin-top: auto;
 }
 </style>
