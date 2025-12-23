@@ -62,7 +62,7 @@
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
               <span class="footer-separator">|</span>
-              <span class="version-badge">v2.2.7</span>
+              <span class="version-badge">v2.2.3</span>
             </p>
           </div>
 
@@ -364,28 +364,31 @@ const installApp = async () => {
 }
 
 /* =========================================
-   7. استجابة الهواتف (مهم جداً للتحرر)
+   7. استجابة الهواتف (ملء الشاشة بالكامل)
    ========================================= */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .login-container {
-    padding: 0; /* إلغاء الحواف في الموبايل */
+    padding: 0; /* إزالة الحواف الخارجية */
+    align-items: stretch; /* جعل الكارد يتمدد طولياً */
   }
 
   .login-card {
-    border-radius: 0; /* الكارد يملأ الزوايا */
+    border-radius: 0; /* إزالة الزوايا الدائرية */
     min-height: 100vh;
     min-height: 100dvh;
-    padding: 40px 25px;
+    padding: 60px 25px 40px;
     box-shadow: none;
     border: none;
     max-width: none;
+    justify-content: flex-start; /* بدء المحتوى من الأعلى قليلاً مع دفع الفوتر للأسفل */
   }
 
-  .logo-img { height: 70px; }
-  .app-name { font-size: 28px; }
+  .logo-img { height: 80px; }
+  .app-name { font-size: 30px; }
   
   .footer-info {
-    margin-top: auto; /* دفع الفوتر لأسفل الشاشة */
+    margin-top: auto; /* دفع الفوتر لأسفل الشاشة دائماً */
+    padding-top: 40px;
     padding-bottom: 20px;
   }
 }

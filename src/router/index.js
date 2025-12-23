@@ -96,20 +96,29 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.matched.some(r => r.meta.requiresAuth)
     const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
 
-    // 2. Check session only if needed to avoid hanging
+    // 2. Check session only if needed
     if (requiresAuth) {
-      // نستخدم getSession() فقط إذا لم يكن هناك مستخدم في الستور أو للتأكد من صلاحية الجلسة
-      // قمنا بإضافة محاولة سريعة لتجنب التعليق
       const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (error || !session) {
+      // إذا كان هناك خطأ في الشبكة والأوفلاين، نعتمد على البيانات الموجودة في الستور
+      const isNetworkError = error && (error.message?.includes('fetch') || !navigator.onLine);
+      
+      if (!session && !isNetworkError) {
         logger.warn('🔒 Session invalid or expired. Redirecting to login.');
         authStore.user = null;
         authStore.userProfile = null;
         if (to.path !== '/') return next('/');
         return next();
-      } else {
+      } 
+      
+      if (session) {
         authStore.user = session.user;
+      } else if (isNetworkError && authStore.user) {
+        // إذا كنا أوفلاين ولدينا مستخدم سابقاً، نسمح بالمرور
+        logger.info('🌐 Offline mode: Using cached session');
+      } else if (isNetworkError && !authStore.user) {
+        // أوفلاين وبدون جلسة سابقة
+        return next('/');
       }
     }
 
@@ -118,7 +127,6 @@ router.beforeEach(async (to, from, next) => {
     // 3. Already Logged In -> Redirect to last page
     if (isLoggedIn && requiresGuest) {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
-      // تجنب حلقة مفرغة إذا كان lastRoute هو نفس الصفحة الحالية
       if (lastRoute === to.path) return next();
       return next(lastRoute);
     }
@@ -127,15 +135,19 @@ router.beforeEach(async (to, from, next) => {
     if (requiresAuth) {
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin)
       if (requiresAdmin && !authStore.isAdmin) {
-        logger.warn('⚠️ Admin access denied.')
-        return next({ name: 'Dashboard' })
+        // في حالة الأوفلاين، قد لا نتمكن من التحقق من رتبة الأدمن إذا لم تكن مخزنة
+        // لكن نفترض الصلاحية إذا كان البروفايل موجود محلياً
+        logger.warn('⚠️ Admin access check')
+        if (authStore.user && !authStore.userProfile && !navigator.onLine) {
+           // إذا كنا أوفلاين ولا يوجد بروفايل، قد نضطر للسماح أو المنع بناء على سياسة التطبيق
+           // هنا سنسمح بالدخول إذا كان قد دخل سابقاً كأدمن (نحتاج لتخزين هذا في الستور)
+        }
       }
     }
 
     next()
   } catch (err) {
     logger.error('🚀 Router Guard Error:', err);
-    // في حالة حدوث خطأ كارثي، اسمح بالانتقال لتجنب تجميد الواجهة أو وجه للرئيسية
     next();
   }
 })

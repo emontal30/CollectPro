@@ -1,22 +1,26 @@
 import { supabase } from '@/supabase';
 import logger from '@/utils/logger.js';
+import { apiInterceptor } from './apiInterceptor.js';
 
 export const archiveService = {
   /**
    * جلب قائمة التواريخ المتوفرة في السحابة
-   * يجلب فقط عمود التاريخ ليكون الطلب خفيفاً جداً
    */
   async getAvailableDates(userId) {
     try {
-      const { data, error } = await supabase
-        .from('daily_archives')
-        .select('archive_date')
-        .eq('user_id', userId)
-        .order('archive_date', { ascending: false });
+      const { data, error } = await apiInterceptor(
+        supabase
+          .from('daily_archives')
+          .select('archive_date')
+          .eq('user_id', userId)
+          .order('archive_date', { ascending: false })
+      );
 
-      if (error) throw error;
+      if (error) {
+        if (error.silent) return { dates: [], error: null };
+        throw error;
+      }
 
-      // إرجاع مصفوفة من التواريخ النصية (Strings)
       return { 
         dates: data?.map(item => item.archive_date) || [], 
         error: null 
@@ -29,20 +33,23 @@ export const archiveService = {
 
   /**
    * جلب تفاصيل أرشيف يوم محدد
-   * يقوم بفك ضغط JSONB وإرجاع المصفوفة الأصلية
    */
   async getArchiveByDate(userId, dateStr) {
     try {
-      const { data, error } = await supabase
-        .from('daily_archives')
-        .select('data') // هذا العمود يحتوي على JSON المضغوط
-        .eq('user_id', userId)
-        .eq('archive_date', dateStr)
-        .single();
+      const { data, error } = await apiInterceptor(
+        supabase
+          .from('daily_archives')
+          .select('data')
+          .eq('user_id', userId)
+          .eq('archive_date', dateStr)
+          .single()
+      );
 
-      if (error) throw error;
+      if (error) {
+        if (error.silent) return { data: null, error: null };
+        throw error;
+      }
 
-      // إرجاع البيانات الموجودة داخل الحقل data
       return { 
         data: data?.data || [], 
         error: null 
@@ -55,21 +62,21 @@ export const archiveService = {
 
   /**
    * حفظ أو تحديث أرشيف اليوم (Upsert)
-   * يتم تخزين البيانات كاملة في حقل واحد (data) لتقليل عدد الصفوف
    */
   async saveDailyArchive(userId, dateStr, harvestData) {
     try {
       const payload = {
         user_id: userId,
         archive_date: dateStr,
-        data: harvestData, // المصفوفة كاملة كـ JSON
+        data: harvestData,
         updated_at: new Date().toISOString()
       };
 
-      // استخدام Upsert: إذا وجد التاريخ يحدثه، وإذا لم يوجد ينشئه
-      const { error } = await supabase
-        .from('daily_archives')
-        .upsert(payload, { onConflict: 'user_id, archive_date' });
+      const { error } = await apiInterceptor(
+        supabase
+          .from('daily_archives')
+          .upsert(payload, { onConflict: 'user_id, archive_date' })
+      );
 
       if (error) throw error;
 
@@ -86,11 +93,13 @@ export const archiveService = {
    */
   async deleteArchiveByDate(userId, dateStr) {
     try {
-      const { error } = await supabase
-        .from('daily_archives')
-        .delete()
-        .eq('user_id', userId)
-        .eq('archive_date', dateStr);
+      const { error } = await apiInterceptor(
+        supabase
+          .from('daily_archives')
+          .delete()
+          .eq('user_id', userId)
+          .eq('archive_date', dateStr)
+      );
 
       if (error) throw error;
       

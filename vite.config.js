@@ -8,12 +8,28 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'prompt', // تغيير من autoUpdate إلى prompt لإظهار رسالة تحديث
+      registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [/^\/$/],
+        // حذف navigateFallbackAllowlist للسماح لجميع المسارات بالعمل أوفلاين
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/altnvsolaqphpndyztup\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // أسبوع واحد
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       },
       includeAssets: [
         'favicon.ico',

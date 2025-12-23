@@ -3,7 +3,6 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifications } from '@/composables/useNotifications';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
-import { apiInterceptor } from '@/services/apiInterceptor';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
@@ -14,7 +13,7 @@ export const useArchiveStore = defineStore('archive', () => {
   const availableDates = ref([]);
   const selectedDate = ref('');
   const isLoading = ref(false);
-  const isGlobalSearching = ref(false); // حالة للبحث الشامل
+  const isGlobalSearching = ref(false);
 
   const { addNotification } = useNotifications();
   const authStore = useAuthStore();
@@ -33,21 +32,17 @@ export const useArchiveStore = defineStore('archive', () => {
 
   function getTodayLocal() {
     const d = new Date();
-    const offset = d.getTimezoneOffset();
-    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-    return localDate.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async function loadAvailableDates() {
     try {
-      if (!authStore.user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          authStore.user = session.user;
-        }
-      }
+      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
+      if (!user) return;
 
-      const user = authStore.user;
       const allKeys = await localforage.keys();
       const localDates = allKeys
         .filter(k => k.startsWith(DB_PREFIX))
@@ -55,14 +50,10 @@ export const useArchiveStore = defineStore('archive', () => {
 
       let cloudDates = [];
       
-      if (navigator.onLine && user) {
-        const { dates, error } = await apiInterceptor(
-          api.archive.getAvailableDates(user.id)
-        );
-        
-        if (!error && dates) {
-          cloudDates = dates;
-        }
+      // نعتمد على الخدمة الآن لأنها محمية بـ Interceptor
+      const { dates, error } = await api.archive.getAvailableDates(user.id);
+      if (!error && dates) {
+        cloudDates = dates;
       }
 
       const dateMap = new Map();
@@ -93,21 +84,14 @@ export const useArchiveStore = defineStore('archive', () => {
     isGlobalSearching.value = false;
     
     try {
-      if (!authStore.user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) authStore.user = session.user;
-      }
-
-      const user = authStore.user;
+      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
       const localKey = `${DB_PREFIX}${dateStr}`;
       const localData = await localforage.getItem(localKey);
       
       if (localData) {
         rows.value = (Array.isArray(localData) ? localData : (localData.rows || [])).map(r => ({...r, date: dateStr}));
-      } else if (navigator.onLine && user) {
-        const { data, error } = await apiInterceptor(
-          api.archive.getArchiveByDate(user.id, dateStr)
-        );
+      } else if (user) {
+        const { data, error } = await api.archive.getArchiveByDate(user.id, dateStr);
 
         if (!error && data) {
           rows.value = data.map(r => ({...r, date: dateStr}));
@@ -126,9 +110,6 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /**
-   * البحث في جميع الأرشيفات المتاحة محلياً
-   */
   async function searchInAllArchives(query) {
     if (!query || query.length < 2) return;
     
@@ -155,7 +136,7 @@ export const useArchiveStore = defineStore('archive', () => {
       }
 
       rows.value = results;
-      selectedDate.value = ''; // إلغاء اختيار التاريخ المحدد أثناء البحث الشامل
+      selectedDate.value = '';
     } catch (err) {
       logger.error('❌ Global Search Error:', err);
     } finally {
@@ -163,39 +144,28 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  async function uploadArchive(payload) {
-    const { user_id, archive_date, data } = payload;
-    const { error } = await apiInterceptor(
-      api.archive.saveDailyArchive(user_id, archive_date, data)
-    );
-    if (error) throw error;
-    return true;
-  }
-
   async function deleteArchive(dateStr) {
     if (!dateStr) return { success: false, message: 'لا يوجد تاريخ محدد' };
     isLoading.value = true;
     try {
-      const user = authStore.user;
+      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
       await localforage.removeItem(`${DB_PREFIX}${dateStr}`);
+      
       if (selectedDate.value === dateStr) {
         rows.value = [];
         selectedDate.value = '';
       }
+
       if (user) {
-        if (navigator.onLine) {
-          try {
-            const { error } = await apiInterceptor(api.archive.deleteArchiveByDate(user.id, dateStr));
-            if (error && (error.status === 'offline' || error.status === 'network_error' || error.silent)) {
-              await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
-            } else if (error) throw error;
-          } catch (netErr) {
-             await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
-          }
-        } else {
-           await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
+        const { error } = await api.archive.deleteArchiveByDate(user.id, dateStr);
+        // إذا فشل الحذف بسبب الشبكة، نضيفه لطابور المزامنة
+        if (error && (error.status === 'offline' || error.status === 'network_error')) {
+          await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
+        } else if (error) {
+          throw error;
         }
       }
+
       await loadAvailableDates();
       return { success: true, message: `تم حذف الأرشيف بنجاح 🗑️` };
     } catch (err) {
@@ -213,12 +183,11 @@ export const useArchiveStore = defineStore('archive', () => {
     isLoading, 
     isGlobalSearching,
     totals,
+    getTodayLocal,
     loadAvailableDates, 
     loadArchiveByDate, 
     searchInAllArchives,
     deleteArchive,
-    uploadArchive,
-    getTodayLocal,
     DB_PREFIX
   };
 });

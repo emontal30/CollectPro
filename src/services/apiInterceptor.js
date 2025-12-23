@@ -7,7 +7,7 @@ import logger from '@/utils/logger.js';
  */
 export async function apiInterceptor(apiCall) {
   // الحماية المبكرة: إذا كان الجهاز أوفلاين صراحةً، لا تحاول حتى إرسال الطلب
-  if (!navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return { 
       data: null, 
       error: { 
@@ -29,16 +29,15 @@ export async function apiInterceptor(apiCall) {
       return result;
     }
 
-    // 2. Handle cases where Supabase returns an error object without status
+    // 2. Handle cases where Supabase returns an error object
     if (result?.error) {
-      // تجاهل تحذيرات الشبكة العادية في الكونسول
-      const isNetworkError = result.error.message === 'Failed to fetch' || 
-                             result.error.message?.includes('Network Error') ||
-                             result.error.status === 'ERR_NAME_NOT_RESOLVED';
+      const errMsg = result.error.message || '';
+      const isNetworkError = errMsg.includes('Failed to fetch') || 
+                             errMsg.includes('Network Error') ||
+                             errMsg.includes('ERR_NAME_NOT_RESOLVED') ||
+                             result.error.status === 'network_error';
 
-      if (!isNetworkError) {
-        logger.warn('⚠️ Supabase Error:', result.error.message);
-      } else {
+      if (isNetworkError) {
         return { 
           data: null, 
           error: { 
@@ -48,17 +47,20 @@ export async function apiInterceptor(apiCall) {
           } 
         };
       }
+      
+      logger.warn('⚠️ Supabase Error:', result.error.message);
     }
 
     return result;
   } catch (err) {
     // 3. Handle Network/Fetch Errors (e.g., "Failed to fetch")
-    const isNetworkErr = err.message?.includes('fetch') || 
+    const errMsg = err.message || '';
+    const isNetworkErr = errMsg.includes('fetch') || 
                          err.name === 'TypeError' || 
-                         err.message?.includes('Network');
+                         errMsg.includes('Network') ||
+                         errMsg.includes('ERR_NAME_NOT_RESOLVED');
                          
     if (isNetworkErr) {
-      logger.info('ℹ️ Network info: Server unreachable, using local mode.');
       return { 
         data: null, 
         error: { 
