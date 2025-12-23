@@ -14,10 +14,11 @@
 .admin-dashboard,
 .my-subscription-page,
 .payment-page {
-  width: 768px; /* عرض ثابت كما طلب المستخدم */
+  width: var(--app-min-width, 768px); /* استخدام المتغير الموحد */
   margin: 0 auto;
   padding: 20px;
   animation: fadeIn 0.5s ease-in-out;
+  box-sizing: border-box; /* لضمان عدم زيادة العرض بسبب الـ padding */
 }
 
 /* =========================================
@@ -317,16 +318,7 @@
 
 @media (max-width: 768px) {
   .summary-row { flex-direction: column; gap: 12px; }
-  .page-container, 
-  .harvest-page, 
-  .dashboard-page, 
-  .archive-page, 
-  .subscriptions-page,
-  .admin-dashboard,
-  .my-subscription-page,
-  .payment-page {
-    padding: 12px;
-  }
+  /* إزالة تعديل padding هنا ليبقى 20px دائماً مثل الهيدر والفوتر */
 }
 
 /* =========================================

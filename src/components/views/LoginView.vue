@@ -62,7 +62,7 @@
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
               <span class="footer-separator">|</span>
-              <span class="version-badge">v2.2.4</span>
+              <span class="version-badge">v2.2.6</span>
             </p>
           </div>
 

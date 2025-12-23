@@ -5,7 +5,7 @@
       <p class="developer-info">
         تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
         <span class="footer-separator">|</span>
-        <span class="version-badge">v2.2.4</span>
+        <span class="version-badge">v2.2.6</span>
       </p>
     </div>
   </div>
@@ -35,6 +35,8 @@ onMounted(() => {
   position: relative;
   z-index: 10;
   width: 100%;
+  /* ضمان أن الخلفية تغطي العرض الكامل المطلوب */
+  min-width: var(--app-min-width, 768px);
   transition: background 0.3s ease;
 }
 
@@ -44,7 +46,7 @@ onMounted(() => {
   align-items: center;
   gap: 5px;
   width: 100%;
-  max-width: var(--app-min-width, 768px); /* توحيد العرض مع الصفحات */
+  max-width: var(--app-min-width, 768px);
   margin: 0 auto;
 }
 
@@ -54,22 +56,9 @@ onMounted(() => {
   letter-spacing: 0.3px;
 }
 
-.developer-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .developer-name {
   color: #ff9f43;
   font-weight: 700;
-}
-
-.footer-separator {
-  opacity: 0.5;
-  font-weight: 300;
 }
 
 .version-badge {
@@ -77,17 +66,5 @@ onMounted(() => {
   padding: 1px 8px;
   border-radius: 10px;
   font-size: 11px;
-  font-family: monospace;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .footer {
-    font-size: 12px;
-    padding: 12px 10px;
-    margin-top: 30px;
-  }
 }
 </style>

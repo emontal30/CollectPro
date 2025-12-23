@@ -80,12 +80,9 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
+  /* إزالة أي توسيط يسبب إزاحة في الهواتف */
   width: 100%;
-  margin: 0 auto;
-  min-width: var(--app-min-width, 768px);
   position: relative;
-  /* لضمان التوسط في الشاشات الكبيرة جداً */
-  align-items: center;
 }
 
 .alert-container {
@@ -99,9 +96,6 @@ watch(() => subStore.isInitialized, (val) => {
 
 .app-header, .app-footer {
   width: 100%;
-  display: flex;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .app-main {
@@ -109,17 +103,11 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  align-items: center;
 }
 
 .content-wrapper {
   flex: 1;
   width: 100%;
-  max-width: var(--app-min-width, 768px);
-  margin: 0 auto;
-  /* تم إزالة padding الأفقي هنا لأنه موجود بالفعل داخل مكونات الصفحات */
-  padding-top: 0;
-  padding-bottom: 20px;
 }
 
 .app-footer {

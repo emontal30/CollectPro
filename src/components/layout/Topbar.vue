@@ -32,6 +32,8 @@ const toggleSidebar = () => {
   top: 0;
   left: 0;
   width: 100%;
+  /* ضمان أن الخلفية تغطي العرض الكامل المطلوب */
+  min-width: var(--app-min-width, 768px);
   height: var(--header-height, 70px);
   z-index: 1002;
   background: var(--header-bg, var(--primary));
@@ -47,7 +49,7 @@ const toggleSidebar = () => {
   height: 100%;
   padding: 0 20px;
   width: 100%;
-  max-width: var(--app-min-width, 768px); /* توحيد العرض مع الصفحات */
+  max-width: var(--app-min-width, 768px);
   margin: 0 auto;
   direction: ltr;
 }
@@ -65,12 +67,6 @@ const toggleSidebar = () => {
   display: block;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.header-logo:hover {
-  transform: scale(1.1) rotate(-5deg);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 .app-title {
@@ -94,37 +90,5 @@ const toggleSidebar = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .header-content {
-    height: calc(var(--header-height, 70px) - 5px);
-  }
-  
-  .header-container {
-    padding: 0 15px;
-  }
-
-  .header-logo {
-    height: 35px;
-  }
-  
-  .app-title {
-    font-size: 1.25rem;
-  }
-
-  .menu-toggle {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-  }
 }
 </style>
