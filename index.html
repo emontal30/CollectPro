@@ -11,11 +11,11 @@
       if (screenWidth < 768) {
         // حساب المقياس المثالي ليتناسب عرض 768 مع عرض الشاشة الفعلي
         var scale = screenWidth / 768;
-        // تقريب المقياس لأقرب 4 أرقام عشرية
-        scale = Math.floor(scale * 10000) / 10000;
+        // تقريب المقياس
+        scale = Math.floor(scale * 100) / 100;
         
-        // إجبار المتصفح على عرض 768 بكسل مع مقياس ثابت يمنع التلاعب التلقائي
-        viewport.content = "width=768, initial-scale=" + scale + ", minimum-scale=" + scale + ", maximum-scale=" + scale + ", user-scalable=no, viewport-fit=cover";
+        // ضبط المقياس الابتدائي ليظهر العرض كاملاً مع السماح بالزوم اليدوي
+        viewport.content = "width=768, initial-scale=" + scale + ", minimum-scale=" + scale + ", maximum-scale=5, user-scalable=yes, viewport-fit=cover";
       } else {
         viewport.content = "width=device-width, initial-scale=1.0, viewport-fit=cover";
       }
@@ -73,7 +73,7 @@
       --safe-area-right: env(safe-area-inset-right, 0px);
     }
 
-    /* منع الزوم عند الضغط على الحقول فى الايفون */
+    /* منع الزوم التلقائي المزعج عند التركيز على الحقول */
     @media screen and (max-width: 767px) {
       input, select, textarea {
         font-size: 16px !important;
@@ -88,13 +88,10 @@
       padding-left: var(--safe-area-left);
       padding-right: var(--safe-area-right);
       background-color: var(--light-bg, #f8fafc);
-      /* منع الإزاحة العشوائية لأسفل */
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      overflow-x: hidden;
+      /* ضمان البداية من الأعلى */
+      position: relative;
+      overflow-x: auto;
+      -webkit-text-size-adjust: 100%;
     }
     
     html.dark, html.dark body {

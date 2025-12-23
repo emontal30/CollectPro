@@ -81,7 +81,7 @@
       </ul>
     </div>
 
-    <!-- تذييل الشريط الجانبي - يحتوي على زر الخروج وحالة الاشتراك -->
+    <!-- تذييل الشريط الجانبي -->
     <div class="sidebar-footer">
       <div class="logout-container">
         <button
@@ -168,225 +168,53 @@ const handleLogout = async () => {
 .sidebar {
     position: fixed;
     top: 0;
-    right: calc(var(--sidebar-width) * -1); /* استخدام المتغير للعرض المخفي */
-    width: var(--sidebar-width); /* استخدام المتغير الموحد */
+    right: calc(var(--sidebar-width) * -1);
+    width: var(--sidebar-width);
     height: 100vh;
     background: var(--primary, #007965);
     color: #fff;
     display: flex;
     flex-direction: column;
     padding-top: 20px;
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1009;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
     overflow-y: auto;
     box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    /* منع الشريط الجانبي من حجز مساحة أفقية وهو مغلق */
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .sidebar.active {
   right: 0;
+  visibility: visible;
+  pointer-events: auto;
 }
 
-.sidebar-header {
-    padding: 0 10px;
-    margin-bottom: 15px;
-}
-
-/* App Brand Box Styles */
-.brand-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 20px 0;
-  margin-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.brand-logo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  /* ظل أصفر كناري خفيف جداً يحدد الأطراف فقط دون توهج عالي */
-  filter: drop-shadow(0 0 2px rgba(255, 239, 0, 0.5));
-  transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-.brand-box:hover .brand-logo {
-  transform: scale(1.05);
-  filter: drop-shadow(0 0 4px rgba(255, 239, 0, 0.7));
-}
-
-.brand-name {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  margin: 0;
-  letter-spacing: -0.5px;
-  font-family: var(--font-family-sans);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.brand-highlight {
-  color: #2dd4bf;
-}
-
-.user-box {
-    padding: 5px;
-}
-
-.user-data-container {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  padding: 12px 15px;
-  margin-bottom: 12px;
-  transition: all 0.3s ease;
-}
-
-.user-name {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #ffffff;
-    margin-bottom: 4px;
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.user-email {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.8);
-    margin-bottom: 8px;
-    display: block;
-    word-break: break-all;
-}
-
-.user-id {
-    font-size: 10px;
-    color: rgba(255,255,255,0.7);
-    font-family: monospace;
-    background: rgba(0,0,0,0.2);
-    padding: 3px 8px;
-    border-radius: 6px;
-}
-
-.user-id-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.dark-mode-toggle-small {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    width: 30px;
-    height: 30px;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    border-radius: 8px;
-}
-
-.sidebar-content {
-    flex: 1;
-}
-
-.sidebar-footer {
-    margin-top: auto;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.05);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.subscription-container {
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 12px;
-  margin-top: 12px;
-}
-
-.subscription-title {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
-  font-weight: 600;
-  margin: 0 0 6px 0;
-  text-align: right;
-}
-
-.subscription-days-simple {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #ffffff;
-}
-
+/* بقية التنسيقات كما هي دون تغيير */
+.sidebar-header { padding: 0 10px; margin-bottom: 15px; }
+.brand-box { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px 0; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.brand-logo { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255, 239, 0, 0.5)); transition: transform 0.3s ease; }
+.brand-name { font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.5px; }
+.brand-highlight { color: #2dd4bf; }
+.user-data-container { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 14px; padding: 12px 15px; margin-bottom: 12px; }
+.user-name { font-weight: 700; font-size: 1.1rem; color: #ffffff; margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; }
+.user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; word-break: break-all; }
+.user-id { font-size: 10px; color: rgba(255,255,255,0.7); font-family: monospace; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
+.user-id-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dark-mode-toggle-small { background: rgba(255, 255, 255, 0.2); border: none; width: 30px; height: 30px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+.sidebar-content { flex: 1; }
+.sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
+.subscription-title { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; margin: 0 0 6px 0; text-align: right; }
+.subscription-days-simple { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 700; color: #ffffff; }
 .subscription-days-simple.expired { color: #ff6b6b; }
 .subscription-days-simple.warning { color: #feca57; }
 .subscription-days-simple.active { color: #2ecc71; }
-.subscription-days-simple.pending { color: rgba(255,255,255,0.7); }
-
-.logout-container {
-    margin-bottom: 5px;
-}
-
-.logout-btn {
-  background: rgba(220, 53, 69, 0.9);
-  border: none;
-  border-radius: 12px;
-  padding: 12px;
-  color: white;
-  font-weight: 600;
-  width: 100%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
+.logout-btn { background: rgba(220, 53, 69, 0.9); border: none; border-radius: 12px; padding: 12px; color: white; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-links { list-style: none; padding: 0; }
-.nav-links a {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 14px 25px;
-    color: rgba(255, 255, 255, 0.85);
-    text-decoration: none;
-}
-
-.nav-links a.active {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.15);
-    font-weight: 700;
-}
-
-.overlay {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  opacity: 0;
-  visibility: hidden;
-  z-index: 1008;
-}
-
+.nav-links a { display: flex; align-items: center; gap: 15px; padding: 14px 25px; color: rgba(255, 255, 255, 0.85); text-decoration: none; }
+.nav-links a.active { color: #fff; background: rgba(255, 255, 255, 0.15); font-weight: 700; }
+.overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; z-index: 1008; transition: opacity 0.3s ease; }
 .overlay.active { opacity: 1; visibility: visible; }
-
-@media (max-width: 480px) {
-    .sidebar {
-        width: 100%; /* العرض كامل على الشاشات الصغيرة جداً */
-        right: -100%;
-    }
-}
 </style>

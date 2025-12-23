@@ -8,7 +8,9 @@
 
     <!-- الهيدر -->
     <header class="app-header">
-      <Topbar />
+      <div class="header-stretch">
+         <Topbar />
+      </div>
     </header>
 
     <Sidebar />
@@ -26,7 +28,9 @@
 
     <!-- الفوتر -->
     <footer class="app-footer">
-      <Footer />
+      <div class="footer-stretch">
+        <Footer />
+      </div>
     </footer>
   </div>
 </template>
@@ -80,9 +84,10 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   background: var(--light-bg, #f8fafc);
-  /* إزالة أي توسيط يسبب إزاحة في الهواتف */
   width: 100%;
   position: relative;
+  /* منع ظهور الشريط الجانبي في حسابات العرض الأفقي للمتصفح */
+  overflow-x: hidden;
 }
 
 .alert-container {
@@ -96,6 +101,16 @@ watch(() => subStore.isInitialized, (val) => {
 
 .app-header, .app-footer {
   width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* لضمان امتداد الخلفية لليسار واليمين حتى عند التمرير الأفقي للجداول */
+.header-stretch, .footer-stretch {
+    width: 100%;
+    min-width: var(--app-min-width, 768px);
+    display: flex;
+    justify-content: center;
 }
 
 .app-main {
@@ -103,11 +118,17 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   width: 100%;
+  /* السماح بالتمرير الأفقي فقط داخل منطقة المحتوى للجداول الكبيرة */
+  overflow-x: auto;
 }
 
 .content-wrapper {
   flex: 1;
   width: 100%;
+  max-width: var(--app-min-width, 768px);
+  margin: 0 auto;
+  padding-top: 40px; /* زيادة المسافة العلوية بين الهيدر والمحتوى */
+  padding-bottom: 20px;
 }
 
 .app-footer {
