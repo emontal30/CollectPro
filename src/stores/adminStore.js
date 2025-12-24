@@ -4,6 +4,7 @@ import api from '@/services/api';
 import { useNotifications } from '@/composables/useNotifications';
 import eventBus from '@/utils/eventBus';
 import logger from '@/utils/logger.js'
+import { supabase } from '@/supabase';
 
 export const useAdminStore = defineStore('admin', () => {
   // --- State ---
@@ -14,6 +15,9 @@ export const useAdminStore = defineStore('admin', () => {
   const allSubscriptions = ref([]);
   const filters = ref({ status: 'all', expiry: 'all', usersSearch: '' });
   const isLoading = ref(false);
+  
+  // حالة "إلزامية الاشتراك"
+  const isSubscriptionEnforced = ref(false);
 
   // استدعاء الإشعارات
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
@@ -28,13 +32,57 @@ export const useAdminStore = defineStore('admin', () => {
         fetchStats(),
         fetchPendingSubscriptions(),
         fetchAllSubscriptions(),
-        fetchUsers()
+        fetchUsers(),
+        fetchSystemConfig() // تحميل إعدادات الحماية
       ]);
     } catch (err) {
       logger.error('Error loading admin data:', err);
       addNotification('فشل تحميل البيانات', 'error');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /**
+   * جلب إعدادات النظام (مثل إلزامية الاشتراك)
+   */
+  async function fetchSystemConfig() {
+    try {
+      const { data } = await supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle();
+      if (data) {
+        const val = data.value === true || data.value === 'true';
+        isSubscriptionEnforced.value = val;
+        localStorage.setItem('sys_config_enforce', String(val));
+      }
+    } catch (e) {
+      logger.error('Error fetching system config:', e);
+    }
+  }
+
+  /**
+   * تحديث حالة إلزامية الاشتراك
+   */
+  async function toggleSubscriptionEnforcement(status) {
+    showLoading('جاري تحديث إعدادات النظام...');
+    try {
+      const { error } = await supabase
+        .from('system_config')
+        .update({ value: status, updated_at: new Date().toISOString() })
+        .eq('key', 'enforce_subscription');
+      
+      closeLoading();
+      
+      if (error) throw error;
+      
+      isSubscriptionEnforced.value = status;
+      localStorage.setItem('sys_config_enforce', String(status));
+      addNotification(`تم ${status ? 'تفعيل' : 'إيقاف'} وضع الاشتراك الإجباري بنجاح`, 'success');
+    } catch (e) {
+      closeLoading();
+      logger.error('Error toggling enforcement:', e);
+      addNotification('فشل تحديث الإعدادات', 'error');
+      // إعادة الحالة للسابقة في حال الفشل
+      await fetchSystemConfig();
     }
   }
 
@@ -184,8 +232,8 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   return {
-    stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading,
+    stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers,
-    handleSubscriptionAction, activateManualSubscription, formatDate
+    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement
   };
 });

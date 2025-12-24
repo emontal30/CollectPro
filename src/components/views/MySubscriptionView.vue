@@ -7,6 +7,17 @@
       icon="🛡️"
     />
 
+    <!-- رسالة التنبيه عند محاولة دخول صفحة محمية -->
+    <div v-if="route.query.access === 'denied'" class="access-denied-alert animate-fade-in">
+       <div class="alert-inner">
+         <div class="alert-icon"><i class="fas fa-shield-virus"></i></div>
+         <div class="alert-content">
+           <h4>ميزة للمشتركين فقط</h4>
+           <p>الصفحة التي حاولت دخولها متاحة فقط للمشتركين الفعالين. يرجى اختيار باقة لتفعيل حسابك.</p>
+         </div>
+       </div>
+    </div>
+
     <div class="content-grid">
       <!-- Card 1: Current Status -->
       <section class="card status-card animate-fade-in">
@@ -114,10 +125,12 @@
 
 <script setup>
 import { onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 
 const store = useMySubscriptionStore();
+const route = useRoute();
 
 const formatDate = (date) => {
   if (!date) return '---';
@@ -137,8 +150,56 @@ onMounted(() => {
 <style scoped>
 /* --- Layout Structure --- */
 .my-subscription-page { padding-bottom: 40px; }
-.content-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; margin-top: 20px; }
-@media (max-width: 992px) { .content-grid { grid-template-columns: 1fr; } }
+.content-grid { display: flex; flex-direction: column; gap: 25px; margin-top: 20px; }
+
+/* --- Access Denied Alert --- */
+.access-denied-alert {
+  margin-bottom: 2rem;
+  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.alert-inner {
+  background: rgba(var(--warning-rgb), 0.1);
+  border: 1px solid var(--warning);
+  border-right-width: 5px;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.alert-icon {
+  width: 50px;
+  height: 50px;
+  background: var(--warning);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(var(--warning-rgb), 0.3);
+}
+
+.alert-content h4 {
+  margin: 0 0 5px;
+  color: var(--warning);
+  font-weight: 800;
+}
+
+.alert-content p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 
 /* --- Unified Card Design --- */
 .card {

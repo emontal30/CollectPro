@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v4.2 - Fix Statistics RLS)
+-- COLLECTPRO - MASTER SCHEMA (v4.3 - Subscription Protection System)
 -- ====================================================================
 
 -- #####################################################
@@ -20,6 +20,7 @@ DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
 DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
+DROP FUNCTION IF EXISTS public.can_write_data CASCADE; -- دالة جديدة
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -87,6 +88,13 @@ CREATE TABLE IF NOT EXISTS public.statistics (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- جدول إعدادات النظام (الجديد)
+CREATE TABLE IF NOT EXISTS public.system_config (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- #####################################################
 -- 3. الدوال (Functions)
 -- #####################################################
@@ -114,7 +122,32 @@ RETURNS TIMESTAMP WITH TIME ZONE LANGUAGE sql SECURITY DEFINER SET search_path =
   SELECT NOW();
 $$;
 
--- دالة مُحسنة: تحديث إحصائيات المستخدمين (Incremental)
+-- دالة التحقق من السماح بالكتابة (للحماية)
+CREATE OR REPLACE FUNCTION public.can_write_data()
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE
+    enforced BOOLEAN;
+    has_sub BOOLEAN;
+BEGIN
+    -- 1. هل حماية الاشتراكات مفعلة؟
+    SELECT (value::text = 'true') INTO enforced FROM public.system_config WHERE key = 'enforce_subscription';
+    
+    -- إذا لم تكن مفعلة، اسمح للجميع
+    IF enforced IS NOT TRUE THEN
+        RETURN TRUE;
+    END IF;
+
+    -- 2. إذا كانت مفعلة، هل المستخدم مشترك؟
+    SELECT EXISTS (
+        SELECT 1 FROM public.subscriptions 
+        WHERE user_id = auth.uid() 
+        AND status = 'active' 
+    ) INTO has_sub;
+
+    RETURN has_sub;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user_stats()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -131,13 +164,11 @@ BEGIN
 END;
 $$;
 
--- دالة مُحسنة: تحديث إحصائيات الاشتراكات (Incremental)
 CREATE OR REPLACE FUNCTION public.handle_subscription_stats()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 DECLARE
     price_diff DECIMAL(10,2) := 0;
 BEGIN
-    -- حساب سعر الخطة المرتبطة
     DECLARE
         plan_price DECIMAL(10,2);
     BEGIN
@@ -159,7 +190,6 @@ BEGIN
         WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
         
     ELSIF (TG_OP = 'UPDATE') THEN
-        -- التعامل مع تغيير الحالة
         UPDATE public.statistics SET
             active_subscriptions = active_subscriptions + 
                 (CASE WHEN NEW.status = 'active' THEN 1 ELSE 0 END) - 
@@ -240,7 +270,16 @@ BEGIN
 END;
 $$;
 
--- دالة إعادة مزامنة الإحصائيات (تستخدم يدوياً أو مرة واحدة للتصحيح)
+CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
+RETURNS NUMERIC SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN (SELECT COALESCE(SUM(sp.price_egp), 0)
+            FROM public.subscriptions s
+            JOIN public.subscription_plans sp ON s.plan_id = sp.id
+            WHERE s.status = 'active');
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.recalculate_statistics()
 RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -265,6 +304,7 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY; -- تفعيل الحماية لجدول الإعدادات
 
 DO $$ 
 DECLARE pol record;
@@ -285,16 +325,23 @@ CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SEL
 CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (public.is_admin());
 
--- سياسات الأرشيف
-CREATE POLICY "Users can manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
+-- سياسات الأرشيف (تحديث لإضافة حماية الكتابة)
+CREATE POLICY "Users can manage own archives" ON public.daily_archives 
+FOR ALL USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id AND public.can_write_data()); -- منع الكتابة لغير المشتركين عند التفعيل
+
 CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (public.is_admin());
 
--- سياسات الإحصائيات (الجديدة)
+-- سياسات الإحصائيات
 CREATE POLICY "Admins can view statistics" ON public.statistics FOR SELECT USING (public.is_admin());
 
 -- سياسات الخطط
 CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
+
+-- سياسات إعدادات النظام (الجديدة)
+CREATE POLICY "Everyone can read config" ON public.system_config FOR SELECT USING (true);
+CREATE POLICY "Admins can update config" ON public.system_config FOR ALL USING (public.is_admin());
 
 -- #####################################################
 -- 5. التريجرز (Triggers)
@@ -306,14 +353,12 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- تريجر إحصائيات الاشتراكات
 DROP TRIGGER IF EXISTS trigger_update_stats_subs ON public.subscriptions;
 CREATE TRIGGER trigger_update_stats_subs 
 AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions 
 FOR EACH ROW 
 EXECUTE FUNCTION handle_subscription_stats();
 
--- تريجر إحصائيات المستخدمين
 DROP TRIGGER IF EXISTS trigger_update_stats_users ON public.users;
 CREATE TRIGGER trigger_update_stats_users 
 AFTER INSERT OR UPDATE OR DELETE ON public.users 
@@ -340,6 +385,11 @@ BEGIN
     VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
     ON CONFLICT (id) DO NOTHING;
 
+    -- إضافة إعداد حماية الاشتراكات (معطل افتراضياً)
+    INSERT INTO public.system_config (key, value) 
+    VALUES ('enforce_subscription', 'false'::jsonb)
+    ON CONFLICT (key) DO NOTHING;
+
     PERFORM public.fix_missing_profiles();
     PERFORM public.recalculate_statistics();
     
@@ -365,3 +415,4 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_server_time TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.can_write_data TO authenticated, anon;

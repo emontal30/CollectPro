@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore'
 import { supabase } from '@/supabase'
 import logger from '@/utils/logger.js'
 
@@ -34,37 +35,44 @@ const routes = [
       { 
         path: 'dashboard', 
         name: 'Dashboard', 
-        component: DashboardView 
+        component: DashboardView,
+        meta: { requiresSubscription: true } // محمية
       },
       { 
         path: 'harvest', 
         name: 'Harvest', 
-        component: HarvestView 
+        component: HarvestView,
+        meta: { requiresSubscription: true } // محمية
       },
       { 
         path: 'archive', 
         name: 'Archive', 
-        component: ArchiveView 
+        component: ArchiveView,
+        meta: { requiresSubscription: true } // محمية
       },
       { 
         path: 'counter', 
         name: 'Counter', 
-        component: CounterView 
+        component: CounterView,
+        meta: { requiresSubscription: true } // محمية
       },
       { 
         path: 'subscriptions', 
         name: 'Subscriptions', 
         component: SubscriptionsView 
+        // مفتوحة (لشراء باقة)
       },
       { 
         path: 'my-subscription', 
         name: 'MySubscription', 
         component: MySubscriptionView 
+        // مفتوحة (لمعرفة الحالة)
       },
       { 
         path: 'payment', 
         name: 'Payment', 
         component: PaymentView 
+        // مفتوحة
       },
       { 
         path: 'admin', 
@@ -99,12 +107,9 @@ router.beforeEach(async (to, from, next) => {
     // 2. Check session only if needed
     if (requiresAuth) {
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      // إذا كان هناك خطأ في الشبكة والأوفلاين، نعتمد على البيانات الموجودة في الستور
       const isNetworkError = error && (error.message?.includes('fetch') || !navigator.onLine);
       
       if (!session && !isNetworkError) {
-        logger.warn('🔒 Session invalid or expired. Redirecting to login.');
         authStore.user = null;
         authStore.userProfile = null;
         if (to.path !== '/') return next('/');
@@ -113,11 +118,7 @@ router.beforeEach(async (to, from, next) => {
       
       if (session) {
         authStore.user = session.user;
-      } else if (isNetworkError && authStore.user) {
-        // إذا كنا أوفلاين ولدينا مستخدم سابقاً، نسمح بالمرور
-        logger.info('🌐 Offline mode: Using cached session');
       } else if (isNetworkError && !authStore.user) {
-        // أوفلاين وبدون جلسة سابقة
         return next('/');
       }
     }
@@ -135,14 +136,51 @@ router.beforeEach(async (to, from, next) => {
     if (requiresAuth) {
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin)
       if (requiresAdmin && !authStore.isAdmin) {
-        // في حالة الأوفلاين، قد لا نتمكن من التحقق من رتبة الأدمن إذا لم تكن مخزنة
-        // لكن نفترض الصلاحية إذا كان البروفايل موجود محلياً
-        logger.warn('⚠️ Admin access check')
-        if (authStore.user && !authStore.userProfile && !navigator.onLine) {
-           // إذا كنا أوفلاين ولا يوجد بروفايل، قد نضطر للسماح أو المنع بناء على سياسة التطبيق
-           // هنا سنسمح بالدخول إذا كان قد دخل سابقاً كأدمن (نحتاج لتخزين هذا في الستور)
-        }
+         // إذا لم يكن أدمن، لا يدخل
+         return next({ name: 'Dashboard' }); // أو صفحة أخرى آمنة
       }
+    }
+
+    // 5. Subscription Protection Check (New Feature) 🛡️
+    const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
+    if (requiresSub && isLoggedIn && !authStore.isAdmin) {
+        // التحقق مما إذا كان النظام محمياً
+        // نستخدم cache لتجنب الطلبات المتكررة، لكن مع التحقق الدوري
+        let isEnforced = false;
+        
+        try {
+            // محاولة قراءة الإعداد من الـ localStorage أولاً للسرعة
+            // ويجب تحديث هذا الـ cache عند بدء التطبيق في مكان ما
+            const cachedConfig = localStorage.getItem('sys_config_enforce');
+            if (cachedConfig) {
+                isEnforced = cachedConfig === 'true';
+            } else {
+                // إذا لم يوجد، نطلبه من الشبكة (مرة واحدة ثم نخزنه)
+                // الأفضل: أن يتم تحميله في الـ authStore عند البدء
+                const { data: config } = await supabase
+                    .from('system_config')
+                    .select('value')
+                    .eq('key', 'enforce_subscription')
+                    .maybeSingle();
+                
+                isEnforced = config?.value === 'true' || config?.value === true;
+                localStorage.setItem('sys_config_enforce', String(isEnforced));
+            }
+        } catch (e) {
+            // فشل القراءة (أوفلاين مثلاً)، نعتمد على الكاش أو نسمح بالمرور
+        }
+
+        if (isEnforced) {
+            const subStore = useMySubscriptionStore();
+            // تأكد من تحميل بيانات الاشتراك
+            if (!subStore.isInitialized) await subStore.init(authStore.user);
+            
+            if (!subStore.isSubscribed) {
+                // إذا لم يكن مشتركاً، حوله لصفحة اشتراكي
+                // مع رسالة (يمكن تمريرها كـ query param أو عبر الستور)
+                return next({ name: 'MySubscription', query: { access: 'denied' } });
+            }
+        }
     }
 
     next()
@@ -152,7 +190,6 @@ router.beforeEach(async (to, from, next) => {
   }
 })
 
-// --- Page Tracker ---
 router.afterEach((to) => {
   if (to.path.startsWith('/app')) {
     localStorage.setItem('app_last_route', to.fullPath);

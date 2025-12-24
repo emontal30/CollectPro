@@ -51,34 +51,11 @@
 
     <div class="sidebar-content">
       <ul class="nav-links">
-        <li>
-          <router-link to="/app/dashboard" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-tachometer-alt"></i><span>إدخال البيانات</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/app/harvest" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-donate"></i><span>التحصيلات</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/app/archive" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-archive"></i><span>الأرشيف</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/app/counter" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-calculator"></i><span>عداد الأموال</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/app/subscriptions" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-credit-card"></i><span>الاشتراكات</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/app/my-subscription" active-class="active" @click="store.closeSidebar">
-            <i class="fas fa-user-shield"></i><span>اشتراكي</span>
+        <li v-for="link in navLinks" :key="link.to">
+          <router-link :to="link.to" active-class="active" @click="store.closeSidebar" :class="{ 'locked-link': isLocked(link) }">
+            <i :class="link.icon"></i>
+            <span>{{ link.label }}</span>
+            <i v-if="isLocked(link)" class="fas fa-lock lock-icon-mini"></i>
           </router-link>
         </li>
         
@@ -134,6 +111,7 @@ import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import cacheManager from '@/services/cacheManager';
+import { supabase } from '@/supabase';
 
 const store = useSidebarStore();
 const settingsStore = useSettingsStore();
@@ -144,47 +122,67 @@ const { confirm, addNotification } = inject('notifications');
 
 const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
+const isEnforced = ref(false); // حالة قفل النظام
+
+const navLinks = [
+  { to: '/app/dashboard', label: 'إدخال البيانات', icon: 'fas fa-tachometer-alt', protected: true },
+  { to: '/app/harvest', label: 'التحصيلات', icon: 'fas fa-donate', protected: true },
+  { to: '/app/archive', label: 'الأرشيف', icon: 'fas fa-archive', protected: true },
+  { to: '/app/counter', label: 'عداد الأموال', icon: 'fas fa-calculator', protected: true },
+  { to: '/app/subscriptions', label: 'الاشتراكات', icon: 'fas fa-credit-card', protected: false },
+  { to: '/app/my-subscription', label: 'اشتراكي', icon: 'fas fa-user-shield', protected: false },
+];
+
+const isLocked = (link) => {
+    // الرابط مقفل فقط إذا كان: (محمياً) وَ (النظام مغلق) وَ (المستخدم غير مشترك) وَ (ليس مديراً)
+    return link.protected && isEnforced.value && !subStore.isSubscribed && !authStore.isAdmin;
+};
 
 const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
 };
 
+const checkEnforcementStatus = async () => {
+    try {
+        const cached = localStorage.getItem('sys_config_enforce');
+        if (cached !== null) isEnforced.value = cached === 'true';
+        
+        // تحديث من السيرفر بصمت
+        const { data } = await supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle();
+        if (data) {
+            isEnforced.value = data.value === true || data.value === 'true';
+            localStorage.setItem('sys_config_enforce', String(isEnforced.value));
+        }
+    } catch (e) {
+        logger.error('Failed to check enforcement status');
+    }
+};
+
 const handleRefreshData = async () => {
   const result = await confirm({
-    title: 'تحديث البيانات',
-    text: 'سيتم مسح الذاكرة المؤقتة وإعادة تحميل البيانات من السيرفر. هل تريد المتابعة؟',
+    title: 'تحديث ومزامنة البيانات',
+    text: 'هل تود إعادة مزامنة البيانات مع السحابه؟ سيضمن هذا تحديث كافة المعلومات وحل أي مشاكل تقنية في العرض لضمان دقة بياناتك.',
     icon: 'info',
-    confirmButtonText: 'تحديث',
+    confirmButtonText: 'تحديث الآن',
     confirmButtonColor: 'var(--primary)'
   });
 
   if (result.isConfirmed) {
     isRefreshing.value = true;
     try {
-      // 1. مسح الكاشات المعروفة
       localStorage.removeItem('my_subscription_data_v2');
-      
-      // 2. استخدام مدير الكاش للتنظيف (اختياري)
-      if (cacheManager) {
-        await cacheManager.clearAllCaches();
-      }
-
-      // 3. مسح كاش Workbox (إذا أمكن الوصول إليه، لكن إعادة التحميل تكفي عادة مع NetworkFirst)
-      
-      addNotification('جاري تحديث التطبيق...', 'info');
-      
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-      
+      localStorage.removeItem('sys_config_enforce'); // مسح حالة القفل أيضاً للتجديد
+      if (cacheManager) await cacheManager.clearAllCaches();
+      addNotification('جاري مزامنة وتحديث التطبيق...', 'info');
+      setTimeout(() => { window.location.reload(); }, 500);
     } catch (e) {
-      logger.error('Refresh failed', e);
       isRefreshing.value = false;
     }
   }
 };
 
 onMounted(async () => {
+  await checkEnforcementStatus();
   if (authStore.user) {
     await subStore.init(authStore.user);
   }
@@ -198,13 +196,10 @@ const handleLogout = async () => {
     confirmButtonText: 'تسجيل الخروج',
     confirmButtonColor: '#dc3545'
   });
-
   if (!result.isConfirmed) return;
-
   try {
     await authStore.logout();
   } catch (error) {
-    logger.error('Logout failed:', error);
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
   }
 };
@@ -226,7 +221,6 @@ const handleLogout = async () => {
     z-index: 2000;
     overflow-y: auto;
     box-shadow: -5px 0 15px rgba(0,0,0,0.1);
-    /* منع الشريط الجانبي من حجز مساحة أفقية وهو مغلق */
     visibility: hidden;
     pointer-events: none;
 }
@@ -237,7 +231,25 @@ const handleLogout = async () => {
   pointer-events: auto;
 }
 
-/* بقية التنسيقات كما هي دون تغيير */
+/* Locked Link Style */
+.locked-link {
+    opacity: 0.6;
+}
+.lock-icon-mini {
+    margin-right: auto; /* دفع القفل لليسار (أقصى اليسار في العربي) */
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    animation: lockShake 3s infinite;
+}
+
+@keyframes lockShake {
+    0%, 90%, 100% { transform: rotate(0); }
+    92% { transform: rotate(10deg); }
+    94% { transform: rotate(-10deg); }
+    96% { transform: rotate(10deg); }
+    98% { transform: rotate(-10deg); }
+}
+
 .sidebar-header { padding: 0 10px; margin-bottom: 15px; }
 .brand-box { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px 0; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
 .brand-logo { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255, 239, 0, 0.5)); transition: transform 0.3s ease; }

@@ -7,6 +7,33 @@
       icon="⚙️"
     />
 
+    <!-- قسم التحكم في حماية النظام (جديد) -->
+    <div class="admin-section protection-card">
+      <div class="admin-section-header">
+        <h2><i class="fas fa-shield-alt"></i> نظام حماية الاشتراكات</h2>
+      </div>
+      <div class="protection-content">
+        <div class="protection-info">
+          <h4 class="protection-title">وضع القفل (Subscription Only)</h4>
+          <p class="protection-desc">
+            عند تفعيل هذا الخيار، سيتم منع أي مستخدم غير مشترك من الوصول لصفحات العمل (الإدخال، التحصيل، الأرشيف).
+            <span class="warning-text">الحالة الحالية: {{ store.isSubscriptionEnforced ? 'مفعل 🔒' : 'مجاني 🔓' }}</span>
+          </p>
+        </div>
+        
+        <div class="switch-wrapper">
+          <label class="switch">
+            <input 
+              type="checkbox" 
+              :checked="store.isSubscriptionEnforced" 
+              @change="handleToggleEnforcement"
+            >
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <!-- Stats Cards -->
     <div class="stats-container">
       <div v-for="(stat, key) in adminStats" :key="key" class="stat-card">
@@ -201,13 +228,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, inject } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import { useNotifications } from '@/composables/useNotifications';
 
 const store = useAdminStore();
-const { confirm, addNotification } = useNotifications();
+const { confirm, addNotification } = inject('notifications');
 
 const adminStats = {
   totalUsers: { label: 'إجمالي المستخدمين', icon: 'fas fa-users', unit: '' },
@@ -261,6 +287,26 @@ const handleBulkActivate = async () => {
   }
 };
 
+const handleToggleEnforcement = async (event) => {
+    const newVal = event.target.checked;
+    const result = await confirm({
+        title: newVal ? 'تفعيل وضع الحماية' : 'إيقاف وضع الحماية',
+        text: newVal 
+            ? 'هل أنت متأكد؟ سيتم منع جميع المستخدمين غير المشتركين من العمل على التطبيق فوراً.' 
+            : 'هل أنت متأكد؟ سيتم السماح لجميع المستخدمين بالعمل على التطبيق مجاناً.',
+        icon: newVal ? 'warning' : 'info',
+        confirmButtonText: newVal ? 'تفعيل القفل 🔒' : 'فتح التطبيق 🔓',
+        confirmButtonColor: newVal ? 'var(--danger)' : 'var(--primary)'
+    });
+
+    if (result.isConfirmed) {
+        await store.toggleSubscriptionEnforcement(newVal);
+    } else {
+        // إعادة الزر لوضعه السابق إذا ألغى المستخدم
+        event.target.checked = !newVal;
+    }
+};
+
 const filteredUsers = computed(() => {
   if (!store.filters.usersSearch) return store.usersList;
   const q = store.filters.usersSearch.toLowerCase();
@@ -291,6 +337,39 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.protection-card {
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  margin-bottom: 2rem;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+.protection-content {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.protection-info { flex: 1; }
+.protection-title { margin: 0 0 0.5rem; font-size: 1.1rem; color: var(--text-main); }
+.protection-desc { margin: 0; font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+.warning-text { display: block; margin-top: 0.5rem; font-weight: 700; color: var(--primary); }
+
+/* Switch Styles */
+.switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+.slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; }
+input:checked + .slider { background-color: var(--primary); }
+input:focus + .slider { box-shadow: 0 0 1px var(--primary); }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
+
+/* الباقي... */
 .bulk-input { 
   width: 70px; 
   padding: 4px 8px; 
@@ -319,12 +398,7 @@ onMounted(() => {
   margin-top: 4px;
 }
 
-body.dark .user-short-id {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--gray-400);
-}
-
-/* Dark mode specific for child components not handled by global */
+body.dark .user-short-id { background: rgba(255, 255, 255, 0.05); color: var(--gray-400); }
 body.dark .bg-light { background-color: #0f172a !important; border-color: #334155 !important; }
 body.dark .border-bottom { border-color: #334155 !important; }
 </style>
