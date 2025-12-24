@@ -8,26 +8,41 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate', // تغيير من prompt إلى autoUpdate لتسهيل التحديثات
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'], // إضافة json
+        cleanupOutdatedCaches: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // زيادة الحد إلى 5 ميجابايت
         navigateFallback: '/index.html',
-        // حذف navigateFallbackAllowlist للسماح لجميع المسارات بالعمل أوفلاين
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/altnvsolaqphpndyztup\.supabase\.co\/.*/i,
+            // استراتيجية للكاش الخاص بـ Supabase API
+            urlPattern: /^https:\/\/altnvsolaqphpndyztup\.supabase\.co\/rest\/v1\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'supabase-api-cache',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // أسبوع واحد
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              }
+              },
+              networkTimeoutSeconds: 10 // الانتظار 10 ثواني للشبكة قبل استخدام الكاش
             }
+          },
+          {
+             // استراتيجية للصور الخارجية والخطوط
+             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf|eot)$/,
+             handler: 'CacheFirst',
+             options: {
+                cacheName: 'assets-cache',
+                expiration: {
+                   maxEntries: 50,
+                   maxAgeSeconds: 30 * 24 * 60 * 60, // 30 يوم
+                },
+             },
           }
         ]
       },
@@ -50,32 +65,38 @@ export default defineConfig({
           {
             src: 'manifest/icon-48x48.png',
             sizes: '48x48',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'manifest/icon-72x72.png',
             sizes: '72x72',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'manifest/icon-96x96.png',
             sizes: '96x96',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'manifest/icon-144x144.png',
             sizes: '144x144',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'manifest/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'manifest/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
