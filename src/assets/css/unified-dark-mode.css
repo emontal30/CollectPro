@@ -4,7 +4,7 @@
 
 body.dark {
   background-color: var(--light-bg);
-  color: var(--gray-600);
+  color: var(--gray-700); 
 }
 
 /* =========================================
@@ -25,8 +25,9 @@ body.dark .section-header h2 {
   font-weight: 800;
 }
 
+/* تصحيح ألوان العناوين الفرعية لتكون فاتحة */
 body.dark h3, body.dark h4, body.dark h5, body.dark h6 {
-  color: var(--gray-900);
+  color: var(--gray-800);
 }
 
 body.dark a { color: var(--primary); }
@@ -41,23 +42,6 @@ body.dark ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
    2. MODERN LAYOUT SURFACES (Glassmorphism)
    ========================================= */
 
-body.dark .input-container,
-body.dark .archive-controls,
-body.dark .date-display,
-body.dark .summary-container,
-body.dark .buttons-container,
-body.dark .stat-card,
-body.dark .admin-section,
-body.dark .help-card,
-body.dark .subscription-card,
-body.dark .plan-card,
-body.dark .counter-card {
-  background: var(--dark-surface);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--dark-border);
-  box-shadow: 0 10px 30px var(--dark-shadow);
-}
-
 /* Header (topbar) */
 body.dark header,
 body.dark .header-content {
@@ -67,10 +51,10 @@ body.dark .header-content {
   backdrop-filter: blur(10px);
 }
 
-/* Sidebar */
+/* Sidebar - Unified with header theme */
 body.dark .sidebar,
 body.dark .main-sidebar {
-  background: linear-gradient(180deg, #111827 0%, #0f172a 80%, #064e3b 100%);
+  background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
 }
@@ -87,31 +71,7 @@ body.dark .sidebar a.active {
 body.dark .footer {
   background: var(--footer-bg);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  color: #64748b;
-}
-
-/* =========================================
-   3. FORMS, INPUTS & CONTROLS
-   ========================================= */
-body.dark input, 
-body.dark textarea, 
-body.dark select,
-body.dark .archive-select,
-body.dark .bulk-input,
-body.dark .search-input-wrapper {
-  background-color: var(--gray-100);
-  border-color: var(--gray-300);
-  color: #f8fafc;
-}
-
-body.dark input::placeholder { color: #475569; }
-
-body.dark input:focus, 
-body.dark textarea:focus, 
-body.dark select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
-  background-color: #0f172a;
+  color: var(--gray-600);
 }
 
 /* =========================================
@@ -120,8 +80,8 @@ body.dark select:focus {
 body.dark table,
 body.dark .modern-table,
 body.dark .collections-table {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.05);
+  background: var(--surface-bg);
+  border-color: var(--dark-border);
 }
 
 body.dark thead th {
@@ -133,7 +93,7 @@ body.dark thead th {
 body.dark tbody td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  color: #cbd5e1;
+  color: var(--gray-700);
 }
 
 body.dark .shop {
@@ -160,7 +120,9 @@ body.dark .total-row-negative {
 
 body.dark .summary-item,
 body.dark .stat-icon,
-body.dark .bg-light {
+body.dark .bg-light,
+body.dark .faq-item,
+body.dark .faq-answer {
   background: #0f172a;
   border-color: var(--gray-300);
 }
@@ -168,14 +130,11 @@ body.dark .bg-light {
 body.dark .summary-title,
 body.dark .stat-value {
   color: #f1f5f9;
-  background: none;
-  -webkit-text-fill-color: initial;
-  text-shadow: none;
 }
 
 body.dark .stat-content h3,
 body.dark .field-header {
-  color: #94a3b8;
+  color: var(--gray-600);
 }
 
 body.dark .bold-input,
@@ -183,8 +142,14 @@ body.dark .calc-field {
   color: var(--primary-light);
 }
 
-body.dark .admin-section-header {
-  background: #0f766e;
+body.dark .plan-header {
+  background: linear-gradient(to bottom, var(--dark-surface), var(--content-bg));
+  border-bottom-color: var(--dark-border);
+}
+
+body.dark .plan-features li {
+  border-bottom-color: rgba(255,255,255,0.05);
+  color: var(--gray-600);
 }
 
 /* Status Badges - Themed for Dark mode */
@@ -195,21 +160,62 @@ body.dark .status-expired { background: rgba(239, 68, 68, 0.15); color: #f87171;
 /* Modals */
 body.dark .modal-content,
 body.dark .shared-modal {
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  background: var(--surface-bg);
+  border: 1px solid var(--dark-border);
 }
 
-body.dark .modal-header,
-body.dark .shared-modal-header {
+/* Page header - Unified Dark Theme */
+body.dark .page-header {
+  /* التدرج العمودي: الداكن في الأعلى والأفتح قليلاً في الأسفل */
+  background: linear-gradient(to bottom, #0a1120 0%, #1e293b 100%) !important;
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* تعديل الطبقة الإضافية لتكون عمودية أيضاً أو مخفية لمنع التعارض */
+body.dark .page-header::after {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.03) 0%, transparent 100%) !important;
+}
+
+body.dark .page-header h1 {
+  background: linear-gradient(to bottom, #ffffff 0%, var(--primary-light) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+
+body.dark .page-header .subtitle {
+  color: var(--gray-600);
+  opacity: 1;
+}
+
+body.dark .zoom-trigger-btn {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.2);
+  color: var(--primary-light);
+}
+
+body.dark .zoom-trigger-btn:hover {
+  background: rgba(45, 212, 191, 0.2);
+  border-color: var(--primary-light);
+}
+
+/* Login Page Dark Overrides */
+body.dark .login-wrapper {
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+}
+
+body.dark .install-app-btn {
   background: #0f172a;
-  border-bottom-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--gray-300);
 }
 
-body.dark .close-modal { color: #94a3b8; }
-body.dark .close-modal:hover { color: #fff; }
+body.dark .install-btn-title { color: var(--gray-900); }
+body.dark .install-btn-subtitle { color: var(--gray-600); }
+body.dark .install-app-icon { background: #1e293b; }
 
-/* Alerts */
+/* Alert Overrides in Dark Mode */
 body.dark .alert-success, body.dark .status-message.success {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
@@ -226,12 +232,4 @@ body.dark .alert-warning, body.dark .status-message.warning {
   background: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-/* Page header */
-body.dark .page-header {
-  background: linear-gradient(180deg, var(--content-bg) 0%, var(--light-bg) 100%);
-  border: 1px solid var(--dark-border);
-  color: var(--gray-900);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }

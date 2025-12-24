@@ -59,7 +59,7 @@
 
 /* 4. Danger Button */
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  background: linear-gradient(135deg, var(--danger), #b91c1c);
   color: white;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
@@ -101,12 +101,12 @@
   transform: scale(1.15);
 }
 
-/* 6. Specialized Button Colors (Icon Driven) */
-.btn-dashboard--paste i   { color: #10b981; }
-.btn-dashboard--save i    { color: #f59e0b; }
-.btn-dashboard--archive i { color: #6366f1; }
-.btn-dashboard--clear i   { color: #ef4444; }
-.btn-dashboard--home i    { color: #0ea5e9; }
+/* 6. Specialized Button Colors (Using Unified Variables) */
+.btn-dashboard--paste i   { color: var(--icon-paste); }
+.btn-dashboard--save i    { color: var(--icon-save); }
+.btn-dashboard--archive i { color: var(--icon-archive); }
+.btn-dashboard--clear i   { color: var(--icon-clear); }
+.btn-dashboard--home i    { color: var(--icon-home); }
 
 /* Highlight 'Archive Today' button specially */
 .btn--archive-today {

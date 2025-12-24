@@ -17,14 +17,14 @@
     </div>
 
     <ColumnVisibility
-      v-model="showColumnsHarvest"
+      v-model="showSettings"
       :columns="harvestColumns"
       storage-key="columns.visibility.harvest"
-      @save="applySavedColumnsHarvest"
+      @save="apply"
     />
 
     <div class="search-control">
-      <div class="customer-count-badge" v-show="isVisibleHarvest('shop')">
+      <div class="customer-count-badge" v-show="isVisible('shop')">
         <div class="count-label">عدد العملاء</div>
         <div class="count-value">{{ store.customerCount }}</div>
       </div>
@@ -37,7 +37,7 @@
           class="search-input"
         />
       </div>
-      <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showColumnsHarvest = true">
+      <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
         <i class="fas fa-cog"></i>
       </button>
     </div>
@@ -46,25 +46,25 @@
       <table class="modern-table w-full">
         <thead>
           <tr>
-            <th v-show="isVisibleHarvest('shop')" class="shop">🏪 المحل</th>
-            <th v-show="isVisibleHarvest('code')" class="code">🔢 الكود</th>
-            <th v-show="isVisibleHarvest('amount')" class="amount">💵 التحويل</th>
-            <th v-show="isVisibleHarvest('extra')" class="extra">📌 اخرى</th>
-            <th v-show="isVisibleHarvest('collector')" class="collector">👤 المحصل</th>
-            <th v-show="isVisibleHarvest('net')" class="net highlight">✅ الصافي</th>
+            <th v-show="isVisible('shop')" class="shop">🏪 المحل</th>
+            <th v-show="isVisible('code')" class="code">🔢 الكود</th>
+            <th v-show="isVisible('amount')" class="amount">💵 التحويل</th>
+            <th v-show="isVisible('extra')" class="extra">📌 اخرى</th>
+            <th v-show="isVisible('collector')" class="collector">👤 المحصل</th>
+            <th v-show="isVisible('net')" class="net highlight">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(row, index) in store.filteredRows" :key="row.id">
-            <td v-show="isVisibleHarvest('shop')" class="shop" :class="{ 'negative-net-border': getNetClass(row) === 'negative' }">
+            <td v-show="isVisible('shop')" class="shop" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }">
               <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
               <span v-else class="readonly-field">{{ row.shop }}</span>
             </td>
-            <td v-show="isVisibleHarvest('code')" class="code">
+            <td v-show="isVisible('code')" class="code">
               <input v-if="!row.isImported" :value="row.code" type="text" placeholder="الكود" class="editable-input" @input="updateCode(row, index, $event)" />
               <span v-else class="readonly-field">{{ row.code }}</span>
             </td>
-            <td v-show="isVisibleHarvest('amount')" class="amount">
+            <td v-show="isVisible('amount')" class="amount">
               <input
                 v-if="!row.isImported"
                 type="text"
@@ -76,7 +76,7 @@
               />
               <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
             </td>
-            <td v-show="isVisibleHarvest('extra')" class="extra">
+            <td v-show="isVisible('extra')" class="extra">
               <input
                 type="text"
                 :value="formatInputNumber(row.extra)"
@@ -86,7 +86,7 @@
                 @blur="updateExtra(row, index, $event)"
               />
             </td>
-            <td v-show="isVisibleHarvest('collector')" class="collector">
+            <td v-show="isVisible('collector')" class="collector">
               <input
                 type="text"
                 :value="formatInputNumber(row.collector)"
@@ -97,19 +97,19 @@
               />
             </td>
 
-            <td v-show="isVisibleHarvest('net')" class="net numeric" :class="getNetClass(row)">
+            <td v-show="isVisible('net')" class="net numeric" :class="getRowNetStatus(row)">
               {{ store.formatNumber((parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) ) }}
-              <i :class="getNetIcon(row)"></i>
+              <i :class="getRowNetIcon(row)"></i>
             </td>
           </tr>
 
           <tr class="total-row">
-            <td v-show="isVisibleHarvest('shop')" class="shop">الإجمالي</td>
-            <td v-show="isVisibleHarvest('code')" class="code"></td>
-            <td v-show="isVisibleHarvest('amount')" class="amount text-center">{{ store.formatNumber(store.totals.amount) }}</td>
-            <td v-show="isVisibleHarvest('extra')" class="extra text-center">{{ store.formatNumber(store.totals.extra) }}</td>
-            <td v-show="isVisibleHarvest('collector')" class="collector text-center">{{ store.formatNumber(store.totals.collector) }}</td>
-            <td v-show="isVisibleHarvest('net')" class="net numeric" :class="getTotalNetClass">
+            <td v-show="isVisible('shop')" class="shop">الإجمالي</td>
+            <td v-show="isVisible('code')" class="code"></td>
+            <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(store.totals.amount) }}</td>
+            <td v-show="isVisible('extra')" class="extra text-center">{{ store.formatNumber(store.totals.extra) }}</td>
+            <td v-show="isVisible('collector')" class="collector text-center">{{ store.formatNumber(store.totals.collector) }}</td>
+            <td v-show="isVisible('net')" class="net numeric" :class="getTotalNetClass">
               {{ store.formatNumber((parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0)) ) }}
               <i :class="getTotalNetIcon"></i>
             </td>
@@ -222,7 +222,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onActivated, watch, inject, ref, reactive, onBeforeUnmount } from 'vue';
+import { computed, onMounted, onActivated, watch, inject, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
@@ -230,6 +230,8 @@ import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import localforage from 'localforage';
 import logger from '@/utils/logger.js';
+import { formatInputNumber, getNetClass, getNetIcon } from '@/utils/formatters.js';
+import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 
 const store = useHarvestStore();
 const archiveStore = useArchiveStore();
@@ -242,17 +244,7 @@ const harvestColumns = [
   { key: 'extra', label: '📌 اخرى' }
 ];
 
-const showColumnsHarvest = ref(false);
-const columnsVisibilityHarvest = reactive({});
-
-function loadColumnsVisibilityHarvest(){
-  const raw = localStorage.getItem('columns.visibility.harvest');
-  const saved = raw ? JSON.parse(raw) : null;
-  harvestColumns.forEach(c => { columnsVisibilityHarvest[c.key] = saved && typeof saved[c.key] === 'boolean' ? saved[c.key] : true; });
-}
-
-function isVisibleHarvest(key){ return columnsVisibilityHarvest[key] !== false; }
-function applySavedColumnsHarvest(obj){ Object.keys(obj || {}).forEach(k => { columnsVisibilityHarvest[k] = !!obj[k]; }); }
+const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(harvestColumns, 'columns.visibility.harvest');
 
 const { confirm, addNotification } = inject('notifications');
 
@@ -273,7 +265,7 @@ const syncWithCounterStore = () => {
 
 onMounted(() => {
   store.initialize && store.initialize();
-  loadColumnsVisibilityHarvest();
+  loadColumns();
   store.loadDataFromStorage();
   syncWithCounterStore();
   window.addEventListener('focus', syncWithCounterStore);
@@ -296,22 +288,21 @@ const updateCollector = (row, index, event) => { row.collector = parseFloat(even
 const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
 const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
 
-const formatInputNumber = (num) => (!num && num !== 0) || num === 0 ? '' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
-const getNetClass = (row) => {
+const getRowNetStatus = (row) => {
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  return net > 0 ? 'positive' : (net < 0 ? 'negative' : 'zero');
+  return getNetClass(net);
 };
-const getNetIcon = (row) => {
+const getRowNetIcon = (row) => {
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  return net > 0 ? 'fas fa-arrow-up' : (net < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
+  return getNetIcon(net);
 };
 const getTotalNetClass = computed(() => {
   const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
-  return net > 0 ? 'positive' : (net < 0 ? 'negative' : 'zero');
+  return getNetClass(net);
 });
 const getTotalNetIcon = computed(() => {
   const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
-  return net > 0 ? 'fas fa-arrow-up' : (net < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
+  return getNetIcon(net);
 });
 
 const confirmClearAll = async () => {
@@ -348,7 +339,6 @@ const archiveToday = async () => {
 </script>
 
 <style scoped>
-/* All specialized styles moved to _unified-components.css or utilities.css */
 .mx-2 { margin: 0 8px; }
 
 .customer-count-badge {

@@ -10,7 +10,7 @@
     <div class="counter-container">
       <div class="counters-grid">
         <!-- العداد الأول -->
-        <div class="counter-card main-card">
+        <div class="counter-card">
           <div class="card-header centered-header">
             <h2 class="counter-title">العداد الأول</h2>
             <button @click="toggleSort(1)" class="sort-btn header-action" :title="sortOrder1 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
@@ -22,27 +22,29 @@
             <table class="modern-counter-table">
               <thead>
                 <tr>
-                  <th>الإجمالي</th>
-                  <th>العدد</th>
-                  <th>الفئة</th>
+                  <th class="col-total">الإجمالي</th>
+                  <th class="col-qty">العدد</th>
+                  <th class="col-cat">الفئة</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="val in sortedDenominations1" :key="'c1-'+val" :class="'row-val-' + val">
                   <td class="total-cell">{{ store.formatNumber(val * (store.counter1[val] || 0)) }}</td>
-                  <td>
+                  <td class="qty-column">
                     <input
                       :value="formatWithCommas(store.counter1[val])"
                       type="text"
                       inputmode="numeric"
-                      class="input-field"
+                      class="counter-input-field"
                       @input="onRawInput($event, val, 1)"
                       @blur="onBlurFormat(val, 1)"
                     />
                   </td>
                   <td class="category-cell" :class="'cat-' + val">
-                    <span class="val-badge">{{ val }}</span>
-                    <span class="val-unit">جنيه</span>
+                    <div class="category-wrapper">
+                      <span class="val-badge">{{ val }}</span>
+                      <span class="val-unit">جنيه</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -62,7 +64,7 @@
         </div>
 
         <!-- العداد الثاني -->
-        <div class="counter-card main-card">
+        <div class="counter-card">
           <div class="card-header centered-header">
             <h2 class="counter-title">العداد الثاني</h2>
             <button @click="toggleSort(2)" class="sort-btn header-action" :title="sortOrder2 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
@@ -74,27 +76,29 @@
             <table class="modern-counter-table">
               <thead>
                 <tr>
-                  <th>الإجمالي</th>
-                  <th>العدد</th>
-                  <th>الفئة</th>
+                  <th class="col-total">الإجمالي</th>
+                  <th class="col-qty">العدد</th>
+                  <th class="col-cat">الفئة</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="val in sortedDenominations2" :key="'c2-'+val" :class="'row-val-' + val">
                   <td class="total-cell">{{ store.formatNumber(val * (store.counter2[val] || 0)) }}</td>
-                  <td>
+                  <td class="qty-column">
                     <input
                       :value="formatWithCommas(store.counter2[val])"
                       type="text"
                       inputmode="numeric"
-                      class="input-field"
+                      class="counter-input-field"
                       @input="onRawInput($event, val, 2)"
                       @blur="onBlurFormat(val, 2)"
                     />
                   </td>
                   <td class="category-cell" :class="'cat-' + val">
-                    <span class="val-badge">{{ val }}</span>
-                    <span class="val-unit">جنيه</span>
+                    <div class="category-wrapper">
+                      <span class="val-badge">{{ val }}</span>
+                      <span class="val-unit">جنيه</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -122,7 +126,6 @@
         </div>
         
         <div class="summary-grid consolidated-summary">
-          <!-- السطر الأول -->
           <div class="summary-card primary">
             <span class="label">إجمالي العدادات</span>
             <span class="value">{{ store.formatNumber(store.grandTotal) }} <small>ج.م</small></span>
@@ -131,8 +134,6 @@
             <span class="label">إجمالي الفكة</span>
             <span class="value">{{ store.formatNumber(store.totalSmall) }} <small>ج.م</small></span>
           </div>
-
-          <!-- السطر الثاني -->
           <div class="summary-card">
             <span class="label">مبلغ التصفيرة</span>
             <span class="value">{{ store.formatNumber(store.clearanceAmount) }} <small>ج.م</small></span>
@@ -141,8 +142,6 @@
             <span class="label">إجمالي المحصل</span>
             <span class="value">{{ store.formatNumber(store.totalCollected) }} <small>ج.م</small></span>
           </div>
-
-          <!-- السطر الثالث -->
           <div class="summary-card full-width" :class="store.status.class">
             <span class="label">الحالة ({{ store.status.text }})</span>
             <span class="value">{{ store.formatNumber(store.status.val) }} <small>ج.م</small></span>
@@ -151,7 +150,7 @@
       </div>
 
       <!-- ملخص الفئات -->
-      <div class="categories-section">
+      <div class="categories-section categories-card">
         <div class="card-header centered-header">
           <h2 class="counter-title">ملخص الفئات</h2>
           <button @click="toggleSort(3)" class="sort-btn header-action">
@@ -163,9 +162,9 @@
           <table class="modern-counter-table summary-table">
             <thead>
               <tr>
-                <th>الإجمالي</th>
-                <th>العدد</th>
-                <th>الفئة</th>
+                <th class="col-total">الإجمالي</th>
+                <th class="col-qty">العدد</th>
+                <th class="col-cat">الفئة</th>
               </tr>
             </thead>
             <tbody>
@@ -173,8 +172,10 @@
                 <td class="total-cell highlight">{{ store.formatNumber(cat.total) }}</td>
                 <td class="qty-cell">{{ store.formatNumber(cat.qty) }}</td>
                 <td class="category-cell" :class="'cat-' + cat.value">
-                  <span class="val-badge">{{ cat.value }}</span>
-                  <span class="val-unit">جنيه</span>
+                  <div class="category-wrapper">
+                    <span class="val-badge">{{ cat.value }}</span>
+                    <span class="val-unit">جنيه</span>
+                  </div>
                 </td>
               </tr>
               <tr v-if="store.categoriesSummary.every(c => c.qty === 0)">
@@ -219,8 +220,6 @@ import PageHeader from '@/components/layout/PageHeader.vue';
 import html2canvas from 'html2canvas';
 
 const store = useCounterStore();
-
-// حالات الترتيب
 const sortOrder1 = ref('desc');
 const sortOrder2 = ref('desc');
 const sortOrderSummary = ref('desc');
@@ -248,28 +247,21 @@ const sortedCategoriesSummary = computed(() => {
     : summary.sort((a, b) => a.value - b.value);
 });
 
-// نظام الإشعارات
 const { confirm, addNotification } = inject('notifications');
 
-const syncTotalCollected = () => {
-  store.updateTotalCollected();
-};
-
 onMounted(() => {
-  syncTotalCollected();
-  window.addEventListener('focus', syncTotalCollected);
+  store.updateTotalCollected();
+  window.addEventListener('focus', () => store.updateTotalCollected());
 });
 
 const exportData = async () => {
   const element = document.querySelector('.categories-export');
   if (!element) return;
-
   try {
     const canvas = await html2canvas(element, {
       backgroundColor: getComputedStyle(document.body).getPropertyValue('--content-bg') || '#ffffff',
       scale: 2,
     });
-
     canvas.toBlob(blob => {
       if (blob && navigator.share) {
         const file = new File([blob], `counter-${Date.now()}.png`, { type: 'image/png' });
@@ -293,7 +285,6 @@ const handleResetAll = async () => {
     icon: 'warning',
     confirmButtonText: 'تصفير الكل'
   });
-
   if (result.isConfirmed) {
     store.resetAll();
     addNotification('تم تصفير العدادات', 'success');
@@ -336,36 +327,26 @@ const onBlurFormat = (val, counterIdx) => {
   padding: 15px;
 }
 
-/* Grids */
 .counters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
-@media (max-width: 768px) {
-  .counters-grid { grid-template-columns: 1fr; }
-}
-
-/* Cards */
-.counter-card {
-  background: var(--white);
-  border-radius: var(--border-radius-xl);
-  box-shadow: var(--shadow-md);
+.counter-card, .summary-section, .categories-card {
   overflow: hidden;
-  border: 1px solid var(--gray-200);
-  transition: var(--transition);
+  padding: 0 !important;
 }
 
 .centered-header {
   padding: 15px 20px;
-  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  background: var(--table-header-bg);
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
+  border: none;
 }
 
 .counter-title {
@@ -381,7 +362,6 @@ const onBlurFormat = (val, counterIdx) => {
   left: 15px;
 }
 
-/* Sort Button */
 .sort-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -401,7 +381,6 @@ const onBlurFormat = (val, counterIdx) => {
   color: var(--primary);
 }
 
-/* Tables */
 .table-container {
   overflow-x: auto;
 }
@@ -409,84 +388,105 @@ const onBlurFormat = (val, counterIdx) => {
 .modern-counter-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* توزيع متساوٍ للأعمدة */
 }
 
 .modern-counter-table th {
-  background: #f1f5f9;
+  background: var(--gray-100);
   padding: 14px;
   font-size: 0.9rem;
   color: var(--primary-dark);
   font-weight: 800;
   text-align: center;
-  border-bottom: 2px solid var(--gray-200);
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* توزيع متساوٍ للأعمدة لضمان التناسق */
+.col-total, .col-qty, .col-cat {
+  width: 33.33%;
 }
 
 .modern-counter-table td {
   padding: 12px;
   text-align: center;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
 
-/* Inputs */
-.input-field {
+.category-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  max-width: 100px;
-  padding: 8px;
-  border: 1.5px solid var(--gray-200);
+  height: 100%;
+}
+
+.qty-column {
+  width: 33.33%;
+}
+
+.counter-input-field {
+  width: 100%;
+  max-width: 160px; /* زيادة بسيطة للتناسب مع العرض الجديد */
+  padding: 10px;
+  border: 1.5px solid var(--input-border);
   border-radius: 8px;
   text-align: center;
   font-weight: 700;
-  font-size: 1rem;
-  background: var(--white);
+  font-size: 1.1rem;
+  background: var(--input-bg);
+  color: var(--input-text);
   transition: var(--transition);
+  display: inline-block;
+  vertical-align: middle;
 }
 
-.input-field:focus {
+.counter-input-field:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
   outline: none;
 }
 
-/* Category styling (No background, just colored text) */
 .category-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   font-weight: 900;
+  vertical-align: middle;
 }
 
 .val-badge {
-  font-size: 1.2rem;
-  transition: transform 0.2s;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
-.cat-200 .val-badge { color: #1a4d2e; }
-.cat-100 .val-badge { color: #2c3e50; }
-.cat-50 .val-badge { color: #d35400; }
+.val-unit { 
+  font-size: 0.8rem; 
+  color: var(--gray-500); 
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.cat-200 .val-badge { color: #27ae60; }
+.cat-100 .val-badge { color: #3498db; }
+.cat-50 .val-badge { color: #e67e22; }
 .cat-20 .val-badge { color: #2980b9; }
 .cat-10 .val-badge { color: #8e44ad; }
-.cat-5 .val-badge { color: #27ae60; }
+.cat-5 .val-badge { color: #16a085; }
 .cat-1 .val-badge { color: #7f8c8d; }
 
-.val-unit { font-size: 0.75rem; color: var(--gray-500); font-weight: normal; }
-
-/* Total cells */
 .total-cell {
   font-weight: 800;
   color: var(--gray-900);
-  font-size: 1rem;
+  font-size: 1.05rem;
+  vertical-align: middle;
 }
 
 .total-cell.highlight {
   color: var(--primary);
 }
 
-/* Stats in Card Footer */
 .card-footer-stats {
   padding: 15px 20px;
-  background: var(--gray-50);
+  background: rgba(var(--primary-rgb), 0.03);
   display: flex;
   justify-content: space-between;
 }
@@ -499,21 +499,6 @@ const onBlurFormat = (val, counterIdx) => {
 .stat-label { font-size: 0.75rem; color: var(--gray-600); font-weight: 700; }
 .stat-value { font-size: 1.2rem; font-weight: 900; color: var(--primary); }
 .stat-item.small .stat-value { font-size: 1rem; color: var(--gray-700); }
-
-/* Summary Section */
-.summary-section {
-  background: var(--white);
-  border-radius: var(--border-radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--gray-200);
-}
-
-.summary-header {
-  gap: 12px;
-}
-
-.summary-header i { font-size: 1.3rem; }
 
 .consolidated-summary {
   display: grid;
@@ -529,11 +514,11 @@ const onBlurFormat = (val, counterIdx) => {
 .summary-card {
   padding: 15px;
   border-radius: 12px;
-  background: var(--gray-50);
+  background: var(--light-bg);
   display: flex;
   flex-direction: column;
   gap: 5px;
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--border-color);
   text-align: center;
 }
 
@@ -548,16 +533,6 @@ const onBlurFormat = (val, counterIdx) => {
 .summary-card.status-surplus .value { color: var(--success); }
 .summary-card.status-deficit .value { color: var(--danger); }
 
-/* Categories Section specifically */
-.categories-section {
-  background: var(--white);
-  border-radius: var(--border-radius-xl);
-  overflow: hidden;
-  border: 1px solid var(--gray-200);
-  box-shadow: var(--shadow-md);
-}
-
-/* Action Buttons */
 .action-buttons {
   display: flex;
   gap: 15px;
@@ -577,65 +552,29 @@ const onBlurFormat = (val, counterIdx) => {
   transition: var(--transition);
 }
 
-.action-btn.reset { background: #fdf2f2; color: #cf2222; border: 1px solid #f8d7da; }
-.action-btn.reset:hover { background: #cf2222; color: white; }
+.action-btn.reset { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+.action-btn.reset:hover { background: #ef4444; color: white; }
 
 .action-btn.export { background: var(--primary); color: white; }
 .action-btn.export:hover { background: var(--primary-dark); transform: translateY(-2px); }
 
 /* Dark Mode Overrides */
-body.dark .counter-card, 
-body.dark .summary-section,
-body.dark .categories-section,
-body.dark .summary-card {
-  background: var(--dark-surface);
-  border-color: var(--dark-border);
-}
-
-body.dark .centered-header {
-  /* Fix: Use solid background for dark mode to avoid the transparent/box issue */
-  background: var(--primary) !important;
-  color: white !important;
-}
-
-/* Ensure title doesn't have transparency in dark mode */
-body.dark .counter-title {
-  background: none !important;
-  -webkit-text-fill-color: white !important;
-  text-fill-color: white !important;
-  box-shadow: none !important;
-  border: none !important;
-  color: white !important;
-  text-shadow: none !important;
-}
-
 body.dark .modern-counter-table th {
   background: rgba(255,255,255,0.05);
   color: var(--primary-light);
-  border-bottom-color: var(--dark-border);
 }
 
-body.dark .modern-counter-table td {
-  border-bottom-color: rgba(255,255,255,0.05);
-}
+body.dark .val-unit { color: var(--gray-600); }
 
-body.dark .input-field {
-  background: var(--dark-bg);
-  color: white;
-  border-color: var(--gray-700);
-}
-
-body.dark .total-cell { color: #f1f5f9; }
-body.dark .stat-value { color: var(--primary-light); }
-body.dark .summary-card .value { color: white; }
-body.dark .card-footer-stats { background: rgba(0,0,0,0.2); }
-
-/* Keep denomination colors visible in dark mode */
-body.dark .cat-200 .val-badge { color: #4ade80; }
+body.dark .cat-200 .val-badge { color: #2dd4bf; }
 body.dark .cat-100 .val-badge { color: #60a5fa; }
 body.dark .cat-50 .val-badge { color: #fb923c; }
-body.dark .cat-20 .val-badge { color: #5eead4; }
+body.dark .cat-20 .val-badge { color: #38bdf8; }
 body.dark .cat-10 .val-badge { color: #c084fc; }
-body.dark .cat-5 .val-badge { color: #4ade80; }
+body.dark .cat-5 .val-badge { color: #34d399; }
 body.dark .cat-1 .val-badge { color: #94a3b8; }
+
+body.dark .card-footer-stats { background: rgba(0,0,0,0.15); }
+body.dark .stat-value { color: var(--primary-light); }
+body.dark .stat-item.small .stat-value { color: var(--gray-700); }
 </style>

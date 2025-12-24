@@ -1,16 +1,24 @@
 import { defineStore } from 'pinia'
 import logger from '@/utils/logger.js'
 
+// إصدار الإعدادات - يتم تغييره عند حدوث تغييرات جذرية في التنسيقات لضمان تحديث كاش المستخدم
+const SETTINGS_VERSION = '1.1'
+
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     darkMode: false,
-    zoomLevel: 5 // 0 to 10 scale, 5 is the new default (14px)
+    zoomLevel: 5, // 0 to 10 scale, 5 is the default (14px)
+    version: SETTINGS_VERSION,
+    // يمكن إضافة مصفوفة للألوان المخصصة هنا مستقبلاً
+    themeConfig: {
+      primaryColor: null,
+      sidebarColor: null
+    }
   }),
 
   getters: {
-    zoomClass: (state) => {
-      return `zoom-lvl${state.zoomLevel}`
-    }
+    zoomClass: (state) => `zoom-lvl${state.zoomLevel}`,
+    isDarkMode: (state) => state.darkMode
   },
 
   actions: {
@@ -29,68 +37,95 @@ export const useSettingsStore = defineStore('settings', {
       this.applySettings()
     },
 
-    zoomIn() {
-      if (this.zoomLevel < 10) {
-        this.zoomLevel++
-        this.applySettings()
-      }
-    },
-
-    zoomOut() {
-      if (this.zoomLevel > 0) {
-        this.zoomLevel--
-        this.applySettings()
-      }
-    },
-
+    /**
+     * تطبيق الإعدادات على مستند الـ DOM
+     * يتم استدعاؤها عند التغيير وعند تحميل التطبيق
+     */
     applySettings() {
-      // Apply dark mode to body
-      if (this.darkMode) {
-        document.body.classList.add('dark')
-      } else {
-        document.body.classList.remove('dark')
-      }
+      try {
+        const html = document.documentElement
+        const body = document.body
 
-      // Apply zoom level to HTML element
-      const html = document.documentElement;
-      
-      // Remove any class starting with zoom-lvl
-      const classes = Array.from(html.classList);
-      classes.forEach(cls => {
-        if (cls.startsWith('zoom-lvl')) {
-          html.classList.remove(cls);
+        // 1. تطبيق الوضع الليلي (على الـ html والـ body لضمان التوافق)
+        if (this.darkMode) {
+          html.classList.add('dark')
+          body.classList.add('dark')
+        } else {
+          html.classList.remove('dark')
+          body.classList.remove('dark')
         }
-      });
-      
-      // Add current zoom class
-      html.classList.add(`zoom-lvl${this.zoomLevel}`);
 
-      this.saveSettings()
+        // 2. تطبيق مستويات الزوم
+        // إزالة أي كلاسات زوم قديمة
+        const classes = Array.from(html.classList)
+        classes.forEach(cls => {
+          if (cls.startsWith('zoom-lvl')) {
+            html.classList.remove(cls)
+          }
+        })
+        // إضافة الكلاس الجديد
+        html.classList.add(`zoom-lvl${this.zoomLevel}`)
+
+        // 3. تطبيق أي ألوان مخصصة إذا وجدت (مستقبلاً)
+        if (this.themeConfig.primaryColor) {
+          html.style.setProperty('--primary', this.themeConfig.primaryColor)
+        }
+
+        this.saveSettings()
+      } catch (error) {
+        logger.error('Error applying settings:', error)
+      }
     },
 
     saveSettings() {
-      localStorage.setItem('settings', JSON.stringify({
+      const dataToSave = {
         darkMode: this.darkMode,
-        zoomLevel: this.zoomLevel
-      }))
+        zoomLevel: this.zoomLevel,
+        version: this.version,
+        themeConfig: this.themeConfig
+      }
+      localStorage.setItem('app_settings_v1', JSON.stringify(dataToSave))
     },
 
     loadSettings() {
-      const settings = localStorage.getItem('settings')
-      if (settings) {
+      const saved = localStorage.getItem('app_settings_v1')
+      if (saved) {
         try {
-          const parsed = JSON.parse(settings)
+          const parsed = JSON.parse(saved)
+          
+          // التحقق من الإصدار - إذا كان هناك تحديث جوهري يمكننا إعادة تعيين بعض القيم
+          if (parsed.version !== SETTINGS_VERSION) {
+            logger.info('New settings version detected, migrating...')
+            // منطق الترحيل (Migration) إذا لزم الأمر
+          }
+
           this.darkMode = typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false
-          // التأكد من أن الزوم القديم (إذا كان مخزناً) سيتم تحويله للقيمة الافتراضية الجديدة 5 إذا لم يكن صالحاً
           this.zoomLevel = (typeof parsed.zoomLevel === 'number' && parsed.zoomLevel >= 0 && parsed.zoomLevel <= 10) ? parsed.zoomLevel : 5
+          this.themeConfig = parsed.themeConfig || { primaryColor: null, sidebarColor: null }
+          
           this.applySettings()
         } catch (error) {
-          logger.error('Error loading settings:', error)
-          this.applySettings()
+          logger.error('Error parsing settings:', error)
+          this.resetToDefaults()
         }
       } else {
+        // إذا لم توجد إعدادات، نحاول كشف تفضيلات النظام
+        this.detectSystemPreferences()
         this.applySettings()
       }
+    },
+
+    detectSystemPreferences() {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        this.darkMode = true
+      }
+    },
+
+    resetToDefaults() {
+      this.darkMode = false
+      this.zoomLevel = 5
+      this.themeConfig = { primaryColor: null, sidebarColor: null }
+      this.applySettings()
     }
   }
 })

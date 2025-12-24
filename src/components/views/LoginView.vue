@@ -1,6 +1,5 @@
 <template>
   <div class="login-wrapper" :class="{ 'loading': store.isLoading }">
-    <!-- خلفية متحركة (اختياري) -->
     <div class="animated-bg"></div>
     
     <div id="alert-container" class="alert-container"></div>
@@ -17,7 +16,7 @@
 
           <div class="btn-container">
             <button 
-              class="google-login-btn btn btn-primary" 
+              class="google-login-btn" 
               :class="{ 'is-loading': store.isLoading }"
               :disabled="store.isLoading"
               @click="store.loginWithGoogle"
@@ -41,7 +40,7 @@
           <hr class="privacy-divider">
 
           <div v-if="showInstallButton" class="install-app-section">
-            <button class="install-app-btn btn btn-primary" @click="installApp">
+            <button class="install-app-btn" @click="installApp">
               <div class="install-app-icon">
                 <img src="/favicon.svg" alt="شعار التطبيق" />
               </div>
@@ -134,17 +133,16 @@ const installApp = async () => {
    1. التخطيط العام والخلفيات
    ========================================= */
 .login-wrapper {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
   min-height: 100vh;
-  min-height: 100dvh; /* لدعم الهواتف الحديثة */
+  min-height: 100dvh;
   width: 100%;
-  font-family: 'Cairo', sans-serif;
+  font-family: var(--font-family-sans);
   direction: rtl;
   overflow-x: hidden;
   position: relative;
 }
 
-/* خلفية متحركة تحسين الأداء */
 .animated-bg {
   content: '';
   position: fixed;
@@ -152,7 +150,7 @@ const installApp = async () => {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(0, 121, 101, 0.05) 0%, rgba(0, 121, 101, 0) 70%);
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, rgba(var(--primary-rgb), 0) 70%);
   z-index: 0;
   animation: rotate 30s linear infinite;
   pointer-events: none;
@@ -177,19 +175,20 @@ const installApp = async () => {
 }
 
 .login-card {
-  background: white;
-  border-radius: 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  background: var(--surface-bg);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-lg);
   padding: 60px 40px;
   width: 100%;
   max-width: 480px;
   text-align: center;
   position: relative;
-  border: 1px solid rgba(0,0,0,0.03);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  transition: var(--transition);
 }
 
 /* =========================================
@@ -204,7 +203,7 @@ const installApp = async () => {
   height: 90px;
   width: auto;
   margin-bottom: 25px;
-  filter: drop-shadow(0 5px 15px rgba(0, 121, 101, 0.2));
+  filter: drop-shadow(0 5px 15px rgba(var(--primary-rgb), 0.2));
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -213,13 +212,13 @@ const installApp = async () => {
 .app-name {
   font-size: 34px;
   font-weight: 800;
-  color: var(--primary, #007965);
+  color: var(--primary);
   margin: 0 0 10px;
   letter-spacing: -0.5px;
 }
 
 .subtitle {
-  color: #64748b;
+  color: var(--gray-600);
   font-size: 16px;
   margin: 0;
   font-weight: 500;
@@ -236,7 +235,7 @@ const installApp = async () => {
 .google-login-btn {
   width: 100%;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #007965 0%, #00a080 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
   border: none;
   border-radius: 16px;
@@ -244,7 +243,7 @@ const installApp = async () => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 10px 20px rgba(0, 121, 101, 0.2);
+  box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,7 +252,7 @@ const installApp = async () => {
 
 .google-login-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(0, 121, 101, 0.3);
+  box-shadow: 0 15px 30px rgba(var(--primary-rgb), 0.3);
 }
 
 .google-login-btn i {
@@ -275,11 +274,11 @@ const installApp = async () => {
 .privacy-policy {
   margin-top: 20px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--gray-500);
 }
 
 .privacy-policy a {
-  color: var(--primary, #007965);
+  color: var(--primary);
   text-decoration: none;
   font-weight: 600;
 }
@@ -287,7 +286,7 @@ const installApp = async () => {
 .privacy-divider {
   width: 100%;
   height: 1px;
-  background: #f1f5f9;
+  background: var(--border-color);
   border: none;
   margin: 30px 0;
 }
@@ -305,8 +304,8 @@ const installApp = async () => {
   width: 100%;
   max-width: 320px;
   height: 80px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
   border-radius: 16px;
   padding: 0 20px;
   cursor: pointer;
@@ -317,19 +316,19 @@ const installApp = async () => {
 }
 
 .install-app-btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--gray-200);
+  border-color: var(--gray-400);
 }
 
 .install-app-icon {
   width: 44px;
   height: 44px;
-  background: white;
+  background: var(--surface-bg);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .install-app-icon img { width: 28px; height: 28px; }
@@ -341,10 +340,10 @@ const installApp = async () => {
   flex-direction: column;
 }
 
-.install-btn-title { font-size: 15px; font-weight: 700; color: #1e293b; }
-.install-btn-subtitle { font-size: 12px; color: #64748b; }
+.install-btn-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.install-btn-subtitle { font-size: 12px; color: var(--gray-600); }
 
-.download-icon { color: var(--primary, #007965); font-size: 18px; }
+.download-icon { color: var(--primary); font-size: 18px; }
 
 /* =========================================
    6. الفوتر
@@ -352,42 +351,39 @@ const installApp = async () => {
 .footer-info {
   margin-top: 40px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--gray-500);
   width: 100%;
 }
 
-.developer-name { color: #475569; font-weight: 700; }
+.developer-name { color: var(--gray-700); font-weight: 700; }
 
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* =========================================
-   7. استجابة الهواتف (ملء الشاشة بالكامل)
-   ========================================= */
 @media (max-width: 768px) {
   .login-container {
-    padding: 0; /* إزالة الحواف الخارجية */
-    align-items: stretch; /* جعل الكارد يتمدد طولياً */
+    padding: 0;
+    align-items: stretch;
   }
 
   .login-card {
-    border-radius: 0; /* إزالة الزوايا الدائرية */
+    border-radius: 0;
     min-height: 100vh;
     min-height: 100dvh;
     padding: 60px 25px 40px;
     box-shadow: none;
     border: none;
     max-width: none;
-    justify-content: flex-start; /* بدء المحتوى من الأعلى قليلاً مع دفع الفوتر للأسفل */
+    justify-content: flex-start;
   }
 
   .logo-img { height: 80px; }
   .app-name { font-size: 30px; }
   
   .footer-info {
-    margin-top: auto; /* دفع الفوتر لأسفل الشاشة دائماً */
+    margin-top: auto;
     padding-top: 40px;
     padding-bottom: 20px;
   }

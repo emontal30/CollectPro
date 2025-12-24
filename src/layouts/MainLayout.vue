@@ -6,8 +6,8 @@
     <!-- حاوية الإشعارات الموحدة -->
     <NotificationContainer />
 
-    <!-- الهيدر -->
-    <header class="app-header">
+    <!-- الهيدر المثبت -->
+    <header class="app-header fixed-header">
       <div class="header-stretch">
          <Topbar />
       </div>
@@ -15,7 +15,7 @@
 
     <Sidebar />
 
-    <!-- Main content area -->
+    <!-- منطقة المحتوى الرئيسي مع إزاحة للهيدر -->
     <main class="app-main">
       <div class="content-wrapper">
         <router-view v-slot="{ Component }">
@@ -86,13 +86,23 @@ watch(() => subStore.isInitialized, (val) => {
   background: var(--light-bg, #f8fafc);
   width: 100%;
   position: relative;
-  /* منع ظهور الشريط الجانبي في حسابات العرض الأفقي للمتصفح */
   overflow-x: hidden;
+}
+
+/* تنسيق الهيدر المثبت */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-header, 1000);
+  background: var(--header-bg);
+  box-shadow: var(--shadow-md);
 }
 
 .alert-container {
   position: fixed;
-  top: 80px;
+  top: calc(var(--header-height, 70px) + 10px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 10000;
@@ -105,7 +115,6 @@ watch(() => subStore.isInitialized, (val) => {
   justify-content: center;
 }
 
-/* لضمان امتداد الخلفية لليسار واليمين حتى عند التمرير الأفقي للجداول */
 .header-stretch, .footer-stretch {
     width: 100%;
     min-width: var(--app-min-width, 768px);
@@ -118,7 +127,8 @@ watch(() => subStore.isInitialized, (val) => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* السماح بالتمرير الأفقي فقط داخل منطقة المحتوى للجداول الكبيرة */
+  /* إزاحة المحتوى لأسفل لتعويض الهيدر المثبت */
+  padding-top: var(--header-height, 70px);
   overflow-x: auto;
 }
 
@@ -127,11 +137,16 @@ watch(() => subStore.isInitialized, (val) => {
   width: 100%;
   max-width: var(--app-min-width, 768px);
   margin: 0 auto;
-  padding-top: 40px; /* زيادة المسافة العلوية بين الهيدر والمحتوى */
+  padding-top: 20px;
   padding-bottom: 20px;
 }
 
 .app-footer {
   margin-top: auto;
+}
+
+/* ضبط موضع الإشعارات لتظهر تحت الهيدر المثبت */
+:deep(.notification-container) {
+  top: calc(var(--header-height, 70px) + 10px) !important;
 }
 </style>

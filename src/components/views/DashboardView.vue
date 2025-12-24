@@ -26,7 +26,6 @@
           <span class="line-count">{{ store.clientData.split('\n').length }} سطر</span>
         </div>
         
-        <!-- شريط الحالة السفلي -->
         <transition name="slide-status">
           <div v-if="statusMessage" :class="['status-bar', statusMessage.type]">
             <div class="status-icon-wrapper">
@@ -115,7 +114,6 @@
           <h3 class="tab-title">🚀 النسخ التلقائي الاحترافي</h3>
           
           <div class="instruction-steps">
-            <!-- Step 1 -->
             <div class="istep">
               <div class="istep-num">1</div>
               <div class="istep-content">
@@ -129,7 +127,6 @@
               </div>
             </div>
 
-            <!-- Step 2 -->
             <div class="istep">
               <div class="istep-num">2</div>
               <div class="istep-content">
@@ -142,7 +139,6 @@
               </div>
             </div>
 
-            <!-- Step 3 -->
             <div class="istep">
               <div class="istep-num">3</div>
               <div class="istep-content">
@@ -156,7 +152,6 @@
               </div>
             </div>
 
-            <!-- Step 4 -->
             <div class="istep">
               <div class="istep-num">4</div>
               <div class="istep-content">
@@ -193,10 +188,8 @@ const store = useDashboardStore();
 
 const activeTab = ref('manual');
 
-// نظام الإشعارات الموحد
 const { confirm, addNotification } = inject('notifications');
 
-// حالة شريط الحالة
 const statusMessage = ref(null);
 let statusTimeout = null;
 
@@ -318,7 +311,6 @@ onMounted(() => {
   100% { transform: scale(1); box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3); }
 }
 
-/* Tabs Styling */
 .help-card--tabs {
   padding: 0 !important;
   overflow: hidden;
@@ -365,11 +357,6 @@ onMounted(() => {
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .tab-title {
   margin-bottom: 1.5rem;
   color: var(--text-main);
@@ -399,7 +386,6 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* Auto Instructions Styling */
 .instruction-steps {
   display: flex;
   flex-direction: column;
@@ -520,17 +506,6 @@ onMounted(() => {
   background: rgba(var(--success-rgb), 0.1);
   border-radius: 8px;
 }
-
-/* Animations local to Dashboard */
-.animate-pulse { animation: pulse 2s ease-in-out infinite; }
-.animate-spin { animation: spin 1s linear infinite; }
-.animate-bounce { animation: bounce 0.6s ease-in-out; }
-.animate-shake { animation: shake 0.4s ease-in-out; }
-
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
 .slide-status-enter-active, .slide-status-leave-active { transition: all 0.3s ease; }
 .slide-status-enter-from { opacity: 0; transform: translateY(10px); }

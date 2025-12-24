@@ -8,10 +8,10 @@
     />
 
     <ColumnVisibility
-      v-model="showColumnsArchive"
+      v-model="showSettings"
       :columns="archiveColumns"
       storage-key="columns.visibility.archive"
-      @save="applySavedColumnsArchive"
+      @save="apply"
     />
 
     <div class="archive-controls">
@@ -53,7 +53,7 @@
             @input="handleSearch"
           />
         </div>
-        <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showColumnsArchive = true">
+        <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
           <i class="fas fa-cog"></i>
         </button>
       </div>
@@ -71,12 +71,12 @@
         <thead>
           <tr>
             <th class="date-header">📅 التاريخ</th>
-            <th v-show="isVisibleArchive('shop')" class="shop">🏪 المحل</th>
-            <th v-show="isVisibleArchive('code')" class="code">🔢 الكود</th>
-            <th v-show="isVisibleArchive('amount')" class="amount">💵 التحويل</th>
-            <th v-show="isVisibleArchive('extra')" class="extra">📌 اخرى</th>
-            <th v-show="isVisibleArchive('collector')" class="collector">👤 المحصل</th>
-            <th v-show="isVisibleArchive('net')" class="net highlight">✅ الصافي</th>
+            <th v-show="isVisible('shop')" class="shop">🏪 المحل</th>
+            <th v-show="isVisible('code')" class="code">🔢 الكود</th>
+            <th v-show="isVisible('amount')" class="amount">💵 التحويل</th>
+            <th v-show="isVisible('extra')" class="extra">📌 اخرى</th>
+            <th v-show="isVisible('collector')" class="collector">👤 المحصل</th>
+            <th v-show="isVisible('net')" class="net highlight">✅ الصافي</th>
           </tr>
         </thead>
         <tbody>
@@ -89,12 +89,12 @@
           <template v-else>
             <tr v-for="(row, index) in store.rows" :key="index">
               <td class="date-cell">{{ row.date || store.selectedDate }}</td>
-              <td v-show="isVisibleArchive('shop')">{{ row.shop }}</td>
-              <td v-show="isVisibleArchive('code')">{{ row.code }}</td>
-              <td v-show="isVisibleArchive('amount')">{{ formatNum(row.amount) }}</td>
-              <td v-show="isVisibleArchive('extra')">{{ formatNum(row.extra) }}</td>
-              <td v-show="isVisibleArchive('collector')">{{ formatNum(row.collector) }}</td>
-              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(row.net)">
+              <td v-show="isVisible('shop')">{{ row.shop }}</td>
+              <td v-show="isVisible('code')">{{ row.code }}</td>
+              <td v-show="isVisible('amount')">{{ formatNum(row.amount) }}</td>
+              <td v-show="isVisible('extra')">{{ formatNum(row.extra) }}</td>
+              <td v-show="isVisible('collector')">{{ formatNum(row.collector) }}</td>
+              <td v-show="isVisible('net')" class="net numeric" :class="getNetClass(row.net)">
                 {{ formatNum(row.net) }}
                 <i :class="getNetIcon(row.net)"></i>
               </td>
@@ -108,12 +108,12 @@
 
             <tr v-if="store.rows.length > 0" class="total-row">
               <td class="shop">الإجمالي</td>
-              <td v-show="isVisibleArchive('shop')"></td>
-              <td v-show="isVisibleArchive('code')"></td>
-              <td v-show="isVisibleArchive('amount')">{{ formatNum(store.totals.amount) }}</td>
-              <td v-show="isVisibleArchive('extra')">{{ formatNum(store.totals.extra) }}</td>
-              <td v-show="isVisibleArchive('collector')">{{ formatNum(store.totals.collector) }}</td>
-              <td v-show="isVisibleArchive('net')" class="net numeric" :class="getNetClass(store.totals.net)">
+              <td v-show="isVisible('shop')"></td>
+              <td v-show="isVisible('code')"></td>
+              <td v-show="isVisible('amount')">{{ formatNum(store.totals.amount) }}</td>
+              <td v-show="isVisible('extra')">{{ formatNum(store.totals.extra) }}</td>
+              <td v-show="isVisible('collector')">{{ formatNum(store.totals.collector) }}</td>
+              <td v-show="isVisible('net')" class="net numeric" :class="getNetClass(store.totals.net)">
                 {{ formatNum(store.totals.net) }}
               </td>
             </tr>
@@ -144,11 +144,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref, reactive, inject } from 'vue';
+import { onMounted, ref, inject } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import logger from '@/utils/logger.js';
+import { getNetClass, getNetIcon } from '@/utils/formatters.js';
+import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 
 const store = useArchiveStore();
 const searchQuery = ref('');
@@ -165,28 +167,13 @@ const archiveColumns = [
   { key: 'net', label: '✅ الصافي' }
 ];
 
-const showColumnsArchive = ref(false);
-const columnsVisibilityArchive = reactive({});
-
-function loadColumnsVisibilityArchive() {
-  const raw = localStorage.getItem('columns.visibility.archive');
-  const saved = raw ? JSON.parse(raw) : null;
-  archiveColumns.forEach(c => { 
-    columnsVisibilityArchive[c.key] = saved && typeof saved[c.key] === 'boolean' ? saved[c.key] : true; 
-  });
-}
-
-function isVisibleArchive(key) { return columnsVisibilityArchive[key] !== false; }
-
-function applySavedColumnsArchive(obj) { 
-  Object.keys(obj || {}).forEach(k => { columnsVisibilityArchive[k] = !!obj[k]; }); 
-}
+const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(archiveColumns, 'columns.visibility.archive');
 
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
 onMounted(async () => {
   logger.info('🚀 ArchiveView Initializing...');
-  loadColumnsVisibilityArchive();
+  loadColumns();
   await store.loadAvailableDates();
   if (store.selectedDate) {
     await store.loadArchiveByDate(store.selectedDate);
@@ -207,7 +194,7 @@ const handleSearch = () => {
   if (searchQuery.value.length >= 2) {
     searchTimeout = setTimeout(() => {
       store.searchInAllArchives(searchQuery.value);
-    }, 400); // تأخير بسيط لتحسين الأداء
+    }, 400); 
   } else if (searchQuery.value.length === 0) {
     if (store.selectedDate) {
       store.loadArchiveByDate(store.selectedDate);
@@ -222,9 +209,6 @@ const clearSearch = () => {
   searchQuery.value = '';
   handleSearch();
 };
-
-const getNetClass = (val) => val > 0 ? 'positive' : (val < 0 ? 'negative' : 'zero');
-const getNetIcon = (val) => val > 0 ? 'fas fa-arrow-up' : (val < 0 ? 'fas fa-arrow-down' : 'fas fa-check');
 
 const deleteCurrentArchive = async () => {
   if (!store.selectedDate) return;

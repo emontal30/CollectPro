@@ -86,6 +86,17 @@
   --sidebar-width: 320px;
   --app-min-width: 768px;
 
+  /* ====== Semantic Variables (Added for UI Consistency) ====== */
+  --input-bg: var(--white);
+  --input-border: var(--gray-300);
+  --input-text: var(--gray-900);
+  --input-placeholder: #666;
+  
+  --container-bg: var(--surface-bg);
+  --container-border: var(--border-color);
+  --container-shadow: var(--card-shadow);
+  --container-backdrop: none;
+
   /* ====== Dark Mode Overrides Placeholders ====== */
   --dark-surface: rgba(255, 255, 255, 0.7);
   --dark-border: rgba(0, 0, 0, 0.08);
@@ -95,9 +106,17 @@
   /* ألوان الهيدر والفوتر الافتراضية */
   --header-bg: var(--primary);
   --footer-bg: var(--primary);
+
+  /* ألوان أيقونات الداشبورد */
+  --icon-paste: #10b981;
+  --icon-save: #f59e0b;
+  --icon-archive: #6366f1;
+  --icon-clear: #ef4444;
+  --icon-home: #0ea5e9;
 }
 
 /* ====== DARK MODE OVERRIDES ====== */
+html.dark body,
 body.dark {
   /* --- Core Palette --- */
   --light-bg: #0f172a;
@@ -125,6 +144,17 @@ body.dark {
   --success: #10b981;
   --info: #3b82f6;
 
+  /* --- Semantic Overrides (This prevents code duplication) --- */
+  --input-bg: var(--gray-100);
+  --input-border: var(--gray-300);
+  --input-text: #f8fafc;
+  --input-placeholder: var(--gray-500);
+
+  --container-bg: var(--dark-surface);
+  --container-border: var(--dark-border);
+  --container-shadow: 0 10px 30px var(--dark-shadow);
+  --container-backdrop: blur(12px);
+
   /* --- Specific Dark Mode Tokens --- */
   --dark-surface: rgba(30, 41, 59, 0.7);
   --dark-border: rgba(255, 255, 255, 0.08);
@@ -137,4 +167,11 @@ body.dark {
   /* ألوان الهيدر والفوتر في الوضع الليلي */
   --header-bg: var(--dark-surface);
   --footer-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+
+  /* ألوان أيقونات الداشبورد في الوضع الليلي (أكثر إشراقاً) */
+  --icon-paste: #34d399;
+  --icon-save: #fbbf24;
+  --icon-archive: #818cf8;
+  --icon-clear: #f87171;
+  --icon-home: #38bdf8;
 }

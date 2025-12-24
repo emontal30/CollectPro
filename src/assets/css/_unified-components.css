@@ -1,346 +1,345 @@
 /* ====== SPECIALIZED COMPONENTS & LAYOUTS ====== */
-/* يتضمن: البطاقات، المخططات، وهيكلية الصفحات المتخصصة */
 
 /* =========================================
    1. PAGE WRAPPERS & LAYOUT STRUCTURE
    ========================================= */
 
-/* Unified Fixed Width Page Container for all views */
-.page-container, 
-.harvest-page, 
-.dashboard-page, 
-.archive-page, 
-.subscriptions-page,
-.admin-dashboard,
-.my-subscription-page,
-.payment-page {
-  width: var(--app-min-width, 768px); /* استخدام المتغير الموحد */
-  margin: 0 auto;
-  padding: 20px;
-  animation: fadeIn 0.5s ease-in-out;
-  box-sizing: border-box; /* لضمان عدم زيادة العرض بسبب الـ padding */
-}
-
-/* =========================================
-   2. DASHBOARD & DATA ENTRY COMPONENTS
-   ========================================= */
-
-.input-section {
-  margin-bottom: 24px;
-}
-
-.input-container {
-  background: var(--surface-bg);
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--border-color);
-  position: relative;
-  transition: var(--transition);
-}
-
-.input-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: var(--gray-900);
-}
-
-/* Dashboard Status Bar (Professional Status Feedback) */
-.status-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  margin-top: 15px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid transparent;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-}
-
-.status-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  font-size: 18px;
-}
-
-.status-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.status-text { font-weight: 600; }
-.status-subtext { font-size: 12px; opacity: 0.85; }
-
-.progress-line {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: currentColor;
-  animation: progressMove 2s ease-in-out infinite;
-}
-
-/* Status Variations */
-.status-bar.paste { background: rgba(23, 162, 184, 0.08); color: #17a2b8; border-color: rgba(23, 162, 184, 0.2); }
-.status-bar.saving { background: rgba(255, 193, 7, 0.08); color: #ff9800; border-color: rgba(255, 152, 0, 0.2); }
-.status-bar.success { background: rgba(16, 185, 129, 0.08); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
-.status-bar.error { background: rgba(239, 68, 68, 0.08); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
-
-/* =========================================
-   3. HARVEST & SUMMARY SYSTEM (Used in multiple views)
-   ========================================= */
-
-.date-display {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  justify-content: center;
-  margin-bottom: 25px;
-  padding: 15px 20px;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.03));
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-}
-
-.summary-container {
-  margin: 35px 0;
-  padding: 28px;
-  background: var(--surface-bg);
-  border-radius: 18px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
-}
-
-.summary-title {
-  text-align: center;
-  font-size: 1.25rem;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--gray-900);
-  font-weight: 800;
-}
-
-.summary-divider {
-  width: 70%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--primary), transparent);
-  margin: 10px auto 25px;
-  opacity: 0.2;
-}
-
-.summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.summary-row {
-  display: flex;
-  gap: 18px;
-  width: 100%;
-}
-
-.summary-item {
-  flex: 1;
-  padding: 22px;
-  background: var(--light-bg);
-  border-radius: 14px;
-  border: 1px solid var(--gray-300);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-.summary-item:hover {
-  transform: translateY(-3px);
-  border-color: var(--primary-light);
-}
-
-.field-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  color: var(--gray-600);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.calc-field {
-  font-size: 1.5rem;
-  font-weight: 900;
-  font-family: var(--font-family-mono);
-  color: var(--gray-900);
-}
-
-/* =========================================
-   4. ADMIN DASHBOARD COMPONENTS
-   ========================================= */
-
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 24px;
-  margin-bottom: 35px;
-}
-
-.stat-card {
-  background: var(--surface-bg);
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: var(--card-shadow);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.stat-icon {
-  font-size: 2.2rem;
-  color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.06);
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-}
-
-.stat-content h3 {
-  font-size: 0.95rem;
-  color: var(--gray-600);
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.stat-value {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--gray-900);
-}
-
-.admin-section {
-  background: var(--surface-bg);
-  border-radius: 18px;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 35px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-}
-
-.admin-section-header {
-  background: var(--table-header-bg);
-  padding: 18px 24px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Status Badges - Consolidated */
-.status-badge {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid transparent;
-}
-
-.status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
-.status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
-.status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
-
-/* =========================================
-   5. HELP & UTILITY CARDS
-   ========================================= */
-
-.help-section {
-  display: flex;
-  justify-content: center;
-  padding: 25px 0;
-}
-
-.help-card {
-  width: 100%;
-  max-width: 920px;
-  background: var(--surface-bg);
-  border-radius: 14px;
-  padding: 25px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-300);
-}
-
-.help-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  color: var(--primary);
-  font-size: 1.1rem;
-}
-
-/* =========================================
-   6. ANIMATIONS & RESPONSIVE
-   ========================================= */
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes progressMove {
-  0% { width: 0%; }
-  100% { width: 100%; }
-}
-
-@media (max-width: 768px) {
-  .summary-row { flex-direction: column; gap: 12px; }
-  /* إزالة تعديل padding هنا ليبقى 20px دائماً مثل الهيدر والفوتر */
-  .summary-row.two-cols { flex-direction: row; }
-  .summary-row.two-cols .summary-item { flex: 1; min-width: 0; }
-}
-
-/* =========================================
-   7. SHARED UI ELEMENTS
-   ========================================= */
-
-.bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 6px 15px;
-  border-radius: 10px;
-}
-
-.user-info-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.user-name { font-weight: 700; color: var(--gray-900); }
-.user-email { font-size: 0.8rem; color: var(--gray-600); }
+   .page-container, 
+   .harvest-page, 
+   .dashboard-page, 
+   .archive-page, 
+   .subscriptions-page,
+   .admin-dashboard,
+   .my-subscription-page,
+   .payment-page {
+     width: var(--app-min-width, 768px); 
+     margin: 0 auto;
+     padding: 20px;
+     animation: fadeIn 0.5s ease-in-out;
+     box-sizing: border-box; 
+   }
+   
+   /* =========================================
+      2. DASHBOARD & DATA ENTRY COMPONENTS
+      ========================================= */
+   
+   .input-section {
+     margin-bottom: 24px;
+   }
+   
+   .input-container,
+   .archive-controls,
+   .summary-container,
+   .stat-card,
+   .admin-section,
+   .help-card,
+   .subscription-card,
+   .plan-card,
+   .counter-card,
+   .login-card,
+   .faq-section {
+     background: var(--container-bg);
+     backdrop-filter: var(--container-backdrop);
+     padding: 24px;
+     border-radius: 16px;
+     box-shadow: var(--container-shadow);
+     border: 1px solid var(--container-border);
+     position: relative;
+     transition: var(--transition);
+   }
+   
+   .input-label {
+     display: flex;
+     align-items: center;
+     gap: 10px;
+     font-weight: 700;
+     margin-bottom: 12px;
+     color: var(--gray-900);
+   }
+   
+   .status-bar {
+     display: flex;
+     align-items: center;
+     gap: 12px;
+     padding: 14px 18px;
+     margin-top: 15px;
+     border-radius: 10px;
+     font-size: 14px;
+     font-weight: 500;
+     border: 1px solid transparent;
+     position: relative;
+     overflow: hidden;
+     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+     transition: all 0.3s ease;
+   }
+   
+   .status-icon-wrapper {
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     min-width: 24px;
+     font-size: 18px;
+   }
+   
+   .status-content {
+     display: flex;
+     flex-direction: column;
+     gap: 2px;
+     flex: 1;
+   }
+   
+   .status-text { font-weight: 600; }
+   .status-subtext { font-size: 12px; opacity: 0.85; }
+   
+   .progress-line {
+     position: absolute;
+     bottom: 0;
+     left: 0;
+     height: 3px;
+     background: currentColor;
+     animation: progressMove 2s ease-in-out infinite;
+   }
+   
+   .status-bar.paste { background: rgba(23, 162, 184, 0.08); color: #17a2b8; border-color: rgba(23, 162, 184, 0.2); }
+   .status-bar.saving { background: rgba(255, 193, 7, 0.08); color: #ff9800; border-color: rgba(255, 152, 0, 0.2); }
+   .status-bar.success { background: rgba(16, 185, 129, 0.08); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+   .status-bar.error { background: rgba(239, 68, 68, 0.08); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+   
+   /* =========================================
+      3. HARVEST & SUMMARY SYSTEM
+      ========================================= */
+   
+   .date-display {
+     display: flex;
+     align-items: center;
+     gap: 15px;
+     justify-content: center;
+     margin-bottom: 25px;
+     padding: 15px 20px;
+     background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.03));
+     border-radius: 12px;
+     border: 1px solid var(--border-color);
+   }
+   
+   .summary-container {
+     margin: 35px 0;
+   }
+   
+   .summary-title {
+     text-align: center;
+     font-size: 1.25rem;
+     margin-bottom: 20px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     gap: 12px;
+     color: var(--gray-900);
+     font-weight: 800;
+   }
+   
+   .summary-divider {
+     width: 70%;
+     height: 3px;
+     background: linear-gradient(90deg, transparent, var(--primary), transparent);
+     margin: 10px auto 25px;
+     opacity: 0.2;
+   }
+   
+   .summary-grid {
+     display: flex;
+     flex-direction: column;
+     gap: 18px;
+   }
+   
+   .summary-row {
+     display: flex;
+     gap: 18px;
+     width: 100%;
+   }
+   
+   .summary-item {
+     flex: 1;
+     padding: 22px;
+     background: var(--light-bg);
+     border-radius: 14px;
+     border: 1px solid var(--gray-300);
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     justify-content: center;
+     transition: transform 0.3s ease;
+   }
+   
+   .summary-item:hover {
+     transform: translateY(-3px);
+     border-color: var(--primary-light);
+   }
+   
+   .field-header {
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     gap: 10px;
+     margin-bottom: 12px;
+     color: var(--gray-600);
+     font-size: 0.9rem;
+     font-weight: 600;
+   }
+   
+   /* Base style for calc fields */
+   .calc-field {
+     font-size: 1.5rem;
+     font-weight: 900;
+     font-family: var(--font-family-mono);
+     color: var(--gray-900);
+   }
+   
+   /* Specific scaling for summary values */
+   .summary-item .calc-field {
+     font-size: 1.00em; /* تصغير مبلغ التصفيرة وإجمالي المحصل درجة واحدة */
+   }
+   
+   .summary-item .bold-input {
+     font-size: 1.00rem !important; /* تكبير ليمت الماستر والرصيد الحالي درجة واحدة */
+   }
+   
+   /* =========================================
+      4. ADMIN DASHBOARD COMPONENTS
+      ========================================= */
+   
+   .stats-container {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+     gap: 24px;
+     margin-bottom: 35px;
+   }
+   
+   .stat-icon {
+     font-size: 2.2rem;
+     color: var(--primary);
+     background: rgba(var(--primary-rgb), 0.06);
+     width: 60px;
+     height: 60px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     border-radius: 14px;
+   }
+   
+   .stat-content h3 {
+     font-size: 0.95rem;
+     color: var(--gray-600);
+     margin-bottom: 6px;
+     font-weight: 600;
+   }
+   
+   .stat-value {
+     font-size: 1.6rem;
+     font-weight: 800;
+     color: var(--gray-900);
+   }
+   
+   .admin-section {
+     margin-bottom: 35px;
+     overflow: hidden;
+     padding: 0; /* Admin section header handles padding */
+   }
+   
+   .admin-section-header {
+     background: var(--table-header-bg);
+     padding: 18px 24px;
+     color: white;
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+   }
+   
+   .status-badge {
+     padding: 6px 14px;
+     border-radius: 20px;
+     font-size: 0.8rem;
+     font-weight: 700;
+     display: inline-block;
+     text-transform: uppercase;
+     letter-spacing: 0.5px;
+     border: 1px solid transparent;
+   }
+   
+   .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+   .status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
+   .status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+   
+   /* =========================================
+      5. HELP & UTILITY CARDS
+      ========================================= */
+   
+   .help-section {
+     display: flex;
+     justify-content: center;
+     padding: 25px 0;
+   }
+   
+   .help-card {
+     width: 100%;
+     max-width: 920px;
+   }
+   
+   .help-card h3 {
+     display: flex;
+     align-items: center;
+     gap: 10px;
+     margin-bottom: 15px;
+     color: var(--primary);
+     font-size: 1.1rem;
+   }
+   
+   /* =========================================
+      6. ANIMATIONS
+      ========================================= */
+   
+   @keyframes fadeIn {
+     from { opacity: 0; transform: translateY(12px); }
+     to { opacity: 1; transform: translateY(0); }
+   }
+   
+   @keyframes progressMove {
+     0% { width: 0%; }
+     100% { width: 100%; }
+   }
+   
+   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+   @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+   @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+   
+   .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+   .animate-spin { animation: spin 1s linear infinite; }
+   .animate-bounce { animation: bounce 0.6s ease-in-out; }
+   .animate-shake { animation: shake 0.4s ease-in-out; }
+   
+   @media (max-width: 768px) {
+     .summary-row { gap: 12px; }
+   }
+   
+   /* =========================================
+      7. SHARED UI ELEMENTS
+      ========================================= */
+   
+   .bulk-actions {
+     display: flex;
+     align-items: center;
+     gap: 12px;
+     background: rgba(255, 255, 255, 0.15);
+     padding: 6px 15px;
+     border-radius: 10px;
+   }
+   
+   .user-info-cell {
+     display: flex;
+     flex-direction: column;
+     gap: 2px;
+   }
+   
+   .user-name { font-weight: 700; color: var(--gray-900); }
+   .user-email { font-size: 0.8rem; color: var(--gray-600); }
+   

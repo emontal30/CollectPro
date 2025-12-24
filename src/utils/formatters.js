@@ -1,4 +1,46 @@
 /**
+ * Format number with comma separation and 2 decimal places (English locale for inputs)
+ * @param {number|string} num 
+ * @returns {string}
+ */
+export const formatInputNumber = (num) => {
+  if (!num && num !== 0) return '';
+  if (num === 0) return '';
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
+};
+
+/**
+ * Format number with comma separation (Display purposes)
+ * @param {number|string} num 
+ * @returns {string}
+ */
+export const formatDisplayNumber = (num) => {
+  return Number(val || 0).toLocaleString();
+};
+
+/**
+ * Get Net status CSS class
+ * @param {number} net 
+ * @returns {string}
+ */
+export const getNetClass = (net) => {
+  if (net > 0) return 'positive';
+  if (net < 0) return 'negative';
+  return 'zero';
+};
+
+/**
+ * Get Net status FontAwesome icon
+ * @param {number} net 
+ * @returns {string}
+ */
+export const getNetIcon = (net) => {
+  if (net > 0) return 'fas fa-arrow-up';
+  if (net < 0) return 'fas fa-arrow-down';
+  return 'fas fa-check';
+};
+
+/**
  * Format number as currency (Egyptian Pounds)
  * @param {number} num - Number to format
  * @returns {string} Formatted number
