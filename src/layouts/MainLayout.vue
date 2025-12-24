@@ -1,5 +1,10 @@
 <template>
-  <div class="main-layout">
+  <div 
+    class="main-layout"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
+  >
     <!-- حاوية التنبيهات -->
     <div id="alert-container" class="alert-container"></div>
 
@@ -36,7 +41,7 @@
 </template>
 
 <script setup>
-import { provide, onMounted, watch } from 'vue';
+import { provide, onMounted, watch, ref } from 'vue';
 import Topbar from '@/components/layout/Topbar.vue';
 import Sidebar from '@/components/layout/Sidebar.vue';
 import Footer from '@/components/layout/Footer.vue';
@@ -45,13 +50,59 @@ import { useNotifications } from '@/composables/useNotifications';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import { useSidebarStore } from '@/stores/sidebarStore';
 
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const subStore = useMySubscriptionStore();
+const sidebarStore = useSidebarStore();
 const notifications = useNotifications();
 
 provide('notifications', notifications);
+
+// --- منطق السحب لفتح/إغلاق القائمة الجانبية ---
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchEndX = ref(0);
+const touchEndY = ref(0);
+
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX;
+  touchStartY.value = e.touches[0].clientY;
+};
+
+const handleTouchMove = (e) => {
+  touchEndX.value = e.touches[0].clientX;
+  touchEndY.value = e.touches[0].clientY;
+};
+
+const handleTouchEnd = () => {
+  const diffX = touchStartX.value - touchEndX.value;
+  const diffY = touchStartY.value - touchEndY.value;
+  
+  // التأكد من أن الحركة أفقية وليست رأسية (لتجنب التداخل مع الـ scroll)
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    // حساسية السحب (بكسل)
+    const threshold = 60; 
+    
+    if (Math.abs(diffX) > threshold) {
+      if (diffX > 0) {
+        // سحب لليسار (فتح القائمة لأن التطبيق RTL)
+        // يجب أن يبدأ السحب من حافة الشاشة اليمنى (مثلاً أول 30 بكسل)
+        const screenWidth = window.innerWidth;
+        const edgeThreshold = 30;
+        if (touchStartX.value > screenWidth - edgeThreshold && !sidebarStore.isOpen) {
+          sidebarStore.toggleSidebar();
+        }
+      } else {
+        // سحب لليمين (إغلاق القائمة)
+        if (sidebarStore.isOpen) {
+          sidebarStore.closeSidebar();
+        }
+      }
+    }
+  }
+};
 
 const checkSubscriptionExpiry = () => {
   if (!subStore.isInitialized || !subStore.isSubscribed) return;
@@ -87,6 +138,8 @@ watch(() => subStore.isInitialized, (val) => {
   width: 100%;
   position: relative;
   overflow-x: hidden;
+  /* منع السحب لليسار/يمين في المتصفح أحياناً */
+  touch-action: pan-y; 
 }
 
 /* تنسيق الهيدر المثبت */

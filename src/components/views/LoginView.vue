@@ -41,7 +41,6 @@
 
           <div class="install-section-wrapper">
             <transition name="fade" mode="out-in">
-              <!-- الحالة 1: زر التثبيت (يظهر إذا لم يكن مثبتاً) -->
               <div v-if="showInstallButton" class="install-app-section" key="install-btn">
                 <button class="install-app-btn" @click="installApp">
                   <div class="install-app-icon">
@@ -59,7 +58,6 @@
                 </button>
               </div>
 
-              <!-- الحالة 2: رسالة جاري التثبيت (عند الضغط) -->
               <div v-else-if="isInstallSuccess" class="install-feedback" key="install-feedback">
                 <div class="feedback-content">
                   <i class="fas fa-circle-notch fa-spin text-orange"></i>
@@ -67,7 +65,6 @@
                 </div>
               </div>
 
-              <!-- الحالة 3: التطبيق مثبت بالفعل (Status Card) - هذا ما طلبته -->
               <div v-else class="app-installed-card" key="installed-card">
                 <div class="status-icon">
                   <i class="fas fa-shield-alt"></i>
@@ -84,6 +81,18 @@
           </div>
 
           <div class="footer-info">
+            <div class="footer-controls">
+              <button class="footer-action-btn" title="نشر التطبيق" @click="handleShare">
+                <i class="fas fa-share-alt"></i>
+              </button>
+              <button class="footer-action-btn" title="تحديث البيانات" @click="handleRefresh">
+                <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+              </button>
+              <button class="footer-action-btn" title="تبديل الوضع الليلي" @click="toggleDarkMode">
+                <i class="fas" :class="settingsStore.darkMode ? 'fa-sun' : 'fa-moon'"></i>
+              </button>
+            </div>
+            
             <p class="copyright">© <span id="year">{{ currentYear }}</span> جميع الحقوق محفوظة.</p>
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
@@ -99,24 +108,87 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, inject } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
+import cacheManager from '@/services/cacheManager';
 import logger from '@/utils/logger.js'
 
 const store = useAuthStore();
+const settingsStore = useSettingsStore();
 const currentYear = ref(new Date().getFullYear());
 const showInstallButton = ref(false);
 const isInstallSuccess = ref(false); 
+const isRefreshing = ref(false);
+
+const { confirm, addNotification } = inject('notifications');
 
 onMounted(() => {
   store.initializeAuth();
   handleInstallPromptLogic();
+  
+  // الغاء الـ min-width الثابت في صفحة الدخول فقط لضمان التجاوب ومنع السكرول
+  document.body.style.minWidth = 'auto';
+  document.documentElement.style.overflowX = 'hidden';
+  document.body.style.overflowX = 'hidden';
 });
+
+onUnmounted(() => {
+  // إعادة القيم الأصلية عند مغادرة الصفحة حتى لا تتأثر باقي الصفحات
+  document.body.style.minWidth = '';
+  document.documentElement.style.overflowX = '';
+  document.body.style.overflowX = '';
+});
+
+const toggleDarkMode = () => {
+  settingsStore.toggleDarkMode();
+};
+
+const handleRefresh = async () => {
+  const result = await confirm({
+    title: 'تحديث البيانات',
+    text: 'هل تود تحديث ملفات التطبيق والمزامنة الآن؟',
+    icon: 'info',
+    confirmButtonText: 'تحديث',
+    confirmButtonColor: 'var(--primary)'
+  });
+
+  if (result.isConfirmed) {
+    isRefreshing.value = true;
+    try {
+      localStorage.removeItem('sys_config_enforce');
+      if (cacheManager) await cacheManager.clearAllCaches();
+      addNotification('جاري التحديث...', 'info');
+      setTimeout(() => { window.location.reload(); }, 500);
+    } catch (e) {
+      isRefreshing.value = false;
+    }
+  }
+};
+
+const handleShare = async () => {
+  const shareData = {
+    title: 'Collect Pro',
+    text: 'نظام إدارة التحصيلات المتقدم - تطبيق احترافي لإدارة أعمالك بكل سهولة.',
+    url: window.location.origin
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(window.location.origin);
+      addNotification('تم نسخ رابط التطبيق بنجاح', 'success');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      addNotification('فشل في نشر التطبيق', 'error');
+    }
+  }
+};
 
 const handleInstallPromptLogic = () => {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  // إذا كان التطبيق مثبتاً (Standalone)، المتغير showInstallButton سيكون false
-  // وبالتالي سيظهر الـ v-else الأخير (app-installed-card)
   if (isStandalone) {
     showInstallButton.value = false;
     return;
@@ -219,7 +291,7 @@ const installApp = async () => {
   background: var(--surface-bg);
   border-radius: var(--border-radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: 60px 40px;
+  padding: 50px 40px;
   width: 100%;
   max-width: 480px;
   text-align: center;
@@ -233,10 +305,10 @@ const installApp = async () => {
 }
 
 /* =========================================
-   2. الشعار والعناوين
+   2. الشعار والعناوين (تم التعديل هنا)
    ========================================= */
 .logo-container {
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   width: 100%;
 }
 
@@ -250,12 +322,28 @@ const installApp = async () => {
   margin-right: auto;
 }
 
+/* === تعديل اسم التطبيق لإضافة الفاصل الأخضر === */
 .app-name {
   font-size: 34px;
   font-weight: 800;
   color: var(--primary);
-  margin: 0 0 10px;
+  margin: 0 0 15px; /* زيادة الهامش السفلي قليلاً */
   letter-spacing: -0.5px;
+  position: relative; /* ضروري لتموضع الخط */
+  display: inline-block;
+}
+
+/* الفاصل الأخضر أسفل كلمة CollectPro */
+.app-name::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 10%;
+  width: 80%;
+  height: 3px;
+  /* استخدمنا var(--primary) ليتناسق مع السمة، يمكنك وضع اللون #007965 مباشرة إذا أردت */
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  border-radius: 3px;
 }
 
 .subtitle {
@@ -270,7 +358,7 @@ const installApp = async () => {
    ========================================= */
 .btn-container {
   width: 100%;
-  margin: 35px 0 20px;
+  margin: 25px 0 15px;
 }
 
 .google-login-btn {
@@ -310,10 +398,10 @@ const installApp = async () => {
 }
 
 /* =========================================
-   4. الروابط والفواصل
+   4. الروابط والفواصل (تم التعديل هنا)
    ========================================= */
 .privacy-policy {
-  margin-top: 20px;
+  margin-top: 15px;
   font-size: 13px;
   color: var(--gray-500);
 }
@@ -324,12 +412,57 @@ const installApp = async () => {
   font-weight: 600;
 }
 
+/* === الفاصل المتقدم الجديد === */
 .privacy-divider {
-  width: 100%;
-  height: 1px;
-  background: var(--border-color);
+  display: block;
+  width: 85%; /* لجعله غير ممتد للنهاية */
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(var(--primary-rgb), 0.2) 10%, 
+    rgba(var(--primary-rgb), 0.6) 30%, 
+    rgba(var(--primary-rgb), 0.8) 50%, 
+    rgba(var(--primary-rgb), 0.6) 70%, 
+    rgba(var(--primary-rgb), 0.2) 90%, 
+    transparent 100%
+  );
   border: none;
-  margin: 30px 0;
+  margin: 30px auto;
+  border-radius: 2px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(var(--primary-rgb), 0.2);
+}
+
+/* تأثير الوهج (Glow) فوق الفاصل */
+.privacy-divider::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(var(--primary-rgb), 0.1) 20%, 
+    rgba(var(--primary-rgb), 0.15) 50%, 
+    rgba(var(--primary-rgb), 0.1) 80%, 
+    transparent 100%
+  );
+  filter: blur(2px);
+  border-radius: 2px;
+}
+
+/* تأثير عند مرور الماوس */
+.privacy-divider:hover {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(var(--primary-rgb), 0.3) 10%, 
+    rgba(var(--primary-rgb), 0.7) 30%, 
+    rgba(var(--primary-rgb), 0.9) 50%, 
+    rgba(var(--primary-rgb), 0.7) 70%, 
+    rgba(var(--primary-rgb), 0.3) 90%, 
+    transparent 100%
+  );
 }
 
 /* =========================================
@@ -411,41 +544,11 @@ const installApp = async () => {
   flex-shrink: 0;
 }
 
-/* --- حالة جاري التثبيت --- */
-.install-feedback {
-  width: 100%;
-  max-width: 320px;
-  height: 80px;
-  background: rgba(211, 84, 0, 0.08);
-  border: 1px solid #e67e22;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-  box-shadow: 0 4px 15px rgba(230, 126, 34, 0.1);
-}
-
-.feedback-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #d35400;
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-align: center;
-}
-
-.text-orange { color: #d35400; font-size: 1.4rem; }
-.pulse-text { animation: pulse-text 2s infinite; }
-@keyframes pulse-text { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
-
-/* --- حالة التطبيق مثبت (New Status Card) --- */
 .app-installed-card {
   width: 100%;
   max-width: 320px;
   height: 80px;
-  background: rgba(var(--primary-rgb), 0.05); /* أخضر فاتح جداً */
+  background: rgba(var(--primary-rgb), 0.05);
   border: 1px solid rgba(var(--primary-rgb), 0.2);
   border-radius: 16px;
   display: flex;
@@ -475,34 +578,50 @@ const installApp = async () => {
   justify-content: center;
 }
 
-.status-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-.status-sub {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.status-check {
-  color: var(--primary);
-  font-size: 18px;
-}
+.status-title { font-size: 14px; font-weight: 800; color: var(--primary); }
+.status-sub { font-size: 11px; color: var(--text-muted); }
+.status-check { color: var(--primary); font-size: 18px; }
 
 /* Transitions */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* =========================================
-   6. الفوتر
+   6. الفوتر والتحكم
    ========================================= */
 .footer-info {
-  margin-top: 40px;
+  margin-top: 30px;
   font-size: 12px;
   color: var(--gray-500);
   width: 100%;
+}
+
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.footer-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.footer-action-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .developer-name { color: var(--gray-700); font-weight: 700; }
@@ -512,30 +631,30 @@ const installApp = async () => {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 768px) {
-  .login-container {
-    padding: 20px; 
+@media (max-width: 480px) {
+  .login-container { 
+    padding: 10px 50px; /* جعل الكارد "نحيفاً" جداً */
     align-items: center; 
   }
-
-  .login-card {
-    border-radius: var(--border-radius-xl);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-color);
-    min-height: auto; 
-    height: auto;
-    padding: 40px 25px;
+  .login-card { 
+    padding: 55px 20px; /* جعل الكارد "طويلاً" جداً */
     max-width: 100%; 
-    justify-content: center;
+    border-radius: 24px;
   }
+  .logo-img { height: 75px; margin-bottom: 12px; }
+  .logo-container { margin-bottom: 15px; }
+  .app-name { font-size: 28px; }
+  .subtitle { font-size: 14px; }
+  .btn-container { margin: 20px 0 10px; }
+  .google-login-btn { padding: 14px 15px; border-radius: 12px; }
+  /* تحديث هوامش الفاصل للشاشات الصغيرة */
+  .privacy-divider { margin: 20px auto; }
+  .footer-info { margin-top: 20px; }
+  .footer-controls { margin-bottom: 15px; gap: 10px; }
+}
 
-  .logo-img { height: 80px; }
-  .app-name { font-size: 30px; }
-  
-  .footer-info {
-    margin-top: 30px;
-    padding-top: 20px;
-    padding-bottom: 0;
-  }
+@media (min-width: 481px) and (max-width: 768px) {
+  .login-container { padding: 20px 45px; }
+  .login-card { padding: 40px 25px; }
 }
 </style>

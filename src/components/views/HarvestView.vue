@@ -8,12 +8,12 @@
     />
 
     <div class="date-display">
-      <i class="fas fa-calendar-alt text-primary"></i>
-      <span class="font-bold">اليوم:</span>
-      <span class="text-primary font-bold">{{ currentDay }}</span>
-      <span class="text-muted">|</span>
-      <span class="font-bold">التاريخ:</span>
-      <span class="text-primary font-bold">{{ currentDate }}</span>
+      <i class="fas fa-calendar-alt calendar-icon"></i>
+      <span class="label">اليوم:</span>
+      <span class="value">{{ currentDay }}</span>
+      <span class="separator">|</span>
+      <span class="label">التاريخ:</span>
+      <span class="value">{{ currentDate }}</span>
     </div>
 
     <ColumnVisibility
@@ -33,8 +33,9 @@
         <input
           v-model="store.searchQuery"
           type="text"
-          placeholder=" ...ابحث في المحل أو الكود"
+          placeholder="ابحث في المحل أو الكود..."
           class="search-input"
+          @input="handleSearch"
         />
       </div>
       <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
@@ -61,13 +62,22 @@
               <span v-else class="readonly-field">{{ row.shop }}</span>
             </td>
             <td v-show="isVisible('code')" class="code">
-              <input v-if="!row.isImported" :value="row.code" type="text" placeholder="الكود" class="editable-input" @input="updateCode(row, index, $event)" />
+              <input 
+                v-if="!row.isImported" 
+                :value="row.code" 
+                type="text" 
+                inputmode="numeric"
+                placeholder="الكود" 
+                class="editable-input" 
+                @input="updateCode(row, index, $event)" 
+              />
               <span v-else class="readonly-field">{{ row.code }}</span>
             </td>
             <td v-show="isVisible('amount')" class="amount">
               <input
                 v-if="!row.isImported"
                 type="text"
+                inputmode="decimal"
                 :value="formatInputNumber(row.amount)"
                 class="amount-input centered-input"
                 lang="en"
@@ -79,6 +89,7 @@
             <td v-show="isVisible('extra')" class="extra">
               <input
                 type="text"
+                inputmode="decimal"
                 :value="formatInputNumber(row.extra)"
                 class="centered-input"
                 lang="en"
@@ -89,6 +100,7 @@
             <td v-show="isVisible('collector')" class="collector">
               <input
                 type="text"
+                inputmode="decimal"
                 :value="formatInputNumber(row.collector)"
                 class="centered-input"
                 lang="en"
@@ -103,19 +115,23 @@
             </td>
           </tr>
 
-          <tr class="total-row">
-            <td v-show="isVisible('shop')" class="shop">الإجمالي</td>
+          <!-- صف الإجماليات -->
+          <tr class="total-row" v-if="store.filteredRows.length > 0">
+            <td v-show="isVisible('shop')" class="shop">الإجمالي (المصفى)</td>
             <td v-show="isVisible('code')" class="code"></td>
-            <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(store.totals.amount) }}</td>
-            <td v-show="isVisible('extra')" class="extra text-center">{{ store.formatNumber(store.totals.extra) }}</td>
-            <td v-show="isVisible('collector')" class="collector text-center">{{ store.formatNumber(store.totals.collector) }}</td>
-            <td v-show="isVisible('net')" class="net numeric" :class="getTotalNetClass">
-              {{ store.formatNumber((parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0)) ) }}
-              <i :class="getTotalNetIcon"></i>
+            <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(filteredTotals.amount) }}</td>
+            <td v-show="isVisible('extra')" class="extra text-center">{{ store.formatNumber(filteredTotals.extra) }}</td>
+            <td v-show="isVisible('collector')" class="collector text-center">{{ store.formatNumber(filteredTotals.collector) }}</td>
+            <td v-show="isVisible('net')" class="net numeric" :class="getFilteredTotalNetClass">
+              {{ store.formatNumber((parseFloat(filteredTotals.collector) || 0) - ((parseFloat(filteredTotals.amount) || 0) + (parseFloat(filteredTotals.extra) || 0)) ) }}
+              <i :class="getFilteredTotalNetIcon"></i>
             </td>
           </tr>
         </tbody>
       </table>
+      <div v-if="store.filteredRows.length === 0" class="no-results">
+        لا توجد نتائج تطابق بحثك...
+      </div>
     </div>
 
     <div class="summary-container">
@@ -131,6 +147,7 @@
               </div>
               <input
                 type="text"
+                inputmode="decimal"
                 :value="store.masterLimit !== 100000 ? formatInputNumber(store.masterLimit) : ''"
                 class="bold-input text-center font-bold"
                 lang="en"
@@ -147,6 +164,7 @@
               </div>
               <input
                 type="text"
+                inputmode="decimal"
                 :value="store.currentBalance ? formatInputNumber(store.currentBalance) : ''"
                 class="bold-input text-center font-bold"
                 lang="en"
@@ -273,20 +291,59 @@ onMounted(() => {
 });
 
 const checkAndAddEmptyRow = (index) => {
+  if (store.searchQuery) return; 
+  
   if (index === store.rows.length - 1) {
     store.rows.push({ id: Date.now(), shop: '', code: '', amount: 0, extra: null, collector: null, net: 0, isImported: false });
     store.saveRowsToLocalStorage();
   }
 };
 
+const handleSearch = () => {};
+
 const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
 const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
-const updateAmount = (row, index, event) => { row.amount = parseFloat(event.target.value.replace(/,/g, '')) || 0; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
-const updateExtra = (row, index, event) => { row.extra = parseFloat(event.target.value.replace(/,/g, '')) || null; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
-const updateCollector = (row, index, event) => { row.collector = parseFloat(event.target.value.replace(/,/g, '')) || null; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); syncWithCounterStore(); };
+
+// دالة محسنة للتعامل مع الإدخال الرقمي بما في ذلك علامة السالب
+const handleNumericInput = (event, row, field) => {
+  const val = event.target.value;
+  // إذا كان المستخدم يكتب علامة سالب فقط، لا تحولها لرقم الآن
+  if (val === '-') {
+    row[field] = '-';
+    return;
+  }
+  const parsed = parseFloat(val.replace(/,/g, ''));
+  row[field] = isNaN(parsed) ? null : parsed;
+};
+
+const updateAmount = (row, index, event) => { 
+  handleNumericInput(event, row, 'amount');
+  store.saveRowsToLocalStorage(); 
+  checkAndAddEmptyRow(index); 
+};
+const updateExtra = (row, index, event) => { 
+  handleNumericInput(event, row, 'extra');
+  store.saveRowsToLocalStorage(); 
+  checkAndAddEmptyRow(index); 
+};
+const updateCollector = (row, index, event) => { 
+  handleNumericInput(event, row, 'collector');
+  store.saveRowsToLocalStorage(); 
+  checkAndAddEmptyRow(index); 
+  syncWithCounterStore(); 
+};
 
 const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
 const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
+
+const filteredTotals = computed(() => {
+  return store.filteredRows.reduce((acc, row) => {
+    acc.amount += parseFloat(row.amount) || 0;
+    acc.extra += parseFloat(row.extra) || 0;
+    acc.collector += parseFloat(row.collector) || 0;
+    return acc;
+  }, { amount: 0, extra: 0, collector: 0 });
+});
 
 const getRowNetStatus = (row) => {
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
@@ -296,12 +353,13 @@ const getRowNetIcon = (row) => {
   const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
   return getNetIcon(net);
 };
-const getTotalNetClass = computed(() => {
-  const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
+
+const getFilteredTotalNetClass = computed(() => {
+  const net = (parseFloat(filteredTotals.value.collector) || 0) - ((parseFloat(filteredTotals.value.amount) || 0) + (parseFloat(filteredTotals.value.extra) || 0));
   return getNetClass(net);
 });
-const getTotalNetIcon = computed(() => {
-  const net = (parseFloat(store.totals.collector) || 0) - ((parseFloat(store.totals.amount) || 0) + (parseFloat(store.totals.extra) || 0));
+const getFilteredTotalNetIcon = computed(() => {
+  const net = (parseFloat(filteredTotals.value.collector) || 0) - ((parseFloat(filteredTotals.value.amount) || 0) + (parseFloat(filteredTotals.value.extra) || 0));
   return getNetIcon(net);
 });
 
@@ -341,6 +399,39 @@ const archiveToday = async () => {
 <style scoped>
 .mx-2 { margin: 0 8px; }
 
+/* Date Display Styling - Unified */
+.date-display {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 25px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.03));
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.calendar-icon {
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.date-display .label {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.date-display .value {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.date-display .separator {
+  color: var(--gray-400);
+  font-weight: 300;
+}
+
 .customer-count-badge {
   display: flex;
   flex-direction: column;
@@ -364,6 +455,15 @@ const archiveToday = async () => {
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--primary);
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-style: italic;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

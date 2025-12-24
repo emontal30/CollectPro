@@ -86,16 +86,22 @@
   --sidebar-width: 320px;
   --app-min-width: 768px;
 
-  /* ====== Semantic Variables (Added for UI Consistency) ====== */
+  /* ====== Semantic Variables (Unified System) ====== */
   --input-bg: var(--white);
   --input-border: var(--gray-300);
   --input-text: var(--gray-900);
   --input-placeholder: #666;
+  --input-focus-bg: rgba(255, 255, 255, 0.95);
   
   --container-bg: var(--surface-bg);
   --container-border: var(--border-color);
   --container-shadow: var(--card-shadow);
   --container-backdrop: none;
+
+  --text-main: var(--gray-900);
+  --text-muted: var(--gray-600);
+  --bg-primary: var(--light-bg);
+  --bg-secondary: var(--gray-100);
 
   /* ====== Dark Mode Overrides Placeholders ====== */
   --dark-surface: rgba(255, 255, 255, 0.7);
@@ -130,13 +136,16 @@ body.dark {
   --gray-700: #cbd5e1;
   --gray-600: #94a3b8;
   --gray-500: #64748b;
+  --gray-400: #475569;
   --gray-300: #334155;
+  --gray-200: #1e293b;
   --gray-100: #020617;
 
   /* --- Brand Colors --- */
   --primary: #2dd4bf;
   --primary-dark: #0d9488;
   --primary-light: #5eead4;
+  --primary-rgb: 45, 212, 191;
   
   /* --- Status Colors --- */
   --danger: #ef4444;
@@ -144,16 +153,22 @@ body.dark {
   --success: #10b981;
   --info: #3b82f6;
 
-  /* --- Semantic Overrides (This prevents code duplication) --- */
+  /* --- Semantic Overrides --- */
   --input-bg: var(--gray-100);
   --input-border: var(--gray-300);
   --input-text: #f8fafc;
   --input-placeholder: var(--gray-500);
+  --input-focus-bg: rgba(15, 23, 42, 0.95);
 
   --container-bg: var(--dark-surface);
   --container-border: var(--dark-border);
   --container-shadow: 0 10px 30px var(--dark-shadow);
   --container-backdrop: blur(12px);
+
+  --text-main: var(--gray-900);
+  --text-muted: var(--gray-600);
+  --bg-primary: #0f172a;
+  --bg-secondary: #020617;
 
   /* --- Specific Dark Mode Tokens --- */
   --dark-surface: rgba(30, 41, 59, 0.7);
@@ -168,7 +183,7 @@ body.dark {
   --header-bg: var(--dark-surface);
   --footer-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
 
-  /* ألوان أيقونات الداشبورد في الوضع الليلي (أكثر إشراقاً) */
+  /* ألوان أيقونات الداشبورد في الوضع الليلي */
   --icon-paste: #34d399;
   --icon-save: #fbbf24;
   --icon-archive: #818cf8;

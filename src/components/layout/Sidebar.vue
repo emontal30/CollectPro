@@ -27,22 +27,6 @@
               <span id="user-id" class="user-id">
                 ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
               </span>
-              <div class="d-flex gap-1">
-                 <button 
-                  class="action-btn-small btn--icon btn" 
-                  title="تحديث البيانات وإصلاح المشاكل"
-                  @click="handleRefreshData"
-                >
-                  <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
-                </button>
-                <button 
-                  class="action-btn-small btn--icon btn" 
-                  title="تبديل الوضع الليلي"
-                  @click="toggleDarkMode"
-                >
-                  <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -69,6 +53,35 @@
 
     <!-- تذييل الشريط الجانبي -->
     <div class="sidebar-footer">
+      
+      <!-- أزرار التحكم الجديدة فوق تسجيل الخروج -->
+      <div class="footer-actions-row">
+        <button 
+          class="sidebar-action-btn" 
+          title="نشر التطبيق"
+          @click="handleShare"
+        >
+          <i class="fas fa-share-alt"></i>
+        </button>
+        <button 
+          class="sidebar-action-btn" 
+          title="تحديث البيانات"
+          @click="handleRefreshData"
+        >
+          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+        </button>
+        <button 
+          class="sidebar-action-btn" 
+          title="تبديل الوضع الليلي"
+          @click="toggleDarkMode"
+        >
+          <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+        </button>
+      </div>
+
+      <!-- فاصل متناسق -->
+      <div class="footer-divider"></div>
+
       <div class="logout-container">
         <button
           id="logout-btn"
@@ -122,7 +135,7 @@ const { confirm, addNotification } = inject('notifications');
 
 const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
-const isEnforced = ref(false); // حالة قفل النظام
+const isEnforced = ref(false); 
 
 const navLinks = [
   { to: '/app/dashboard', label: 'إدخال البيانات', icon: 'fas fa-tachometer-alt', protected: true },
@@ -134,7 +147,6 @@ const navLinks = [
 ];
 
 const isLocked = (link) => {
-    // الرابط مقفل فقط إذا كان: (محمياً) وَ (النظام مغلق) وَ (المستخدم غير مشترك) وَ (ليس مديراً)
     return link.protected && isEnforced.value && !subStore.isSubscribed && !authStore.isAdmin;
 };
 
@@ -147,7 +159,6 @@ const checkEnforcementStatus = async () => {
         const cached = localStorage.getItem('sys_config_enforce');
         if (cached !== null) isEnforced.value = cached === 'true';
         
-        // تحديث من السيرفر بصمت
         const { data } = await supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle();
         if (data) {
             isEnforced.value = data.value === true || data.value === 'true';
@@ -158,7 +169,30 @@ const checkEnforcementStatus = async () => {
     }
 };
 
+const handleShare = async () => {
+  const shareData = {
+    title: 'Collect Pro',
+    text: 'نظام إدارة التحصيلات المتقدم - تطبيق احترافي لإدارة أعمالك بكل سهولة.',
+    url: window.location.origin
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(window.location.origin);
+      addNotification('تم نسخ رابط التطبيق بنجاح', 'success');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      addNotification('فشل في نشر التطبيق', 'error');
+    }
+  }
+};
+
 const handleRefreshData = async () => {
+  store.closeSidebar();
+  
   const result = await confirm({
     title: 'تحديث ومزامنة البيانات',
     text: 'هل تود إعادة مزامنة البيانات مع السحابه؟ سيضمن هذا تحديث كافة المعلومات وحل أي مشاكل تقنية في العرض لضمان دقة بياناتك.',
@@ -171,7 +205,7 @@ const handleRefreshData = async () => {
     isRefreshing.value = true;
     try {
       localStorage.removeItem('my_subscription_data_v2');
-      localStorage.removeItem('sys_config_enforce'); // مسح حالة القفل أيضاً للتجديد
+      localStorage.removeItem('sys_config_enforce'); 
       if (cacheManager) await cacheManager.clearAllCaches();
       addNotification('جاري مزامنة وتحديث التطبيق...', 'info');
       setTimeout(() => { window.location.reload(); }, 500);
@@ -189,6 +223,8 @@ onMounted(async () => {
 });
 
 const handleLogout = async () => {
+  store.closeSidebar();
+
   const result = await confirm({
     title: 'تأكيد تسجيل الخروج',
     text: 'هل أنت متأكد من تسجيل الخروج من حسابك؟',
@@ -236,7 +272,7 @@ const handleLogout = async () => {
     opacity: 0.6;
 }
 .lock-icon-mini {
-    margin-right: auto; /* دفع القفل لليسار (أقصى اليسار في العربي) */
+    margin-right: auto;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.7);
     animation: lockShake 3s infinite;
@@ -260,19 +296,56 @@ const handleLogout = async () => {
 .user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; word-break: break-all; }
 .user-id { font-size: 10px; color: rgba(255,255,255,0.7); font-family: monospace; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
 .user-id-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.action-btn-small { background: rgba(255, 255, 255, 0.2); border: none; width: 30px; height: 30px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s; }
-.action-btn-small:hover { background: rgba(255, 255, 255, 0.3); }
-.d-flex { display: flex; }
-.gap-1 { gap: 4px; }
 
 .sidebar-content { flex: 1; }
-.sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+
+/* Footer Actions Styling */
+.footer-actions-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sidebar-action-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 40px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+
+.sidebar-action-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.sidebar-action-btn:active {
+  transform: translateY(0);
+}
+
+/* فاصل أنيق */
+.footer-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 15px 0;
+  width: 100%;
+}
+
 .subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
 .subscription-title { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; margin: 0 0 6px 0; text-align: right; }
 .subscription-days-simple { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 700; color: #ffffff; }
 .subscription-days-simple.expired { color: #ff6b6b; }
 .subscription-days-simple.warning { color: #feca57; }
 .subscription-days-simple.active { color: #2ecc71; }
+
 .logout-btn { background: rgba(220, 53, 69, 0.9); border: none; border-radius: 12px; padding: 12px; color: white; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-links { list-style: none; padding: 0; }
 .nav-links a { display: flex; align-items: center; gap: 15px; padding: 14px 25px; color: rgba(255, 255, 255, 0.85); text-decoration: none; }

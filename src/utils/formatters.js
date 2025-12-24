@@ -4,9 +4,17 @@
  * @returns {string}
  */
 export const formatInputNumber = (num) => {
+  // التعامل مع حالة كتابة علامة السالب في البداية
+  if (num === '-') return '-';
+  
   if (!num && num !== 0) return '';
   if (num === 0) return '';
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
+  
+  // التأكد من تحويل القيمة لرقم قبل تنسيقها، وإذا فشل التحويل نرجع القيمة كما هي
+  const n = Number(num);
+  if (isNaN(n)) return num;
+
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n);
 };
 
 /**
@@ -15,7 +23,7 @@ export const formatInputNumber = (num) => {
  * @returns {string}
  */
 export const formatDisplayNumber = (num) => {
-  return Number(val || 0).toLocaleString();
+  return Number(num || 0).toLocaleString();
 };
 
 /**

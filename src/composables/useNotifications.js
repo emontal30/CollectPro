@@ -5,6 +5,24 @@ import Swal from 'sweetalert2';
 export function useNotifications() {
   const notifications = ref([]);
 
+  // وظيفة داخلية لتحديد سمة الرسالة بناءً على الوضع الحالي
+  const getAlertTheme = () => {
+    const isDark = document.body.classList.contains('dark') || 
+                   document.documentElement.classList.contains('dark') ||
+                   localStorage.getItem('theme') === 'dark';
+    
+    return {
+      background: isDark ? '#1e293b' : '#ffffff',
+      color: isDark ? '#f8fafc' : '#1e293b',
+      confirmButtonColor: '#007965',
+      customClass: {
+        popup: isDark ? 'dark-alert-popup' : '',
+        title: isDark ? 'dark-alert-title' : '',
+        htmlContainer: isDark ? 'dark-alert-text' : ''
+      }
+    };
+  };
+
   // إضافة إشعار جديد (للإشعارات البسيطة فقط)
   const addNotification = (message, type = 'info', duration = 5000) => {
     const id = Date.now();
@@ -18,7 +36,6 @@ export function useNotifications() {
 
     notifications.value.push(notification);
 
-    // إزالة الإشعار تلقائياً
     if (duration > 0) {
       setTimeout(() => {
         removeNotification(id);
@@ -28,7 +45,6 @@ export function useNotifications() {
     return id;
   };
 
-  // إزالة إشعار
   const removeNotification = (id) => {
     const index = notifications.value.findIndex(n => n.id === id);
     if (index > -1) {
@@ -38,6 +54,7 @@ export function useNotifications() {
 
   // رسالة تأكيد موحدة
   const confirm = async (options) => {
+    const theme = getAlertTheme();
     const defaultOptions = {
       title: 'تأكيد',
       text: 'هل أنت متأكد؟',
@@ -45,11 +62,14 @@ export function useNotifications() {
       showCancelButton: true,
       confirmButtonText: 'نعم',
       cancelButtonText: 'إلغاء',
-      confirmButtonColor: '#007965',
-      cancelButtonColor: '#6c757d',
-      backdrop: 'rgba(0,0,0,0.4)',
+      confirmButtonColor: theme.confirmButtonColor,
+      cancelButtonColor: '#64748b',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
       allowOutsideClick: false,
       allowEscapeKey: true,
+      customClass: theme.customClass,
       ...options
     };
 
@@ -58,29 +78,37 @@ export function useNotifications() {
 
   // رسالة نجاح محسنة
   const success = (message, title = 'تم بنجاح') => {
+    const theme = getAlertTheme();
     return Swal.fire({
       title,
       text: message,
       icon: 'success',
       confirmButtonText: 'موافق',
-      confirmButtonColor: '#28a745',
+      confirmButtonColor: '#10b981',
+      background: theme.background,
+      color: theme.color,
       timer: 3000,
       timerProgressBar: true,
-      allowOutsideClick: false
+      allowOutsideClick: false,
+      customClass: theme.customClass
     });
   };
 
   // رسالة خطأ محسنة
   const error = (message, title = 'خطأ', options = {}) => {
+    const theme = getAlertTheme();
     const defaultOptions = {
       title,
       text: message,
       icon: 'error',
       confirmButtonText: 'موافق',
-      confirmButtonColor: '#dc3545',
-      backdrop: 'rgba(0,0,0,0.4)',
+      confirmButtonColor: '#ef4444',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
       allowOutsideClick: false,
       footer: options.suggestion ? `<small class="error-footer">${options.suggestion}</small>` : null,
+      customClass: theme.customClass,
       ...options
     };
 
@@ -89,67 +117,82 @@ export function useNotifications() {
 
   // رسالة تحذير محسنة
   const warning = (message, title = 'تحذير') => {
+    const theme = getAlertTheme();
     return Swal.fire({
       title,
       text: message,
       icon: 'warning',
       confirmButtonText: 'موافق',
-      confirmButtonColor: '#ffc107',
-      confirmButtonTextColor: '#000',
-      backdrop: 'rgba(0,0,0,0.4)',
-      allowOutsideClick: false
+      confirmButtonColor: '#f59e0b',
+      confirmButtonTextColor: '#fff',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
+      allowOutsideClick: false,
+      customClass: theme.customClass
     });
   };
 
   // رسالة معلومات محسنة
   const info = (message, title = 'معلومات') => {
+    const theme = getAlertTheme();
     return Swal.fire({
       title,
       text: message,
       icon: 'info',
       confirmButtonText: 'موافق',
-      confirmButtonColor: '#17a2b8',
-      backdrop: 'rgba(0,0,0,0.4)',
-      allowOutsideClick: false
+      confirmButtonColor: '#3b82f6',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
+      allowOutsideClick: false,
+      customClass: theme.customClass
     });
   };
 
-  // نافذة منبثقة للتفاصيل
   const showDetails = (title, html, options = {}) => {
+    const theme = getAlertTheme();
     return Swal.fire({
       title,
       html,
       width: '600px',
       confirmButtonText: 'إغلاق',
-      confirmButtonColor: '#007965',
-      backdrop: 'rgba(0,0,0,0.4)',
+      confirmButtonColor: theme.confirmButtonColor,
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
       allowOutsideClick: false,
+      customClass: theme.customClass,
       ...options
     });
   };
 
-  // رسالة تحميل بدون زر
   const loading = (message = 'جاري المعالجة...') => {
+    const theme = getAlertTheme();
     return Swal.fire({
       title: message,
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
-      backdrop: 'rgba(0,0,0,0.4)',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
       didOpen: () => {
         Swal.showLoading();
       }
     });
   };
 
-  // شريط تقدم محسن (للعمليات الطويلة)
   const progressBar = (message = 'جاري المعالجة...', onClose = null) => {
+    const theme = getAlertTheme();
     Swal.fire({
       title: message,
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
-      backdrop: 'rgba(0,0,0,0.4)',
+      background: theme.background,
+      color: theme.color,
+      backdrop: 'rgba(0,0,0,0.5)',
       didOpen: () => {
         Swal.showLoading();
       },
@@ -159,14 +202,11 @@ export function useNotifications() {
     });
   };
 
-  // إغلاق رسالة التحميل
   const closeLoading = () => {
     Swal.close();
   };
 
-  // رسائل محددة للعمليات الشائعة
   const messages = {
-    // رسائل الحفظ
     save: {
       success: (item = 'البيانات') => {
         addNotification(`✅ تم حفظ ${item} بنجاح`, 'success', 3000);
@@ -176,8 +216,6 @@ export function useNotifications() {
       },
       loading: () => progressBar('جاري الحفظ...')
     },
-
-    // رسائل الحذف
     delete: {
       confirm: (item = 'العنصر') => confirm({
         title: 'تأكيد الحذف',
@@ -193,8 +231,6 @@ export function useNotifications() {
         addNotification(`❌ فشل في حذف ${item}`, 'error', 4000);
       }
     },
-
-    // رسائل الأرشفة
     archive: {
       confirm: (date) => confirm({
         title: 'تأكيد الأرشفة',
@@ -208,8 +244,6 @@ export function useNotifications() {
         addNotification('❌ فشل في الأرشفة', 'error', 4000);
       }
     },
-
-    // رسائل التفعيل
     activate: {
       confirm: (user, days) => confirm({
         title: 'تأكيد التفعيل',
@@ -223,8 +257,6 @@ export function useNotifications() {
         addNotification('❌ فشل في تفعيل الاشتراك', 'error', 4000);
       }
     },
-
-    // رسائل التصدير
     export: {
       success: (type = 'البيانات') => {
         addNotification(`✅ تم تصدير ${type} بنجاح`, 'success', 3000);
@@ -233,8 +265,6 @@ export function useNotifications() {
         addNotification(`❌ فشل في تصدير ${type}`, 'error', 4000);
       }
     },
-
-    // رسائل تسجيل الخروج
     logout: {
       confirm: () => confirm({
         title: 'تأكيد تسجيل الخروج',
