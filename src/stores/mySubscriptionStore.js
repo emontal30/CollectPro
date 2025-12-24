@@ -16,6 +16,10 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const isInitialized = ref(false);
   const isRenewModalOpen = ref(false);
   const loadingPlans = ref(false);
+  
+  // متغير لحفظ فرق التوقيت بين السيرفر والجهاز (بالمللي ثانية)
+  // القيمة الموجبة تعني أن السيرفر متقدم، والسالبة تعني أن السيرفر متأخر عن الجهاز
+  const serverTimeOffset = ref(0);
 
   let realtimeChannel = null;
   const SUBSCRIPTION_CACHE_KEY = 'my_subscription_data_v2';
@@ -24,11 +28,29 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   
   const daysRemaining = computed(() => {
     if (!subscription.value?.end_date) return 0;
-    return calculateDaysRemaining(subscription.value.end_date);
+    
+    // استخدام الوقت المصحح (وقت الجهاز + الفرق) للحصول على وقت السيرفر التقريبي
+    const now = new Date(Date.now() + serverTimeOffset.value);
+    const end = new Date(subscription.value.end_date);
+    
+    // تصفير الوقت للمقارنة بالأيام فقط
+    now.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    const diffTime = end - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 0;
   });
 
   const isSubscribed = computed(() => {
-    return subscription.value && subscription.value.status === 'active';
+    // التحقق من الحالة ومن التاريخ الفعلي (باستخدام توقيت السيرفر)
+    if (!subscription.value || subscription.value.status !== 'active') return false;
+    
+    // تحقق إضافي: هل انتهى التاريخ بالفعل؟
+    if (daysRemaining.value <= 0) return false;
+
+    return true;
   });
 
   const planName = computed(() => {
@@ -42,6 +64,16 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const ui = computed(() => {
     // الحالة الافتراضية (غير مشترك)
     if (!isSubscribed.value) {
+      // إذا كان منتهي الصلاحية ولكن الحالة ما زالت active في الداتابيز
+      if (subscription.value?.status === 'active' && daysRemaining.value <= 0) {
+         return {
+            class: 'expired',
+            icon: 'fa-times-circle',
+            label: 'منتهي',
+            statusText: 'انتهت صلاحية الاشتراك'
+         };
+      }
+
       return {
         class: 'pending',
         icon: 'fa-clock',
@@ -113,6 +145,19 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       }
 
       if (user.value) {
+        // 1. مزامنة التوقيت مع السيرفر
+        try {
+           const { data: serverTimeStr, error: timeError } = await supabase.rpc('get_server_time');
+           if (!timeError && serverTimeStr) {
+              const serverTime = new Date(serverTimeStr).getTime();
+              const deviceTime = Date.now();
+              serverTimeOffset.value = serverTime - deviceTime;
+              // logger.info(`🕒 Time synced. Offset: ${serverTimeOffset.value}ms`);
+           }
+        } catch (err) {
+            // فشل صامت، نعتمد على توقيت الجهاز
+        }
+
         const [subRes, histRes] = await Promise.all([
           api.subscriptions.getSubscription(user.value.id),
           api.subscriptions.getSubscriptionHistory(user.value.id)

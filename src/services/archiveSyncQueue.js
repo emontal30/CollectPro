@@ -3,6 +3,7 @@ import { useArchiveStore } from '@/stores/archiveStore';
 import { useNotifications } from '@/composables/useNotifications';
 import logger from '@/utils/logger.js';
 import { supabase } from '@/supabase';
+import api from '@/services/api';
 
 const QUEUE_KEY = 'archive_sync_queue';
 
@@ -65,10 +66,18 @@ async function processQueue() {
   const syncedArchives = [];
   const deletedArchives = [];
 
-  while (remainingQueue.length > 0) {
+  // استخدام حلقة while لمعالجة العناصر واحداً تلو الآخر
+  // ولكن يجب الانتباه لعدم الدخول في حلقة لا نهائية إذا فشل عنصر باستمرار
+  // لذلك نستخدم نسخة من الطابور ونحذف منها ما ينجح
+  
+  // سنقوم بمعالجة النسخة الحالية فقط، وإذا فشل شيء يبقى للمرة القادمة
+  const currentBatch = [...queue];
+  const successIndices = [];
+
+  for (let i = 0; i < currentBatch.length; i++) {
     if (!navigator.onLine) break;
 
-    const item = remainingQueue[0];
+    const item = currentBatch[i];
     const type = item.type;
     const source = item.payload || item;
     const date = source.archive_date || source.date;
@@ -86,27 +95,49 @@ async function processQueue() {
         deletedArchives.push(date);
       } else {
         // عملية أرشفة أو تحديث
-        await archiveStore.uploadArchive(source);
+        // استخدام API مباشرة بدلاً من دالة غير موجودة في الـ Store
+        const { error } = await api.archive.saveDailyArchive(source.user_id, date, source.data);
+        
+        if (error) throw error;
+
         logger.info(`✅ Offline archive synced: ${date}`);
         syncedArchives.push(date);
       }
 
-      // إزالة من الطابور بعد النجاح
-      remainingQueue.shift();
-      await localforage.setItem(QUEUE_KEY, remainingQueue);
+      successIndices.push(i);
 
     } catch (err) {
       logger.error(`❌ Sync failed for [${type}] ${date}:`, err);
-      // توقف لتجنب تكرار الخطأ، سيتم المحاولة عند تغيير حالة الشبكة
-      break; 
+      // لا نتوقف، نحاول مع العنصر التالي، لكن هذا العنصر سيبقى في الطابور
     }
+  }
+
+  // تحديث الطابور بإزالة العناصر الناجحة فقط
+  if (successIndices.length > 0) {
+    // تصفية الطابور الأصلي (قد يكون تغير في هذه الأثناء، لذا نحمل ونحفظ بحذر)
+    // لكن هنا نفترض أن الطابور لم يتغير كثيراً.
+    // الأفضل إعادة قراءة الطابور وحذف ما تم إنجازه
+    const freshQueue = (await localforage.getItem(QUEUE_KEY)) || [];
+    
+    // نحذف العناصر التي تطابق ما تم إنجازه (بناءً على المحتوى لأن الـ Index قد يتغير)
+    const newQueue = freshQueue.filter(q => {
+        const qDate = (q.payload || q).archive_date || (q.payload || q).date;
+        const qType = q.type;
+        // إذا كان التاريخ والنوع موجودين في قائمة الناجحين، نحذفه (لا نرجعه)
+        const isSynced = syncedArchives.includes(qDate) && qType !== 'delete_archive'; 
+        const isDeleted = deletedArchives.includes(qDate) && qType === 'delete_archive';
+        
+        return !isSynced && !isDeleted;
+    });
+
+    await localforage.setItem(QUEUE_KEY, newQueue);
   }
 
   // إرسال تنبيهات للمستخدم بعد انتهاء المزامنة
   if (syncedArchives.length > 0) {
     const datesStr = syncedArchives.join(', ');
     addNotification(`تم مزامنة أرشيف التواريخ: ${datesStr} سحابياً ✅`, 'success');
-    await archiveStore.loadAvailableDates(); // تحديث القائمة لإظهار علامات المزامنة
+    await archiveStore.loadAvailableDates(); 
   }
 
   if (deletedArchives.length > 0) {
@@ -120,7 +151,7 @@ async function processQueue() {
  * تهيئة مستمع حالة الشبكة
  */
 function initializeSyncListener() {
-  window.removeEventListener('online', processQueue); // منع التكرار
+  window.removeEventListener('online', processQueue); 
   window.addEventListener('online', processQueue);
   if (navigator.onLine) processQueue();
   logger.info('👂 Archive Sync Listener Active');

@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v3.9 - Fix Infinite Recursion)
+-- COLLECTPRO - MASTER SCHEMA (v4.0 - Fix Recursion & Server Time)
 -- ====================================================================
 
 -- #####################################################
@@ -17,6 +17,7 @@ DROP FUNCTION IF EXISTS public.cleanup_old_archives CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
 DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin CASCADE;
+DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -85,7 +86,7 @@ CREATE TABLE IF NOT EXISTS public.statistics (
 );
 
 -- #####################################################
--- 3. الدوال (Functions) - تم تقديمها لتكون متاحة للسياسات
+-- 3. الدوال (Functions)
 -- #####################################################
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -105,6 +106,12 @@ BEGIN
     WHERE id = auth.uid() AND role = 'admin'
   );
 END;
+$$;
+
+-- دالة للحصول على توقيت السيرفر لمنع التلاعب بالتاريخ
+CREATE OR REPLACE FUNCTION public.get_server_time()
+RETURNS TIMESTAMP WITH TIME ZONE LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT NOW();
 $$;
 
 CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
@@ -209,7 +216,6 @@ END $$;
 -- سياسات المستخدمين
 CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Allow users to update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
--- استخدام الدالة الآمنة لتجنب التكرار اللانهائي
 CREATE POLICY "Allow admins to view all profiles" ON public.users FOR SELECT USING (public.is_admin());
 CREATE POLICY "Allow admins to manage everything" ON public.users FOR ALL USING (public.is_admin());
 
@@ -288,3 +294,4 @@ GRANT SELECT ON public.admin_subscriptions_view TO authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_server_time TO authenticated, anon;
