@@ -24,7 +24,7 @@ export const userService = {
     }
 
     try {
-      // 1. محاولة جلب المستخدم الحالي
+      // 1. محاولة جلب المستخدم الحالي من جدول users
       let { data: profile, error } = await apiInterceptor(
         authService.supabase
           .from('users')
@@ -38,16 +38,21 @@ export const userService = {
         return { profile: null, error: null, isOffline: true };
       }
 
+      // استخراج البيانات من userData القادمة من الـ Auth
+      const meta = userData.user_metadata || {};
+      // محاولة الحصول على الاسم من مصادر متعددة
+      const fullName = meta.full_name || meta.name || meta.user_name || userData.email?.split('@')[0] || 'مستخدم';
+      const email = userData.email;
+      const providers = userData.app_metadata?.providers || [];
+
       // 2. إذا لم يكن موجوداً، قم بإنشائه
       if (!profile && !error) {
-        const fullName = userData.user_metadata?.full_name || userData.email?.split('@')[0] || 'مستخدم جديد';
-        const providers = userData.app_metadata?.providers || [];
         
         const { data: newProfile, error: insertError } = await apiInterceptor(
           authService.supabase.from('users').insert({
             id: userData.id,
             full_name: fullName,
-            email: userData.email,
+            email: email,
             provider: providers,
             role: 'user' // القيمة الافتراضية
           }).select('*').single()
@@ -55,7 +60,45 @@ export const userService = {
 
         if (insertError) throw insertError;
         profile = newProfile;
-        logger.info('🆕 New user profile created for:', userData.email);
+        logger.info('🆕 New user profile created for:', email);
+      }
+      // 3. إذا كان موجوداً، تحقق مما إذا كان يحتاج لتحديث (البيانات الناقصة)
+      else if (profile) {
+        const updates = {};
+        
+        // تحديث الاسم إذا كان مفقوداً أو غير دقيق في القاعدة
+        if (!profile.full_name || profile.full_name === 'مستخدم' || profile.full_name.trim() === '') {
+            if (fullName && fullName !== 'مستخدم') {
+                updates.full_name = fullName;
+            }
+        }
+        
+        // تحديث البريد الإلكتروني إذا كان مفقوداً
+        if (!profile.email) {
+            updates.email = email;
+        }
+
+        // تحديث المزود
+        if ((!profile.provider || profile.provider.length === 0) && providers.length > 0) {
+            updates.provider = providers;
+        }
+
+        // تنفيذ التحديث إذا وجدت تغييرات
+        if (Object.keys(updates).length > 0) {
+            logger.info('♻️ Updating user profile with missing data:', updates);
+            const { data: updatedProfile, error: updateError } = await apiInterceptor(
+              authService.supabase
+                .from('users')
+                .update(updates)
+                .eq('id', userData.id)
+                .select('*')
+                .single()
+            );
+            
+            if (!updateError && updatedProfile) {
+                profile = updatedProfile;
+            }
+        }
       }
 
       return { profile, error: error };

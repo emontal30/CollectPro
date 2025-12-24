@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v3.7 - RLS & Recursion Fix)
+-- COLLECTPRO - MASTER SCHEMA (v3.9 - Fix Infinite Recursion)
 -- ====================================================================
 
 -- #####################################################
@@ -15,6 +15,8 @@ DROP FUNCTION IF EXISTS public.update_statistics CASCADE;
 DROP FUNCTION IF EXISTS public.create_user_profile CASCADE;
 DROP FUNCTION IF EXISTS public.cleanup_old_archives CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
+DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE;
+DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -26,23 +28,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     email TEXT UNIQUE,
     phone TEXT,
     provider JSONB DEFAULT '["google"]'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- إضافة حقل role بأمان
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.users'::regclass AND attname = 'role') THEN
-        ALTER TABLE public.users ADD COLUMN role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin'));
-    END IF;
-END;
-$$;
-
-CREATE TABLE IF NOT EXISTS public.admins (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    full_name TEXT,
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -99,44 +85,7 @@ CREATE TABLE IF NOT EXISTS public.statistics (
 );
 
 -- #####################################################
--- 3. سياسات الأمان (Row Level Security)
--- #####################################################
-
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
-
--- تنظيف السياسات القديمة
-DO $$ 
-DECLARE pol record;
-BEGIN 
-    FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' LOOP
-        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
-    END LOOP;
-END $$;
-
--- سياسات المستخدمين (تم تحسينها لتجنب التكرار اللانهائي)
-CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Allow users to update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Allow admins to view all profiles" ON public.users FOR SELECT USING (role = 'admin');
-CREATE POLICY "Allow admins to manage everything" ON public.users FOR ALL USING (role = 'admin');
-
--- سياسات الاشتراكات
-CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
-
--- سياسات الأرشيف
-CREATE POLICY "Users can manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
-
--- سياسات الخطط
-CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
-
--- #####################################################
--- 4. الدوال (Functions)
+-- 3. الدوال (Functions) - تم تقديمها لتكون متاحة للسياسات
 -- #####################################################
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -146,6 +95,17 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- دالة للتحقق من صلاحية المدير (تكسر حلقة التكرار اللانهائي)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
 RETURNS NUMERIC SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
@@ -175,12 +135,96 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.create_user_profile()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE
+  extracted_name TEXT;
 BEGIN
+    extracted_name := COALESCE(
+        NEW.raw_user_meta_data->>'full_name',
+        NEW.raw_user_meta_data->>'name',
+        NEW.raw_user_meta_data->>'user_name',
+        split_part(NEW.email, '@', 1)
+    );
+
     INSERT INTO public.users (id, email, full_name, role)
-    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', 'user');
+    VALUES (NEW.id, NEW.email, extracted_name, 'user')
+    ON CONFLICT (id) DO UPDATE
+    SET 
+        email = EXCLUDED.email,
+        full_name = CASE 
+            WHEN public.users.full_name IS NULL OR public.users.full_name = '' THEN EXCLUDED.full_name 
+            ELSE public.users.full_name 
+        END;
+        
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.fix_missing_profiles()
+RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO public.users (id, email, full_name, role, created_at, updated_at)
+    SELECT 
+        id, 
+        email, 
+        COALESCE(
+            raw_user_meta_data->>'full_name', 
+            raw_user_meta_data->>'name', 
+            raw_user_meta_data->>'user_name',
+            split_part(email, '@', 1)
+        ) as full_name,
+        'user' as role,
+        created_at,
+        COALESCE(last_sign_in_at, created_at)
+    FROM auth.users
+    ON CONFLICT (id) DO UPDATE
+    SET 
+        email = EXCLUDED.email,
+        full_name = CASE 
+            WHEN public.users.full_name IS NULL OR public.users.full_name = '' OR public.users.full_name = 'مستخدم' 
+            THEN EXCLUDED.full_name 
+            ELSE public.users.full_name 
+        END;
+END;
+$$;
+
+-- #####################################################
+-- 4. سياسات الأمان (Row Level Security)
+-- #####################################################
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
+
+-- تنظيف السياسات القديمة
+DO $$ 
+DECLARE pol record;
+BEGIN 
+    FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
+    END LOOP;
+END $$;
+
+-- سياسات المستخدمين
+CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Allow users to update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+-- استخدام الدالة الآمنة لتجنب التكرار اللانهائي
+CREATE POLICY "Allow admins to view all profiles" ON public.users FOR SELECT USING (public.is_admin());
+CREATE POLICY "Allow admins to manage everything" ON public.users FOR ALL USING (public.is_admin());
+
+-- سياسات الاشتراكات
+CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (public.is_admin());
+
+-- سياسات الأرشيف
+CREATE POLICY "Users can manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (public.is_admin());
+
+-- سياسات الخطط
+CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
+CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
 
 -- #####################################################
 -- 5. التريجرز (Triggers)
@@ -207,6 +251,7 @@ CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXEC
 
 DO $$
 BEGIN
+    -- إضافة خطط الاشتراك
     INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
     VALUES 
         ('MONTH-1', 'خطة شهرية', 'خطة أساسية للمبتدئين', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات", "الأرشيف"]'::jsonb, TRUE, 30.00),
@@ -218,6 +263,9 @@ BEGIN
     VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
     ON CONFLICT (id) DO NOTHING;
 
+    -- تشغيل إصلاح المستخدمين
+    PERFORM public.fix_missing_profiles();
+    
     -- تعيين المدير
     UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
 END $$;
