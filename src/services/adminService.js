@@ -4,26 +4,37 @@ import logger from '@/utils/logger.js';
 
 export const adminService = {
   /**
-   * 1. جلب الإحصائيات العامة (محسنة لتقليل عدد الطلبات)
+   * 1. جلب الإحصائيات العامة
+   * التحديث: الاعتماد على جدول statistics المحسوب مسبقاً بدلاً من الدوال الثقيلة
    */
   async getStats() {
     try {
-      const [usersCount, subsStats, revenueRes] = await Promise.all([
-        apiInterceptor(authService.supabase.from('users').select('id', { count: 'exact', head: true })),
-        apiInterceptor(authService.supabase.from('subscriptions').select('status, user_id')),
-        apiInterceptor(authService.supabase.rpc('calculate_total_revenue'))
+      // 1. جلب الإحصائيات الأساسية من جدول statistics
+      const { data: statsData } = await apiInterceptor(
+        authService.supabase
+          .from('statistics')
+          .select('*')
+          .eq('id', '00000000-0000-0000-0000-000000000001')
+          .maybeSingle()
+      );
+
+      // 2. جلب العدادات الناقصة (التي لم نضفها لجدول الإحصائيات) عبر استعلامات خفيفة
+      const [cancelledRes, expiredRes] = await Promise.all([
+        apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
+        apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'))
       ]);
 
-      const subs = subsStats.data || [];
-      
+      const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
+
       return {
-        totalUsers: usersCount.count || 0,
-        pendingRequests: subs.filter(s => s.status === 'pending').length,
-        activeSubscriptions: subs.filter(s => s.status === 'active').length,
-        cancelled: subs.filter(s => s.status === 'cancelled').length,
-        expired: subs.filter(s => s.status === 'expired').length,
-        totalRevenue: revenueRes.data || 0,
-        activeUsers: new Set(subs.filter(s => s.status === 'active').map(s => s.user_id)).size
+        totalUsers: stats.total_users || 0,
+        pendingRequests: stats.pending_requests || 0,
+        activeSubscriptions: stats.active_subscriptions || 0,
+        totalRevenue: stats.total_revenue || 0,
+        cancelled: cancelledRes.count || 0,
+        expired: expiredRes.count || 0,
+        // عدد المستخدمين الفعالين تقريباً يساوي عدد الاشتراكات النشطة
+        activeUsers: stats.active_subscriptions || 0 
       };
     } catch (err) {
       logger.error('Error fetching admin stats:', err);

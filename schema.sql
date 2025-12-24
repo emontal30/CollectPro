@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v4.0 - Fix Recursion & Server Time)
+-- COLLECTPRO - MASTER SCHEMA (v4.2 - Fix Statistics RLS)
 -- ====================================================================
 
 -- #####################################################
@@ -18,6 +18,8 @@ DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
 DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
+DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
+DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -97,7 +99,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- دالة للتحقق من صلاحية المدير (تكسر حلقة التكرار اللانهائي)
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -108,34 +109,79 @@ BEGIN
 END;
 $$;
 
--- دالة للحصول على توقيت السيرفر لمنع التلاعب بالتاريخ
 CREATE OR REPLACE FUNCTION public.get_server_time()
 RETURNS TIMESTAMP WITH TIME ZONE LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT NOW();
 $$;
 
-CREATE OR REPLACE FUNCTION public.calculate_total_revenue()
-RETURNS NUMERIC SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+-- دالة مُحسنة: تحديث إحصائيات المستخدمين (Incremental)
+CREATE OR REPLACE FUNCTION public.handle_new_user_stats()
+RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN (SELECT COALESCE(SUM(sp.price_egp), 0)
-            FROM public.subscriptions s
-            JOIN public.subscription_plans sp ON s.plan_id = sp.id
-            WHERE s.status = 'active');
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE public.statistics 
+        SET total_users = total_users + 1, updated_at = NOW() 
+        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE public.statistics 
+        SET total_users = total_users - 1, updated_at = NOW() 
+        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+    END IF;
+    RETURN NULL;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION update_statistics()
+-- دالة مُحسنة: تحديث إحصائيات الاشتراكات (Incremental)
+CREATE OR REPLACE FUNCTION public.handle_subscription_stats()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE
+    price_diff DECIMAL(10,2) := 0;
 BEGIN
-    UPDATE public.statistics
-    SET 
-        total_users = (SELECT COUNT(*) FROM public.users),
-        active_subscriptions = (SELECT COUNT(*) FROM public.subscriptions WHERE status = 'active'),
-        total_revenue = (SELECT public.calculate_total_revenue()),
-        pending_requests = (SELECT COUNT(*) FROM public.subscriptions WHERE status = 'pending'),
-        last_sync = NOW(),
-        updated_at = NOW()
-    WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+    -- حساب سعر الخطة المرتبطة
+    DECLARE
+        plan_price DECIMAL(10,2);
+    BEGIN
+        IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+             SELECT price_egp INTO plan_price FROM public.subscription_plans WHERE id = NEW.plan_id;
+             price_diff := COALESCE(plan_price, 0);
+        ELSIF (TG_OP = 'DELETE') THEN
+             SELECT price_egp INTO plan_price FROM public.subscription_plans WHERE id = OLD.plan_id;
+             price_diff := COALESCE(plan_price, 0);
+        END IF;
+    END;
+
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE public.statistics SET
+            active_subscriptions = CASE WHEN NEW.status = 'active' THEN active_subscriptions + 1 ELSE active_subscriptions END,
+            pending_requests = CASE WHEN NEW.status = 'pending' THEN pending_requests + 1 ELSE pending_requests END,
+            total_revenue = CASE WHEN NEW.status = 'active' THEN total_revenue + price_diff ELSE total_revenue END,
+            updated_at = NOW()
+        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+        
+    ELSIF (TG_OP = 'UPDATE') THEN
+        -- التعامل مع تغيير الحالة
+        UPDATE public.statistics SET
+            active_subscriptions = active_subscriptions + 
+                (CASE WHEN NEW.status = 'active' THEN 1 ELSE 0 END) - 
+                (CASE WHEN OLD.status = 'active' THEN 1 ELSE 0 END),
+            pending_requests = pending_requests + 
+                (CASE WHEN NEW.status = 'pending' THEN 1 ELSE 0 END) - 
+                (CASE WHEN OLD.status = 'pending' THEN 1 ELSE 0 END),
+            total_revenue = total_revenue + 
+                (CASE WHEN NEW.status = 'active' THEN price_diff ELSE 0 END) - 
+                (CASE WHEN OLD.status = 'active' THEN price_diff ELSE 0 END),
+            updated_at = NOW()
+        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE public.statistics SET
+            active_subscriptions = CASE WHEN OLD.status = 'active' THEN active_subscriptions - 1 ELSE active_subscriptions END,
+            pending_requests = CASE WHEN OLD.status = 'pending' THEN pending_requests - 1 ELSE pending_requests END,
+            total_revenue = CASE WHEN OLD.status = 'active' THEN total_revenue - price_diff ELSE total_revenue END,
+            updated_at = NOW()
+        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+    END IF;
+    
     RETURN NULL;
 END;
 $$;
@@ -194,6 +240,22 @@ BEGIN
 END;
 $$;
 
+-- دالة إعادة مزامنة الإحصائيات (تستخدم يدوياً أو مرة واحدة للتصحيح)
+CREATE OR REPLACE FUNCTION public.recalculate_statistics()
+RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE public.statistics
+    SET 
+        total_users = (SELECT COUNT(*) FROM public.users),
+        active_subscriptions = (SELECT COUNT(*) FROM public.subscriptions WHERE status = 'active'),
+        total_revenue = (SELECT COALESCE(SUM(sp.price_egp), 0) FROM public.subscriptions s JOIN public.subscription_plans sp ON s.plan_id = sp.id WHERE s.status = 'active'),
+        pending_requests = (SELECT COUNT(*) FROM public.subscriptions WHERE status = 'pending'),
+        last_sync = NOW(),
+        updated_at = NOW()
+    WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
+END;
+$$;
+
 -- #####################################################
 -- 4. سياسات الأمان (Row Level Security)
 -- #####################################################
@@ -204,7 +266,6 @@ ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 
--- تنظيف السياسات القديمة
 DO $$ 
 DECLARE pol record;
 BEGIN 
@@ -228,6 +289,9 @@ CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR 
 CREATE POLICY "Users can manage own archives" ON public.daily_archives FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (public.is_admin());
 
+-- سياسات الإحصائيات (الجديدة)
+CREATE POLICY "Admins can view statistics" ON public.statistics FOR SELECT USING (public.is_admin());
+
 -- سياسات الخطط
 CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
@@ -242,11 +306,19 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- تريجر إحصائيات الاشتراكات
 DROP TRIGGER IF EXISTS trigger_update_stats_subs ON public.subscriptions;
-CREATE TRIGGER trigger_update_stats_subs AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
+CREATE TRIGGER trigger_update_stats_subs 
+AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions 
+FOR EACH ROW 
+EXECUTE FUNCTION handle_subscription_stats();
 
+-- تريجر إحصائيات المستخدمين
 DROP TRIGGER IF EXISTS trigger_update_stats_users ON public.users;
-CREATE TRIGGER trigger_update_stats_users AFTER INSERT OR UPDATE OR DELETE ON public.users FOR EACH STATEMENT EXECUTE FUNCTION update_statistics();
+CREATE TRIGGER trigger_update_stats_users 
+AFTER INSERT OR UPDATE OR DELETE ON public.users 
+FOR EACH ROW 
+EXECUTE FUNCTION handle_new_user_stats();
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_user_profile();
@@ -257,7 +329,6 @@ CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXEC
 
 DO $$
 BEGIN
-    -- إضافة خطط الاشتراك
     INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
     VALUES 
         ('MONTH-1', 'خطة شهرية', 'خطة أساسية للمبتدئين', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات", "الأرشيف"]'::jsonb, TRUE, 30.00),
@@ -269,10 +340,9 @@ BEGIN
     VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
     ON CONFLICT (id) DO NOTHING;
 
-    -- تشغيل إصلاح المستخدمين
     PERFORM public.fix_missing_profiles();
+    PERFORM public.recalculate_statistics();
     
-    -- تعيين المدير
     UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
 END $$;
 
