@@ -71,6 +71,20 @@ export const useSettingsStore = defineStore('settings', {
           html.style.setProperty('--primary', this.themeConfig.primaryColor)
         }
 
+        // 4. تحديث لون شريط الحالة للموبايل (theme-color) ليتوافق مع الوضع
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+        if (themeColorMeta) {
+          // اللون #0f172a للوضع الليلي، و #007965 للوضع النهاري
+          themeColorMeta.setAttribute('content', this.darkMode ? '#0f172a' : '#007965')
+        }
+        
+        // تحديث لون شريط الحالة لأجهزة iOS (apple-mobile-web-app-status-bar-style)
+        // في الوضع الليلي نستخدم black-translucent أو black، وفي النهاري default
+        const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+        if (appleMeta) {
+             appleMeta.setAttribute('content', this.darkMode ? 'black-translucent' : 'default')
+        }
+
         this.saveSettings()
       } catch (error) {
         logger.error('Error applying settings:', error)

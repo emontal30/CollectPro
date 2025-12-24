@@ -183,7 +183,7 @@
                 <i class="fas fa-check-circle text-success"></i>
                 <strong class="mx-2">حالة التصفيرة</strong>
               </div>
-              <div class="calc-field" :style="{ color: store.resetStatus.color }">
+              <div class="calc-field" :style="{ color: store.resetStatus.color, fontSize: '1.3rem', fontWeight: '800' }">
                 {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }}
                 &nbsp;{{ store.resetStatus.text }}
               </div>

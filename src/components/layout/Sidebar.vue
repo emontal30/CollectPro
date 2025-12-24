@@ -27,13 +27,22 @@
               <span id="user-id" class="user-id">
                 ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
               </span>
-              <button 
-                class="dark-mode-toggle-small btn--icon btn" 
-                title="تبديل الوضع الليلي"
-                @click="toggleDarkMode"
-              >
-                <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-              </button>
+              <div class="d-flex gap-1">
+                 <button 
+                  class="action-btn-small btn--icon btn" 
+                  title="تحديث البيانات وإصلاح المشاكل"
+                  @click="handleRefreshData"
+                >
+                  <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+                </button>
+                <button 
+                  class="action-btn-small btn--icon btn" 
+                  title="تبديل الوضع الليلي"
+                  @click="toggleDarkMode"
+                >
+                  <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -118,12 +127,13 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted } from 'vue';
+import { computed, inject, onMounted, ref } from 'vue';
 import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import cacheManager from '@/services/cacheManager';
 
 const store = useSidebarStore();
 const settingsStore = useSettingsStore();
@@ -133,9 +143,45 @@ const subStore = useMySubscriptionStore();
 const { confirm, addNotification } = inject('notifications');
 
 const isDarkMode = computed(() => settingsStore.darkMode);
+const isRefreshing = ref(false);
 
 const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
+};
+
+const handleRefreshData = async () => {
+  const result = await confirm({
+    title: 'تحديث البيانات',
+    text: 'سيتم مسح الذاكرة المؤقتة وإعادة تحميل البيانات من السيرفر. هل تريد المتابعة؟',
+    icon: 'info',
+    confirmButtonText: 'تحديث',
+    confirmButtonColor: 'var(--primary)'
+  });
+
+  if (result.isConfirmed) {
+    isRefreshing.value = true;
+    try {
+      // 1. مسح الكاشات المعروفة
+      localStorage.removeItem('my_subscription_data_v2');
+      
+      // 2. استخدام مدير الكاش للتنظيف (اختياري)
+      if (cacheManager) {
+        await cacheManager.clearAllCaches();
+      }
+
+      // 3. مسح كاش Workbox (إذا أمكن الوصول إليه، لكن إعادة التحميل تكفي عادة مع NetworkFirst)
+      
+      addNotification('جاري تحديث التطبيق...', 'info');
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+    } catch (e) {
+      logger.error('Refresh failed', e);
+      isRefreshing.value = false;
+    }
+  }
 };
 
 onMounted(async () => {
@@ -202,7 +248,11 @@ const handleLogout = async () => {
 .user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; word-break: break-all; }
 .user-id { font-size: 10px; color: rgba(255,255,255,0.7); font-family: monospace; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
 .user-id-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dark-mode-toggle-small { background: rgba(255, 255, 255, 0.2); border: none; width: 30px; height: 30px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+.action-btn-small { background: rgba(255, 255, 255, 0.2); border: none; width: 30px; height: 30px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s; }
+.action-btn-small:hover { background: rgba(255, 255, 255, 0.3); }
+.d-flex { display: flex; }
+.gap-1 { gap: 4px; }
+
 .sidebar-content { flex: 1; }
 .sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
