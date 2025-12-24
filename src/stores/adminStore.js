@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import api from '@/services/api';
 import { useNotifications } from '@/composables/useNotifications';
 import eventBus from '@/utils/eventBus';
@@ -13,27 +13,35 @@ export const useAdminStore = defineStore('admin', () => {
   const usersList = ref([]);
   const pendingSubscriptions = ref([]);
   const allSubscriptions = ref([]);
-  const filters = ref({ status: 'all', expiry: 'all', usersSearch: '' });
-  const isLoading = ref(false);
   
-  // حالة "إلزامية الاشتراك"
+  const savedPeriod = localStorage.getItem('admin_active_users_period');
+  const filters = ref({ 
+    status: 'all', 
+    expiry: 'all', 
+    usersSearch: '',
+    activeUsersPeriod: savedPeriod ? parseInt(savedPeriod) : 30
+  });
+  
+  const isLoading = ref(false);
   const isSubscriptionEnforced = ref(false);
 
-  // استدعاء الإشعارات
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
 
   // --- Actions ---
 
+  watch(() => filters.value.activeUsersPeriod, (newVal) => {
+    localStorage.setItem('admin_active_users_period', newVal);
+  });
+
   async function loadDashboardData() {
     isLoading.value = true;
     try {
-      // تنفيذ جميع الاستدعاءات بالتوازي لضمان تحديث كل الجداول
       await Promise.all([
-        fetchStats(),
+        fetchStats(true),
         fetchPendingSubscriptions(),
         fetchAllSubscriptions(),
         fetchUsers(),
-        fetchSystemConfig() // تحميل إعدادات الحماية
+        fetchSystemConfig()
       ]);
     } catch (err) {
       logger.error('Error loading admin data:', err);
@@ -43,9 +51,6 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  /**
-   * جلب إعدادات النظام (مثل إلزامية الاشتراك)
-   */
   async function fetchSystemConfig() {
     try {
       const { data } = await supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle();
@@ -59,9 +64,6 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  /**
-   * تحديث حالة إلزامية الاشتراك
-   */
   async function toggleSubscriptionEnforcement(status) {
     showLoading('جاري تحديث إعدادات النظام...');
     try {
@@ -71,7 +73,6 @@ export const useAdminStore = defineStore('admin', () => {
         .eq('key', 'enforce_subscription');
       
       closeLoading();
-      
       if (error) throw error;
       
       isSubscriptionEnforced.value = status;
@@ -81,14 +82,14 @@ export const useAdminStore = defineStore('admin', () => {
       closeLoading();
       logger.error('Error toggling enforcement:', e);
       addNotification('فشل تحديث الإعدادات', 'error');
-      // إعادة الحالة للسابقة في حال الفشل
       await fetchSystemConfig();
     }
   }
 
-  async function fetchStats() {
+  async function fetchStats(updateCharts = false) {
     try {
-      stats.value = await api.admin.getStats();
+      stats.value = await api.admin.getStats(filters.value.activeUsersPeriod);
+      
       const totalSubs = (stats.value.activeSubscriptions || 0) + (stats.value.pendingRequests || 0) + (stats.value.cancelled || 0) + (stats.value.expired || 0);
       if (totalSubs > 0) {
         chartsData.value.piePercentages = [
@@ -98,14 +99,23 @@ export const useAdminStore = defineStore('admin', () => {
           Math.round((stats.value.expired / totalSubs) * 100)
         ];
       }
-      await fetchChartsData();
-    } catch (e) { logger.warn('Error fetching stats:', e); }
+      
+      if (updateCharts) {
+        await fetchChartsData();
+      }
+    } catch (e) { 
+      logger.warn('Error fetching stats:', e); 
+    }
   }
 
   async function fetchChartsData() {
-    const { labels, values } = await api.admin.getMonthlyChartData();
-    chartsData.value.monthlyLabels = labels;
-    chartsData.value.monthlyValues = values;
+    try {
+      const { labels, values } = await api.admin.getMonthlyChartData();
+      chartsData.value.monthlyLabels = labels;
+      chartsData.value.monthlyValues = values;
+    } catch (e) {
+      logger.error('Error fetching charts data:', e);
+    }
   }
 
   async function fetchPendingSubscriptions() {
@@ -151,22 +161,16 @@ export const useAdminStore = defineStore('admin', () => {
 
     showLoading('جاري معالجة الطلب...');
     try {
-      const allSubs = await api.admin.getAllSubscriptions();
-      const targetSub = allSubs.find(s => s.id === id);
-      const userId = targetSub?.user_id;
-
       const { error } = await api.admin.handleSubscriptionAction(id, action);
-      
       closeLoading();
-
       if (error) throw error;
 
       await showSuccess('تم تنفيذ العملية بنجاح');
-      // تحديث شامل وفوري لكل البيانات في لوحة المسؤول
       await loadDashboardData();
 
-      if (userId) {
-        eventBus.emit('subscription-updated', { userId });
+      const sub = allSubscriptions.value.find(s => s.id === id);
+      if (sub?.user_id) {
+        eventBus.emit('subscription-updated', { userId: sub.user_id });
       }
 
     } catch (err) {
@@ -176,53 +180,55 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function activateManualSubscription(userId, days, hasActiveSub) {
+  /**
+   * تفعيل يدوي
+   * @param {string} userId - معرف المستخدم
+   * @param {number} days - عدد الأيام
+   * @param {boolean} hasActiveSub - هل لديه اشتراك نشط؟
+   * @param {boolean} shouldRefresh - هل نقوم بتحديث البيانات بعد الانتهاء؟ (مفيد في التفعيل الجماعي)
+   * @param {boolean} skipConfirm - هل نتخطى رسالة التأكيد؟ (مفيد في التفعيل الجماعي)
+   */
+  async function activateManualSubscription(userId, days, hasActiveSub, shouldRefresh = true, skipConfirm = false) {
     const numDays = Number(days);
     if (!numDays || isNaN(numDays) || numDays === 0) {
-        addNotification('يرجى إدخال عدد أيام صحيح', 'warning');
+        if (!skipConfirm) addNotification('يرجى إدخال عدد أيام صحيح', 'warning');
         return;
     }
 
-    if (!hasActiveSub && numDays < 0) {
-        addNotification('لا يمكن تفعيل اشتراك جديد بقيمة سالبة', 'warning');
-        return;
-    }
-    
-    // تخصيص نص الإجراء بناءً على ما إذا كانت القيمة موجبة أم سالبة
-    let actionText = '';
-    if (hasActiveSub) {
-      actionText = numDays > 0 ? `إضافة ${numDays} يوم` : `خصم ${Math.abs(numDays)} يوم`;
-    } else {
-      actionText = `تفعيل اشتراك جديد لمدة ${numDays} يوم`;
-    }
-    
-    const result = await confirm({
-        title: 'تأكيد التعديل اليدوي',
-        text: `هل تريد بالفعل ${actionText} لهذا المستخدم؟`,
-        icon: 'question'
-    });
+    if (!skipConfirm) {
+      let actionText = hasActiveSub 
+        ? (numDays > 0 ? `إضافة ${numDays} يوم` : `خصم ${Math.abs(numDays)} يوم`)
+        : `تفعيل اشتراك جديد لمدة ${numDays} يوم`;
+      
+      const result = await confirm({
+          title: 'تأكيد التعديل اليدوي',
+          text: `هل تريد بالفعل ${actionText} لهذا المستخدم؟`,
+          icon: 'question'
+      });
 
-    if (!result.isConfirmed) return;
+      if (!result.isConfirmed) return;
+    }
 
-    showLoading('جاري تحديث الاشتراك...');
+    if (shouldRefresh) showLoading('جاري تحديث الاشتراك...');
+    
     try {
       const { error } = await api.admin.activateManualSubscription(userId, numDays);
       
-      closeLoading();
-
       if (error) throw error;
 
-      await showSuccess('تم تحديث الاشتراك بنجاح');
-      
-      // تحديث شامل لكل البيانات
-      await loadDashboardData();
+      if (shouldRefresh) {
+        closeLoading();
+        await showSuccess('تم تحديث الاشتراك بنجاح');
+        await loadDashboardData();
+      }
       
       eventBus.emit('subscription-updated', { userId });
 
     } catch (err) {
-      closeLoading();
+      if (shouldRefresh) closeLoading();
       logger.error('Error activating manual subscription:', err);
-      showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
+      if (shouldRefresh) showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
+      throw err; // إعادة رمي الخطأ للتعامل معه في التفعيل الجماعي
     }
   }
 

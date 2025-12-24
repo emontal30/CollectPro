@@ -5,9 +5,9 @@ import logger from '@/utils/logger.js';
 export const adminService = {
   /**
    * 1. جلب الإحصائيات العامة
-   * التحديث: الاعتماد على جدول statistics المحسوب مسبقاً بدلاً من الدوال الثقيلة
+   * @param {number} activeDays - عدد الأيام لحساب المستخدمين النشطين
    */
-  async getStats() {
+  async getStats(activeDays = 30) {
     try {
       // 1. جلب الإحصائيات الأساسية من جدول statistics
       const { data: statsData } = await apiInterceptor(
@@ -18,7 +18,19 @@ export const adminService = {
           .maybeSingle()
       );
 
-      // 2. جلب العدادات الناقصة (التي لم نضفها لجدول الإحصائيات) عبر استعلامات خفيفة
+      // 2. حساب المستخدمين النشطين فعلياً خلال الفترة المحددة
+      // نستخدم updated_at كبديل لآخر نشاط لأن last_sign_in_at غير موجود في الجدول العام
+      const dateLimit = new Date();
+      dateLimit.setDate(dateLimit.getDate() - activeDays);
+      
+      const { count: activeUsersCount } = await apiInterceptor(
+        authService.supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .gte('updated_at', dateLimit.toISOString())
+      );
+
+      // 3. جلب العدادات الأخرى خفيفة الوزن
       const [cancelledRes, expiredRes] = await Promise.all([
         apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
         apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'))
@@ -33,8 +45,7 @@ export const adminService = {
         totalRevenue: stats.total_revenue || 0,
         cancelled: cancelledRes.count || 0,
         expired: expiredRes.count || 0,
-        // عدد المستخدمين الفعالين تقريباً يساوي عدد الاشتراكات النشطة
-        activeUsers: stats.active_subscriptions || 0 
+        activeUsers: activeUsersCount || 0 
       };
     } catch (err) {
       logger.error('Error fetching admin stats:', err);
@@ -118,7 +129,6 @@ export const adminService = {
     const now = new Date();
 
     if (action === 'approve') {
-      // جلب بيانات الطلب الحالي
       const { data: sub } = await apiInterceptor(
         authService.supabase
           .from('subscriptions')
@@ -129,7 +139,6 @@ export const adminService = {
 
       if (!sub) return { error: 'الطلب غير موجود' };
 
-      // إبطال أي اشتراك نشط قديم
       await authService.supabase
         .from('subscriptions')
         .update({ status: 'cancelled', updated_at: now.toISOString() })
@@ -177,12 +186,11 @@ export const adminService = {
   },
 
   /**
-   * 6. تفعيل يدوي أو إضافة أيام (محسنة)
+   * 6. تفعيل يدوي أو إضافة أيام
    */
   async activateManualSubscription(userId, days) {
     const now = new Date();
     
-    // أ. البحث عن اشتراك نشط حالياً
     const { data: activeSub } = await apiInterceptor(
       authService.supabase
         .from('subscriptions')
@@ -193,10 +201,8 @@ export const adminService = {
     );
 
     if (activeSub) {
-      // تحديث: إضافة أيام للاشتراك الحالي
       let newEnd = new Date(activeSub.end_date);
-      if (newEnd < now) newEnd = now; // إذا كان منتهياً تقنياً ولكنه نشط في السيستم
-      
+      if (newEnd < now) newEnd = now;
       newEnd.setDate(newEnd.getDate() + Number(days));
 
       return await apiInterceptor(
@@ -209,7 +215,6 @@ export const adminService = {
           .eq('id', activeSub.id)
       );
     } else {
-      // إنشاء: اشتراك جديد تماماً
       const end = new Date(now);
       end.setDate(now.getDate() + Number(days));
 
@@ -219,7 +224,6 @@ export const adminService = {
       
       if (!plan) return { error: { message: "لا توجد خطط معرفة" } };
 
-      // تنظيف أي طلبات معلقة
       await authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
 
       return await apiInterceptor(

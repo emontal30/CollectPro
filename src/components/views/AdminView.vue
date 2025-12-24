@@ -7,7 +7,7 @@
       icon="⚙️"
     />
 
-    <!-- قسم التحكم في حماية النظام (جديد) -->
+    <!-- قسم التحكم في حماية النظام -->
     <div class="admin-section protection-card">
       <div class="admin-section-header">
         <h2><i class="fas fa-shield-alt"></i> نظام حماية الاشتراكات</h2>
@@ -40,10 +40,18 @@
         <div class="stat-icon"><i :class="stat.icon"></i></div>
         <div class="stat-content">
           <h3>{{ stat.label }}</h3>
-          <p class="stat-value">{{ store.stats[key] || 0 }} {{ stat.unit }}</p>
+          <p class="stat-value">
+             <span v-if="store.isLoading && key === 'activeUsers'" class="spinner-tiny"></span>
+             <span v-else>{{ store.stats[key] || 0 }}</span>
+             {{ stat.unit }}
+          </p>
           
           <div v-if="key === 'activeUsers'" class="mt-2">
-             <select v-model="store.filters.activeUsersPeriod" class="archive-select p-1 text-xs" @change="store.fetchStats">
+             <select 
+               v-model="store.filters.activeUsersPeriod" 
+               class="archive-select p-1 text-xs" 
+               @change="handleActiveUsersPeriodChange"
+             >
                <option :value="1">آخر 24 ساعة</option>
                <option :value="7">آخر 7 أيام</option>
                <option :value="30">آخر 30 يوم</option>
@@ -246,6 +254,11 @@ const adminStats = {
 const selectedUsers = ref([]);
 const bulkDays = ref(null);
 
+const handleActiveUsersPeriodChange = async () => {
+  // استدعاء تحديث الإحصائيات فقط (بدون الشارتات لزيادة السرعة)
+  await store.fetchStats(false);
+};
+
 const isAllSelected = computed(() => {
   return filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length;
 });
@@ -302,7 +315,6 @@ const handleToggleEnforcement = async (event) => {
     if (result.isConfirmed) {
         await store.toggleSubscriptionEnforcement(newVal);
     } else {
-        // إعادة الزر لوضعه السابق إذا ألغى المستخدم
         event.target.checked = !newVal;
     }
 };
@@ -369,7 +381,20 @@ input:checked + .slider:before { transform: translateX(26px); }
 .slider.round { border-radius: 34px; }
 .slider.round:before { border-radius: 50%; }
 
-/* الباقي... */
+.spinner-tiny {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(var(--primary-rgb), 0.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .bulk-input { 
   width: 70px; 
   padding: 4px 8px; 

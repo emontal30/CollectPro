@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v4.3 - Subscription Protection System)
+-- COLLECTPRO - MASTER SCHEMA (v4.4 - Admin Security Hardening)
 -- ====================================================================
 
 -- #####################################################
@@ -20,7 +20,8 @@ DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
 DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
-DROP FUNCTION IF EXISTS public.can_write_data CASCADE; -- دالة جديدة
+DROP FUNCTION IF EXISTS public.can_write_data CASCADE;
+DROP FUNCTION IF EXISTS public.protect_user_role CASCADE; -- تنظيف الدالة الجديدة
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -88,7 +89,7 @@ CREATE TABLE IF NOT EXISTS public.statistics (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- جدول إعدادات النظام (الجديد)
+-- جدول إعدادات النظام العامة
 CREATE TABLE IF NOT EXISTS public.system_config (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL,
@@ -107,6 +108,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- دالة للتحقق من صلاحية المدير
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -117,6 +119,21 @@ BEGIN
 END;
 $$;
 
+-- دالة حماية حقل الدور (Role Protection)
+-- تمنع أي مستخدم من تغيير دوره بنفسه لضمان الأمان المطلق
+CREATE OR REPLACE FUNCTION public.protect_user_role()
+RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+    -- إذا كانت هناك محاولة لتغيير الـ role وكان الشخص القائم بالتعديل ليس مديراً
+    IF (OLD.role IS DISTINCT FROM NEW.role) AND NOT public.is_admin() THEN
+        -- قم بإلغاء التغيير وإرجاع القيمة القديمة
+        NEW.role := OLD.role;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- دالة للحصول على توقيت السيرفر
 CREATE OR REPLACE FUNCTION public.get_server_time()
 RETURNS TIMESTAMP WITH TIME ZONE LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT NOW();
@@ -148,6 +165,7 @@ BEGIN
 END;
 $$;
 
+-- تحديث إحصائيات المستخدمين (Incremental)
 CREATE OR REPLACE FUNCTION public.handle_new_user_stats()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -164,6 +182,7 @@ BEGIN
 END;
 $$;
 
+-- تحديث إحصائيات الاشتراكات (Incremental)
 CREATE OR REPLACE FUNCTION public.handle_subscription_stats()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 DECLARE
@@ -266,7 +285,8 @@ BEGIN
             WHEN public.users.full_name IS NULL OR public.users.full_name = '' OR public.users.full_name = 'مستخدم' 
             THEN EXCLUDED.full_name 
             ELSE public.users.full_name 
-        END;
+        END,
+        updated_at = NOW();
 END;
 $$;
 
@@ -304,7 +324,7 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY; -- تفعيل الحماية لجدول الإعدادات
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 DECLARE pol record;
@@ -325,10 +345,10 @@ CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SEL
 CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (public.is_admin());
 
--- سياسات الأرشيف (تحديث لإضافة حماية الكتابة)
+-- سياسات الأرشيف
 CREATE POLICY "Users can manage own archives" ON public.daily_archives 
 FOR ALL USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id AND public.can_write_data()); -- منع الكتابة لغير المشتركين عند التفعيل
+WITH CHECK (auth.uid() = user_id AND public.can_write_data());
 
 CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (public.is_admin());
 
@@ -339,13 +359,19 @@ CREATE POLICY "Admins can view statistics" ON public.statistics FOR SELECT USING
 CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
 
--- سياسات إعدادات النظام (الجديدة)
+-- سياسات إعدادات النظام
 CREATE POLICY "Everyone can read config" ON public.system_config FOR SELECT USING (true);
 CREATE POLICY "Admins can update config" ON public.system_config FOR ALL USING (public.is_admin());
 
 -- #####################################################
 -- 5. التريجرز (Triggers)
 -- #####################################################
+
+-- تريجر حماية حقل الدور (هام جداً للأمن)
+DROP TRIGGER IF EXISTS trigger_protect_user_role ON public.users;
+CREATE TRIGGER trigger_protect_user_role 
+BEFORE UPDATE ON public.users 
+FOR EACH ROW EXECUTE FUNCTION public.protect_user_role();
 
 DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -374,6 +400,7 @@ CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXEC
 
 DO $$
 BEGIN
+    -- إضافة خطط الاشتراك
     INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
     VALUES 
         ('MONTH-1', 'خطة شهرية', 'خطة أساسية للمبتدئين', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات", "الأرشيف"]'::jsonb, TRUE, 30.00),
@@ -381,18 +408,21 @@ BEGIN
         ('YEAR-1', 'خطة سنوية', 'خطة احترافية (أفضل قيمة)', 360.00, 365, 12, '["جميع الميزات", "دعم فني", "تحديثات مجانية"]'::jsonb, TRUE, 360.00)
     ON CONFLICT DO NOTHING;
 
+    -- تهيئة الإحصائيات
     INSERT INTO public.statistics (id, total_users, active_subscriptions, total_revenue, pending_requests, last_sync)
     VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
     ON CONFLICT (id) DO NOTHING;
 
-    -- إضافة إعداد حماية الاشتراكات (معطل افتراضياً)
+    -- إضافة إعداد حماية الاشتراكات
     INSERT INTO public.system_config (key, value) 
     VALUES ('enforce_subscription', 'false'::jsonb)
     ON CONFLICT (key) DO NOTHING;
 
+    -- تشغيل الإصلاحات التلقائية
     PERFORM public.fix_missing_profiles();
     PERFORM public.recalculate_statistics();
     
+    -- تعيين المدير
     UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
 END $$;
 
