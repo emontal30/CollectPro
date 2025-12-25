@@ -24,9 +24,9 @@
           v-model="store.selectedDate" 
           class="archive-select" 
           @change="handleDateChange"
-          :disabled="store.isLoading || searchQuery.length >= 2"
+          :disabled="store.isLoading || isSearching"
         >
-          <option value="">{{ searchQuery.length >= 2 ? '-- وضع البحث الشامل نشط --' : '-- اختر تاريخ --' }}</option>
+          <option value="">{{ isSearching ? '-- وضع البحث الشامل نشط --' : '-- اختر تاريخ --' }}</option>
           <template v-if="store.availableDates.length > 0">
             <option 
               v-for="dateItem in store.availableDates" 
@@ -122,7 +122,7 @@
       </table>
     </div>
 
-    <div class="buttons-container">
+    <div class="buttons-container footer-sticky">
       <div class="buttons-row">
         <router-link to="/app/harvest" class="btn btn-secondary">
           <i class="fas fa-arrow-left"></i>
@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, inject } from 'vue';
+import { onMounted, ref, inject, computed } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
@@ -169,10 +169,11 @@ const archiveColumns = [
 
 const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(archiveColumns, 'columns.visibility.archive');
 
+const isSearching = computed(() => searchQuery.value.trim().length >= 2);
+
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
 onMounted(async () => {
-  logger.info('🚀 ArchiveView Initializing...');
   loadColumns();
   await store.loadAvailableDates();
   if (store.selectedDate) {
@@ -181,8 +182,8 @@ onMounted(async () => {
 });
 
 const handleDateChange = async () => {
-  searchQuery.value = "";
   if (store.selectedDate) {
+    searchQuery.value = "";
     await store.loadArchiveByDate(store.selectedDate);
   } else {
     store.rows = [];
@@ -191,11 +192,13 @@ const handleDateChange = async () => {
 
 const handleSearch = () => {
   clearTimeout(searchTimeout);
-  if (searchQuery.value.length >= 2) {
+  const query = searchQuery.value.trim();
+  
+  if (query.length >= 2) {
     searchTimeout = setTimeout(() => {
-      store.searchInAllArchives(searchQuery.value);
-    }, 400); 
-  } else if (searchQuery.value.length === 0) {
+      store.searchInAllArchives(query);
+    }, 300); 
+  } else if (query.length === 0) {
     if (store.selectedDate) {
       store.loadArchiveByDate(store.selectedDate);
     } else {
@@ -215,7 +218,7 @@ const deleteCurrentArchive = async () => {
 
   const result = await confirm({
     title: 'تأكيد الحذف',
-    text: `هل أنت متأكد من حذف أرشيف يوم ${store.selectedDate}؟ سيتم حذفه من الهاتف وقاعدة البيانات نهائياً.`,
+    text: `هل أنت متأكد من حذف أرشيف يوم ${store.selectedDate}؟ سيتم حذفه نهائياً من الهاتف والسحابة.`,
     icon: 'warning',
     confirmButtonText: 'نعم، احذف',
     cancelButtonText: 'إلغاء',
@@ -223,18 +226,34 @@ const deleteCurrentArchive = async () => {
   });
 
   if (result.isConfirmed) {
-    const deleteResult = await store.deleteArchive(store.selectedDate);
-    if (deleteResult.success) {
-      addNotification(deleteResult.message, 'success');
+    const res = await store.deleteArchive(store.selectedDate);
+    if (res.success) {
+      addNotification(res.message, 'success');
       searchQuery.value = '';
     } else {
-      addNotification(deleteResult.message, 'error');
+      addNotification(res.message, 'error');
     }
   }
 };
 </script>
 
 <style scoped>
+.archive-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 80px);
+}
+
+.table-wrapper {
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.footer-sticky {
+  margin-top: auto;
+  padding-bottom: 20px;
+}
+
 .search-info-banner {
   background: var(--primary-light, #e0f2fe);
   color: var(--primary-dark, #0369a1);
@@ -269,12 +288,12 @@ const deleteCurrentArchive = async () => {
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
-  font-size: 0.75rem; /* تصغير الخط أكثر */
+  font-size: 0.75rem;
 }
 
 .modern-table td.code {
-  font-size: 0.75rem; /* تصغير الخط أكثر */
+  font-size: 0.75rem;
   color: var(--gray-600);
-  font-style: italic; /* جعل النص مائلاً */
+  font-style: italic;
 }
 </style>

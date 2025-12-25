@@ -16,24 +16,18 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const isInitialized = ref(false);
   const isRenewModalOpen = ref(false);
   const loadingPlans = ref(false);
-  
   const serverTimeOffset = ref(0);
-
   let realtimeChannel = null;
   const SUBSCRIPTION_CACHE_KEY = 'my_subscription_data_v2';
 
   const daysRemaining = computed(() => {
     if (!subscription.value?.end_date) return 0;
-    
     const now = new Date(Date.now() + serverTimeOffset.value);
     const end = new Date(subscription.value.end_date);
-    
     now.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-
     const diffTime = end - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
     return diffDays > 0 ? diffDays : 0;
   });
 
@@ -53,7 +47,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   });
 
   const ui = computed(() => {
-    // 1. حالة بانتظار التفعيل (Pending)
     if (subscription.value?.status === 'pending') {
       return {
         class: 'pending',
@@ -65,7 +58,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       };
     }
 
-    // 2. حالة منتهي الصلاحية (Expired)
     if (subscription.value?.status === 'active' && daysRemaining.value <= 0) {
       return {
         class: 'expired',
@@ -77,7 +69,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       };
     }
 
-    // 3. حالة اشتراك نشط (Active)
     if (isSubscribed.value) {
       const days = daysRemaining.value;
       return {
@@ -90,7 +81,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       };
     }
 
-    // 4. الحالة الافتراضية: مجاني
     return {
       class: 'pending',
       icon: 'fa-gift',
@@ -103,7 +93,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
 
   async function init(currentUser = null) {
     if (isInitialized.value && user.value?.id === currentUser?.id) return; 
-    
     const cachedData = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
     if (cachedData) {
       try {
@@ -114,7 +103,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
         logger.warn('Failed to parse subscription cache');
       }
     }
-
     await forceRefresh(currentUser);
     setupEventListeners();
   }
@@ -130,12 +118,12 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
 
       if (user.value) {
         try {
-           const { data: serverTimeStr, error: timeError } = await supabase.rpc('get_server_time');
-           if (!timeError && serverTimeStr) {
-              const serverTime = new Date(serverTimeStr).getTime();
-              const deviceTime = Date.now();
-              serverTimeOffset.value = serverTime - deviceTime;
-           }
+          const { data: serverTimeStr, error: timeError } = await supabase.rpc('get_server_time');
+          if (!timeError && serverTimeStr) {
+            const serverTime = new Date(serverTimeStr).getTime();
+            const deviceTime = Date.now();
+            serverTimeOffset.value = serverTime - deviceTime;
+          }
         } catch (err) {}
 
         const [subRes, histRes] = await Promise.all([
@@ -145,12 +133,10 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
         
         subscription.value = subRes.subscription;
         history.value = histRes.history || [];
-        
         localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({ 
           sub: subRes.subscription, 
           hist: histRes.history 
         }));
-        
         isInitialized.value = true;
         setupRealtimeListener();
       }

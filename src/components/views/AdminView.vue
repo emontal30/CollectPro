@@ -67,7 +67,10 @@
         <div class="d-flex align-center gap-3">
           <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
           <div class="bulk-actions" v-if="selectedUsers.length > 0">
-            <input v-model.number="bulkDays" type="number" class="bulk-input" placeholder="أيام">
+            <div class="input-with-notch">
+              <input v-model.number="bulkDays" type="number" class="bulk-input" placeholder="أيام">
+              <button class="btn-notch-sign" @click="toggleBulkSign">-</button>
+            </div>
             <button class="btn btn-secondary btn-sm p-1" @click="handleBulkActivate">تفعيل للمحددين ({{ selectedUsers.length }})</button>
           </div>
         </div>
@@ -112,7 +115,10 @@
                 <span v-else class="status-badge status-cancelled">غير نشط</span>
               </td>
               <td class="col-subscription-days">
-                <input v-model="user.manualDays" type="number" class="editable-input w-full" placeholder="أيام">
+                <div class="input-with-notch">
+                  <input v-model.number="user.manualDays" type="number" class="editable-input w-full" placeholder="أيام">
+                  <button class="btn-notch-sign" @click="toggleUserSign(user)">-</button>
+                </div>
               </td>
               <td class="text-center">
                 <button 
@@ -255,7 +261,6 @@ const selectedUsers = ref([]);
 const bulkDays = ref(null);
 
 const handleActiveUsersPeriodChange = async () => {
-  // استدعاء تحديث الإحصائيات فقط (بدون الشارتات لزيادة السرعة)
   await store.fetchStats(false);
 };
 
@@ -271,8 +276,24 @@ const toggleSelectAll = () => {
   }
 };
 
+const toggleBulkSign = () => {
+  if (bulkDays.value) {
+    bulkDays.value = bulkDays.value * -1;
+  }
+};
+
+const toggleUserSign = (user) => {
+  if (user.manualDays) {
+    user.manualDays = user.manualDays * -1;
+  } else if (user.manualDays === 0) {
+    // do nothing
+  } else {
+    user.manualDays = -1;
+  }
+};
+
 const handleBulkActivate = async () => {
-  if (!bulkDays.value || bulkDays.value < 1) {
+  if (!bulkDays.value || isNaN(bulkDays.value)) {
     return addNotification('يرجى إدخال عدد أيام صحيح', 'error');
   }
 
@@ -349,6 +370,45 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.input-with-notch {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.btn-notch-sign {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: var(--border-color, #ddd);
+  color: var(--primary);
+  border: none;
+  border-radius: 0 4px 0 0;
+  width: 18px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 5;
+  opacity: 0.7;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 0;
+}
+
+.btn-notch-sign:hover {
+  opacity: 1;
+  background: var(--primary);
+  color: white;
+}
+
+.bulk-actions .input-with-notch {
+  margin-left: 8px;
+}
+
 .protection-card {
   border: 1px solid var(--border-color);
   background: var(--surface-bg);

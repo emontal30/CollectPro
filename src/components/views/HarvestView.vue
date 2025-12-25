@@ -35,6 +35,7 @@
           type="text"
           placeholder="ابحث في المحل أو الكود..."
           class="search-input"
+          @input="handleSearchInput"
         />
       </div>
       <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
@@ -271,19 +272,24 @@ const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibilit
 
 const { confirm, addNotification } = inject('notifications');
 
-// Local filtering for performance - COMPLETELY LOCAL
+// Local filtering for performance - COMPLETELY LOCAL & INSTANT
 const localFilteredRows = computed(() => {
   const data = store.rows || [];
-  if (!searchQueryLocal.value) return data;
+  const query = searchQueryLocal.value ? searchQueryLocal.value.toLowerCase().trim() : '';
   
-  const query = searchQueryLocal.value.toLowerCase().trim();
-  if (query === '') return data;
+  if (!query) return data;
 
-  return data.filter(row =>
-    (row.shop && row.shop.toLowerCase().includes(query)) ||
-    (row.code && row.code.toString().toLowerCase().includes(query))
-  );
+  return data.filter(row => {
+    const shopMatch = row.shop && row.shop.toLowerCase().includes(query);
+    const codeMatch = row.code && row.code.toString().toLowerCase().includes(query);
+    return shopMatch || codeMatch;
+  });
 });
+
+const handleSearchInput = (e) => {
+  // التحديث فوري هنا لضمان عمل الـ Computed Property لحظياً
+  searchQueryLocal.value = e.target.value;
+};
 
 onActivated(() => {
   store.initialize && store.initialize();
@@ -294,7 +300,6 @@ watch(() => route.name, (newName) => {
   if (newName === 'Harvest') store.initialize && store.initialize();
 });
 
-// Update store only when leaving or before specific actions to avoid lag during typing
 const syncSearchToStore = () => {
   store.searchQuery = searchQueryLocal.value;
 };
@@ -323,11 +328,9 @@ onMounted(() => {
 });
 
 const checkAndAddEmptyRow = (index) => {
-  // Only add row if not searching and it's the last row of the REAL data
   if (searchQueryLocal.value) return; 
-  
   if (index === store.rows.length - 1) {
-    store.addRow(); // Use the store action instead of direct push
+    store.addRow();
   }
 };
 
@@ -433,7 +436,7 @@ const archiveToday = async () => {
   });
   if (!confirmResult.isConfirmed) return;
   
-  syncSearchToStore(); // Update store before archiving
+  syncSearchToStore(); 
   const result = await store.archiveTodayData();
   if (result.success) { 
     addNotification(result.message, 'success'); 

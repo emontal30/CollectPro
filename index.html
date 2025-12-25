@@ -7,13 +7,13 @@
       var viewport = document.createElement('meta');
       viewport.name = "viewport";
       
-      // إذا كان الجهاز هاتفاً (عرض الشاشة الفعلي أقل من 768)
       if (window.screen.width < 768) {
-        // نحدد العرض الثابت 768px ونترك للمتصفح مهمة الملاءمة التلقائية (Shrink-to-fit)
-        // هذا يضمن بقاء الزوم الافتراضي "المصغر" مع استقرار كامل عند التحميل الأول
-        viewport.content = "width=768, user-scalable=yes, viewport-fit=cover";
+        // نحدد العرض الثابت 768px
+        // السماح بالزوم اليدوي عن طريق رفع maximum-scale
+        // إبقاء user-scalable=yes
+        viewport.content = "width=768, initial-scale=0, maximum-scale=5, user-scalable=yes, viewport-fit=cover";
       } else {
-        viewport.content = "width=device-width, initial-scale=1.0, viewport-fit=cover";
+        viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover";
       }
       document.getElementsByTagName('head')[0].appendChild(viewport);
     })();
@@ -72,6 +72,7 @@
     /* منع الزوم التلقائي المزعج عند التركيز على الحقول */
     @media screen and (max-width: 767px) {
       input, select, textarea {
+        /* يجب أن يكون حجم الخط 16px على الأقل لمنع iOS من عمل زوم تلقائي */
         font-size: 16px !important;
       }
     }
@@ -85,9 +86,10 @@
       padding-right: var(--safe-area-right);
       background-color: var(--light-bg, #f8fafc);
       position: relative;
-      /* منع ظهور هوامش بيضاء بسبب العرض الثابت */
       overflow-x: auto; 
       -webkit-text-size-adjust: 100%;
+      /* تحسين اللمس المتعدد للزوم اليدوي */
+      touch-action: manipulation;
     }
     
     html.dark, html.dark body {
