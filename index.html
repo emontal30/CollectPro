@@ -7,13 +7,16 @@
       var viewport = document.createElement('meta');
       viewport.name = "viewport";
       
-      if (window.screen.width < 768) {
+      // العرض المطلوب الثابت
+      var targetWidth = 768;
+      
+      if (window.screen.width < targetWidth) {
         // نحدد العرض الثابت 768px
-        // السماح بالزوم اليدوي عن طريق رفع maximum-scale
-        // إبقاء user-scalable=yes
-        viewport.content = "width=768, initial-scale=0, maximum-scale=5, user-scalable=yes, viewport-fit=cover";
+        // نترك للمتصفح حساب initial-scale تلقائياً ليناسب الشاشة (Shrink-to-fit)
+        // مع السماح بالزوم اليدوي حتى 5 أضعاف
+        viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
       } else {
-        viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover";
+        viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
       }
       document.getElementsByTagName('head')[0].appendChild(viewport);
     })();
@@ -72,7 +75,6 @@
     /* منع الزوم التلقائي المزعج عند التركيز على الحقول */
     @media screen and (max-width: 767px) {
       input, select, textarea {
-        /* يجب أن يكون حجم الخط 16px على الأقل لمنع iOS من عمل زوم تلقائي */
         font-size: 16px !important;
       }
     }
@@ -88,7 +90,6 @@
       position: relative;
       overflow-x: auto; 
       -webkit-text-size-adjust: 100%;
-      /* تحسين اللمس المتعدد للزوم اليدوي */
       touch-action: manipulation;
     }
     
