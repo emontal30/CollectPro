@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userProfile = ref(null) 
   const isLoading = ref(false)
   const isInitialized = ref(false)
+  const isSubscriptionEnforced = ref(false)
   const authWarning = ref('')
 
   const { addNotification } = useNotifications()
@@ -47,12 +48,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loadSystemConfig() {
+    try {
+      // محاولة التحميل من الكاش أولاً للسرعة
+      const cached = localStorage.getItem('sys_config_enforce');
+      if (cached !== null) {
+        isSubscriptionEnforced.value = cached === 'true';
+      }
+
+      // تحديث الإعداد من الشبكة في الخلفية
+      const { data: config } = await supabase
+        .from('system_config')
+        .select('value')
+        .eq('key', 'enforce_subscription')
+        .maybeSingle();
+      
+      if (config) {
+        const value = config.value === 'true' || config.value === true;
+        isSubscriptionEnforced.value = value;
+        localStorage.setItem('sys_config_enforce', String(value));
+      }
+    } catch (err) {
+      logger.warn('Config Load Warning:', err.message);
+    }
+  }
+
   async function initializeAuth() {
     if (isInitialized.value) return
     
     isLoading.value = true;
     try {
-      // 1. التحقق من مدة الجلسة يدوياً قبل أي شيء
+      // 1. تحميل إعدادات النظام (مثل حماية الاشتراك)
+      await loadSystemConfig();
+
+      // 2. التحقق من مدة الجلسة يدوياً
       const lastActiveTime = localStorage.getItem('last_active_time');
       if (lastActiveTime) {
         const timeSinceLastActive = Date.now() - parseInt(lastActiveTime, 10);
@@ -63,7 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
 
-      // 2. الحصول على الجلسة الحالية بصورة آمنة
+      // 3. الحصول على الجلسة الحالية
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
 
@@ -74,15 +103,12 @@ export const useAuthStore = defineStore('auth', () => {
         cleanUrlHash();
       }
 
-      // 3. الاستماع لتغييرات الحالة (دخول، خروج، تحديث توكن)
+      // 4. الاستماع لتغييرات الحالة
       supabase.auth.onAuthStateChange(async (event, session) => {
-        logger.debug(`🔔 Auth Event: ${event}`);
-        
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
             updateLastActivity();
-            // لا ننتظر المزامنة هنا لعدم تعطيل الواجهة
             syncUserProfile(session.user);
           }
         } else if (event === 'SIGNED_OUT') {
@@ -121,7 +147,6 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     isLoading.value = true;
     try {
-      // مسح البيانات محلياً أولاً لضمان عدم التعليق في حالة فشل الشبكة عند الخروج
       user.value = null;
       userProfile.value = null;
       localStorage.removeItem('last_active_time');
@@ -132,7 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       await supabase.auth.signOut();
     } catch (err) {
-      logger.warn('Logout warning (possibly already signed out):', err);
+      logger.warn('Logout warning:', err);
     } finally {
       isInitialized.value = false;
       isLoading.value = false;
@@ -147,6 +172,7 @@ export const useAuthStore = defineStore('auth', () => {
     isInitialized,
     isAuthenticated,
     isAdmin,
+    isSubscriptionEnforced,
     initializeAuth,
     loginWithGoogle,
     logout
