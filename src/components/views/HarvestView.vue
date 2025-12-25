@@ -63,7 +63,7 @@
             </td>
             <td v-show="isVisible('code')" class="code">
               <input 
-                v-if="!row.isImported" 
+                v-if="!row.isImported"
                 :value="row.code" 
                 type="text" 
                 inputmode="decimal"
@@ -87,15 +87,18 @@
               <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
             </td>
             <td v-show="isVisible('extra')" class="extra">
-              <input
-                type="text"
-                inputmode="decimal"
-                :value="formatInputNumber(row.extra)"
-                class="centered-input"
-                lang="en"
-                @input="updateExtra(row, index, $event)"
-                @blur="updateExtra(row, index, $event)"
-              />
+              <div class="input-with-action">
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  :value="formatInputNumber(row.extra)"
+                  class="centered-input text-center-important"
+                  lang="en"
+                  @input="updateExtra(row, index, $event)"
+                  @blur="updateExtra(row, index, $event)"
+                />
+                <button class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
+              </div>
             </td>
             <td v-show="isVisible('collector')" class="collector">
               <input
@@ -304,6 +307,20 @@ const handleSearch = () => {};
 const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
 const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
 
+// دالة لتبديل الإشارة (موجب/سالب)
+const toggleSign = (row, field) => {
+  const currentVal = row[field];
+  if (currentVal === null || currentVal === undefined || currentVal === '') {
+    row[field] = '-';
+  } else if (currentVal === '-') {
+    row[field] = null;
+  } else {
+    row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
+  }
+  store.saveRowsToLocalStorage();
+  if (field === 'collector') syncWithCounterStore();
+};
+
 // دالة محسنة للتعامل مع الإدخال الرقمي بما في ذلك علامة السالب
 const handleNumericInput = (event, row, field) => {
   const val = event.target.value;
@@ -398,6 +415,54 @@ const archiveToday = async () => {
 
 <style scoped>
 .mx-2 { margin: 0 8px; }
+
+/* Input with Notch Sign Action */
+.input-with-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.text-center-important {
+  text-align: center !important;
+}
+
+.btn-toggle-sign {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: var(--border-color);
+  color: var(--primary);
+  border: none;
+  border-radius: 0 var(--border-radius-sm) 0 0; /* شكل نوتش في الزاوية */
+  width: 20px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 5;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 0;
+}
+
+/* الوضع الليلي لزر النوتش */
+:deep(body.dark) .btn-toggle-sign {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--gray-400);
+}
+
+.btn-toggle-sign:hover, .btn-toggle-sign:active {
+  opacity: 1;
+  background: var(--primary);
+  color: white;
+}
 
 /* Date Display Styling - Unified */
 .date-display {
