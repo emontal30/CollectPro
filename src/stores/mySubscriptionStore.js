@@ -17,23 +17,17 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const isRenewModalOpen = ref(false);
   const loadingPlans = ref(false);
   
-  // متغير لحفظ فرق التوقيت بين السيرفر والجهاز (بالمللي ثانية)
-  // القيمة الموجبة تعني أن السيرفر متقدم، والسالبة تعني أن السيرفر متأخر عن الجهاز
   const serverTimeOffset = ref(0);
 
   let realtimeChannel = null;
   const SUBSCRIPTION_CACHE_KEY = 'my_subscription_data_v2';
 
-  // --- 1. المصدر الوحيد للمعلومات الحسابية ---
-  
   const daysRemaining = computed(() => {
     if (!subscription.value?.end_date) return 0;
     
-    // استخدام الوقت المصحح (وقت الجهاز + الفرق) للحصول على وقت السيرفر التقريبي
     const now = new Date(Date.now() + serverTimeOffset.value);
     const end = new Date(subscription.value.end_date);
     
-    // تصفير الوقت للمقارنة بالأيام فقط
     now.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
@@ -44,81 +38,72 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   });
 
   const isSubscribed = computed(() => {
-    // التحقق من الحالة ومن التاريخ الفعلي (باستخدام توقيت السيرفر)
     if (!subscription.value || subscription.value.status !== 'active') return false;
-    
-    // تحقق إضافي: هل انتهى التاريخ بالفعل؟
     if (daysRemaining.value <= 0) return false;
-
     return true;
   });
 
-  const planName = computed(() => {
-    if (!subscription.value) return 'الحساب المجاني';
-    return subscription.value.subscription_plans?.name_ar || 
-           subscription.value.plan_name || 
-           'باقة نشطة';
+  const isFree = computed(() => {
+    return !isSubscribed.value && subscription.value?.status !== 'pending';
   });
 
-  // --- 2. الهيئة الموحدة (UI Config) - المصدر الوحيد للشكل والرسائل ---
-  const ui = computed(() => {
-    // الحالة الافتراضية (غير مشترك)
-    if (!isSubscribed.value) {
-      // إذا كان منتهي الصلاحية ولكن الحالة ما زالت active في الداتابيز
-      if (subscription.value?.status === 'active' && daysRemaining.value <= 0) {
-         return {
-            class: 'expired',
-            icon: 'fa-times-circle',
-            label: 'منتهي',
-            statusText: 'انتهت صلاحية الاشتراك'
-         };
-      }
+  const planName = computed(() => {
+    if (!subscription.value) return 'مجاني';
+    return subscription.value.subscription_plans?.name_ar || subscription.value.plan_name || 'باقة نشطة';
+  });
 
+  const ui = computed(() => {
+    // 1. حالة بانتظار التفعيل (Pending)
+    if (subscription.value?.status === 'pending') {
       return {
         class: 'pending',
         icon: 'fa-clock',
-        label: 'مجاني',
-        statusText: 'بانتظار الاشتراك'
+        statusText: 'بانتظار التفعيل',
+        detailsPrefix: 'سيتم مراجعة طلبك قريباً',
+        days: null,
+        detailsSuffix: ''
       };
     }
 
-    const days = daysRemaining.value;
-
-    // حالة الانتهاء
-    if (days <= 0) {
+    // 2. حالة منتهي الصلاحية (Expired)
+    if (subscription.value?.status === 'active' && daysRemaining.value <= 0) {
       return {
         class: 'expired',
         icon: 'fa-times-circle',
-        label: 'منتهي',
-        statusText: 'انتهت صلاحية الاشتراك'
+        statusText: 'غير نشط (منتهي)',
+        detailsPrefix: 'يرجى تجديد الاشتراك',
+        days: null,
+        detailsSuffix: ''
       };
     }
 
-    // حالة التحذير (أقل من 7 أيام)
-    if (days <= 7) {
+    // 3. حالة اشتراك نشط (Active)
+    if (isSubscribed.value) {
+      const days = daysRemaining.value;
       return {
-        class: 'warning',
-        icon: 'fa-exclamation-circle',
-        label: `${days} يوم متبقي`,
-        statusText: 'قارب على الانتهاء'
+        class: days <= 7 ? 'warning' : 'active',
+        icon: days <= 7 ? 'fa-exclamation-circle' : 'fa-check-circle',
+        statusText: 'نشط',
+        detailsPrefix: 'متبقى ',
+        days: days,
+        detailsSuffix: ' يوم على الانتهاء'
       };
     }
 
-    // الحالة النشطة العادية
+    // 4. الحالة الافتراضية: مجاني
     return {
-      class: 'active',
-      icon: 'fa-check-circle',
-      label: `${days} يوم متبقي`,
-      statusText: 'اشتراك نشط'
+      class: 'pending',
+      icon: 'fa-gift',
+      statusText: 'مجاني',
+      detailsPrefix: '(فترة محدودة)',
+      days: null,
+      detailsSuffix: ''
     };
   });
-
-  // --- 3. العمليات (Actions) ---
 
   async function init(currentUser = null) {
     if (isInitialized.value && user.value?.id === currentUser?.id) return; 
     
-    // محاولة استعادة من الكاش فوراً للسرعة
     const cachedData = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
     if (cachedData) {
       try {
@@ -130,7 +115,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       }
     }
 
-    // التحديث من السيرفر في الخلفية
     await forceRefresh(currentUser);
     setupEventListeners();
   }
@@ -145,18 +129,14 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       }
 
       if (user.value) {
-        // 1. مزامنة التوقيت مع السيرفر
         try {
            const { data: serverTimeStr, error: timeError } = await supabase.rpc('get_server_time');
            if (!timeError && serverTimeStr) {
               const serverTime = new Date(serverTimeStr).getTime();
               const deviceTime = Date.now();
               serverTimeOffset.value = serverTime - deviceTime;
-              // logger.info(`🕒 Time synced. Offset: ${serverTimeOffset.value}ms`);
            }
-        } catch (err) {
-            // فشل صامت، نعتمد على توقيت الجهاز
-        }
+        } catch (err) {}
 
         const [subRes, histRes] = await Promise.all([
           api.subscriptions.getSubscription(user.value.id),
@@ -166,7 +146,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
         subscription.value = subRes.subscription;
         history.value = histRes.history || [];
         
-        // تحديث الكاش بالهيئة الجديدة
         localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({ 
           sub: subRes.subscription, 
           hist: histRes.history 
@@ -215,7 +194,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
 
   return {
     subscription, history, isLoading, isInitialized, isRenewModalOpen, renewalPlans, loadingPlans,
-    daysRemaining, planName, isSubscribed, ui,
+    daysRemaining, planName, isSubscribed, isFree, ui,
     init, forceRefresh, clearSubscription
   };
 });

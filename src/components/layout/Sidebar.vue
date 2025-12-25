@@ -96,18 +96,18 @@
       </div>
 
       <div class="subscription-container">
-        <h4 class="subscription-title">
-          حالة الاشتراك: {{ subStore.planName }}
-        </h4>
-        <div class="subscription-info">
-          <div
-            class="subscription-days-simple"
-            :class="subStore.ui.class"
-          >
-            <i class="fas" :class="subStore.ui.icon"></i>
-            <span id="days-left">
-              {{ subStore.ui.label }}
-            </span>
+        <h4 class="subscription-title">حالة الاشتراك:</h4>
+        <div class="subscription-info-box" :class="subStore.ui.class">
+          <div class="subscription-main-row">
+             <i class="fas status-icon" :class="subStore.ui.icon"></i>
+             <span class="status-text">{{ subStore.ui.statusText }}</span>
+          </div>
+          <div class="subscription-details-row">
+             <span class="details-text">
+               {{ subStore.ui.detailsPrefix }}
+               <span v-if="subStore.ui.days !== null" class="days-number">{{ subStore.ui.days }}</span>
+               {{ subStore.ui.detailsSuffix }}
+             </span>
           </div>
         </div>
       </div>
@@ -123,6 +123,7 @@ import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import { useArchiveStore } from '@/stores/archiveStore';
 import cacheManager from '@/services/cacheManager';
 import { supabase } from '@/supabase';
 
@@ -130,6 +131,7 @@ const store = useSidebarStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const subStore = useMySubscriptionStore();
+const archiveStore = useArchiveStore();
 
 const { confirm, addNotification } = inject('notifications');
 
@@ -195,7 +197,7 @@ const handleRefreshData = async () => {
   
   const result = await confirm({
     title: 'تحديث ومزامنة البيانات',
-    text: 'هل تود إعادة مزامنة البيانات مع السحابه؟ سيضمن هذا تحديث كافة المعلومات وحل أي مشاكل تقنية في العرض لضمان دقة بياناتك.',
+    text: 'هل تود مزامنة حالة الاشتراك وتحديث تواريخ الأرشيف من السحابة؟ سيتم تحديث المعلومات دون التأثير على بياناتك المحلية المدخلة.',
     icon: 'info',
     confirmButtonText: 'تحديث الآن',
     confirmButtonColor: 'var(--primary)'
@@ -204,12 +206,19 @@ const handleRefreshData = async () => {
   if (result.isConfirmed) {
     isRefreshing.value = true;
     try {
+      addNotification('جاري مزامنة وتحديث البيانات من السحابة...', 'info');
+      
       localStorage.removeItem('my_subscription_data_v2');
       localStorage.removeItem('sys_config_enforce'); 
-      if (cacheManager) await cacheManager.clearAllCaches();
-      addNotification('جاري مزامنة وتحديث التطبيق...', 'info');
-      setTimeout(() => { window.location.reload(); }, 500);
+      await subStore.forceRefresh(authStore.user);
+      await checkEnforcementStatus();
+      await archiveStore.loadAvailableDates();
+      
+      addNotification('تم تحديث حالة الاشتراك ومزامنة تواريخ الأرشيف بنجاح ✅', 'success');
+      isRefreshing.value = false;
     } catch (e) {
+      logger.error('Refresh error:', e);
+      addNotification('حدث خطأ أثناء التحديث', 'error');
       isRefreshing.value = false;
     }
   }
@@ -341,10 +350,54 @@ const handleLogout = async () => {
 
 .subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
 .subscription-title { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; margin: 0 0 6px 0; text-align: right; }
-.subscription-days-simple { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 700; color: #ffffff; }
-.subscription-days-simple.expired { color: #ff6b6b; }
-.subscription-days-simple.warning { color: #feca57; }
-.subscription-days-simple.active { color: #2ecc71; }
+
+/* New Subscription UI Box */
+.subscription-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.subscription-main-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-icon {
+  font-size: 1rem;
+}
+.status-text {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+}
+.subscription-details-row {
+  padding-right: 24px; /* Align with text after icon */
+}
+.details-text {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Highlighted days number */
+.days-number {
+  font-weight: 900;
+  font-size: 1rem;
+  margin: 0 2px;
+}
+
+/* Status Colors */
+.subscription-info-box.active .status-text, 
+.subscription-info-box.active .days-number { color: #2ecc71; }
+
+.subscription-info-box.warning .status-text,
+.subscription-info-box.warning .days-number { color: #feca57; }
+
+.subscription-info-box.expired .status-text,
+.subscription-info-box.expired .days-number { color: #ff6b6b; }
+
+.subscription-info-box.pending .status-text,
+.subscription-info-box.pending .days-number { color: #3498db; }
 
 .logout-btn { background: rgba(220, 53, 69, 0.9); border: none; border-radius: 12px; padding: 12px; color: white; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-links { list-style: none; padding: 0; }

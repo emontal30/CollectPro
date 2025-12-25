@@ -35,7 +35,6 @@
           type="text"
           placeholder="ابحث في المحل أو الكود..."
           class="search-input"
-          @input="handleSearch"
         />
       </div>
       <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
@@ -56,7 +55,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in store.filteredRows" :key="row.id">
+          <tr v-for="(row, index) in localFilteredRows" :key="row.id">
             <td v-show="isVisible('shop')" class="shop" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }">
               <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
               <span v-else class="readonly-field">{{ row.shop }}</span>
@@ -119,7 +118,7 @@
           </tr>
 
           <!-- صف الإجماليات -->
-          <tr class="total-row" v-if="store.filteredRows.length > 0">
+          <tr class="total-row" v-if="localFilteredRows.length > 0">
             <td v-show="isVisible('shop')" class="shop">الإجمالي </td>
             <td v-show="isVisible('code')" class="code"></td>
             <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(filteredTotals.amount) }}</td>
@@ -132,7 +131,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="store.filteredRows.length === 0" class="no-results">
+      <div v-if="localFilteredRows.length === 0" class="no-results">
         لا توجد نتائج تطابق بحثك...
       </div>
     </div>
@@ -243,7 +242,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, onDeactivated } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
@@ -260,7 +259,6 @@ const route = useRoute();
 
 // Local search query for smooth typing
 const searchQueryLocal = ref('');
-let searchTimeout = null;
 
 const harvestColumns = [
   { key: 'shop', label: '🏪 المحل' },
@@ -273,14 +271,36 @@ const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibilit
 
 const { confirm, addNotification } = inject('notifications');
 
+// Local filtering for performance - COMPLETELY LOCAL
+const localFilteredRows = computed(() => {
+  const data = store.rows || [];
+  if (!searchQueryLocal.value) return data;
+  
+  const query = searchQueryLocal.value.toLowerCase().trim();
+  if (query === '') return data;
+
+  return data.filter(row =>
+    (row.shop && row.shop.toLowerCase().includes(query)) ||
+    (row.code && row.code.toString().toLowerCase().includes(query))
+  );
+});
+
 onActivated(() => {
   store.initialize && store.initialize();
-  searchQueryLocal.value = store.searchQuery;
+  searchQueryLocal.value = store.searchQuery || '';
 });
 
 watch(() => route.name, (newName) => {
   if (newName === 'Harvest') store.initialize && store.initialize();
 });
+
+// Update store only when leaving or before specific actions to avoid lag during typing
+const syncSearchToStore = () => {
+  store.searchQuery = searchQueryLocal.value;
+};
+
+onDeactivated(syncSearchToStore);
+onBeforeUnmount(syncSearchToStore);
 
 const syncWithCounterStore = () => {
   try {
@@ -297,26 +317,18 @@ onMounted(() => {
   loadColumns();
   store.loadDataFromStorage();
   syncWithCounterStore();
-  searchQueryLocal.value = store.searchQuery;
+  searchQueryLocal.value = store.searchQuery || '';
   window.addEventListener('focus', syncWithCounterStore);
   onBeforeUnmount(() => window.removeEventListener('focus', syncWithCounterStore));
 });
 
 const checkAndAddEmptyRow = (index) => {
-  if (store.searchQuery) return; 
+  // Only add row if not searching and it's the last row of the REAL data
+  if (searchQueryLocal.value) return; 
   
   if (index === store.rows.length - 1) {
-    store.rows.push({ id: Date.now(), shop: '', code: '', amount: 0, extra: null, collector: null, net: 0, isImported: false });
-    store.saveRowsToLocalStorage();
+    store.addRow(); // Use the store action instead of direct push
   }
-};
-
-// Search handling with Debouncing
-const handleSearch = () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    store.searchQuery = searchQueryLocal.value;
-  }, 300); // 300ms delay
 };
 
 const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
@@ -366,7 +378,7 @@ const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day:
 const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
 
 const filteredTotals = computed(() => {
-  return store.filteredRows.reduce((acc, row) => {
+  return localFilteredRows.value.reduce((acc, row) => {
     acc.amount += parseFloat(row.amount) || 0;
     acc.extra += parseFloat(row.extra) || 0;
     acc.collector += parseFloat(row.collector) || 0;
@@ -420,6 +432,8 @@ const archiveToday = async () => {
     confirmButtonColor: 'var(--primary)'
   });
   if (!confirmResult.isConfirmed) return;
+  
+  syncSearchToStore(); // Update store before archiving
   const result = await store.archiveTodayData();
   if (result.success) { 
     addNotification(result.message, 'success'); 
