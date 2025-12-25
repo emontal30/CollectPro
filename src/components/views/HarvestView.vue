@@ -66,7 +66,7 @@
                 v-if="!row.isImported" 
                 :value="row.code" 
                 type="text" 
-                inputmode="numeric"
+                inputmode="decimal"
                 placeholder="الكود" 
                 class="editable-input" 
                 @input="updateCode(row, index, $event)" 
