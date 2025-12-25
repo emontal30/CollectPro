@@ -236,6 +236,12 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
   text-align: center !important;
   vertical-align: middle !important;
   padding-right: 12px !important; /* keep some spacing for RTL layout */
+  border-left: none !important;
+}
+
+/* Remove border between shop and code in total row to make them feel merged */
+.modern-table .total-row td.code {
+  border-right: none !important;
 }
 
 /* 10. Special Column Widths */

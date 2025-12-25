@@ -4,6 +4,7 @@ import { supabase } from '@/supabase'
 import router from '@/router'
 import { useNotifications } from '@/composables/useNotifications';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import { useSettingsStore } from '@/stores/settings';
 import logger from '@/utils/logger.js';
 import api from '@/services/api';
 
@@ -17,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const authWarning = ref('')
 
   const { addNotification } = useNotifications()
+  const settingsStore = useSettingsStore()
   const SESSION_DURATION = 48 * 60 * 60 * 1000; // 48 hours
 
   // --- Getters ---
@@ -50,13 +52,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function loadSystemConfig() {
     try {
-      // محاولة التحميل من الكاش أولاً للسرعة
       const cached = localStorage.getItem('sys_config_enforce');
       if (cached !== null) {
         isSubscriptionEnforced.value = cached === 'true';
       }
 
-      // تحديث الإعداد من الشبكة في الخلفية
       const { data: config } = await supabase
         .from('system_config')
         .select('value')
@@ -78,10 +78,8 @@ export const useAuthStore = defineStore('auth', () => {
     
     isLoading.value = true;
     try {
-      // 1. تحميل إعدادات النظام (مثل حماية الاشتراك)
       await loadSystemConfig();
 
-      // 2. التحقق من مدة الجلسة يدوياً
       const lastActiveTime = localStorage.getItem('last_active_time');
       if (lastActiveTime) {
         const timeSinceLastActive = Date.now() - parseInt(lastActiveTime, 10);
@@ -92,7 +90,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
 
-      // 3. الحصول على الجلسة الحالية
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
 
@@ -100,16 +97,19 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = session.user;
         updateLastActivity();
         await syncUserProfile(session.user);
+        // تأكيد تطبيق إعدادات الزوم والوضع الليلي فور استعادة الجلسة
+        settingsStore.applySettings();
         cleanUrlHash();
       }
 
-      // 4. الاستماع لتغييرات الحالة
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
             updateLastActivity();
             syncUserProfile(session.user);
+            // تأكيد تطبيق الإعدادات عند تسجيل الدخول
+            settingsStore.applySettings();
           }
         } else if (event === 'SIGNED_OUT') {
           user.value = null;

@@ -90,7 +90,7 @@
             <tr v-for="(row, index) in store.rows" :key="index">
               <td class="date-cell">{{ row.date || store.selectedDate }}</td>
               <td v-show="isVisible('shop')">{{ row.shop }}</td>
-              <td v-show="isVisible('code')">{{ row.code }}</td>
+              <td v-show="isVisible('code')" class="code">{{ row.code }}</td>
               <td v-show="isVisible('amount')">{{ formatNum(row.amount) }}</td>
               <td v-show="isVisible('extra')">{{ formatNum(row.extra) }}</td>
               <td v-show="isVisible('collector')">{{ formatNum(row.collector) }}</td>
@@ -107,9 +107,9 @@
             </tr>
 
             <tr v-if="store.rows.length > 0" class="total-row">
-              <td class="shop">الإجمالي</td>
-              <td v-show="isVisible('shop')"></td>
-              <td v-show="isVisible('code')"></td>
+              <td class="date-cell"></td>
+              <td v-show="isVisible('shop')" class="shop">الإجمالي</td>
+              <td v-show="isVisible('code')" class="code"></td>
               <td v-show="isVisible('amount')">{{ formatNum(store.totals.amount) }}</td>
               <td v-show="isVisible('extra')">{{ formatNum(store.totals.extra) }}</td>
               <td v-show="isVisible('collector')">{{ formatNum(store.totals.collector) }}</td>
@@ -269,5 +269,12 @@ const deleteCurrentArchive = async () => {
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
+  font-size: 0.75rem; /* تصغير الخط أكثر */
+}
+
+.modern-table td.code {
+  font-size: 0.75rem; /* تصغير الخط أكثر */
+  color: var(--gray-600);
+  font-style: italic; /* جعل النص مائلاً */
 }
 </style>

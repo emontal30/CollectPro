@@ -31,7 +31,7 @@
       <div class="search-input-wrapper">
         <i class="fas fa-search control-icon"></i>
         <input
-          v-model="store.searchQuery"
+          v-model="searchQueryLocal"
           type="text"
           placeholder="ابحث في المحل أو الكود..."
           class="search-input"
@@ -120,7 +120,7 @@
 
           <!-- صف الإجماليات -->
           <tr class="total-row" v-if="store.filteredRows.length > 0">
-            <td v-show="isVisible('shop')" class="shop">الإجمالي (المصفى)</td>
+            <td v-show="isVisible('shop')" class="shop">الإجمالي </td>
             <td v-show="isVisible('code')" class="code"></td>
             <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(filteredTotals.amount) }}</td>
             <td v-show="isVisible('extra')" class="extra text-center">{{ store.formatNumber(filteredTotals.extra) }}</td>
@@ -243,7 +243,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onActivated, watch, inject, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
@@ -258,6 +258,10 @@ const store = useHarvestStore();
 const archiveStore = useArchiveStore();
 const route = useRoute();
 
+// Local search query for smooth typing
+const searchQueryLocal = ref('');
+let searchTimeout = null;
+
 const harvestColumns = [
   { key: 'shop', label: '🏪 المحل' },
   { key: 'code', label: '🔢 الكود' },
@@ -269,7 +273,11 @@ const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibilit
 
 const { confirm, addNotification } = inject('notifications');
 
-onActivated(() => store.initialize && store.initialize());
+onActivated(() => {
+  store.initialize && store.initialize();
+  searchQueryLocal.value = store.searchQuery;
+});
+
 watch(() => route.name, (newName) => {
   if (newName === 'Harvest') store.initialize && store.initialize();
 });
@@ -289,6 +297,7 @@ onMounted(() => {
   loadColumns();
   store.loadDataFromStorage();
   syncWithCounterStore();
+  searchQueryLocal.value = store.searchQuery;
   window.addEventListener('focus', syncWithCounterStore);
   onBeforeUnmount(() => window.removeEventListener('focus', syncWithCounterStore));
 });
@@ -302,12 +311,17 @@ const checkAndAddEmptyRow = (index) => {
   }
 };
 
-const handleSearch = () => {};
+// Search handling with Debouncing
+const handleSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    store.searchQuery = searchQueryLocal.value;
+  }, 300); // 300ms delay
+};
 
 const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
 const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
 
-// دالة لتبديل الإشارة (موجب/سالب)
 const toggleSign = (row, field) => {
   const currentVal = row[field];
   if (currentVal === null || currentVal === undefined || currentVal === '') {
@@ -321,10 +335,8 @@ const toggleSign = (row, field) => {
   if (field === 'collector') syncWithCounterStore();
 };
 
-// دالة محسنة للتعامل مع الإدخال الرقمي بما في ذلك علامة السالب
 const handleNumericInput = (event, row, field) => {
   const val = event.target.value;
-  // إذا كان المستخدم يكتب علامة سالب فقط، لا تحولها لرقم الآن
   if (val === '-') {
     row[field] = '-';
     return;
@@ -392,6 +404,7 @@ const confirmClearAll = async () => {
 
   if (result.isConfirmed) {
     store.clearAll();
+    searchQueryLocal.value = '';
     addNotification('تم تفريغ الحقول بنجاح', 'info');
   }
 };
@@ -408,7 +421,11 @@ const archiveToday = async () => {
   });
   if (!confirmResult.isConfirmed) return;
   const result = await store.archiveTodayData();
-  if (result.success) { addNotification(result.message, 'success'); store.clearAll(); }
+  if (result.success) { 
+    addNotification(result.message, 'success'); 
+    store.clearAll(); 
+    searchQueryLocal.value = ''; 
+  }
   else addNotification(result.message, 'error');
 };
 </script>
@@ -436,7 +453,7 @@ const archiveToday = async () => {
   background: var(--border-color);
   color: var(--primary);
   border: none;
-  border-radius: 0 var(--border-radius-sm) 0 0; /* شكل نوتش في الزاوية */
+  border-radius: 0 var(--border-radius-sm) 0 0; /* Notch shape */
   width: 20px;
   height: 14px;
   display: flex;
@@ -452,7 +469,7 @@ const archiveToday = async () => {
   line-height: 0;
 }
 
-/* الوضع الليلي لزر النوتش */
+/* Dark mode for notch */
 :deep(body.dark) .btn-toggle-sign {
   background: rgba(255, 255, 255, 0.1);
   color: var(--gray-400);
