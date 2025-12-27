@@ -138,11 +138,9 @@ watch(() => subStore.isInitialized, (val) => {
   width: 100%;
   position: relative;
   overflow-x: hidden;
-  /* منع السحب لليسار/يمين في المتصفح أحياناً */
   touch-action: pan-y; 
 }
 
-/* تنسيق الهيدر المثبت */
 .fixed-header {
   position: fixed;
   top: 0;
@@ -162,10 +160,11 @@ watch(() => subStore.isInitialized, (val) => {
   pointer-events: none;
 }
 
-.app-header, .app-footer {
+.app-header {
   width: 100%;
   display: flex;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .header-stretch, .footer-stretch {
@@ -176,11 +175,10 @@ watch(() => subStore.isInitialized, (val) => {
 }
 
 .app-main {
-  flex: 1;
+  flex: 1 0 auto; /* هذا يضمن أن المحتوى ينمو ليأخذ المساحة المتبقية */
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* إزاحة المحتوى لأسفل لتعويض الهيدر المثبت */
   padding-top: var(--header-height, 70px);
   overflow-x: auto;
 }
@@ -191,14 +189,17 @@ watch(() => subStore.isInitialized, (val) => {
   max-width: var(--app-min-width, 768px);
   margin: 0 auto;
   padding-top: 20px;
-  padding-bottom: 20px;
+  padding-bottom: 40px; /* زيادة مساحة التباعد السفلية */
 }
 
 .app-footer {
+  flex-shrink: 0; /* يمنع الفوتر من التقلص */
+  width: 100%;
+  display: flex;
+  justify-content: center;
   margin-top: auto;
 }
 
-/* ضبط موضع الإشعارات لتظهر تحت الهيدر المثبت */
 :deep(.notification-container) {
   top: calc(var(--header-height, 70px) + 10px) !important;
 }

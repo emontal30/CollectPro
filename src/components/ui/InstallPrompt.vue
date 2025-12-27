@@ -21,10 +21,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import logger from '@/utils/logger.js'
 
 const show = ref(false)
+const route = useRoute()
 
 const install = async () => {
   const promptEvent = window.deferredPrompt
@@ -43,9 +45,8 @@ const install = async () => {
 
 const dismiss = () => {
   show.value = false
-  // كتم التنبيه لمدة 24 ساعة لعدم إزعاج المستخدم
-  const expiry = new Date().getTime() + (24 * 60 * 60 * 1000)
-  localStorage.setItem('installPromptDismissedUntil', expiry.toString())
+  // تمت إزالة التوقيت لمدة 24 ساعة لضمان ظهور الرسالة مرة أخرى عند عمل ريفرش أو انتقال بين الصفحات
+  // بناءً على طلب المستخدم
 }
 
 const checkPrompt = () => {
@@ -53,34 +54,39 @@ const checkPrompt = () => {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
   if (isStandalone) return
 
-  // التحقق من الكتم المؤقت
-  const dismissedUntil = localStorage.getItem('installPromptDismissedUntil')
-  if (dismissedUntil && new Date().getTime() < parseInt(dismissedUntil)) {
-    return
-  }
-
   if (window.deferredPrompt) {
     show.value = true
   }
 }
 
+// مراقبة الانتقال بين الصفحات لإعادة إظهار الرسالة إذا كان الحدث موجوداً
+watch(() => route.path, () => {
+  if (!show.value) {
+    checkPrompt()
+  }
+})
+
 let interval = null
 
 onMounted(() => {
   // التحقق بشكل دوري أو عند الحدث
-  window.addEventListener('beforeinstallprompt', () => {
-    setTimeout(checkPrompt, 2000) // تأخير بسيط لتجربة أفضل
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // منع المتصفح من إظهار الرسالة التلقائية الخاصة به
+    e.preventDefault()
+    // تخزين الحدث عالمياً ليتم استخدامه عند الضغط على "تثبيت الآن"
+    window.deferredPrompt = e
+    setTimeout(checkPrompt, 1000)
   })
   
-  // فحص أولي بعد 3 ثوانٍ من التحميل
-  setTimeout(checkPrompt, 3000)
+  // فحص أولي فوري عند التحميل
+  checkPrompt()
 
-  // مراقبة الحدث إذا تم التقاطه عالمياً
+  // مراقبة الحدث بشكل مستمر كل 3 ثوانٍ لضمان الظهور
   interval = setInterval(() => {
     if (window.deferredPrompt && !show.value) {
       checkPrompt()
     }
-  }, 5000)
+  }, 3000)
 })
 
 onUnmounted(() => {

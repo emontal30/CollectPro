@@ -13,6 +13,7 @@ export const useHarvestStore = defineStore('harvest', {
     rows: [],
     currentDate: new Date().toISOString().split('T')[0],
     masterLimit: 100000,
+    extraLimit: 0,
     currentBalance: 0,
     isLoading: false,
     error: null,
@@ -49,7 +50,7 @@ export const useHarvestStore = defineStore('harvest', {
 
     resetStatus: (state) => {
       const totalCollected = state.totals.collector || 0;
-      const resetVal = (state.currentBalance || 0) - (state.masterLimit || 0);
+      const resetVal = (state.currentBalance || 0) - ((state.masterLimit || 0) + (state.extraLimit || 0));
       const combinedValue = totalCollected + resetVal;
       
       if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
@@ -57,7 +58,7 @@ export const useHarvestStore = defineStore('harvest', {
       else return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
     },
     
-    resetAmount: (state) => (parseFloat(state.currentBalance) || 0) - (parseFloat(state.masterLimit) || 0),
+    resetAmount: (state) => (parseFloat(state.currentBalance) || 0) - ((parseFloat(state.masterLimit) || 0) + (parseFloat(state.extraLimit) || 0)),
     
     totalNet: (state) => state.totals.collector - (state.totals.amount + state.totals.extra)
   },
@@ -66,6 +67,7 @@ export const useHarvestStore = defineStore('harvest', {
     async initialize() {
       try {
         this.loadMasterLimit();
+        this.loadExtraLimit();
         const savedBalance = localStorage.getItem('currentBalance');
         if (savedBalance) this.currentBalance = parseFloat(savedBalance);
 
@@ -92,8 +94,11 @@ export const useHarvestStore = defineStore('harvest', {
       this.resetTable();
       this.searchQuery = '';
       this.currentBalance = 0;
+      this.extraLimit = 0;
       localStorage.removeItem('currentBalance');
+      localStorage.removeItem('extraLimit');
       this.isModified = false;
+      // ملحوظة: لا يتم حذف masterLimit هنا بناءً على طلب المستخدم
     },
 
     clearFields() {
@@ -239,13 +244,27 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     setMasterLimit(limit) {
-      this.masterLimit = parseFloat(limit) || 100000;
+      this.masterLimit = parseFloat(limit) || 0;
       localStorage.setItem('masterLimit', this.masterLimit.toString());
     },
 
     loadMasterLimit() {
       const limit = localStorage.getItem('masterLimit');
-      if (limit) this.masterLimit = parseFloat(limit);
+      if (limit !== null) {
+        this.masterLimit = parseFloat(limit);
+      } else {
+        this.masterLimit = 100000;
+      }
+    },
+
+    setExtraLimit(limit) {
+      this.extraLimit = parseFloat(limit) || 0;
+      localStorage.setItem('extraLimit', this.extraLimit.toString());
+    },
+
+    loadExtraLimit() {
+      const limit = localStorage.getItem('extraLimit');
+      if (limit) this.extraLimit = parseFloat(limit);
     },
 
     setCurrentBalance(balance) {

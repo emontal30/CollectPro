@@ -145,21 +145,40 @@
           <div class="summary-row two-cols">
             <div class="summary-item">
               <div class="field-header">
-                <i class="fas fa-crown text-primary"></i>
-                <strong class="mx-2">ليمت الماستر</strong>
+                <i class="fas fa-crown crown-gold"></i>
+                <strong class="mx-2">ليمت الماستر <span class="small-label">( أساسي )</span></strong>
               </div>
               <input
                 type="text"
                 inputmode="decimal"
                 :value="store.masterLimit !== 100000 ? formatInputNumber(store.masterLimit) : ''"
-                class="bold-input text-center font-bold"
+                class="bold-input text-center font-bold master-limit-input"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
-                @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
-                @blur="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 100000)"
+                @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @blur="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
               />
             </div>
 
+            <div class="summary-item">
+              <div class="field-header">
+                <i class="fas fa-plus-circle text-primary"></i>
+                <strong class="mx-2">ليمت اضافى <span class="small-text">(رصيد اضافى كولكتور , شركه )</span></strong>
+              </div>
+              <input
+                type="text"
+                inputmode="decimal"
+                :value="store.extraLimit ? formatInputNumber(store.extraLimit) : ''"
+                class="bold-input text-center font-bold"
+                lang="en"
+                placeholder="ادخل الليمت الإضافي"
+                @input="store.setExtraLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @blur="store.setExtraLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+              />
+            </div>
+          </div>
+
+          <div class="summary-row full">
             <div class="summary-item">
               <div class="field-header">
                 <i class="fas fa-wallet text-primary"></i>
@@ -449,6 +468,30 @@ const archiveToday = async () => {
 
 <style scoped>
 .mx-2 { margin: 0 8px; }
+
+.small-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.8;
+  display: block;
+}
+
+.small-label {
+  font-size: 0.7rem;
+  font-weight: normal;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+
+.master-limit-input {
+  border: 2px solid var(--primary-light) !important;
+  background-color: rgba(var(--primary-rgb), 0.05) !important;
+}
+
+.crown-gold {
+  color: #ffc107; /* Golden color */
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.2));
+}
 
 /* Input with Notch Sign Action */
 .input-with-action {
