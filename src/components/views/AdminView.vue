@@ -135,12 +135,6 @@
                     @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
                     <i class="fas fa-play-circle"></i>
                   </button>
-                  <button 
-                    class="btn btn--icon text-danger"
-                    title="إبطال جلسة المستخدم (تسجيل خروج إجباري)"
-                    @click="store.signOutUser(user.id, user.full_name)">
-                    <i class="fas fa-power-off"></i>
-                  </button>
                 </div>
               </td>
             </tr>

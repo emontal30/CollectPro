@@ -92,8 +92,8 @@ tr:last-child td { border-bottom: none !important; }
 
 /* Code Column - Fixed width to accommodate large numbers */
 .code, td.code, th.code {
-  width: 110px !important; 
-  min-width: 110px;
+  width: 90px !important; 
+  min-width: 90px;
   white-space: nowrap;
 }
 
@@ -178,8 +178,8 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
     min-width: 120px;
   }
   .code {
-    width: 90px !important;
-    min-width: 90px;
+    width: 70px !important;
+    min-width: 70px;
   }
   
   /* تقليل الحد الأدنى للجدول في الموبايل ليسمح بالتمرير بشكل سليم */

@@ -67,9 +67,9 @@
     </div>
 
     <div class="table-wrapper">
-      <table class="modern-table w-full">
+      <table class="modern-table archive-specific-table w-full">
         <thead>
-          <tr>
+          <tr class="archive-header-row">
             <th class="date-header">📅 التاريخ</th>
             <th v-show="isVisible('shop')" class="shop">🏪 المحل</th>
             <th v-show="isVisible('code')" class="code">🔢 الكود</th>
@@ -89,7 +89,7 @@
           <template v-else>
             <tr v-for="(row, index) in store.rows" :key="index">
               <td class="date-cell">{{ row.date || store.selectedDate }}</td>
-              <td v-show="isVisible('shop')">{{ row.shop }}</td>
+              <td v-show="isVisible('shop')" class="shop shop-name-cell">{{ row.shop }}</td>
               <td v-show="isVisible('code')" class="code">{{ row.code }}</td>
               <td v-show="isVisible('amount')">{{ formatNum(row.amount) }}</td>
               <td v-show="isVisible('extra')">{{ formatNum(row.extra) }}</td>
@@ -249,6 +249,10 @@ const deleteCurrentArchive = async () => {
   margin-bottom: 20px;
 }
 
+.archive-header-row th {
+  font-size: 0.8rem;
+}
+
 .footer-sticky {
   margin-top: auto;
   padding-bottom: 20px;
@@ -288,12 +292,36 @@ const deleteCurrentArchive = async () => {
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
-  font-size: 0.75rem;
+  font-size: 0.55rem;
+}
+
+.shop-name-cell {
+  font-size: 0.8rem !important;
 }
 
 .modern-table td.code {
   font-size: 0.75rem;
   color: var(--gray-600);
   font-style: italic;
+}
+
+/* تعديل عرض عمود المحل في صفحة الأرشيف ومنع التواء النص */
+.archive-specific-table .shop, 
+.archive-specific-table td.shop, 
+.archive-specific-table th.shop {
+  width: 125px !important;
+  min-width: 125px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+@media (max-width: 768px) {
+  .archive-specific-table .shop, 
+  .archive-specific-table td.shop, 
+  .archive-specific-table th.shop {
+    width: 95px !important;
+    min-width: 95px !important;
+  }
 }
 </style>

@@ -5,6 +5,7 @@ import { useNotifications } from '@/composables/useNotifications';
 import eventBus from '@/utils/eventBus';
 import logger from '@/utils/logger.js'
 import { supabase } from '@/supabase';
+import { useAuthStore } from './auth';
 
 export const useAdminStore = defineStore('admin', () => {
   const stats = ref({});
@@ -25,6 +26,7 @@ export const useAdminStore = defineStore('admin', () => {
   const isSubscriptionEnforced = ref(false);
 
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
+  const authStore = useAuthStore();
 
   watch(() => filters.value.activeUsersPeriod, (newVal) => {
     localStorage.setItem('admin_active_users_period', newVal);
@@ -61,64 +63,9 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function signOutUser(userId, userName) {
-    const result = await confirm({
-        title: 'تأكيد إبطال الجلسة',
-        text: `هل أنت متأكد من تسجيل الخروج القسري للمستخدم "${userName}"؟ سيتم إجباره على تسجيل الدخول مرة أخرى.`,
-        icon: 'warning',
-        confirmButtonText: 'نعم، قم بإبطال الجلسة',
-        confirmButtonColor: 'var(--danger)'
-    });
-
-    if (!result.isConfirmed) return;
-
-    showLoading('جاري إبطال جلسة المستخدم...');
-    try {
-        const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
-
-        if (sessionError || !session || !session.access_token) {
-            throw new Error('فشلت المصادقة: الجلسة قد انتهت. يرجى إعادة تسجيل الدخول كمسؤول.');
-        }
-        
-        const token = session.access_token;
-        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
-        
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ userId })
-        });
-
-        if (!response.ok) {
-            const responseBodyText = await response.text();
-            let errorMsg;
-            try {
-                const errorData = JSON.parse(responseBodyText);
-                errorMsg = errorData.error || responseBodyText;
-            } catch (e) {
-                errorMsg = responseBodyText || `Edge Function returned status ${response.status}.`;
-            }
-            throw new Error(errorMsg);
-        }
-
-        closeLoading();
-        showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
-
-    } catch (err) {
-        closeLoading();
-        logger.error('Error signing out user:', err);
-        showError(err.message || 'حدث خطأ غير متوقع أثناء إبطال الجلسة.');
-    }
-  }
-
   async function toggleSubscriptionEnforcement(status) {
     showLoading('جاري تحديث إعدادات النظام...');
     try {
-      // إرسال القيمة كـ JSON متوافق مع نوع الحقل في قاعدة البيانات
       const { error } = await supabase
         .from('system_config')
         .update({ 
@@ -138,7 +85,6 @@ export const useAdminStore = defineStore('admin', () => {
       closeLoading();
       logger.error('Error toggling enforcement:', e);
       addNotification('فشل تحديث الإعدادات: ' + (e.message || 'خطأ غير معروف'), 'error');
-      // إعادة جلب الحالة الأصلية في حالة الفشل لمزامنة الواجهة
       await fetchSystemConfig();
     }
   }
@@ -289,7 +235,6 @@ export const useAdminStore = defineStore('admin', () => {
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers,
-    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement,
-    signOutUser
+    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement
   };
 });

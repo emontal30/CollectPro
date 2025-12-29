@@ -160,7 +160,7 @@ watch(() => subStore.isInitialized, (val) => {
 }
 
 .app-main {
-  flex: 1 0 auto;
+  flex: 1; /* تم التعديل ليأخذ المساحة المتبقية */
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -168,12 +168,13 @@ watch(() => subStore.isInitialized, (val) => {
 }
 
 .content-wrapper {
-  flex: 1 0 auto;
+  flex: 1; /* تم التعديل ليتمدد داخل app-main */
   width: 100%;
   max-width: var(--app-min-width, 768px);
   margin: 0 auto;
   padding: 20px 10px 60px 10px;
-  min-height: calc(100vh - var(--header-height, 70px) - 100px); /* يضمن مساحة كافية دائماً */
+  display: flex;
+  flex-direction: column;
 }
 
 .app-footer {
@@ -181,7 +182,7 @@ watch(() => subStore.isInitialized, (val) => {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-top: auto; /* يدفعه لأسفل الصفحة دائماً */
+  margin-top: auto;
 }
 
 .alert-container {
