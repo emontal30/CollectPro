@@ -54,3 +54,6 @@ coverage/
 # Optional cache
 .eslintcache
 .prettiercache
+# Vite temporary files
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

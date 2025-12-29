@@ -38,10 +38,7 @@ export const authService = {
   async isAuthenticated() {
     const { session } = await supabase.auth.getSession()
     return session !== null
-  },
-
-  // Export supabase client for direct access if needed
-  supabase
+  }
 }
 
 export default authService

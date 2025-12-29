@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore'
-import { supabase } from '@/supabase'
 import logger from '@/utils/logger.js'
 
 // Lazy Loading Components
@@ -79,7 +78,33 @@ const routes = [
       }
     ]
   },
-  { path: '/:pathMatch(.*)*', redirect: '/' }
+  // --- Intelligent Catch-all Route ---
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    beforeEnter: (to, from, next) => {
+      logger.warn(`🚀 Route Not Found: ${to.path}. Redirecting...`);
+      const authStore = useAuthStore();
+      // Must ensure auth is initialized to make a correct decision
+      if (!authStore.isInitialized) {
+        authStore.initializeAuth().then(() => {
+          if (authStore.isAuthenticated) {
+            next({ name: 'Dashboard' });
+          } else {
+            next({ name: 'Login' });
+          }
+        });
+      } else {
+        if (authStore.isAuthenticated) {
+          next({ name: 'Dashboard' });
+        } else {
+          next({ name: 'Login' });
+        }
+      }
+    },
+    // No component is needed for a redirect-only route
+    component: { template: '' }
+  }
 ]
 
 const router = createRouter({
@@ -88,69 +113,70 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore()
+  const authStore = useAuthStore();
 
   try {
+    // Ensure auth state is initialized before any navigation
     if (!authStore.isInitialized) {
-      await authStore.initializeAuth()
+      await authStore.initializeAuth();
     }
 
-    const requiresAuth = to.matched.some(r => r.meta.requiresAuth)
-    const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
-
-    if (requiresAuth) {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      const isNetworkError = error && (error.message?.includes('fetch') || !navigator.onLine);
-      
-      if (!session && !isNetworkError) {
-        authStore.user = null;
-        authStore.userProfile = null;
-        if (to.path !== '/') return next('/');
+    const isLoggedIn = authStore.isAuthenticated;
+    const requiresAuth = to.matched.some(r => r.meta.requiresAuth);
+    const requiresGuest = to.matched.some(r => r.meta.requiresGuest);
+    
+    // The NotFound route now handles its own logic, so we can ignore it here.
+    if (to.name === 'NotFound') {
         return next();
-      } 
-      
-      if (session) {
-        authStore.user = session.user;
-      } else if (isNetworkError && !authStore.user) {
-        return next('/');
-      }
     }
 
-    const isLoggedIn = authStore.isAuthenticated
+    // Redirect unauthenticated users trying to access protected routes
+    if (requiresAuth && !isLoggedIn) {
+      return next({ path: '/' }); // Redirect to login
+    }
 
-    if (isLoggedIn && requiresGuest) {
+    // Redirect authenticated users trying to access guest-only routes (like login)
+    if (requiresGuest && isLoggedIn) {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
-      if (lastRoute === to.path) return next();
       return next(lastRoute);
     }
-
-    if (requiresAuth) {
-      const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin)
+    
+    // --- Post-Authentication Checks (Admin & Subscription) ---
+    if (requiresAuth && isLoggedIn) {
+      // Admin Role Check
+      const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin);
       if (requiresAdmin && !authStore.isAdmin) {
-         return next({ name: 'Dashboard' });
+        return next({ name: 'Dashboard' }); // Redirect non-admins
+      }
+
+      // Subscription Protection Check
+      const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
+      if (requiresSub && !authStore.isAdmin && authStore.isSubscriptionEnforced) {
+        const subStore = useMySubscriptionStore();
+        if (!subStore.isInitialized) {
+          await subStore.init(authStore.user);
+        }
+        
+        if (!subStore.isSubscribed) {
+          return next({ name: 'MySubscription', query: { access: 'denied' } });
+        }
       }
     }
 
-    // --- Subscription Protection Check (Optimized) ---
-    const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
-    if (requiresSub && isLoggedIn && !authStore.isAdmin) {
-        // نستخدم الإعداد المحمل مسبقاً في authStore بدلاً من الاستعلام المباشر
-        if (authStore.isSubscriptionEnforced) {
-            const subStore = useMySubscriptionStore();
-            if (!subStore.isInitialized) await subStore.init(authStore.user);
-            
-            if (!subStore.isSubscribed) {
-                return next({ name: 'MySubscription', query: { access: 'denied' } });
-            }
-        }
-    }
+    // If all checks pass, proceed to the route
+    next();
 
-    next()
   } catch (err) {
     logger.error('🚀 Router Guard Error:', err);
-    next();
+    // In case of error during initialization, prevent navigation to protected routes
+    if (to.meta.requiresAuth) {
+      next('/');
+    } else {
+      next();
+    }
   }
-})
+});
+
 
 router.afterEach((to) => {
   if (to.path.startsWith('/app')) {

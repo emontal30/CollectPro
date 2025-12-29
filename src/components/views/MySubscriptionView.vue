@@ -49,21 +49,26 @@
             <div class="divider"></div>
             
             <div class="remaining-section">
-               <h4 class="remaining-title">الأيام المتبقية</h4>
+               <h4 class="remaining-title">حالة الاشتراك</h4>
                <div class="days-counter" :class="store.ui.class">
-                 <span class="number">{{ store.daysRemaining }}</span>
-                 <span class="unit">يوم</span>
+                 <template v-if="store.ui.days !== null">
+                    <span class="number">{{ store.ui.days }}</span>
+                    <span class="unit">يوم متبقي</span>
+                 </template>
+                 <template v-else>
+                    <span class="unit text-lg">{{ store.ui.detailsPrefix }}</span>
+                 </template>
                </div>
             </div>
           </div>
-          <div v-else class="empty-state">
-            <i class="fas fa-ghost"></i>
-            <p>لا يوجد اشتراك نشط حالياً</p>
+          <div v-else class="empty-state text-center py-5">
+            <i class="fas fa-ghost fa-3x mb-3 text-muted"></i>
+            <p class="text-muted">لا يوجد اشتراك نشط حالياً</p>
           </div>
         </div>
 
         <div class="card-footer">
-          <router-link v-if="!store.isSubscribed || store.daysRemaining <= 0" to="/app/subscriptions" class="btn btn-primary btn-block">
+          <router-link v-if="!store.isSubscribed" to="/app/subscriptions" class="btn btn-primary btn-block">
              <i class="fas fa-rocket"></i> اشترك الآن
           </router-link>
           
@@ -242,12 +247,13 @@ onMounted(() => {
 .days-counter { display: inline-flex; flex-direction: column; padding: 20px 40px; border-radius: 24px; min-width: 160px; box-shadow: var(--shadow-md); transition: all 0.3s ease; }
 .days-counter .number { font-size: 3.5rem; font-weight: 900; line-height: 1; }
 .days-counter .unit { font-size: 1.1rem; font-weight: 700; margin-top: 8px; opacity: 0.9; }
+.days-counter .text-lg { font-size: 1.4rem; padding: 10px 0; }
 
 /* Dynamic Indicators Aligned with Sidebar Logic */
 .days-counter.active { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); }
 .days-counter.warning { background: rgba(254, 202, 87, 0.1); color: #feca57; border: 1px solid rgba(254, 202, 87, 0.2); animation: pulse 2s infinite; }
 .days-counter.expired { background: rgba(255, 107, 107, 0.1); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.2); }
-.days-counter.pending { background: rgba(155, 155, 155, 0.1); color: var(--gray-500); border: 1px solid rgba(155, 155, 155, 0.2); }
+.days-counter.pending { background: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.2); }
 
 .card-footer { padding: 24px; background: var(--gray-100); border-top: 1px solid var(--border-color); }
 .subscription-active-msg { text-align: center; color: var(--primary); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -278,7 +284,8 @@ onMounted(() => {
 /* --- Badges --- */
 .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .badge-active { background: var(--success, #2ecc71); }
-.badge-pending, .badge-warning { background: var(--warning, #feca57); }
+.badge-pending { background: #3498db; }
+.badge-warning { background: var(--warning, #feca57); }
 .badge-expired, .badge-cancelled { background: var(--gray-500, #95a5a6); }
 
 /* --- Strict Dark Mode Overrides (High Accuracy) --- */
@@ -309,7 +316,7 @@ onMounted(() => {
 :global(body.dark-mode) .text-muted { color: #aaa !important; }
 :global(body.dark-mode) .divider { background: #333 !important; opacity: 1; }
 :global(body.dark-mode) .days-counter.expired { background: rgba(255, 107, 107, 0.05); }
-:global(body.dark-mode) .days-counter.pending { background: rgba(255, 255, 255, 0.05); color: #888; }
+:global(body.dark-mode) .days-counter.pending { background: rgba(52, 152, 219, 0.05); color: #3498db; }
 :global(body.dark-mode) .empty-state { color: #777 !important; }
 
 @keyframes pulse {

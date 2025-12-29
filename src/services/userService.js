@@ -1,15 +1,15 @@
 import { apiInterceptor } from './apiInterceptor.js';
-import { authService } from './authService.js';
+import { supabase } from '@/supabase';
 import logger from '@/utils/logger.js';
 
 export const userService = {
   async getUser() {
-    const { data, error } = await authService.supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
     return { user: data.user, error };
   },
 
   async updateUser(updates) {
-    const { data, error } = await authService.supabase.auth.updateUser(updates);
+    const { data, error } = await supabase.auth.updateUser(updates);
     return { data, error };
   },
 
@@ -26,7 +26,7 @@ export const userService = {
     try {
       // 1. محاولة جلب المستخدم الحالي من جدول users
       let { data: profile, error } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('users')
           .select('*')
           .eq('id', userData.id)
@@ -49,7 +49,7 @@ export const userService = {
       if (!profile && !error) {
         
         const { data: newProfile, error: insertError } = await apiInterceptor(
-          authService.supabase.from('users').insert({
+          supabase.from('users').insert({
             id: userData.id,
             full_name: fullName,
             email: email,
@@ -87,7 +87,7 @@ export const userService = {
         if (Object.keys(updates).length > 0) {
             logger.info('♻️ Updating user profile with missing data:', updates);
             const { data: updatedProfile, error: updateError } = await apiInterceptor(
-              authService.supabase
+              supabase
                 .from('users')
                 .update(updates)
                 .eq('id', userData.id)

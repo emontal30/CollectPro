@@ -15,11 +15,11 @@
           <div v-if="store.selectedPlan" class="plan-summary">
             <div class="plan-info">
               <span class="plan-label">الخطة المختارة:</span>
-              <span class="plan-value">{{ store.selectedPlan.name }}</span>
+              <span class="plan-value highlighted-orange">{{ store.selectedPlan.name }}</span>
             </div>
             <div class="plan-info">
               <span class="plan-label">السعر:</span>
-              <span class="plan-value">{{ store.selectedPlan.price }} ج.م</span>
+              <span class="plan-value highlighted-orange">{{ store.selectedPlan.price }} ج.م</span>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@
                       </button>
                     </span>
                   </li>
-                  <li>ادخل المبلغ المطلوب: <strong>{{ store.selectedPlan?.price }} ج.م</strong></li>
+                  <li>ادخل المبلغ المطلوب: <strong class="highlighted-orange">{{ store.selectedPlan?.price }} ج.م</strong></li>
                   <li>بعد النجاح، انسخ <strong>رقم العملية</strong> وأدخله في الحقل أعلاه</li>
                 </ol>
               </div>
@@ -214,6 +214,11 @@ onMounted(() => {
 .plan-label { opacity: 0.9; margin-left: 5px; }
 .plan-value { font-weight: 700; }
 
+.highlighted-orange {
+  color: #fb923c !important; /* لون برتقالي واضح */
+  font-weight: 800;
+}
+
 .payment-form { padding: 30px; }
 
 .form-grid {
@@ -230,7 +235,7 @@ onMounted(() => {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: var(--gray-900); /* استخدام اللون الرئيسي للنص لضمان الوضوح */
+  color: var(--gray-900);
 }
 
 .input-wrapper {
@@ -439,15 +444,15 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Dark Mode Overrides - Simplified and fixed text visibility */
+/* Dark Mode Overrides */
 body.dark .input-label,
 body.dark .methods-title,
 body.dark .method-info h4 {
-  color: var(--gray-900); /* سيعطي #f1f5f9 في الوضع الليلي بناءً على variables.css */
+  color: var(--gray-900);
 }
 
 body.dark .base-input { 
-  background: var(--gray-100); /* سيعطي اللون الداكن المناسب للخلفية من variables.css */
+  background: var(--gray-100);
   border-color: var(--gray-300); 
   color: #f8fafc; 
 }

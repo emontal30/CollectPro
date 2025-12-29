@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/supabase'
-import router from '@/router'
 import { useNotifications } from '@/composables/useNotifications';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
@@ -15,21 +14,16 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const isInitialized = ref(false)
   const isSubscriptionEnforced = ref(false)
-  const authWarning = ref('')
+  const authListener = ref(null) // مرجع لحفظ المستمع
 
   const { addNotification } = useNotifications()
   const settingsStore = useSettingsStore()
-  const SESSION_DURATION = 48 * 60 * 60 * 1000; // 48 hours
 
   // --- Getters ---
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => userProfile.value?.role === 'admin')
 
   // --- Actions ---
-
-  function updateLastActivity() {
-    localStorage.setItem('last_active_time', Date.now().toString());
-  }
 
   function cleanUrlHash() {
     if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
@@ -50,26 +44,49 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * تحميل إعدادات النظام مع وجود قيم افتراضية قوية لمنع التعارضات
+   */
   async function loadSystemConfig() {
+    const DEFAULT_ENFORCE = false; // القيمة الافتراضية في حالة عدم وجود الإعداد
+
     try {
+      // 1. محاولة القراءة من الكاش المحلي أولاً لاستجابة سريعة
       const cached = localStorage.getItem('sys_config_enforce');
       if (cached !== null) {
         isSubscriptionEnforced.value = cached === 'true';
+      } else {
+        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
       }
 
-      const { data: config } = await supabase
+      // 2. جلب القيمة من قاعدة البيانات لتحديث الكاش
+      const { data: config, error } = await supabase
         .from('system_config')
         .select('value')
         .eq('key', 'enforce_subscription')
         .maybeSingle();
       
+      // في حالة وجود خطأ في الصلاحيات (RLS) أو الشبكة
+      if (error) throw error;
+
       if (config) {
+        // تحويل القيمة إلى Boolean (سواء كانت نص "true" أو قيمة منطقية)
         const value = config.value === 'true' || config.value === true;
         isSubscriptionEnforced.value = value;
         localStorage.setItem('sys_config_enforce', String(value));
+        logger.info(`⚙️ System Config Loaded: enforce_subscription = ${value}`);
+      } else {
+        // إذا لم يعثر على المفتاح، نستخدم القيمة الافتراضية
+        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
+        localStorage.setItem('sys_config_enforce', String(DEFAULT_ENFORCE));
+        logger.info(`ℹ️ Config key not found, using default: ${DEFAULT_ENFORCE}`);
       }
     } catch (err) {
-      logger.warn('Config Load Warning:', err.message);
+      // في حالة الفشل التام (مثلاً أوفلاين)، نعتمد على ما في الكاش أو القيمة الافتراضية
+      logger.warn('⚠️ Config Load Warning (Using fallback):', err.message);
+      if (isSubscriptionEnforced.value === null) {
+        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
+      }
     }
   }
 
@@ -78,45 +95,40 @@ export const useAuthStore = defineStore('auth', () => {
     
     isLoading.value = true;
     try {
+      // تحميل إعدادات النظام أولاً لضمان عمل القيود فوراً
       await loadSystemConfig();
-
-      const lastActiveTime = localStorage.getItem('last_active_time');
-      if (lastActiveTime) {
-        const timeSinceLastActive = Date.now() - parseInt(lastActiveTime, 10);
-        if (timeSinceLastActive > SESSION_DURATION) {
-          logger.info('🛑 Session expired by duration. Logging out.');
-          await logout();
-          return;
-        }
-      }
 
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
 
       if (session?.user) {
         user.value = session.user;
-        updateLastActivity();
         await syncUserProfile(session.user);
-        // تأكيد تطبيق إعدادات الزوم والوضع الليلي فور استعادة الجلسة
         settingsStore.applySettings();
         cleanUrlHash();
       }
 
-      supabase.auth.onAuthStateChange(async (event, session) => {
+      // تنظيف المستمع القديم إن وجد قبل إنشاء واحد جديد
+      if (authListener.value) {
+        authListener.value.subscription.unsubscribe();
+      }
+
+      const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        logger.info(`🔐 Auth State Change: ${event}`);
+        
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
-            updateLastActivity();
-            syncUserProfile(session.user);
-            // تأكيد تطبيق الإعدادات عند تسجيل الدخول
+            await syncUserProfile(session.user);
             settingsStore.applySettings();
           }
         } else if (event === 'SIGNED_OUT') {
           user.value = null;
           userProfile.value = null;
-          localStorage.removeItem('last_active_time');
         }
       });
+
+      authListener.value = listener;
 
     } catch (err) {
       logger.error('💥 Auth Init Error:', err);
@@ -140,6 +152,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (error) throw error;
     } catch (err) {
       addNotification('فشل تسجيل الدخول: ' + err.message, 'error');
+    } finally {
       isLoading.value = false;
     }
   }
@@ -147,21 +160,37 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     isLoading.value = true;
     try {
+      logger.info('🚀 Initiating user logout...');
+
+      // 1. تنظيف مستمع Supabase أولاً
+      if (authListener.value) {
+        authListener.value.subscription.unsubscribe();
+        authListener.value = null;
+      }
+
+      // 2. تصفير الحالة المحلية
       user.value = null;
       userProfile.value = null;
-      localStorage.removeItem('last_active_time');
-      localStorage.removeItem('app_last_route');
-      
+      isInitialized.value = false; // إعادة ضبط الحالة للسماح بتهيئة جديدة لاحقاً
+
+      // 3. تنظيف المخازن المرتبطة
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
+      localStorage.removeItem('app_last_route');
 
-      await supabase.auth.signOut();
+      // 4. تسجيل الخروج من Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      logger.info('✅ User signed out successfully.');
+      return true;
+
     } catch (err) {
-      logger.warn('Logout warning:', err);
+      logger.error('💥 Logout failed:', err);
+      addNotification('فشل تسجيل الخروج، يرجى المحاولة مرة أخرى', 'error');
+      return false;
     } finally {
-      isInitialized.value = false;
       isLoading.value = false;
-      window.location.href = '/';
     }
   }
 

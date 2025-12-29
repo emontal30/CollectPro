@@ -80,22 +80,17 @@ const handleTouchEnd = () => {
   const diffX = touchStartX.value - touchEndX.value;
   const diffY = touchStartY.value - touchEndY.value;
   
-  // التأكد من أن الحركة أفقية وليست رأسية (لتجنب التداخل مع الـ scroll)
   if (Math.abs(diffX) > Math.abs(diffY)) {
-    // حساسية السحب (بكسل)
     const threshold = 60; 
     
     if (Math.abs(diffX) > threshold) {
       if (diffX > 0) {
-        // سحب لليسار (فتح القائمة لأن التطبيق RTL)
-        // يجب أن يبدأ السحب من حافة الشاشة اليمنى (مثلاً أول 30 بكسل)
         const screenWidth = window.innerWidth;
         const edgeThreshold = 30;
         if (touchStartX.value > screenWidth - edgeThreshold && !sidebarStore.isOpen) {
           sidebarStore.toggleSidebar();
         }
       } else {
-        // سحب لليمين (إغلاق القائمة)
         if (sidebarStore.isOpen) {
           sidebarStore.closeSidebar();
         }
@@ -138,7 +133,6 @@ watch(() => subStore.isInitialized, (val) => {
   width: 100%;
   position: relative;
   overflow-x: hidden;
-  touch-action: pan-y; 
 }
 
 .fixed-header {
@@ -149,15 +143,6 @@ watch(() => subStore.isInitialized, (val) => {
   z-index: var(--z-header, 1000);
   background: var(--header-bg);
   box-shadow: var(--shadow-md);
-}
-
-.alert-container {
-  position: fixed;
-  top: calc(var(--header-height, 70px) + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10000;
-  pointer-events: none;
 }
 
 .app-header {
@@ -175,29 +160,37 @@ watch(() => subStore.isInitialized, (val) => {
 }
 
 .app-main {
-  flex: 1 0 auto; /* هذا يضمن أن المحتوى ينمو ليأخذ المساحة المتبقية */
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
   padding-top: var(--header-height, 70px);
-  overflow-x: auto;
 }
 
 .content-wrapper {
-  flex: 1;
+  flex: 1 0 auto;
   width: 100%;
   max-width: var(--app-min-width, 768px);
   margin: 0 auto;
-  padding-top: 20px;
-  padding-bottom: 40px; /* زيادة مساحة التباعد السفلية */
+  padding: 20px 10px 60px 10px;
+  min-height: calc(100vh - var(--header-height, 70px) - 100px); /* يضمن مساحة كافية دائماً */
 }
 
 .app-footer {
-  flex-shrink: 0; /* يمنع الفوتر من التقلص */
+  flex-shrink: 0;
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-top: auto;
+  margin-top: auto; /* يدفعه لأسفل الصفحة دائماً */
+}
+
+.alert-container {
+  position: fixed;
+  top: calc(var(--header-height, 70px) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  pointer-events: none;
 }
 
 :deep(.notification-container) {

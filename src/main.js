@@ -37,50 +37,24 @@ app.directive('click-outside', {
 app.use(pinia)
 app.use(router)
 
-// 4. Global PWA Handler
+// 4. Global PWA Install Prompt Handler
 window.addEventListener('beforeinstallprompt', (e) => {
-  logger.info('🚀 Global: Captured beforeinstallprompt event');
-  e.preventDefault(); 
-  window.deferredPrompt = e; 
+  logger.info('🚀 Global: Captured beforeinstallprompt event. Preventing default behavior.');
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  window.deferredPrompt = e;
+  // Optionally, send a custom event to notify the UI to show a custom install button.
+  window.dispatchEvent(new CustomEvent('pwa-install-prompt'));
 });
 
-/**
- * دالة ذكية للتحقق من وجود تحديثات جديدة
- * متوافقة مع بنية المشروع وتستخدم سجلات النظام
- */
-function setupUpdateListener() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      logger.info('♻️ New Service Worker Controller detected. Refreshing...');
-    });
-
-    window.addEventListener('load', async () => {
-      try {
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  logger.info('✨ New content is available; please refresh.');
-                }
-              };
-            }
-          };
-        }
-      } catch (err) {
-        logger.error('❌ Service Worker registration check failed:', err);
-      }
-    });
-  }
-}
 
 // 5. Initialize Background Services
 logger.info('🧠 Initializing Smart Cache System...');
+// Automatically clean up old cache entries every 5 minutes.
 startAutoCleaning(5 * 60 * 1000);
-setupUpdateListener();
 
+// In development mode, set up a cache monitor for debugging.
 if (import.meta.env.DEV) {
   setupCacheMonitor();
 }

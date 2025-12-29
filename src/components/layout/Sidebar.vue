@@ -118,6 +118,7 @@
 
 <script setup>
 import { computed, inject, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useSettingsStore } from '@/stores/settings';
@@ -132,6 +133,7 @@ const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const subStore = useMySubscriptionStore();
 const archiveStore = useArchiveStore();
+const router = useRouter();
 
 const { confirm, addNotification } = inject('notifications');
 
@@ -243,7 +245,10 @@ const handleLogout = async () => {
   });
   if (!result.isConfirmed) return;
   try {
-    await authStore.logout();
+    const success = await authStore.logout();
+    if (success) {
+      router.push('/');
+    }
   } catch (error) {
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
   }

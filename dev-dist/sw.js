@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-8919e3e0'], (function (workbox) { 'use strict';
+define(['./workbox-9f6ada0c'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -78,40 +78,36 @@ define(['./workbox-8919e3e0'], (function (workbox) { 'use strict';
    * See https://goo.gl/S9QRab
    */
   workbox.precacheAndRoute([{
-    "url": "/index.html",
-    "revision": "0.2nfo1i8nhog"
+    "url": "index.html",
+    "revision": "0.1vpfrthvr0s"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(({
-    url
-  }) => url.origin === "https://altnvsolaqphpndyztup.supabase.co", new workbox.NetworkFirst({
+  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/.*/, new workbox.StaleWhileRevalidate({
     "cacheName": "supabase-api-cache",
-    "networkTimeoutSeconds": 5,
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
-      maxAgeSeconds: 604800
+      maxEntries: 500,
+      maxAgeSeconds: 2592000
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/^https:\/\/fonts\.googleapis\.com\/.*/i, new workbox.StaleWhileRevalidate({
+  workbox.registerRoute(/^https:\/\/fonts\.googleapis\.com\/.*/i, new workbox.CacheFirst({
     "cacheName": "google-fonts-cache",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 10,
       maxAgeSeconds: 31536000
     })]
   }), 'GET');
-  workbox.registerRoute(({
-    request
-  }) => request.destination === "image", new workbox.CacheFirst({
-    "cacheName": "images-cache",
+  workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf|eot)$/, new workbox.CacheFirst({
+    "cacheName": "assets-cache",
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 50,
+      maxEntries: 200,
       maxAgeSeconds: 2592000
     })]
   }), 'GET');
 
 }));
+//# sourceMappingURL=sw.js.map

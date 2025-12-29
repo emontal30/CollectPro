@@ -7,7 +7,6 @@ import logger from '@/utils/logger.js'
 import { supabase } from '@/supabase';
 
 export const useAdminStore = defineStore('admin', () => {
-  // --- State ---
   const stats = ref({});
   const chartsData = ref({ piePercentages: [0, 0, 0, 0], monthlyLabels: [], monthlyValues: [] });
   const usersList = ref([]);
@@ -26,8 +25,6 @@ export const useAdminStore = defineStore('admin', () => {
   const isSubscriptionEnforced = ref(false);
 
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
-
-  // --- Actions ---
 
   watch(() => filters.value.activeUsersPeriod, (newVal) => {
     localStorage.setItem('admin_active_users_period', newVal);
@@ -61,6 +58,63 @@ export const useAdminStore = defineStore('admin', () => {
       }
     } catch (e) {
       logger.error('Error fetching system config:', e);
+    }
+  }
+
+  async function signOutUser(userId, userName) {
+    const result = await confirm({
+        title: 'تأكيد إبطال الجلسة',
+        text: `هل أنت متأكد من تسجيل الخروج القسري للمستخدم "${userName}"؟ سيتم إجباره على تسجيل الدخول مرة أخرى.`,
+        icon: 'warning',
+        confirmButtonText: 'نعم، قم بإبطال الجلسة',
+        confirmButtonColor: 'var(--danger)'
+    });
+
+    if (!result.isConfirmed) return;
+
+    showLoading('جاري إبطال جلسة المستخدم...');
+    try {
+        // 1. Get the current session's token to authenticate the request.
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session || !session.access_token) {
+            throw new Error('فشلت المصادقة: لم يتم العثور على جلسة عمل نشطة. يرجى إعادة تسجيل الدخول.');
+        }
+        const token = session.access_token;
+
+        // 2. Use a manual fetch call for maximum stability.
+        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
+        
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ userId })
+        });
+
+        // 3. Handle the response.
+        if (!response.ok) {
+            const responseBodyText = await response.text();
+            let errorMsg;
+            try {
+                const errorData = JSON.parse(responseBodyText);
+                errorMsg = errorData.error || responseBodyText;
+            } catch (e) {
+                errorMsg = responseBodyText || `Edge Function returned status ${response.status}.`;
+            }
+            throw new Error(errorMsg);
+        }
+
+        closeLoading();
+        showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
+
+    } catch (err) {
+        closeLoading();
+        logger.error('Error signing out user:', err);
+        showError(err.message || 'حدث خطأ غير متوقع.');
     }
   }
 
@@ -180,14 +234,6 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  /**
-   * تفعيل يدوي
-   * @param {string} userId - معرف المستخدم
-   * @param {number} days - عدد الأيام
-   * @param {boolean} hasActiveSub - هل لديه اشتراك نشط؟
-   * @param {boolean} shouldRefresh - هل نقوم بتحديث البيانات بعد الانتهاء؟ (مفيد في التفعيل الجماعي)
-   * @param {boolean} skipConfirm - هل نتخطى رسالة التأكيد؟ (مفيد في التفعيل الجماعي)
-   */
   async function activateManualSubscription(userId, days, hasActiveSub, shouldRefresh = true, skipConfirm = false) {
     const numDays = Number(days);
     if (!numDays || isNaN(numDays) || numDays === 0) {
@@ -228,7 +274,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (shouldRefresh) closeLoading();
       logger.error('Error activating manual subscription:', err);
       if (shouldRefresh) showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
-      throw err; // إعادة رمي الخطأ للتعامل معه في التفعيل الجماعي
+      throw err;
     }
   }
 
@@ -240,6 +286,7 @@ export const useAdminStore = defineStore('admin', () => {
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers,
-    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement
+    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement,
+    signOutUser
   };
 });

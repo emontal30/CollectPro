@@ -1,5 +1,5 @@
-import { apiInterceptor } from './api.js';
-import { authService } from './authService.js';
+import { apiInterceptor } from './apiInterceptor.js';
+import { supabase } from '@/supabase.js';
 import logger from '@/utils/logger.js';
 
 export const paymentService = {
@@ -14,7 +14,7 @@ export const paymentService = {
     if (!planInfo) throw new Error('خطة غير صالحة');
 
     const { data, error } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscription_plans')
         .select('*')
         .eq('duration_months', planInfo.months)
@@ -44,7 +44,7 @@ export const paymentService = {
   async submitPayment(userId, planId, transactionId, userData, selectedPlan) {
     // Check for active subscriptions
     const { data: activeSubs } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
@@ -54,7 +54,7 @@ export const paymentService = {
     if (activeSubs && activeSubs.length > 0) {
       // Cancel previous subscriptions
       await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscriptions')
           .update({ status: 'cancelled', end_date: new Date().toISOString() })
           .eq('user_id', userId)
@@ -64,7 +64,7 @@ export const paymentService = {
 
     // Clean up previous pending requests
     await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .delete()
         .eq('user_id', userId)
@@ -73,7 +73,7 @@ export const paymentService = {
 
     // Ensure user exists in users table
     const { error: userCheckError } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('users')
         .select('id')
         .eq('id', userId)
@@ -82,7 +82,7 @@ export const paymentService = {
 
     if (userCheckError) {
       // Add user if not exists
-      await apiInterceptor(authService.supabase.from('users').upsert({
+      await apiInterceptor(supabase.from('users').upsert({
         id: userId,
         email: userData.email || 'user@example.com',
         full_name: userData.name || 'مستخدم'
@@ -91,7 +91,7 @@ export const paymentService = {
 
     // Insert new subscription
     const { error: insertError } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .insert({
           user_id: userId,

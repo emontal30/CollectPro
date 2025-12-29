@@ -84,15 +84,14 @@
       </div>
 
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table id="logged-in-users-table" class="modern-table">
+        <table id="logged-in-users-table" class="modern-table auto-layout">
           <thead>
             <tr>
               <th class="th-checkbox">
                 <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll">
               </th>
               <th>المستخدم</th>
-              <th>تاريخ التسجيل</th>
-              <th>حالة الاشتراك</th>
+              <th class="col-status text-center">حالة الاشتراك</th>
               <th class="col-subscription-days">إضافة أيام</th>
               <th class="text-center">إجراء</th>
             </tr>
@@ -109,10 +108,18 @@
                   <div class="user-short-id">ID: {{ user.id.slice(0, 8) }}</div>
                 </div>
               </td>
-              <td>{{ store.formatDate(user.created_at) }}</td>
-              <td>
-                <span v-if="user.hasActiveSub" class="status-badge status-active">فعال حتى {{ store.formatDate(user.expiryDate) }}</span>
-                <span v-else class="status-badge status-cancelled">غير نشط</span>
+              <td class="col-status">
+                <div class="status-column centered">
+                  <span v-if="user.hasActiveSub" class="status-badge status-active">نشط</span>
+                  <span v-else class="status-badge status-cancelled">غير نشط</span>
+                  
+                  <div class="expiry-date-sub">
+                    من: {{ store.formatDate(user.created_at) }}
+                  </div>
+                  <div v-if="user.hasActiveSub" class="expiry-date-sub">
+                    إلى: {{ store.formatDate(user.expiryDate) }}
+                  </div>
+                </div>
               </td>
               <td class="col-subscription-days">
                 <div class="input-with-notch">
@@ -121,12 +128,20 @@
                 </div>
               </td>
               <td class="text-center">
-                <button 
-                  class="btn btn--icon"
-                  :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
-                  @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
-                  <i class="fas fa-play-circle"></i>
-                </button>
+                <div class="d-flex justify-center align-center gap-1 h-full">
+                  <button 
+                    class="btn btn--icon"
+                    :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
+                    @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
+                    <i class="fas fa-play-circle"></i>
+                  </button>
+                  <button 
+                    class="btn btn--icon text-danger"
+                    title="إبطال جلسة المستخدم (تسجيل خروج إجباري)"
+                    @click="store.signOutUser(user.id, user.full_name)">
+                    <i class="fas fa-power-off"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -140,7 +155,7 @@
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table" v-if="store.pendingSubscriptions.length > 0">
+        <table class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0">
           <thead>
             <tr>
               <th>المستخدم</th>
@@ -162,9 +177,11 @@
               <td>{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
               <td class="font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
               <td>{{ store.formatDate(sub.created_at) }}</td>
-              <td class="text-center d-flex justify-center gap-2">
-                <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
-                <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
+              <td class="text-center">
+                <div class="d-flex justify-center align-center gap-2 h-full">
+                  <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
+                  <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -191,13 +208,12 @@
           </select>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table">
+        <table class="modern-table auto-layout">
           <thead>
             <tr>
               <th>المستخدم</th>
-              <th>الحالة</th>
-              <th>تاريخ الانتهاء</th>
-              <th class="text-center">الأيام</th>
+              <th class="col-status text-center">الحالة</th>
+              <th class="col-days text-center">الأيام</th>
               <th class="text-center">إجراء</th>
             </tr>
           </thead>
@@ -210,34 +226,96 @@
                   <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
                 </div>
               </td>
-              <td>
-                <span class="status-badge" :class="`status-${sub.status}`">
-                  {{ sub.status === 'cancelled' ? 'معلق' : sub.status }}
-                </span>
+              <td class="col-status">
+                <div class="status-column centered">
+                  <span class="status-badge" :class="`status-${sub.status}`">
+                    {{ sub.status === 'active' ? 'نشط' : (sub.status === 'cancelled' ? 'معلق' : (sub.status === 'expired' ? 'منتهي' : sub.status)) }}
+                  </span>
+                  <div v-if="sub.end_date" class="expiry-date-sub">
+                    إلى: {{ store.formatDate(sub.end_date) }}
+                  </div>
+                </div>
               </td>
-              <td>{{ store.formatDate(sub.end_date) }}</td>
-              <td class="text-center font-bold">
+              <td class="col-days text-center font-bold">
                 <span v-if="sub.status === 'active'" :style="{ color: getRemainingDaysColor(sub.end_date) }">
                   {{ calculateRemainingDays(sub.end_date) }}
                 </span>
                 <span v-else>-</span>
               </td>
-              <td class="text-center d-flex justify-center gap-2">
-                 <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')">
-                   <i class="fas fa-pause"></i>
-                 </button>
-                 <button v-if="sub.status === 'cancelled'" class="btn btn--icon text-success" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')">
-                   <i class="fas fa-play"></i>
-                 </button>
-                <button class="btn btn--icon text-danger" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')">
-                  <i class="fas fa-trash"></i>
-                </button>
+              <td class="text-center">
+                <div class="d-flex justify-center align-center gap-2 h-full">
+                  <button class="btn btn--icon text-info" title="تفاصيل" @click="showSubscriptionDetails(sub)">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')">
+                    <i class="fas fa-pause"></i>
+                  </button>
+                  <button v-if="sub.status === 'cancelled'" class="btn btn--icon text-success" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')">
+                    <i class="fas fa-play"></i>
+                  </button>
+                  <button class="btn btn--icon text-danger" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Modal التفاصيل -->
+    <BaseModal 
+      v-model:show="showDetailsModal" 
+      :title="'تفاصيل اشتراك: ' + (selectedSub?.users?.full_name || 'مستخدم')"
+    >
+      <div v-if="selectedSub" class="subscription-details">
+        <div class="details-grid">
+          <div class="detail-item">
+            <label>اسم المستخدم:</label>
+            <span>{{ selectedSub.users?.full_name || 'غير متوفر' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>البريد الإلكتروني:</label>
+            <span>{{ selectedSub.users?.email }}</span>
+          </div>
+          <div class="detail-item">
+            <label>معرف المستخدم (ID):</label>
+            <span class="font-mono text-xs">{{ selectedSub.user_id }}</span>
+          </div>
+          <hr class="full-width" />
+          <div class="detail-item">
+            <label>الخطة المختارة:</label>
+            <span class="font-bold text-primary">{{ selectedSub.plan_name || selectedSub.subscription_plans?.name_ar || 'غير محدد' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>السعر:</label>
+            <span>{{ selectedSub.price || 0 }} ج.م</span>
+          </div>
+          <div class="detail-item">
+            <label>رقم عملية التحويل:</label>
+            <span class="font-mono font-bold text-success">{{ selectedSub.transaction_id || 'دفع يدوي' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>الحالة الحالية:</label>
+            <span class="status-badge" :class="`status-${selectedSub.status}`">{{ selectedSub.status }}</span>
+          </div>
+          <div class="detail-item">
+            <label>تاريخ طلب الاشتراك:</label>
+            <span>{{ store.formatDate(selectedSub.created_at) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>تاريخ انتهاء الاشتراك:</label>
+            <span v-if="selectedSub.end_date" class="font-bold text-danger">{{ store.formatDate(selectedSub.end_date) }}</span>
+            <span v-else>-</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn btn-secondary" @click="showDetailsModal = false">إغلاق</button>
+      </template>
+    </BaseModal>
+
   </div>
 </template>
 
@@ -245,6 +323,7 @@
 import { ref, onMounted, computed, inject } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import BaseModal from '@/components/ui/BaseModal.vue';
 
 const store = useAdminStore();
 const { confirm, addNotification } = inject('notifications');
@@ -259,6 +338,15 @@ const adminStats = {
 
 const selectedUsers = ref([]);
 const bulkDays = ref(null);
+
+// State للمودال
+const showDetailsModal = ref(false);
+const selectedSub = ref(null);
+
+const showSubscriptionDetails = (sub) => {
+  selectedSub.value = sub;
+  showDetailsModal.value = true;
+};
 
 const handleActiveUsersPeriodChange = async () => {
   await store.fetchStats(false);
@@ -478,12 +566,88 @@ input:checked + .slider:before { transform: translateX(26px); }
   color: var(--gray-600);
   font-family: var(--font-family-mono);
   background: var(--gray-100);
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
   margin-top: 4px;
+  line-height: 1;
 }
 
+/* Table Width Adjustments */
+.modern-table.auto-layout {
+  table-layout: auto !important;
+  width: 100%;
+}
+
+.modern-table.auto-layout th,
+.modern-table.auto-layout td {
+  white-space: nowrap;
+}
+
+/* Specifically keep status and days columns compact */
+.col-status {
+  width: 1%;
+  min-width: 120px;
+}
+
+.col-days {
+  width: 1%;
+  min-width: 80px;
+}
+
+.status-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.status-column.centered {
+  align-items: center;
+  text-align: center;
+}
+
+.expiry-date-sub {
+  font-size: 10px;
+  color: var(--gray-600);
+  margin-top: 2px;
+  font-weight: 500;
+  width: 100%;
+}
+
+/* Details Modal Styles */
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-item:last-child { border-bottom: none; }
+
+.detail-item label {
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
+.full-width {
+  grid-column: 1 / -1;
+  border: none;
+  border-top: 1px dashed var(--border-color);
+  margin: 10px 0;
+}
+
+.h-full { height: 100%; }
+
 body.dark .user-short-id { background: rgba(255, 255, 255, 0.05); color: var(--gray-400); }
+body.dark .expiry-date-sub { color: var(--gray-500); }
 body.dark .bg-light { background-color: #0f172a !important; border-color: #334155 !important; }
 body.dark .border-bottom { border-color: #334155 !important; }
+body.dark .detail-item label { color: var(--gray-400); }
 </style>

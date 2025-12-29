@@ -1,12 +1,12 @@
 import { apiInterceptor } from './api.js';
-import { authService } from './authService.js';
+import { supabase } from '@/supabase';
 
 export const dashboardService = {
   async getDashboardData() {
     try {
       // Fetch daily visits
       const { data: dailyVisits, error: visitsError } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('daily_visits')
           .select('count')
           .single()
@@ -14,14 +14,14 @@ export const dashboardService = {
 
       // Fetch total users
       const { count: totalUsers, error: usersError } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
       );
 
       // Fetch active subscriptions
       const { count: activeSubscriptions, error: subsError } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('user_subscriptions')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active')
@@ -29,7 +29,7 @@ export const dashboardService = {
 
       // Fetch revenue statistics
       const { data: revenueStats, error: revenueError } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscription_payments')
           .select('amount, created_at')
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())

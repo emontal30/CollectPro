@@ -256,6 +256,12 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
     min-width: 100px !important;
 }
 
+/* Fix for table cells content overflow and alignment */
+.modern-table td {
+  overflow: visible !important; /* Allow controls like notch-sign to be visible */
+  white-space: normal !important; /* Allow wrapping if needed, but we keep it centered */
+}
+
 /* 11. Dark Mode Specific Overrides for Total Row */
 body.dark .total-row {
   background: var(--table-header-bg) !important;

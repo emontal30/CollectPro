@@ -353,8 +353,8 @@ const checkAndAddEmptyRow = (index) => {
   }
 };
 
-const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
-const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToLocalStorage(); checkAndAddEmptyRow(index); };
+const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToStorage(); checkAndAddEmptyRow(index); };
+const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToStorage(); checkAndAddEmptyRow(index); };
 
 const toggleSign = (row, field) => {
   const currentVal = row[field];
@@ -365,7 +365,7 @@ const toggleSign = (row, field) => {
   } else {
     row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
   }
-  store.saveRowsToLocalStorage();
+  store.saveRowsToStorage();
   if (field === 'collector') syncWithCounterStore();
 };
 
@@ -381,17 +381,17 @@ const handleNumericInput = (event, row, field) => {
 
 const updateAmount = (row, index, event) => { 
   handleNumericInput(event, row, 'amount');
-  store.saveRowsToLocalStorage(); 
+  store.saveRowsToStorage(); 
   checkAndAddEmptyRow(index); 
 };
 const updateExtra = (row, index, event) => { 
   handleNumericInput(event, row, 'extra');
-  store.saveRowsToLocalStorage(); 
+  store.saveRowsToStorage(); 
   checkAndAddEmptyRow(index); 
 };
 const updateCollector = (row, index, event) => { 
   handleNumericInput(event, row, 'collector');
-  store.saveRowsToLocalStorage(); 
+  store.saveRowsToStorage(); 
   checkAndAddEmptyRow(index); 
   syncWithCounterStore(); 
 };

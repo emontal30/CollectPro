@@ -6,7 +6,6 @@ import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
-import { supabase } from '@/supabase';
 
 export const useArchiveStore = defineStore('archive', () => {
   const rows = ref([]);
@@ -40,8 +39,11 @@ export const useArchiveStore = defineStore('archive', () => {
 
   async function loadAvailableDates() {
     try {
-      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
-      if (!user) return;
+      const user = authStore.user;
+      if (!user) {
+        logger.warn('ArchiveStore: Cannot load dates, user not authenticated.');
+        return;
+      }
 
       const allKeys = await localforage.keys();
       const localDates = allKeys
@@ -50,7 +52,6 @@ export const useArchiveStore = defineStore('archive', () => {
 
       let cloudDates = [];
       
-      // نعتمد على الخدمة الآن لأنها محمية بـ Interceptor
       const { dates, error } = await api.archive.getAvailableDates(user.id);
       if (!error && dates) {
         cloudDates = dates;
@@ -84,13 +85,18 @@ export const useArchiveStore = defineStore('archive', () => {
     isGlobalSearching.value = false;
     
     try {
-      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
       const localKey = `${DB_PREFIX}${dateStr}`;
       const localData = await localforage.getItem(localKey);
       
       if (localData) {
         rows.value = (Array.isArray(localData) ? localData : (localData.rows || [])).map(r => ({...r, date: dateStr}));
-      } else if (user) {
+      } else {
+        const user = authStore.user;
+        if (!user) {
+          logger.warn('ArchiveStore: Cannot fetch from cloud, user not authenticated.');
+          rows.value = [];
+          return;
+        }
         const { data, error } = await api.archive.getArchiveByDate(user.id, dateStr);
 
         if (!error && data) {
@@ -99,8 +105,6 @@ export const useArchiveStore = defineStore('archive', () => {
         } else {
           rows.value = [];
         }
-      } else {
-        rows.value = [];
       }
     } catch (err) {
       logger.error('❌ ArchiveStore: loadArchiveByDate Error:', err);
@@ -116,29 +120,32 @@ export const useArchiveStore = defineStore('archive', () => {
     isLoading.value = true;
     isGlobalSearching.value = true;
     const q = query.toLowerCase();
-    const results = [];
-
+    
     try {
       const allKeys = await localforage.keys();
       const archKeys = allKeys.filter(k => k.startsWith(DB_PREFIX));
 
-      for (const key of archKeys) {
+      // Fetch all archive data in parallel for a massive performance boost.
+      const allData = await Promise.all(archKeys.map(key => localforage.getItem(key)));
+
+      const results = allData.flatMap((data, index) => {
+        const key = archKeys[index];
         const dateStr = key.replace(DB_PREFIX, '');
-        const data = await localforage.getItem(key);
         const records = Array.isArray(data) ? data : (data.rows || []);
         
-        const matches = records.filter(r => 
-          (r.shop && r.shop.toLowerCase().includes(q)) || 
-          (r.code && r.code.toString().toLowerCase().includes(q))
-        ).map(r => ({ ...r, date: dateStr }));
-        
-        results.push(...matches);
-      }
+        return records
+          .filter(r => 
+            (r.shop && r.shop.toLowerCase().includes(q)) || 
+            (r.code && r.code.toString().toLowerCase().includes(q))
+          )
+          .map(r => ({ ...r, date: dateStr }));
+      });
 
       rows.value = results;
       selectedDate.value = '';
     } catch (err) {
       logger.error('❌ Global Search Error:', err);
+      addNotification('حدث خطأ أثناء البحث الشامل', 'error');
     } finally {
       isLoading.value = false;
     }
@@ -148,7 +155,6 @@ export const useArchiveStore = defineStore('archive', () => {
     if (!dateStr) return { success: false, message: 'لا يوجد تاريخ محدد' };
     isLoading.value = true;
     try {
-      const user = authStore.user || (await supabase.auth.getSession()).data.session?.user;
       await localforage.removeItem(`${DB_PREFIX}${dateStr}`);
       
       if (selectedDate.value === dateStr) {
@@ -156,9 +162,9 @@ export const useArchiveStore = defineStore('archive', () => {
         selectedDate.value = '';
       }
 
+      const user = authStore.user;
       if (user) {
         const { error } = await api.archive.deleteArchiveByDate(user.id, dateStr);
-        // إذا فشل الحذف بسبب الشبكة، نضيفه لطابور المزامنة
         if (error && (error.status === 'offline' || error.status === 'network_error')) {
           await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
         } else if (error) {

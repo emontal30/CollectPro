@@ -1,5 +1,5 @@
 import { apiInterceptor } from './api.js';
-import { authService } from './authService.js';
+import { supabase } from '@/supabase';
 import logger from '@/utils/logger.js';
 
 export const adminService = {
@@ -11,7 +11,7 @@ export const adminService = {
     try {
       // 1. جلب الإحصائيات الأساسية من جدول statistics
       const { data: statsData } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('statistics')
           .select('*')
           .eq('id', '00000000-0000-0000-0000-000000000001')
@@ -24,7 +24,7 @@ export const adminService = {
       dateLimit.setDate(dateLimit.getDate() - activeDays);
       
       const { count: activeUsersCount } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('users')
           .select('id', { count: 'exact', head: true })
           .gte('updated_at', dateLimit.toISOString())
@@ -32,8 +32,8 @@ export const adminService = {
 
       // 3. جلب العدادات الأخرى خفيفة الوزن
       const [cancelledRes, expiredRes] = await Promise.all([
-        apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
-        apiInterceptor(authService.supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'))
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'))
       ]);
 
       const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
@@ -58,7 +58,7 @@ export const adminService = {
    */
   async getPendingSubscriptions() {
     const { data } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .select(`
           *,
@@ -76,7 +76,7 @@ export const adminService = {
    */
   async getUsers() {
     const { data, error } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('users')
         .select('*, subscriptions(id, status, end_date)')
         .order('created_at', { ascending: false })
@@ -99,7 +99,7 @@ export const adminService = {
    * 4. جلب جميع الاشتراكات مع الفلترة
    */
   async getAllSubscriptions(filters = {}) {
-    let query = authService.supabase
+    let query = supabase
       .from('subscriptions')
       .select(`
         *,
@@ -130,7 +130,7 @@ export const adminService = {
 
     if (action === 'approve') {
       const { data: sub } = await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscriptions')
           .select('user_id, plan_id, subscription_plans(duration_months)')
           .eq('id', id)
@@ -139,7 +139,7 @@ export const adminService = {
 
       if (!sub) return { error: 'الطلب غير موجود' };
 
-      await authService.supabase
+      await supabase
         .from('subscriptions')
         .update({ status: 'cancelled', updated_at: now.toISOString() })
         .eq('user_id', sub.user_id)
@@ -150,7 +150,7 @@ export const adminService = {
       end.setMonth(now.getMonth() + months);
 
       return await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscriptions')
           .update({ 
             status: 'active', 
@@ -163,12 +163,12 @@ export const adminService = {
     } 
     
     if (action === 'reject' || action === 'delete') {
-      return await apiInterceptor(authService.supabase.from('subscriptions').delete().eq('id', id));
+      return await apiInterceptor(supabase.from('subscriptions').delete().eq('id', id));
     } 
     
     if (action === 'cancel') {
       return await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscriptions')
           .update({ status: 'cancelled', updated_at: now.toISOString() })
           .eq('id', id)
@@ -177,7 +177,7 @@ export const adminService = {
 
     if (action === 'reactivate') {
         return await apiInterceptor(
-          authService.supabase
+          supabase
             .from('subscriptions')
             .update({ status: 'active', updated_at: now.toISOString() })
             .eq('id', id)
@@ -192,7 +192,7 @@ export const adminService = {
     const now = new Date();
     
     const { data: activeSub } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .select('id, end_date')
         .eq('user_id', userId)
@@ -206,7 +206,7 @@ export const adminService = {
       newEnd.setDate(newEnd.getDate() + Number(days));
 
       return await apiInterceptor(
-        authService.supabase
+        supabase
           .from('subscriptions')
           .update({ 
             end_date: newEnd.toISOString(), 
@@ -219,15 +219,15 @@ export const adminService = {
       end.setDate(now.getDate() + Number(days));
 
       const { data: plan } = await apiInterceptor(
-        authService.supabase.from('subscription_plans').select('id').limit(1).maybeSingle()
+        supabase.from('subscription_plans').select('id').limit(1).maybeSingle()
       );
       
       if (!plan) return { error: { message: "لا توجد خطط معرفة" } };
 
-      await authService.supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
+      await supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
 
       return await apiInterceptor(
-        authService.supabase.from('subscriptions').insert({
+        supabase.from('subscriptions').insert({
           user_id: userId,
           plan_id: plan.id,
           plan_name: 'اشتراك يدوي',
@@ -243,7 +243,7 @@ export const adminService = {
 
   async getMonthlyChartData() {
     const { data } = await apiInterceptor(
-      authService.supabase
+      supabase
         .from('subscriptions')
         .select('created_at')
         .order('created_at', { ascending: true })

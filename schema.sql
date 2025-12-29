@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v4.4 - Admin Security Hardening)
+-- COLLECTPRO - MASTER SCHEMA (v4.7 - Security Patch Fix)
 -- ====================================================================
 
 -- #####################################################
@@ -21,7 +21,7 @@ DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
 DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
 DROP FUNCTION IF EXISTS public.can_write_data CASCADE;
-DROP FUNCTION IF EXISTS public.protect_user_role CASCADE; -- تنظيف الدالة الجديدة
+DROP FUNCTION IF EXISTS public.protect_user_role CASCADE;
 
 -- #####################################################
 -- 2. تعريف الجداول (Tables Definitions)
@@ -120,13 +120,10 @@ END;
 $$;
 
 -- دالة حماية حقل الدور (Role Protection)
--- تمنع أي مستخدم من تغيير دوره بنفسه لضمان الأمان المطلق
 CREATE OR REPLACE FUNCTION public.protect_user_role()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
-    -- إذا كانت هناك محاولة لتغيير الـ role وكان الشخص القائم بالتعديل ليس مديراً
     IF (OLD.role IS DISTINCT FROM NEW.role) AND NOT public.is_admin() THEN
-        -- قم بإلغاء التغيير وإرجاع القيمة القديمة
         NEW.role := OLD.role;
     END IF;
     RETURN NEW;
@@ -146,15 +143,11 @@ DECLARE
     enforced BOOLEAN;
     has_sub BOOLEAN;
 BEGIN
-    -- 1. هل حماية الاشتراكات مفعلة؟
     SELECT (value::text = 'true') INTO enforced FROM public.system_config WHERE key = 'enforce_subscription';
-    
-    -- إذا لم تكن مفعلة، اسمح للجميع
     IF enforced IS NOT TRUE THEN
         RETURN TRUE;
     END IF;
 
-    -- 2. إذا كانت مفعلة، هل المستخدم مشترك؟
     SELECT EXISTS (
         SELECT 1 FROM public.subscriptions 
         WHERE user_id = auth.uid() 
@@ -261,9 +254,14 @@ BEGIN
 END;
 $$;
 
+-- SECURITY-HARDENED FUNCTION
 CREATE OR REPLACE FUNCTION public.fix_missing_profiles()
 RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
+    IF NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Admin access required';
+    END IF;
+
     INSERT INTO public.users (id, email, full_name, role, created_at, updated_at)
     SELECT 
         id, 
@@ -300,9 +298,14 @@ BEGIN
 END;
 $$;
 
+-- SECURITY-HARDENED FUNCTION
 CREATE OR REPLACE FUNCTION public.recalculate_statistics()
 RETURNS void SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
+    IF NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Admin access required';
+    END IF;
+
     UPDATE public.statistics
     SET 
         total_users = (SELECT COUNT(*) FROM public.users),
@@ -319,6 +322,7 @@ $$;
 -- 4. سياسات الأمان (Row Level Security)
 -- #####################################################
 
+-- تفعيل RLS على جميع الجداول التي تحتوي على بيانات المستخدمين
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
@@ -326,6 +330,7 @@ ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
 
+-- حذف السياسات القديمة لضمان عدم وجود تكرار
 DO $$ 
 DECLARE pol record;
 BEGIN 
@@ -337,19 +342,17 @@ END $$;
 -- سياسات المستخدمين
 CREATE POLICY "Allow users to view their own profile" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Allow users to update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Allow admins to view all profiles" ON public.users FOR SELECT USING (public.is_admin());
-CREATE POLICY "Allow admins to manage everything" ON public.users FOR ALL USING (public.is_admin());
+CREATE POLICY "Allow admins to manage all profiles" ON public.users FOR ALL USING (public.is_admin());
 
 -- سياسات الاشتراكات
-CREATE POLICY "Users can view own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view their own subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own subscriptions" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Admins can manage all subscriptions" ON public.subscriptions FOR ALL USING (public.is_admin());
 
 -- سياسات الأرشيف
-CREATE POLICY "Users can manage own archives" ON public.daily_archives 
+CREATE POLICY "Users can manage their own archives" ON public.daily_archives 
 FOR ALL USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id AND public.can_write_data());
-
 CREATE POLICY "Admins can view all archives" ON public.daily_archives FOR SELECT USING (public.is_admin());
 
 -- سياسات الإحصائيات
@@ -360,8 +363,9 @@ CREATE POLICY "Authenticated users can view active plans" ON public.subscription
 CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
 
 -- سياسات إعدادات النظام
-CREATE POLICY "Everyone can read config" ON public.system_config FOR SELECT USING (true);
-CREATE POLICY "Admins can update config" ON public.system_config FOR ALL USING (public.is_admin());
+CREATE POLICY "Everyone can read system config" ON public.system_config FOR SELECT USING (true);
+CREATE POLICY "Admins can manage system config" ON public.system_config FOR ALL USING (public.is_admin());
+
 
 -- #####################################################
 -- 5. التريجرز (Triggers)
@@ -418,10 +422,6 @@ BEGIN
     VALUES ('enforce_subscription', 'false'::jsonb)
     ON CONFLICT (key) DO NOTHING;
 
-    -- تشغيل الإصلاحات التلقائية
-    PERFORM public.fix_missing_profiles();
-    PERFORM public.recalculate_statistics();
-    
     -- تعيين المدير
     UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
 END $$;
@@ -430,7 +430,13 @@ END $$;
 -- 7. العروض (Views)
 -- #####################################################
 
-CREATE OR REPLACE VIEW public.admin_subscriptions_view AS
+-- <<< CORRECTED SECURITY FIX >>>
+-- هذا العرض مصمم للمدراء فقط. 
+-- استخدام `security_invoker` يجعله يطبق سياسات الأمان (RLS) الخاصة بالجداول الأساسية (users, subscriptions)
+-- مما يضمن أن المدراء فقط يمكنهم رؤية جميع البيانات، بينما يرى المستخدمون العاديون بياناتهم فقط (إن وجدت).
+CREATE OR REPLACE VIEW public.admin_subscriptions_view
+WITH (security_invoker = true) 
+AS
 SELECT
     s.id, s.user_id, COALESCE(u.full_name, u.email) AS user_name,
     s.plan_id, sp.name AS plan_name, sp.name_ar AS plan_name_ar,
@@ -439,10 +445,27 @@ FROM public.subscriptions s
 LEFT JOIN public.users u ON s.user_id = u.id
 LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id;
 
--- منح الصلاحيات
-GRANT SELECT ON public.admin_subscriptions_view TO authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_server_time TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.can_write_data TO authenticated, anon;
+-- #####################################################
+-- 8. الصلاحيات (Permissions) - HARDENED
+-- #####################################################
+
+-- -- منح صلاحيات عامة محددة جداً --
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+
+-- منح صلاحيات القراءة (SELECT) على الجداول والعروض للمستخدمين المسجلين. سياسات RLS ستقوم بالفلترة النهائية.
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+
+-- السماح للمستخدمين بتعديل البيانات في جداول معينة فقط. سياسات RLS ستتحقق من الملكية.
+GRANT INSERT, UPDATE, DELETE ON public.users, public.subscriptions, public.daily_archives TO authenticated;
+
+-- -- صلاحيات الأدوار الخاصة --
+-- دور الخدمة (service_role) يمتلك صلاحيات كاملة (يتجاوز RLS)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+
+-- المستخدم المجهول (anon) يمكنه فقط استدعاء دوال محددة وآمنة
+GRANT EXECUTE ON FUNCTION public.get_server_time() TO anon, authenticated;
+
+-- المستخدم المسجل (authenticated) يمكنه استدعاء دوال محددة وآمنة
+GRANT EXECUTE ON FUNCTION public.can_write_data() TO authenticated;

@@ -8,6 +8,8 @@ import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 
+const HARVEST_ROWS_KEY = 'harvest_rows';
+
 export const useHarvestStore = defineStore('harvest', {
   state: () => ({
     rows: [],
@@ -65,6 +67,7 @@ export const useHarvestStore = defineStore('harvest', {
 
   actions: {
     async initialize() {
+      this.isLoading = true;
       try {
         this.loadMasterLimit();
         this.loadExtraLimit();
@@ -73,51 +76,58 @@ export const useHarvestStore = defineStore('harvest', {
 
         const hasImportedData = await this.loadDataFromStorage();
         if (!hasImportedData) {
-          const savedRows = localStorage.getItem('harvest_rows');
-          if (savedRows) {
-            try { this.rows = JSON.parse(savedRows); } catch (e) { this.resetTable(); }
+          const savedRows = await localforage.getItem(HARVEST_ROWS_KEY);
+          if (savedRows && Array.isArray(savedRows)) {
+            this.rows = savedRows;
           } else {
-            this.resetTable();
+            await this.resetTable();
           }
         }
       } catch (err) {
-        this.resetTable();
+        logger.error('Harvest initialization failed:', err);
+        await this.resetTable();
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    resetTable() {
+    async resetTable() {
       this.rows = [{ id: Date.now(), shop: '', code: '', amount: '', extra: '', collector: '', net: 0 }];
-      this.saveRowsToLocalStorage();
+      await this.saveRowsToStorage();
     },
 
-    clearAll() {
-      this.resetTable();
+    async clearAll() {
+      await this.resetTable();
       this.searchQuery = '';
       this.currentBalance = 0;
       this.extraLimit = 0;
       localStorage.removeItem('currentBalance');
       localStorage.removeItem('extraLimit');
+      await localforage.removeItem(HARVEST_ROWS_KEY);
       this.isModified = false;
-      // ملحوظة: لا يتم حذف masterLimit هنا بناءً على طلب المستخدم
     },
 
-    clearFields() {
-      this.clearAll();
+    async clearFields() {
+      await this.clearAll();
     },
 
-    async saveRowsToLocalStorage() {
+    async saveRowsToStorage() {
       try {
         const cleanedRows = safeDeepClone(this.rows);
-        localStorage.setItem('harvest_rows', JSON.stringify(cleanedRows));
+        await localforage.setItem(HARVEST_ROWS_KEY, cleanedRows);
         this.isModified = true;
       } catch (error) {
-        logger.error('Error saving rows:', error);
+        logger.error('Error saving rows to localforage:', error);
       }
     },
 
     async archiveTodayData() {
       try {
         this.isLoading = true;
+        
+        // FIX: Always use the current date at the moment of archiving
+        this.currentDate = new Date().toISOString().split('T')[0];
+
         const authStore = useAuthStore();
         const archiveStore = useArchiveStore();
 
@@ -137,9 +147,9 @@ export const useHarvestStore = defineStore('harvest', {
           collector: parseFloat(row.collector) || 0,
           net: parseFloat(row.net) || 0
         }));
-
-        const localDateStr = archiveStore.getTodayLocal();
-        const localKey = `arch_data_${localDateStr}`;
+        
+        const dateToSave = this.currentDate;
+        const localKey = `arch_data_${dateToSave}`;
 
         // 1. الحفظ المحلي الفوري
         await localforage.setItem(localKey, cleanRows);
@@ -150,7 +160,7 @@ export const useHarvestStore = defineStore('harvest', {
         // 3. الحفظ السحابي
         const dbPayload = {
           user_id: authStore.user.id,
-          archive_date: localDateStr,
+          archive_date: dateToSave,
           data: cleanRows,
           total_amount: (this.totals.collector || 0) - ((this.totals.amount || 0) + (this.totals.extra || 0)),
           updated_at: new Date()
@@ -187,7 +197,7 @@ export const useHarvestStore = defineStore('harvest', {
 
     parseRawDataToRows(rawData) {
       if (!rawData) return [];
-      const lines = rawData.split("\n");
+      const lines = rawData.split('\n');
       const parsedRows = [];
       lines.forEach((line, index) => {
         const trimmedLine = line.trim();
@@ -220,27 +230,27 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async loadDataFromStorage() {
-      const newData = localStorage.getItem("harvestData");
+      const newData = localStorage.getItem("harvestData"); // This is temporary, so localStorage is fine.
       if (newData) {
         const newRows = this.parseRawDataToRows(newData);
         if (newRows.length > 0) {
           this.rows = newRows;
-          this.addRow();
+          await this.addRow();
           localStorage.removeItem("harvestData");
-          this.saveRowsToLocalStorage();
+          await this.saveRowsToStorage();
           return true;
         }
       }
       return false;
     },
 
-    addRow() {
+    async addRow() {
       this.rows.push({
         id: Date.now() + Math.random(),
         serial: this.rows.length + 1,
         shop: '', code: '', amount: '', extra: '', collector: '', net: 0, isImported: false
       });
-      this.saveRowsToLocalStorage();
+      await this.saveRowsToStorage();
     },
 
     setMasterLimit(limit) {
