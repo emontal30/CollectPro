@@ -61,6 +61,7 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  // --- دالة إبطال الجلسة المعدلة (مع مهلة زمنية وحماية من الأخطاء) ---
   async function signOutUser(userId, userName) {
     const result = await confirm({
         title: 'تأكيد إبطال الجلسة',
@@ -74,18 +75,23 @@ export const useAdminStore = defineStore('admin', () => {
 
     showLoading('جاري إبطال جلسة المستخدم...');
     
+    // إعداد مهلة زمنية (Timeout) للطلب مدتها 15 ثانية لتجنب التعليق
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
-        // 1. الحصول على توكن حديث لضمان الصلاحية
-        const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+        // 1. الحصول على توكن حديث لضمان الصلاحية مع معالجة آمنة للبيانات
+        const { data, error: sessionError } = await supabase.auth.refreshSession();
+        const session = data?.session; // استخدام Optional Chaining لتجنب أخطاء null
 
         if (sessionError || !session || !session.access_token) {
-            throw new Error('فشلت المصادقة: الجلسة قد انتهت. يرجى إعادة تسجيل الدخول كمسؤول.');
+            throw new Error('فشلت المصادقة: الجلسة قد انتهت أو لا يمكن تحديثها. حاول تسجيل الدخول مرة أخرى.');
         }
         
         const token = session.access_token;
         const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
         
-        // 2. استدعاء الـ Edge Function
+        // 2. استدعاء Edge Function مع تمرير إشارة الإلغاء (signal)
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
@@ -93,8 +99,11 @@ export const useAdminStore = defineStore('admin', () => {
                 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ userId })
+            body: JSON.stringify({ userId }),
+            signal: controller.signal // ربط الطلب بالمهلة الزمنية
         });
+
+        clearTimeout(timeoutId); // إلغاء المهلة فور نجاح الطلب
 
         // 3. معالجة الرد
         if (!response.ok) {
@@ -113,16 +122,23 @@ export const useAdminStore = defineStore('admin', () => {
         await showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
 
     } catch (err) {
-        closeLoading();
-        logger.error('Error signing out user:', err);
-        showError(err.message || 'حدث خطأ غير متوقع أثناء إبطال الجلسة.');
+        clearTimeout(timeoutId); // تنظيف المؤقت في حال الفشل أيضاً
+        closeLoading(); // إغلاق نافذة التحميل فوراً
+        
+        // التعامل مع خطأ انتهاء الوقت بشكل خاص
+        if (err.name === 'AbortError') {
+            logger.warn('SignOut request timed out');
+            showError('انتهت مهلة الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
+        } else {
+            logger.error('Error signing out user:', err);
+            showError(err.message || 'حدث خطأ غير متوقع أثناء إبطال الجلسة.');
+        }
     }
   }
 
   async function toggleSubscriptionEnforcement(status) {
     showLoading('جاري تحديث إعدادات النظام...');
     try {
-      // إرسال القيمة كـ Boolean مباشرة (Supabase/Postgres سيعالجها كـ JSONB)
       const { error } = await supabase
         .from('system_config')
         .update({ 
