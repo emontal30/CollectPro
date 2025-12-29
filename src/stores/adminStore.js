@@ -74,12 +74,13 @@ export const useAdminStore = defineStore('admin', () => {
 
     showLoading('جاري إبطال جلسة المستخدم...');
     try {
-        // 1. Get the current session's token to authenticate the request.
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // 1. Force refresh session to get a fresh token before calling the edge function
+        const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
 
         if (sessionError || !session || !session.access_token) {
-            throw new Error('فشلت المصادقة: لم يتم العثور على جلسة عمل نشطة. يرجى إعادة تسجيل الدخول.');
+            throw new Error('فشلت المصادقة: الجلسة قد انتهت. يرجى إعادة تسجيل الدخول كمسؤول.');
         }
+        
         const token = session.access_token;
 
         // 2. Use a manual fetch call for maximum stability.
@@ -114,7 +115,7 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (err) {
         closeLoading();
         logger.error('Error signing out user:', err);
-        showError(err.message || 'حدث خطأ غير متوقع.');
+        showError(err.message || 'حدث خطأ غير متوقع أثناء إبطال الجلسة.');
     }
   }
 
