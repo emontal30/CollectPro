@@ -73,7 +73,9 @@ export const useAdminStore = defineStore('admin', () => {
     if (!result.isConfirmed) return;
 
     showLoading('جاري إبطال جلسة المستخدم...');
+    
     try {
+        // 1. الحصول على توكن حديث لضمان الصلاحية
         const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
 
         if (sessionError || !session || !session.access_token) {
@@ -83,6 +85,7 @@ export const useAdminStore = defineStore('admin', () => {
         const token = session.access_token;
         const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
         
+        // 2. استدعاء الـ Edge Function
         const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
@@ -93,6 +96,7 @@ export const useAdminStore = defineStore('admin', () => {
             body: JSON.stringify({ userId })
         });
 
+        // 3. معالجة الرد
         if (!response.ok) {
             const responseBodyText = await response.text();
             let errorMsg;
@@ -106,7 +110,7 @@ export const useAdminStore = defineStore('admin', () => {
         }
 
         closeLoading();
-        showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
+        await showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
 
     } catch (err) {
         closeLoading();
@@ -118,7 +122,7 @@ export const useAdminStore = defineStore('admin', () => {
   async function toggleSubscriptionEnforcement(status) {
     showLoading('جاري تحديث إعدادات النظام...');
     try {
-      // إرسال القيمة كـ JSON متوافق مع نوع الحقل في قاعدة البيانات
+      // إرسال القيمة كـ Boolean مباشرة (Supabase/Postgres سيعالجها كـ JSONB)
       const { error } = await supabase
         .from('system_config')
         .update({ 
@@ -138,7 +142,6 @@ export const useAdminStore = defineStore('admin', () => {
       closeLoading();
       logger.error('Error toggling enforcement:', e);
       addNotification('فشل تحديث الإعدادات: ' + (e.message || 'خطأ غير معروف'), 'error');
-      // إعادة جلب الحالة الأصلية في حالة الفشل لمزامنة الواجهة
       await fetchSystemConfig();
     }
   }
