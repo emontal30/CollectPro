@@ -74,7 +74,6 @@ export const useAdminStore = defineStore('admin', () => {
 
     showLoading('جاري إبطال جلسة المستخدم...');
     try {
-        // 1. Force refresh session to get a fresh token before calling the edge function
         const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
 
         if (sessionError || !session || !session.access_token) {
@@ -82,8 +81,6 @@ export const useAdminStore = defineStore('admin', () => {
         }
         
         const token = session.access_token;
-
-        // 2. Use a manual fetch call for maximum stability.
         const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
         
         const response = await fetch(functionUrl, {
@@ -96,7 +93,6 @@ export const useAdminStore = defineStore('admin', () => {
             body: JSON.stringify({ userId })
         });
 
-        // 3. Handle the response.
         if (!response.ok) {
             const responseBodyText = await response.text();
             let errorMsg;
@@ -122,21 +118,27 @@ export const useAdminStore = defineStore('admin', () => {
   async function toggleSubscriptionEnforcement(status) {
     showLoading('جاري تحديث إعدادات النظام...');
     try {
+      // إرسال القيمة كـ JSON متوافق مع نوع الحقل في قاعدة البيانات
       const { error } = await supabase
         .from('system_config')
-        .update({ value: status, updated_at: new Date().toISOString() })
+        .update({ 
+            value: status, 
+            updated_at: new Date().toISOString() 
+        })
         .eq('key', 'enforce_subscription');
       
-      closeLoading();
       if (error) throw error;
       
       isSubscriptionEnforced.value = status;
       localStorage.setItem('sys_config_enforce', String(status));
+      
+      closeLoading();
       addNotification(`تم ${status ? 'تفعيل' : 'إيقاف'} وضع الاشتراك الإجباري بنجاح`, 'success');
     } catch (e) {
       closeLoading();
       logger.error('Error toggling enforcement:', e);
-      addNotification('فشل تحديث الإعدادات', 'error');
+      addNotification('فشل تحديث الإعدادات: ' + (e.message || 'خطأ غير معروف'), 'error');
+      // إعادة جلب الحالة الأصلية في حالة الفشل لمزامنة الواجهة
       await fetchSystemConfig();
     }
   }
