@@ -131,9 +131,12 @@ onMounted(() => {
   store.initializeAuth();
   handleInstallPromptLogic();
   
+  // لضمان ملء الشاشة ومنع السكرول الأفقي
   document.body.style.minWidth = 'auto';
   document.documentElement.style.overflowX = 'hidden';
   document.body.style.overflowX = 'hidden';
+  document.body.style.margin = '0';
+  document.body.style.padding = '0';
 });
 
 onUnmounted(() => {
@@ -306,7 +309,7 @@ const installApp = async () => {
   width: 100%;
   font-family: var(--font-family-sans);
   direction: rtl;
-  overflow-x: hidden;
+  overflow: hidden; /* منع أي سكرول في الحاوية الرئيسية */
   position: relative;
 }
 
@@ -339,6 +342,7 @@ const installApp = async () => {
   align-items: center;
   width: 100%;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .login-card {
@@ -356,6 +360,7 @@ const installApp = async () => {
   justify-content: center;
   align-items: center;
   transition: var(--transition);
+  box-sizing: border-box;
 }
 
 /* =========================================
@@ -483,24 +488,6 @@ const installApp = async () => {
   box-shadow: 0 1px 3px rgba(var(--primary-rgb), 0.2);
 }
 
-.privacy-divider::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(var(--primary-rgb), 0.1) 20%, 
-    rgba(var(--primary-rgb), 0.15) 50%, 
-    rgba(var(--primary-rgb), 0.1) 80%, 
-    transparent 100%
-  );
-  filter: blur(2px);
-  border-radius: 2px;
-}
-
 /* =========================================
    5. زر التثبيت والحالات
    ========================================= */
@@ -510,12 +497,6 @@ const installApp = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.install-app-section {
-  width: 100%;
-  display: flex;
-  justify-content: center;
 }
 
 .install-app-btn {
@@ -539,88 +520,11 @@ const installApp = async () => {
   border-color: var(--gray-400);
 }
 
-.install-app-icon {
-  width: 44px;
-  height: 44px;
-  background: var(--surface-bg);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  flex-shrink: 0;
-}
-
 .install-app-icon img { 
   width: 28px; 
   height: 28px; 
   animation: pulse-logo 2s infinite ease-in-out;
 }
-
-@keyframes pulse-logo {
-  0% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.9; }
-}
-
-.install-btn-content {
-  flex: 1;
-  text-align: center; 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.install-btn-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
-.install-btn-subtitle { font-size: 12px; color: var(--gray-600); }
-
-.download-icon { 
-  color: var(--primary); 
-  font-size: 18px; 
-  flex-shrink: 0;
-}
-
-.app-installed-card {
-  width: 100%;
-  max-width: 320px;
-  height: 80px;
-  background: rgba(var(--primary-rgb), 0.05);
-  border: 1px solid rgba(var(--primary-rgb), 0.2);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-}
-
-.status-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--surface-bg);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.status-content {
-  flex: 1;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.status-title { font-size: 14px; font-weight: 800; color: var(--primary); }
-.status-sub { font-size: 11px; color: var(--text-muted); }
-.status-check { color: var(--primary); font-size: 18px; }
-
-/* Transitions */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* =========================================
    6. الفوتر والتحكم
@@ -653,13 +557,6 @@ const installApp = async () => {
   transition: all 0.2s ease;
 }
 
-.footer-action-btn:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-  transform: translateY(-2px);
-}
-
 .developer-name { color: var(--gray-700); font-weight: 700; }
 
 .version-badge {
@@ -676,55 +573,61 @@ const installApp = async () => {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulse-logo {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
 /* =========================================
-   7. تجاوب الهاتف (تعديل لملء الشاشة)
+   7. تجاوب الهاتف المحسن (ملء الشاشة)
    ========================================= */
-@media (max-width: 480px) {
-  .login-page {
-    height: 100vh;
-    height: 100dvh; /* لدعم متصفحات الهاتف بشكل أفضل */
+@media (max-width: 500px) {
+  .login-wrapper {
+    background: var(--surface-bg); /* توحيد الخلفية في الهاتف */
   }
 
   .login-container { 
-    /* تقليل الهوامش الخارجية لتصبح الحواف شبه ملامسة للجدار */
-    padding: 8px; 
-    /* جعل العناصر تتمدد عمودياً لملء المساحة */
-    align-items: stretch;
+    padding: 0; /* إلغاء الهوامش الخارجية تماماً */
+    align-items: stretch; /* التمدد لملء الارتفاع */
   }
 
   .login-card { 
-    /* إزالة الحد الأقصى للعرض والارتفاع لملء الحاوية */
     max-width: 100%;
     width: 100%;
-    flex: 1; /* التمدد لملء الارتفاع المتاح */
-    
-    /* تنسيق المحتوى الداخلي عند ملء الشاشة */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* توزيع المحتوى (أعلى - وسط - أسفل) */
-    
-    padding: 30px 20px; /* هوامش داخلية متوازنة */
-    border-radius: 20px;
-    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    border-radius: 0; /* إزالة الحواف المنحنية في وضع ملء الشاشة */
+    border: none; /* إزالة الحدود */
+    padding: 40px 24px;
+    justify-content: space-between;
+    box-shadow: none;
   }
   
-  /* تعديلات إضافية لضبط العناصر في وضع ملء الشاشة */
   .card-content-top {
-    width: 100%;
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
 
-  .logo-img { height: 80px; margin-bottom: 20px; }
-  .logo-container { margin-bottom: 20px; }
-  .app-name { font-size: 30px; }
-  .subtitle { font-size: 14px; }
-  .btn-container { margin: 20px 0; }
-  .google-login-btn { padding: 15px; border-radius: 14px; }
-  .privacy-divider { margin: 25px auto; }
-  .footer-info { margin-top: auto; padding-top: 20px; } /* دفع الفوتر للأسفل تماماً */
-  .footer-controls { margin-bottom: 15px; gap: 12px; }
+  .logo-img { height: 85px; }
+  .app-name { font-size: 32px; }
+  .subtitle { font-size: 15px; }
+  
+  .footer-info { 
+    margin-top: auto; 
+    padding: 20px 0 10px;
+  }
+}
+
+/* تحسين إضافي للشاشات الصغيرة جداً أو العريضة */
+@media (max-height: 650px) and (max-width: 500px) {
+  .login-card {
+    padding: 20px 24px;
+  }
+  .logo-img { height: 60px; margin-bottom: 15px; }
+  .logo-container { margin-bottom: 15px; }
+  .privacy-divider { margin: 15px auto; }
 }
 </style>
