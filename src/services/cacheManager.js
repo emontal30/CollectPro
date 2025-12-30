@@ -371,6 +371,75 @@ export async function clearAllCaches() {
 }
 
 /**
+ * تنظيف الكاش عند تحديث الإصدار مع الحفاظ على الأرشيف والإعدادات
+ */
+export async function clearCacheOnVersionUpdate() {
+  try {
+    const ARCHIVE_PREFIX = 'arch_data_';
+    const SETTINGS_KEY = 'app_settings_v1';
+    
+    // 1. تنظيف Memory Cache
+    memoryCache.clear();
+    
+    // 2. تنظيف localStorage (باستثناء الأرشيف والإعدادات)
+    Object.keys(localStorage).forEach(key => {
+      if (!key.startsWith(ARCHIVE_PREFIX) && key !== SETTINGS_KEY && key !== 'app_version') {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // 3. تنظيف IndexedDB (باستثناء الأرشيف)
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      if (!key.startsWith(ARCHIVE_PREFIX)) {
+        await localforage.removeItem(key);
+      }
+    }
+
+    logger.info('🧹 Version Update Cache Cleanup: Cleared non-essential data.');
+    return true;
+  } catch (err) {
+    logger.error('❌ Error during version update cache cleanup:', err);
+    return false;
+  }
+}
+
+/**
+ * تنظيف الكاش عند تسجيل الخروج مع الحفاظ على الأرشيف
+ */
+export async function clearCacheOnLogout() {
+  try {
+    const ARCHIVE_PREFIX = 'arch_data_';
+    
+    // 1. تنظيف Memory Cache (كاملة لأنها مؤقتة)
+    memoryCache.clear();
+    
+    // 2. تنظيف localStorage (باستثناء ما يبدأ بـ ARCHIVE_PREFIX وما يخص الإعدادات الأساسية إذا أردت)
+    Object.keys(localStorage).forEach(key => {
+      if (!key.startsWith(ARCHIVE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
+    cacheMetadata.localStorage.clear();
+    
+    // 3. تنظيف IndexedDB (باستثناء جداول الأرشيف)
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      if (!key.startsWith(ARCHIVE_PREFIX)) {
+        await localforage.removeItem(key);
+      }
+    }
+    cacheMetadata.indexedDB.clear();
+
+    logger.info('🧹 Logout Cache Cleanup: All cleared except Archives.');
+    return true;
+  } catch (err) {
+    logger.error('❌ Error during logout cache cleanup:', err);
+    return false;
+  }
+}
+
+/**
  * إحصائيات الكاش
  */
 export function getCacheStats() {
@@ -450,6 +519,25 @@ export async function clearCacheByPattern(pattern) {
   }
 }
 
+/**
+ * التحقق من إصدار التطبيق وتنظيف الكاش إذا لزم الأمر
+ */
+export async function checkAppVersion() {
+  try {
+    const currentVersion = __APP_VERSION__;
+    const savedVersion = localStorage.getItem('app_version');
+
+    if (savedVersion && savedVersion !== currentVersion) {
+      logger.info(`🔄 New version detected: ${currentVersion} (old: ${savedVersion}). Cleaning cache...`);
+      await clearCacheOnVersionUpdate();
+    }
+
+    localStorage.setItem('app_version', currentVersion);
+  } catch (err) {
+    logger.error('❌ Error checking app version:', err);
+  }
+}
+
 export default {
   setLocalStorageCache,
   getLocalStorageCache,
@@ -461,11 +549,13 @@ export default {
   getSmartCache,
   removeFromAllCaches,
   clearAllCaches,
+  clearCacheOnLogout,
   getCacheStats,
   startAutoCleaning,
   clearCacheByPattern,
   cleanExpiredCache,
-  safeDeepClone
+  safeDeepClone,
+  checkAppVersion
 };
 
 export { cleanExpiredCache };

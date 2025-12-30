@@ -153,8 +153,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref, inject, computed } from 'vue';
+import { onMounted, ref, inject, computed, watch } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
+import { useAuthStore } from '@/stores/auth';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import logger from '@/utils/logger.js';
@@ -163,6 +164,7 @@ import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
 
 const store = useArchiveStore();
+const authStore = useAuthStore();
 const searchQuery = ref('');
 const { confirm, addNotification } = inject('notifications');
 
@@ -183,11 +185,29 @@ const isSearching = computed(() => searchQuery.value.trim().length >= 2);
 
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
-onMounted(async () => {
-  loadColumns();
-  await store.loadAvailableDates();
-  if (store.selectedDate) {
-    await store.loadArchiveByDate(store.selectedDate);
+const initData = async () => {
+  // لا نستدعي البيانات إلا إذا كان المستخدم مسجلاً بالفعل
+  if (!authStore.isAuthenticated) return;
+  
+  try {
+    loadColumns();
+    await store.loadAvailableDates();
+    if (store.selectedDate) {
+      await store.loadArchiveByDate(store.selectedDate);
+    }
+  } catch (err) {
+    logger.error('ArchiveView: Error initializing data', err);
+  }
+};
+
+onMounted(() => {
+  initData();
+});
+
+// مراقبة حالة المصادقة: إذا اكتملت ولم تكن البيانات قد حملت، نحملها
+watch(() => authStore.isAuthenticated, (newVal) => {
+  if (newVal && store.availableDates.length === 0) {
+    initData();
   }
 });
 

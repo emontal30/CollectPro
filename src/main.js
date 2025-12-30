@@ -7,7 +7,7 @@ import router from './router'
 import './assets/css/main.css'
 
 /* --- Services & Utils --- */
-import { startAutoCleaning } from './services/cacheManager'
+import { startAutoCleaning, checkAppVersion } from './services/cacheManager'
 import { setupCacheMonitor } from './services/cacheMonitor'
 import logger from '@/utils/logger.js'
 
@@ -43,6 +43,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 // 5. Initialize Background Services
+checkAppVersion();
 startAutoCleaning(5 * 60 * 1000);
 
 if (import.meta.env.DEV) {

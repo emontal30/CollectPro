@@ -8,7 +8,15 @@ import { supabase } from '@/supabase';
 import { useAuthStore } from './auth';
 
 export const useAdminStore = defineStore('admin', () => {
-  const stats = ref({});
+  const stats = ref({
+    totalUsers: 0,
+    activeUsers: 0,
+    pendingRequests: 0,
+    activeSubscriptions: 0,
+    totalRevenue: 0,
+    cancelled: 0,
+    expired: 0
+  });
   const chartsData = ref({ piePercentages: [0, 0, 0, 0], monthlyLabels: [], monthlyValues: [] });
   const usersList = ref([]);
   const pendingSubscriptions = ref([]);
@@ -33,6 +41,7 @@ export const useAdminStore = defineStore('admin', () => {
   });
 
   async function loadDashboardData() {
+    // تصفير القوائم لضمان ظهور حالة التحميل بوضوح
     isLoading.value = true;
     try {
       await Promise.all([
@@ -60,81 +69,6 @@ export const useAdminStore = defineStore('admin', () => {
       }
     } catch (e) {
       logger.error('Error fetching system config:', e);
-    }
-  }
-
-  // --- دالة إبطال الجلسة المعدلة (مع مهلة زمنية وحماية من الأخطاء) ---
-  async function signOutUser(userId, userName) {
-    const result = await confirm({
-        title: 'تأكيد إبطال الجلسة',
-        text: `هل أنت متأكد من تسجيل الخروج القسري للمستخدم "${userName}"؟ سيتم إجباره على تسجيل الدخول مرة أخرى.`,
-        icon: 'warning',
-        confirmButtonText: 'نعم، قم بإبطال الجلسة',
-        confirmButtonColor: 'var(--danger)'
-    });
-
-    if (!result.isConfirmed) return;
-
-    showLoading('جاري إبطال جلسة المستخدم...');
-     
-    // إعداد مهلة زمنية (Timeout) للطلب مدتها 15 ثانية لتجنب التعليق
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-        // 1. الحصول على توكن حديث لضمان الصلاحية مع معالجة آمنة للبيانات
-        const { data, error: sessionError } = await supabase.auth.refreshSession();
-        const session = data?.session; // استخدام Optional Chaining لتجنب أخطاء null
-
-        if (sessionError || !session || !session.access_token) {
-            throw new Error('فشلت المصادقة: الجلسة قد انتهت أو لا يمكن تحديثها. حاول تسجيل الدخول مرة أخرى.');
-        }
-         
-        const token = session.access_token;
-        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/logout-user`;
-         
-        // 2. استدعاء Edge Function مع تمرير إشارة الإلغاء (signal)
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ userId }),
-            signal: controller.signal // ربط الطلب بالمهلة الزمنية
-        });
-
-        clearTimeout(timeoutId); // إلغاء المهلة فور نجاح الطلب
-
-        // 3. معالجة الرد
-        if (!response.ok) {
-            const responseBodyText = await response.text();
-            let errorMsg;
-            try {
-                const errorData = JSON.parse(responseBodyText);
-                errorMsg = errorData.error || responseBodyText;
-            } catch (e) {
-                errorMsg = responseBodyText || `Edge Function returned status ${response.status}.`;
-            }
-            throw new Error(errorMsg);
-        }
-
-        closeLoading();
-        await showSuccess(`تم إبطال جلسة المستخدم ${userName} بنجاح.`);
-
-    } catch (err) {
-        clearTimeout(timeoutId); // تنظيف المؤقت في حال الفشل أيضاً
-        closeLoading(); // إغلاق نافذة التحميل فوراً
-         
-        // التعامل مع خطأ انتهاء الوقت بشكل خاص
-        if (err.name === 'AbortError') {
-            logger.warn('SignOut request timed out');
-            showError('انتهت مهلة الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
-        } else {
-            logger.error('Error signing out user:', err);
-            showError(err.message || 'حدث خطأ غير متوقع أثناء إبطال الجلسة.');
-        }
     }
   }
 
@@ -166,16 +100,19 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function fetchStats(updateCharts = false) {
     try {
-      stats.value = await api.admin.getStats(filters.value.activeUsersPeriod);
-      
-      const totalSubs = (stats.value.activeSubscriptions || 0) + (stats.value.pendingRequests || 0) + (stats.value.cancelled || 0) + (stats.value.expired || 0);
-      if (totalSubs > 0) {
-        chartsData.value.piePercentages = [
-          Math.round((stats.value.activeSubscriptions / totalSubs) * 100),
-          Math.round((stats.value.pendingRequests / totalSubs) * 100),
-          Math.round((stats.value.cancelled / totalSubs) * 100),
-          Math.round((stats.value.expired / totalSubs) * 100)
-        ];
+      const result = await api.admin.getStats(filters.value.activeUsersPeriod);
+      if (result) {
+        stats.value = result;
+        
+        const totalSubs = (stats.value.activeSubscriptions || 0) + (stats.value.pendingRequests || 0) + (stats.value.cancelled || 0) + (stats.value.expired || 0);
+        if (totalSubs > 0) {
+          chartsData.value.piePercentages = [
+            Math.round((stats.value.activeSubscriptions / totalSubs) * 100),
+            Math.round((stats.value.pendingRequests / totalSubs) * 100),
+            Math.round((stats.value.cancelled / totalSubs) * 100),
+            Math.round((stats.value.expired / totalSubs) * 100)
+          ];
+        }
       }
       
       if (updateCharts) {

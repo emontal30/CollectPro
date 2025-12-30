@@ -294,12 +294,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, inject } from 'vue';
+import { ref, onMounted, computed, inject, watch } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
+import { useAuthStore } from '@/stores/auth';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
+import logger from '@/utils/logger';
 
 const store = useAdminStore();
+const authStore = useAuthStore();
 const { confirm, addNotification } = inject('notifications');
 
 const adminStats = {
@@ -408,7 +411,25 @@ const getRemainingDaysColor = (endDate) => {
   return 'inherit';
 };
 
-onMounted(() => store.loadDashboardData());
+const initAdminData = async () => {
+  if (!authStore.isAdmin) return;
+  try {
+    await store.loadDashboardData();
+  } catch (err) {
+    logger.error('AdminView: Failed to load data', err);
+  }
+};
+
+onMounted(() => {
+  initAdminData();
+});
+
+// مراقبة حالة الأدمن: إذا أصبح متاحاً نحمل البيانات
+watch(() => authStore.isAdmin, (newVal) => {
+  if (newVal && store.usersList.length === 0) {
+    initAdminData();
+  }
+});
 </script>
 
 <style scoped>

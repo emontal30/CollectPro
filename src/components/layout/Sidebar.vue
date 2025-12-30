@@ -125,14 +125,17 @@ import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useArchiveStore } from '@/stores/archiveStore';
+import { useHarvestStore } from '@/stores/harvest';
 import cacheManager from '@/services/cacheManager';
 import { supabase } from '@/supabase';
+import localforage from 'localforage';
 
 const store = useSidebarStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const subStore = useMySubscriptionStore();
 const archiveStore = useArchiveStore();
+const harvestStore = useHarvestStore();
 const router = useRouter();
 
 const { confirm, addNotification } = inject('notifications');
@@ -194,12 +197,15 @@ const handleShare = async () => {
   }
 };
 
+/**
+ * وظيفة تحديث البيانات والتحقق من الإصدار وتنظيف الكاش
+ */
 const handleRefreshData = async () => {
   store.closeSidebar();
   
   const result = await confirm({
-    title: 'تحديث ومزامنة البيانات',
-    text: 'هل تود مزامنة حالة الاشتراك وتحديث تواريخ الأرشيف من السحابة؟ سيتم تحديث المعلومات دون التأثير على بياناتك المحلية المدخلة.',
+    title: 'تحديث وتحسين النظام',
+    text: 'هل تود تحديث التطبيق ومزامنه البيانات وتحسين الأداء؟ (لن تفقد بياناتك المسجلة)',
     icon: 'info',
     confirmButtonText: 'تحديث الآن',
     confirmButtonColor: 'var(--primary)'
@@ -208,19 +214,75 @@ const handleRefreshData = async () => {
   if (result.isConfirmed) {
     isRefreshing.value = true;
     try {
-      addNotification('جاري مزامنة وتحديث البيانات من السحابة...', 'info');
+      // 1. التحقق من حالة الإصدار قبل البدء
+      const oldVersion = localStorage.getItem('app_version');
+      const currentVersion = __APP_VERSION__;
+      const hasNewUpdate = oldVersion && oldVersion !== currentVersion;
+
+      // 2. أخذ نسخة احتياطية من البيانات الهامة (Backup)
+      const backup = {
+        localStorage: {},
+        indexedDB: {}
+      };
+
+      // -- نسخ المفاتيح الأساسية من localStorage
+      const lsKeys = ['clientData', 'masterLimit', 'extraLimit', 'currentBalance', 'moneyCountersData', 'app_settings_v1'];
+      lsKeys.forEach(key => {
+        const val = localStorage.getItem(key);
+        if (val !== null) backup.localStorage[key] = val;
+      });
+
+      // -- الحفاظ على جلسة الدخول (Supabase)
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('auth-token')) backup.localStorage[key] = localStorage.getItem(key);
+      });
+
+      // -- نسخ الأرشيف والتحصيلات من IndexedDB
+      const idbKeys = await localforage.keys();
+      for (const key of idbKeys) {
+        if (key.startsWith('arch_data_') || key === 'harvest_rows') {
+          backup.indexedDB[key] = await localforage.getItem(key);
+        }
+      }
+
+      // 3. تنظيف شامل (Clear)
+      localStorage.clear();
+      await localforage.clear();
+
+      // 4. استعادة البيانات (Restore)
+      Object.entries(backup.localStorage).forEach(([key, val]) => localStorage.setItem(key, val));
+      for (const [key, val] of Object.entries(backup.indexedDB)) {
+        await localforage.setItem(key, val);
+      }
       
-      localStorage.removeItem('my_subscription_data_v2');
-      localStorage.removeItem('sys_config_enforce'); 
+      // تحديث رقم الإصدار في التخزين
+      localStorage.setItem('app_version', currentVersion);
+
+      // 5. المزامنة السحابية في الخلفية
       await subStore.forceRefresh(authStore.user);
       await checkEnforcementStatus();
       await archiveStore.loadAvailableDates();
-      
-      addNotification('تم تحديث حالة الاشتراك ومزامنة تواريخ الأرشيف بنجاح ✅', 'success');
-      isRefreshing.value = false;
+
+      // 6. التعامل مع الإشعارات بناءً على حالة التحديث
+      if (hasNewUpdate) {
+        addNotification(`تمت الترقية بنجاح إلى الإصدار رقم ${currentVersion} 🚀`, 'success');
+        // انتظار بسيط ليقرأ المستخدم رسالة الترقية قبل رسالة النجاح النهائية
+        await new Promise(r => setTimeout(r, 1500));
+        addNotification('تم تحديث البيانات وتنظيف الكاش بنجاح ✅', 'success');
+      } else {
+        addNotification('أنت تستخدم أحدث إصدار من التطبيق بالفعل ✅', 'info');
+        // في حالة عدم وجود تحديث، العملية تمت في الخلفية بصمت كما طلبت
+      }
+
+      // 7. ريفرش للصفحة لضمان تحميل كل شيء على نظافة
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
     } catch (e) {
-      logger.error('Refresh error:', e);
-      addNotification('حدث خطأ أثناء التحديث', 'error');
+      logger.error('Refresh Error:', e);
+      addNotification('حدث خطأ أثناء محاولة التحديث', 'error');
+    } finally {
       isRefreshing.value = false;
     }
   }
@@ -281,7 +343,6 @@ const handleLogout = async () => {
   pointer-events: auto;
 }
 
-/* Locked Link Style */
 .locked-link {
     opacity: 0.6;
 }
@@ -314,7 +375,6 @@ const handleLogout = async () => {
 .sidebar-content { flex: 1; }
 .sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
-/* Footer Actions Styling */
 .footer-actions-row {
   display: flex;
   justify-content: space-between;
@@ -345,7 +405,6 @@ const handleLogout = async () => {
   transform: translateY(0);
 }
 
-/* فاصل أنيق */
 .footer-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
@@ -356,7 +415,6 @@ const handleLogout = async () => {
 .subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
 .subscription-title { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; margin: 0 0 6px 0; text-align: right; }
 
-/* New Subscription UI Box */
 .subscription-info-box {
   display: flex;
   flex-direction: column;
@@ -376,7 +434,7 @@ const handleLogout = async () => {
   color: #fff;
 }
 .subscription-details-row {
-  padding-right: 24px; /* Align with text after icon */
+  padding-right: 24px;
 }
 .details-text {
   font-size: 0.8rem;
@@ -384,14 +442,12 @@ const handleLogout = async () => {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Highlighted days number */
 .days-number {
   font-weight: 900;
   font-size: 1rem;
   margin: 0 2px;
 }
 
-/* Status Colors */
 .subscription-info-box.active .status-text, 
 .subscription-info-box.active .days-number { color: #2ecc71; }
 

@@ -6,6 +6,7 @@ import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
 import logger from '@/utils/logger.js';
 import api, { apiInterceptor } from '@/services/api';
+import { clearCacheOnLogout } from '@/services/cacheManager';
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
@@ -133,14 +134,14 @@ export const useAuthStore = defineStore('auth', () => {
             }
           }
         } else if (event === 'SIGNED_OUT') {
-          clearAuthData();
+          await logoutCleanup();
         }
       });
       
       authListener.value = listener;
     } catch (err) {
       logger.error('💥 Auth Init Error:', err);
-      clearAuthData();
+      await logoutCleanup();
     } finally {
       isInitialized.value = true;
       isLoading.value = false;
@@ -148,9 +149,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * تنظيف عميق لكل ما يخص الجلسة
+   * تنظيف عميق لكل ما يخص الجلسة والكاش
    */
-  function clearAuthData() {
+  async function logoutCleanup() {
     try {
       user.value = null;
       userProfile.value = null;
@@ -158,7 +159,10 @@ export const useAuthStore = defineStore('auth', () => {
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
       
-      // مسح مفاتيح Supabase
+      // تنظيف الكاش الذكي (باستثناء الأرشيف)
+      await clearCacheOnLogout();
+
+      // مسح مفاتيح Supabase المتبقية في localStorage
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth.token')) {
           localStorage.removeItem(key);
@@ -172,9 +176,9 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('my_subscription_data_v2');
       localStorage.removeItem('sys_config_enforce');
       
-      logger.info('🧹 Deep Auth Cleanup Completed.');
+      logger.info('🧹 Deep Auth & Cache Cleanup Completed (Archives preserved).');
     } catch (err) {
-      logger.error('Error during deep auth cleanup:', err);
+      logger.error('Error during logout cleanup:', err);
     }
   }
 
@@ -208,7 +212,7 @@ export const useAuthStore = defineStore('auth', () => {
         logger.warn('⚠️ Server-side logout failed, proceeding locally.');
       }
 
-      clearAuthData();
+      await logoutCleanup();
       isInitialized.value = false;
 
       logger.info('✅ Logout completed successfully.');
@@ -216,7 +220,7 @@ export const useAuthStore = defineStore('auth', () => {
       return true;
     } catch (err) {
       logger.error('💥 Logout error:', err);
-      clearAuthData();
+      await logoutCleanup();
       window.location.href = '/';
       return true; 
     } finally {
@@ -236,6 +240,6 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     logout,
     setAdminAction,
-    clearAuthData
+    logoutCleanup
   };
 });

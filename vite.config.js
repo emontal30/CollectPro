@@ -3,12 +3,16 @@ import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+import pkg from './package.json';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const isProd = mode === 'production';
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+    },
     plugins: [
       vue(),
       VitePWA({
