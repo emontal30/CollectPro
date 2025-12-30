@@ -97,7 +97,7 @@
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
               <span class="footer-separator">|</span>
-              <span class="version-badge">v2.9.6</span>
+              <span class="version-badge">v{{ currentAppVersion }}</span>
             </p>
           </div>
 
@@ -113,6 +113,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
 import cacheManager from '@/services/cacheManager';
 import logger from '@/utils/logger.js'
+import localforage from 'localforage';
 
 const store = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -120,6 +121,7 @@ const currentYear = ref(new Date().getFullYear());
 const showInstallButton = ref(false);
 const isInstallSuccess = ref(false); 
 const isRefreshing = ref(false);
+const currentAppVersion = ref(__APP_VERSION__);
 
 const { confirm, addNotification } = inject('notifications');
 
@@ -127,14 +129,12 @@ onMounted(() => {
   store.initializeAuth();
   handleInstallPromptLogic();
   
-  // الغاء الـ min-width الثابت في صفحة الدخول فقط لضمان التجاوب ومنع السكرول
   document.body.style.minWidth = 'auto';
   document.documentElement.style.overflowX = 'hidden';
   document.body.style.overflowX = 'hidden';
 });
 
 onUnmounted(() => {
-  // إعادة القيم الأصلية عند مغادرة الصفحة حتى لا تتأثر باقي الصفحات
   document.body.style.minWidth = '';
   document.documentElement.style.overflowX = '';
   document.body.style.overflowX = '';
@@ -144,47 +144,95 @@ const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
 };
 
+/**
+ * وظيفة التحديث الموحدة (نفس منطق السايدبار)
+ */
 const handleRefresh = async () => {
   const result = await confirm({
-    title: 'تحديث ومزامنة',
-    text: 'سيتم تحديث ملفات التطبيق والمزامنة مع السحابة، هل تود الاستمرار؟',
+    title: 'تحديث وتحسين النظام',
+    text: 'هل تود مزامنة البيانات وتنظيف المؤقتات لتحسين أداء التطبيق؟ (لن تفقد بياناتك المسجلة)',
     icon: 'info',
     confirmButtonText: 'تحديث الآن',
-    confirmButtonColor: 'var(--primary)',
-    showLoaderOnConfirm: true,
-    preConfirm: async () => {
-      isRefreshing.value = true;
-      try {
-        // 1. مسح الكاش البرمجي (Assets) والبيانات المؤقتة
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const reg of registrations) await reg.unregister();
-        }
-        
-        // 2. مسح كاش المتصفح لملفات التطبيق
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          for (const key of keys) await caches.delete(key);
-        }
-
-        // 3. تنظيف البيانات القابلة لإعادة المزامنة
-        localStorage.removeItem('sys_config_enforce');
-        
-        // 4. استخدام cacheManager للتنظيف السريع (بدون لمس بيانات العمل الأساسية)
-        if (cacheManager) await cacheManager.cleanExpiredCache();
-        
-        return true;
-      } catch (err) {
-        logger.error('Refresh Error:', err);
-        return false;
-      }
-    }
+    confirmButtonColor: 'var(--primary)'
   });
 
   if (result.isConfirmed) {
-    addNotification('جاري إعادة التشغيل...', 'success');
-    // استخدام reload مع تجاوز الكاش (force reload)
-    window.location.reload(true);
+    isRefreshing.value = true;
+    try {
+      // 1. التحقق من الإصدار
+      const oldVersion = localStorage.getItem('app_version');
+      const currentVersion = __APP_VERSION__;
+      const hasNewUpdate = oldVersion && oldVersion !== currentVersion;
+
+      // 2. أخذ نسخة احتياطية (Backup)
+      const backup = {
+        localStorage: {},
+        indexedDB: {}
+      };
+
+      // -- نسخ مفاتيح localStorage الأساسية
+      const lsKeys = ['clientData', 'masterLimit', 'extraLimit', 'currentBalance', 'moneyCountersData', 'app_settings_v1'];
+      lsKeys.forEach(key => {
+        const val = localStorage.getItem(key);
+        if (val !== null) backup.localStorage[key] = val;
+      });
+
+      // -- الحفاظ على جلسة الدخول
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('auth-token')) backup.localStorage[key] = localStorage.getItem(key);
+      });
+
+      // -- نسخ بيانات IndexedDB (الأرشيف والتحصيلات)
+      const idbKeys = await localforage.keys();
+      for (const key of idbKeys) {
+        if (key.startsWith('arch_data_') || key === 'harvest_rows') {
+          backup.indexedDB[key] = await localforage.getItem(key);
+        }
+      }
+
+      // 3. تنظيف شامل (Clear)
+      localStorage.clear();
+      await localforage.clear();
+      
+      // مسح الـ Service Worker والكاش البرمجي أيضاً لضمان ملفات جديدة
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) await reg.unregister();
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) await caches.delete(key);
+      }
+
+      // 4. استعادة البيانات (Restore)
+      Object.entries(backup.localStorage).forEach(([key, val]) => localStorage.setItem(key, val));
+      for (const [key, val] of Object.entries(backup.indexedDB)) {
+        await localforage.setItem(key, val);
+      }
+      
+      // تحديث رقم الإصدار
+      localStorage.setItem('app_version', currentVersion);
+
+      // 5. الإشعارات
+      if (hasNewUpdate) {
+        addNotification(`تمت الترقية بنجاح إلى الإصدار رقم ${currentVersion} 🚀`, 'success');
+        await new Promise(r => setTimeout(r, 1500));
+        addNotification('تم تحديث الملفات وتنظيف الكاش بنجاح ✅', 'success');
+      } else {
+        addNotification('أنت تستخدم أحدث إصدار من التطبيق بالفعل ✅', 'info');
+      }
+
+      // 6. إعادة تحميل الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } catch (err) {
+      logger.error('Login Refresh Error:', err);
+      addNotification('حدث خطأ أثناء محاولة التحديث', 'error');
+    } finally {
+      isRefreshing.value = false;
+    }
   }
 };
 
@@ -327,7 +375,7 @@ const installApp = async () => {
 }
 
 /* =========================================
-   2. الشعار والعناوين (تم التعديل هنا)
+   2. الشعار والعناوين
    ========================================= */
 .logo-container {
   margin-bottom: 30px;
@@ -344,18 +392,16 @@ const installApp = async () => {
   margin-right: auto;
 }
 
-/* === تعديل اسم التطبيق لإضافة الفاصل الأخضر === */
 .app-name {
   font-size: 34px;
   font-weight: 800;
   color: var(--primary);
-  margin: 0 0 15px; /* زيادة الهامش السفلي قليلاً */
+  margin: 0 0 15px; 
   letter-spacing: -0.5px;
-  position: relative; /* ضروري لتموضع الخط */
+  position: relative; 
   display: inline-block;
 }
 
-/* الفاصل الأخضر أسفل كلمة CollectPro */
 .app-name::after {
   content: '';
   position: absolute;
@@ -363,7 +409,6 @@ const installApp = async () => {
   left: 10%;
   width: 80%;
   height: 3px;
-  /* استخدمنا var(--primary) ليتناسق مع السمة، يمكنك وضع اللون #007965 مباشرة إذا أردت */
   background: linear-gradient(90deg, transparent, var(--primary), transparent);
   border-radius: 3px;
 }
@@ -420,7 +465,7 @@ const installApp = async () => {
 }
 
 /* =========================================
-   4. الروابط والفواصل (تم التعديل هنا)
+   4. الروابط والفواصل
    ========================================= */
 .privacy-policy {
   margin-top: 15px;
@@ -434,10 +479,9 @@ const installApp = async () => {
   font-weight: 600;
 }
 
-/* === الفاصل المتقدم الجديد === */
 .privacy-divider {
   display: block;
-  width: 85%; /* لجعله غير ممتد للنهاية */
+  width: 85%; 
   height: 2px;
   background: linear-gradient(90deg, 
     transparent 0%, 
@@ -455,7 +499,6 @@ const installApp = async () => {
   box-shadow: 0 1px 3px rgba(var(--primary-rgb), 0.2);
 }
 
-/* تأثير الوهج (Glow) فوق الفاصل */
 .privacy-divider::before {
   content: '';
   position: absolute;
@@ -472,19 +515,6 @@ const installApp = async () => {
   );
   filter: blur(2px);
   border-radius: 2px;
-}
-
-/* تأثير عند مرور الماوس */
-.privacy-divider:hover {
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(var(--primary-rgb), 0.3) 10%, 
-    rgba(var(--primary-rgb), 0.7) 30%, 
-    rgba(var(--primary-rgb), 0.9) 50%, 
-    rgba(var(--primary-rgb), 0.7) 70%, 
-    rgba(var(--primary-rgb), 0.3) 90%, 
-    transparent 100%
-  );
 }
 
 /* =========================================
@@ -648,6 +678,15 @@ const installApp = async () => {
 
 .developer-name { color: var(--gray-700); font-weight: 700; }
 
+.version-badge {
+  background: var(--primary-light);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  margin-left: 5px;
+}
+
 @keyframes rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -655,11 +694,11 @@ const installApp = async () => {
 
 @media (max-width: 480px) {
   .login-container { 
-    padding: 10px 50px; /* جعل الكارد "نحيفاً" جداً */
+    padding: 10px 50px; 
     align-items: center; 
   }
   .login-card { 
-    padding: 55px 20px; /* جعل الكارد "طويلاً" جداً */
+    padding: 55px 20px; 
     max-width: 100%; 
     border-radius: 24px;
   }
@@ -669,14 +708,8 @@ const installApp = async () => {
   .subtitle { font-size: 14px; }
   .btn-container { margin: 20px 0 10px; }
   .google-login-btn { padding: 14px 15px; border-radius: 12px; }
-  /* تحديث هوامش الفاصل للشاشات الصغيرة */
   .privacy-divider { margin: 20px auto; }
   .footer-info { margin-top: 20px; }
   .footer-controls { margin-bottom: 15px; gap: 10px; }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-  .login-container { padding: 20px 45px; }
-  .login-card { padding: 40px 25px; }
 }
 </style>
