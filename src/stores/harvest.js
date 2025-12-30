@@ -27,11 +27,10 @@ export const useHarvestStore = defineStore('harvest', {
     totals: (state) => {
       const rows = state.rows || [];
       return rows.reduce((acc, row) => {
-        // استخدام Math.round لضمان أرقام صحيحة وتجنب مشاكل الـ Floating point
-        acc.amount += Math.round(parseFloat(row.amount) || 0);
-        acc.extra += Math.round(parseFloat(row.extra) || 0);
-        acc.collector += Math.round(parseFloat(row.collector) || 0);
-        acc.net += Math.round(parseFloat(row.net) || 0);
+        acc.amount += parseFloat(row.amount) || 0;
+        acc.extra += parseFloat(row.extra) || 0;
+        acc.collector += parseFloat(row.collector) || 0;
+        acc.net += parseFloat(row.net) || 0;
         return acc;
       }, { amount: 0, extra: 0, collector: 0, net: 0 });
     },
@@ -53,7 +52,7 @@ export const useHarvestStore = defineStore('harvest', {
 
     resetStatus: (state) => {
       const totalCollected = state.totals.collector || 0;
-      const resetVal = Math.round((state.currentBalance || 0) - ((state.masterLimit || 0) + (state.extraLimit || 0)));
+      const resetVal = (state.currentBalance || 0) - ((state.masterLimit || 0) + (state.extraLimit || 0));
       const combinedValue = totalCollected + resetVal;
       
       if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
@@ -61,9 +60,9 @@ export const useHarvestStore = defineStore('harvest', {
       else return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
     },
     
-    resetAmount: (state) => Math.round((parseFloat(state.currentBalance) || 0) - ((parseFloat(state.masterLimit) || 0) + (parseFloat(state.extraLimit) || 0))),
+    resetAmount: (state) => (parseFloat(state.currentBalance) || 0) - ((parseFloat(state.masterLimit) || 0) + (parseFloat(state.extraLimit) || 0)),
     
-    totalNet: (state) => Math.round(state.totals.collector - (state.totals.amount + state.totals.extra))
+    totalNet: (state) => state.totals.collector - (state.totals.amount + state.totals.extra)
   },
 
   actions: {
@@ -108,6 +107,10 @@ export const useHarvestStore = defineStore('harvest', {
       this.isModified = false;
     },
 
+    async clearFields() {
+      await this.clearAll();
+    },
+
     async saveRowsToStorage() {
       try {
         const cleanedRows = safeDeepClone(this.rows);
@@ -121,6 +124,8 @@ export const useHarvestStore = defineStore('harvest', {
     async archiveTodayData() {
       try {
         this.isLoading = true;
+        
+        // FIX: Always use the current date at the moment of archiving
         this.currentDate = new Date().toISOString().split('T')[0];
 
         const authStore = useAuthStore();
@@ -137,38 +142,50 @@ export const useHarvestStore = defineStore('harvest', {
         const cleanRows = safeDeepClone(validRows).map(row => ({
           shop: row.shop || '',
           code: row.code || '',
-          amount: Math.round(parseFloat(row.amount) || 0),
-          extra: Math.round(parseFloat(row.extra) || 0),
-          collector: Math.round(parseFloat(row.collector) || 0),
-          net: Math.round(parseFloat(row.net) || 0)
+          amount: parseFloat(row.amount) || 0,
+          extra: parseFloat(row.extra) || 0,
+          collector: parseFloat(row.collector) || 0,
+          net: parseFloat(row.net) || 0
         }));
         
         const dateToSave = this.currentDate;
-        const localKey = `${archiveStore.DB_PREFIX}${dateToSave}`;
+        const localKey = `arch_data_${dateToSave}`;
 
-        // 1. الحفظ المحلي
+        // 1. الحفظ المحلي الفوري
         await localforage.setItem(localKey, cleanRows);
+        
+        // 2. تحديث قائمة التواريخ محلياً
         await archiveStore.loadAvailableDates();
 
-        // 2. الحفظ السحابي
+        // 3. الحفظ السحابي
         const dbPayload = {
           user_id: authStore.user.id,
           archive_date: dateToSave,
           data: cleanRows,
-          total_amount: Math.round((this.totals.collector || 0) - ((this.totals.amount || 0) + (this.totals.extra || 0))),
+          total_amount: (this.totals.collector || 0) - ((this.totals.amount || 0) + (this.totals.extra || 0)),
           updated_at: new Date()
         };
 
+        let message = '';
+
         if (navigator.onLine) {
-          const { error } = await api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data);
+          const { error } = await apiInterceptor(
+            api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data)
+          );
+
           if (!error) {
-            return { success: true, message: 'تم أرشفة اليوم بنجاح على الهاتف وسحابياً ✅' };
+            message = 'تم أرشفة اليوم بنجاح على الهاتف وسحابياً ✅';
+            await archiveStore.loadAvailableDates();
+          } else {
+            await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+            message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
           }
+        } else {
+          await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+          message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
         }
-        
-        // إذا كان أوفلاين أو فشل السحاب، أضف للطابور
-        await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-        return { success: true, message: 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾' };
+
+        return { success: true, message };
 
       } catch (error) {
         logger.error('💥 Archive Error:', error);
@@ -178,8 +195,42 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    parseRawDataToRows(rawData) {
+      if (!rawData) return [];
+      const lines = rawData.split('\n');
+      const parsedRows = [];
+      lines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine.includes("المسلسل")) return;
+        const parts = trimmedLine.split("\t");
+        if (parts.length < 2) return;
+        let shopName = parts[1].trim();
+        let code = parts[2] ? parts[2].trim() : "";
+        const match = shopName.match(/(.+?):\s*(\d+)/);
+        if (match) {
+          shopName = match[1].trim();
+          code = match[2].trim();
+        }
+        const transferAmount = parseFloat(parts[3]?.replace(/,/g, '') || 0);
+        if (transferAmount !== 0) {
+          parsedRows.push({
+            id: Date.now() + index,
+            serial: index + 1,
+            shop: shopName,
+            code: code,
+            amount: transferAmount,
+            extra: null,
+            collector: null,
+            net: 0 - transferAmount,
+            isImported: true
+          });
+        }
+      });
+      return parsedRows;
+    },
+
     async loadDataFromStorage() {
-      const newData = localStorage.getItem("harvestData");
+      const newData = localStorage.getItem("harvestData"); // This is temporary, so localStorage is fine.
       if (newData) {
         const newRows = this.parseRawDataToRows(newData);
         if (newRows.length > 0) {
@@ -203,32 +254,36 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     setMasterLimit(limit) {
-      this.masterLimit = Math.round(parseFloat(limit) || 0);
+      this.masterLimit = parseFloat(limit) || 0;
       localStorage.setItem('masterLimit', this.masterLimit.toString());
     },
 
     loadMasterLimit() {
       const limit = localStorage.getItem('masterLimit');
-      this.masterLimit = limit !== null ? Math.round(parseFloat(limit)) : 100000;
+      if (limit !== null) {
+        this.masterLimit = parseFloat(limit);
+      } else {
+        this.masterLimit = 100000;
+      }
     },
 
     setExtraLimit(limit) {
-      this.extraLimit = Math.round(parseFloat(limit) || 0);
+      this.extraLimit = parseFloat(limit) || 0;
       localStorage.setItem('extraLimit', this.extraLimit.toString());
     },
 
     loadExtraLimit() {
       const limit = localStorage.getItem('extraLimit');
-      if (limit) this.extraLimit = Math.round(parseFloat(limit));
+      if (limit) this.extraLimit = parseFloat(limit);
     },
 
     setCurrentBalance(balance) {
-      this.currentBalance = Math.round(parseFloat(balance) || 0);
+      this.currentBalance = parseFloat(balance) || 0;
       localStorage.setItem('currentBalance', this.currentBalance.toString());
     },
 
     formatNumber(num) {
-      return new Intl.NumberFormat('en-US').format(Math.round(num || 0));
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num || 0);
     }
   }
 });

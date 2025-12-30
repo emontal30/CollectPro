@@ -30,6 +30,18 @@ export const useAuthStore = defineStore('auth', () => {
     isPerformingAdminAction.value = status;
   }
 
+  /**
+   * دالة سحرية لإعادة تحميل الصفحة مرة واحدة لضبط الزوم
+   */
+  function triggerOneTimeLoginReload() {
+    const RELOAD_KEY = 'app_login_sync_performed';
+    if (!sessionStorage.getItem(RELOAD_KEY)) {
+      sessionStorage.setItem(RELOAD_KEY, 'true');
+      logger.info('🔄 Performing one-time login reload for UI/Zoom adaptation...');
+      window.location.reload();
+    }
+  }
+
   function cleanUrlHash() {
     if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
       logger.info('🧹 Cleaning sensitive data from URL hash');
@@ -96,6 +108,9 @@ export const useAuthStore = defineStore('auth', () => {
         await syncUserProfile(session.user);
         settingsStore.applySettings();
         cleanUrlHash();
+        
+        // تفعيل الإعادة لمرة واحدة عند اكتشاف جلسة نشطة
+        triggerOneTimeLoginReload();
       }
 
       if (authListener.value && authListener.value.subscription) {
@@ -111,6 +126,11 @@ export const useAuthStore = defineStore('auth', () => {
             user.value = session.user;
             await syncUserProfile(session.user);
             settingsStore.applySettings();
+            
+            // تفعيل الإعادة لمرة واحدة عند تسجيل الدخول
+            if (event === 'SIGNED_IN') {
+              triggerOneTimeLoginReload();
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           clearAuthData();
@@ -120,7 +140,7 @@ export const useAuthStore = defineStore('auth', () => {
       authListener.value = listener;
     } catch (err) {
       logger.error('💥 Auth Init Error:', err);
-      user.value = null;
+      clearAuthData();
     } finally {
       isInitialized.value = true;
       isLoading.value = false;
@@ -128,26 +148,33 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * تنظيف بيانات الهوية فقط عند تسجيل الخروج
-   * مع الإبقاء على البيانات المحلية (التحصيلات والأرشيف) بناءً على طلب المستخدم
+   * تنظيف عميق لكل ما يخص الجلسة
    */
   function clearAuthData() {
     try {
-      // 1. Auth Store
       user.value = null;
       userProfile.value = null;
       
-      // 2. Subscription Store (يجب تنظيفه لأسباب أمنية)
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
       
-      // 3. Local Storage (تنظيف المسار الأخير وبيانات الاشتراك فقط)
+      // مسح مفاتيح Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth.token')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // مسح مفتاح الإعادة لضمان عملها عند تسجيل الدخول القادم
+      sessionStorage.removeItem('app_login_sync_performed');
+
       localStorage.removeItem('app_last_route');
       localStorage.removeItem('my_subscription_data_v2');
+      localStorage.removeItem('sys_config_enforce');
       
-      logger.info('🧹 Auth Data Cleared. Local business data preserved.');
+      logger.info('🧹 Deep Auth Cleanup Completed.');
     } catch (err) {
-      logger.error('Error during auth cleanup:', err);
+      logger.error('Error during deep auth cleanup:', err);
     }
   }
 
@@ -168,32 +195,29 @@ export const useAuthStore = defineStore('auth', () => {
     
     isLoading.value = true;
     try {
-      logger.info('🚀 Initiating graceful logout...');
+      logger.info('🚀 Initiating deep logout...');
       
       if (authListener.value && authListener.value.subscription) {
         authListener.value.subscription.unsubscribe();
         authListener.value = null;
       }
 
-      const logoutPromise = api.auth.signOut();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Logout Timeout')), 3000)
-      );
-
       try {
-        await Promise.race([logoutPromise, timeoutPromise]);
+        await api.auth.signOut();
       } catch (e) {
-        logger.warn('⚠️ Server logout timed out, proceeding with local logout.');
+        logger.warn('⚠️ Server-side logout failed, proceeding locally.');
       }
 
       clearAuthData();
       isInitialized.value = false;
 
-      logger.info('✅ User signed out successfully.');
+      logger.info('✅ Logout completed successfully.');
+      window.location.href = '/'; 
       return true;
     } catch (err) {
       logger.error('💥 Logout error:', err);
       clearAuthData();
+      window.location.href = '/';
       return true; 
     } finally {
       isLoading.value = false;

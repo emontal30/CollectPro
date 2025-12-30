@@ -97,7 +97,7 @@
             <p class="developer-info">
               تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
               <span class="footer-separator">|</span>
-              <span class="version-badge">v2.9.3</span>
+              <span class="version-badge">v2.9.4</span>
             </p>
           </div>
 
@@ -146,23 +146,45 @@ const toggleDarkMode = () => {
 
 const handleRefresh = async () => {
   const result = await confirm({
-    title: 'تحديث البيانات',
-    text: 'هل تود تحديث ملفات التطبيق والمزامنة الآن؟',
+    title: 'تحديث ومزامنة',
+    text: 'سيتم تحديث ملفات التطبيق والمزامنة مع السحابة، هل تود الاستمرار؟',
     icon: 'info',
-    confirmButtonText: 'تحديث',
-    confirmButtonColor: 'var(--primary)'
+    confirmButtonText: 'تحديث الآن',
+    confirmButtonColor: 'var(--primary)',
+    showLoaderOnConfirm: true,
+    preConfirm: async () => {
+      isRefreshing.value = true;
+      try {
+        // 1. مسح الكاش البرمجي (Assets) والبيانات المؤقتة
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) await reg.unregister();
+        }
+        
+        // 2. مسح كاش المتصفح لملفات التطبيق
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          for (const key of keys) await caches.delete(key);
+        }
+
+        // 3. تنظيف البيانات القابلة لإعادة المزامنة
+        localStorage.removeItem('sys_config_enforce');
+        
+        // 4. استخدام cacheManager للتنظيف السريع (بدون لمس بيانات العمل الأساسية)
+        if (cacheManager) await cacheManager.cleanExpiredCache();
+        
+        return true;
+      } catch (err) {
+        logger.error('Refresh Error:', err);
+        return false;
+      }
+    }
   });
 
   if (result.isConfirmed) {
-    isRefreshing.value = true;
-    try {
-      localStorage.removeItem('sys_config_enforce');
-      if (cacheManager) await cacheManager.clearAllCaches();
-      addNotification('جاري التحديث...', 'info');
-      setTimeout(() => { window.location.reload(); }, 500);
-    } catch (e) {
-      isRefreshing.value = false;
-    }
+    addNotification('جاري إعادة التشغيل...', 'success');
+    // استخدام reload مع تجاوز الكاش (force reload)
+    window.location.reload(true);
   }
 };
 
