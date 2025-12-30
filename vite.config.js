@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             'vendor-vue': ['vue', 'vue-router', 'pinia'],
             'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-utils': ['sweetalert2', 'localforage', 'axios']
+            'vendor-utils': ['sweetalert2', 'localforage']
           }
         }
       }
