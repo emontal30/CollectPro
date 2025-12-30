@@ -47,7 +47,7 @@ const routes = [
         path: 'archive', 
         name: 'Archive', 
         component: ArchiveView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
       { 
         path: 'counter', 
@@ -85,7 +85,6 @@ const routes = [
     beforeEnter: (to, from, next) => {
       logger.warn(`🚀 Route Not Found: ${to.path}. Redirecting...`);
       const authStore = useAuthStore();
-      // Must ensure auth is initialized to make a correct decision
       if (!authStore.isInitialized) {
         authStore.initializeAuth().then(() => {
           if (authStore.isAuthenticated) {
@@ -102,7 +101,6 @@ const routes = [
         }
       }
     },
-    // No component is needed for a redirect-only route
     component: { template: '' }
   }
 ]
@@ -116,7 +114,6 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   try {
-    // Ensure auth state is initialized before any navigation
     if (!authStore.isInitialized) {
       await authStore.initializeAuth();
     }
@@ -125,31 +122,25 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.matched.some(r => r.meta.requiresAuth);
     const requiresGuest = to.matched.some(r => r.meta.requiresGuest);
     
-    // The NotFound route now handles its own logic, so we can ignore it here.
     if (to.name === 'NotFound') {
         return next();
     }
 
-    // Redirect unauthenticated users trying to access protected routes
     if (requiresAuth && !isLoggedIn) {
-      return next({ path: '/' }); // Redirect to login
+      return next({ path: '/' });
     }
 
-    // Redirect authenticated users trying to access guest-only routes (like login)
     if (requiresGuest && isLoggedIn) {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
       return next(lastRoute);
     }
     
-    // --- Post-Authentication Checks (Admin & Subscription) ---
     if (requiresAuth && isLoggedIn) {
-      // Admin Role Check
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin);
       if (requiresAdmin && !authStore.isAdmin) {
-        return next({ name: 'Dashboard' }); // Redirect non-admins
+        return next({ name: 'Dashboard' });
       }
 
-      // Subscription Protection Check
       const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
       if (requiresSub && !authStore.isAdmin && authStore.isSubscriptionEnforced) {
         const subStore = useMySubscriptionStore();
@@ -163,12 +154,10 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    // If all checks pass, proceed to the route
     next();
 
   } catch (err) {
     logger.error('🚀 Router Guard Error:', err);
-    // In case of error during initialization, prevent navigation to protected routes
     if (to.meta.requiresAuth) {
       next('/');
     } else {
@@ -176,7 +165,6 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 });
-
 
 router.afterEach((to) => {
   if (to.path.startsWith('/app')) {

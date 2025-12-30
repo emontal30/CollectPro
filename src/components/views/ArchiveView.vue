@@ -87,7 +87,7 @@
           </tr>
 
           <template v-else>
-            <tr v-for="(row, index) in store.rows" :key="index">
+            <tr v-for="(row, index) in filteredRows" :key="index">
               <td class="date-cell">{{ row.date || store.selectedDate }}</td>
               <td v-show="isVisible('shop')" class="shop shop-name-cell">{{ row.shop }}</td>
               <td v-show="isVisible('code')" class="code">{{ row.code }}</td>
@@ -100,21 +100,21 @@
               </td>
             </tr>
 
-            <tr v-if="store.rows.length === 0">
+            <tr v-if="filteredRows.length === 0">
               <td colspan="7" class="text-center p-3 text-muted">
                 {{ store.isGlobalSearching ? 'لم يتم العثور على نتائج للبحث' : (store.selectedDate ? 'لا توجد بيانات لهذا اليوم' : 'يرجى اختيار تاريخ أو كتابة اسم محل للبحث') }}
               </td>
             </tr>
 
-            <tr v-if="store.rows.length > 0" class="total-row">
+            <tr v-if="filteredRows.length > 0" class="total-row">
               <td class="date-cell"></td>
               <td v-show="isVisible('shop')" class="shop">الإجمالي</td>
               <td v-show="isVisible('code')" class="code"></td>
-              <td v-show="isVisible('amount')">{{ formatNum(store.totals.amount) }}</td>
-              <td v-show="isVisible('extra')">{{ formatNum(store.totals.extra) }}</td>
-              <td v-show="isVisible('collector')">{{ formatNum(store.totals.collector) }}</td>
-              <td v-show="isVisible('net')" class="net numeric" :class="getNetClass(store.totals.net)">
-                {{ formatNum(store.totals.net) }}
+              <td v-show="isVisible('amount')">{{ formatNum(filteredTotals.amount) }}</td>
+              <td v-show="isVisible('extra')">{{ formatNum(filteredTotals.extra) }}</td>
+              <td v-show="isVisible('collector')">{{ formatNum(filteredTotals.collector) }}</td>
+              <td v-show="isVisible('net')" class="net numeric" :class="getNetClass(filteredTotals.net)">
+                {{ formatNum(filteredTotals.net) }}
               </td>
             </tr>
           </template>
@@ -123,7 +123,7 @@
     </div>
 
     <!-- Export Button -->
-    <div class="export-container" v-if="store.rows.length > 0">
+    <div class="export-container" v-if="filteredRows.length > 0">
       <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
         <i class="fas fa-share-alt"></i>
         <span>مشاركة الجدول</span>
@@ -153,7 +153,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, inject, computed, watch } from 'vue';
+import { onMounted, ref, inject, computed, watch, onActivated } from 'vue';
 import { useArchiveStore } from '@/stores/archiveStore';
 import { useAuthStore } from '@/stores/auth';
 import PageHeader from '@/components/layout/PageHeader.vue';
@@ -162,6 +162,7 @@ import logger from '@/utils/logger.js';
 import { getNetClass, getNetIcon } from '@/utils/formatters.js';
 import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
+import { onBeforeRouteUpdate } from 'vue-router';
 
 const store = useArchiveStore();
 const authStore = useAuthStore();
@@ -181,14 +182,31 @@ const archiveColumns = [
 
 const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(archiveColumns, 'columns.visibility.archive');
 
-const isSearching = computed(() => searchQuery.value.trim().length >= 2);
+const filteredRows = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return store.rows;
+  return store.rows.filter(row => 
+    (row.shop && row.shop.toLowerCase().includes(query)) || 
+    (row.code && row.code.toString().toLowerCase().includes(query)) ||
+    (row.date && row.date.includes(query))
+  );
+});
 
+const filteredTotals = computed(() => {
+  return filteredRows.value.reduce((acc, row) => {
+    acc.amount += Number(row.amount) || 0;
+    acc.extra += Number(row.extra) || 0;
+    acc.collector += Number(row.collector) || 0;
+    acc.net += Number(row.net) || 0;
+    return acc;
+  }, { amount: 0, extra: 0, collector: 0, net: 0 });
+});
+
+const isSearching = computed(() => searchQuery.value.trim().length > 0);
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
-const initData = async () => {
-  // لا نستدعي البيانات إلا إذا كان المستخدم مسجلاً بالفعل
-  if (!authStore.isAuthenticated) return;
-  
+const initData = async (force = false) => {
+  if (!authStore.isAuthenticated || (store.isLoading && !force)) return;
   try {
     loadColumns();
     await store.loadAvailableDates();
@@ -200,15 +218,15 @@ const initData = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(() => { initData(); });
+onActivated(() => { initData(); });
+onBeforeRouteUpdate((to, from, next) => {
   initData();
+  next();
 });
 
-// مراقبة حالة المصادقة: إذا اكتملت ولم تكن البيانات قد حملت، نحملها
 watch(() => authStore.isAuthenticated, (newVal) => {
-  if (newVal && store.availableDates.length === 0) {
-    initData();
-  }
+  if (newVal) initData();
 });
 
 const handleDateChange = async () => {
@@ -221,13 +239,12 @@ const handleDateChange = async () => {
 };
 
 const handleSearch = () => {
-  clearTimeout(searchTimeout);
   const query = searchQuery.value.trim();
-  
-  if (query.length >= 2) {
+  if (query.length > 0 && !store.selectedDate) {
+    clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       store.searchInAllArchives(query);
-    }, 300); 
+    }, 100);
   } else if (query.length === 0) {
     if (store.selectedDate) {
       store.loadArchiveByDate(store.selectedDate);
@@ -253,7 +270,6 @@ const handleExport = async () => {
 
 const deleteCurrentArchive = async () => {
   if (!store.selectedDate) return;
-
   const result = await confirm({
     title: 'تأكيد الحذف',
     text: `هل أنت متأكد من حذف أرشيف يوم ${store.selectedDate}؟ سيتم حذفه نهائياً من الهاتف والسحابة.`,
@@ -262,7 +278,6 @@ const deleteCurrentArchive = async () => {
     cancelButtonText: 'إلغاء',
     confirmButtonColor: 'var(--danger)',
   });
-
   if (result.isConfirmed) {
     const res = await store.deleteArchive(store.selectedDate);
     if (res.success) {
@@ -276,129 +291,22 @@ const deleteCurrentArchive = async () => {
 </script>
 
 <style scoped>
-.archive-page {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 80px);
-}
-
-.table-wrapper {
-  flex: 1;
-  margin-bottom: 20px;
-}
-
-.archive-header-row th {
-  font-size: 0.8rem;
-}
-
-.footer-sticky {
-  margin-top: auto;
-  padding-bottom: 20px;
-}
-
-.search-info-banner {
-  background: var(--primary-light, #e0f2fe);
-  color: var(--primary-dark, #0369a1);
-  padding: 10px 15px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
-  border: 1px solid var(--primary-border, #bae6fd);
-}
-
-.btn-clear-search {
-  margin-right: auto;
-  background: white;
-  border: 1px solid var(--primary-border);
-  padding: 4px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s;
-}
-
-.btn-clear-search:hover {
-  background: var(--danger-light, #fee2e2);
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
+.archive-page { display: flex; flex-direction: column; min-height: calc(100vh - 80px); }
+.table-wrapper { flex: 1; margin-bottom: 20px; }
+.archive-header-row th { font-size: 0.8rem; }
+.footer-sticky { margin-top: auto; padding-bottom: 20px; }
+.search-info-banner { background: var(--primary-light, #e0f2fe); color: var(--primary-dark, #0369a1); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; border: 1px solid var(--primary-border, #bae6fd); }
+.btn-clear-search { margin-right: auto; background: white; border: 1px solid var(--primary-border); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+.btn-clear-search:hover { background: var(--danger-light, #fee2e2); color: var(--danger); border-color: var(--danger); }
 .btn-full { width: 100%; }
-
-.date-cell {
-  font-weight: 600;
-  color: var(--primary);
-  white-space: nowrap;
-  font-size: 0.55rem;
-}
-
-.shop-name-cell {
-  font-size: 0.8rem !important;
-}
-
-.modern-table td.code {
-  font-size: 0.75rem;
-  color: var(--gray-600);
-  font-style: italic;
-}
-
-.archive-specific-table .shop, 
-.archive-specific-table td.shop, 
-.archive-specific-table th.shop {
-  width: 125px !important;
-  min-width: 125px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* Export Button Styles */
-.export-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-  margin-bottom: 15px;
-  padding: 0 5px;
-}
-
-.btn-export-share {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3);
-  transition: all 0.2s ease;
-}
-
-.btn-export-share:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
-}
-
-.btn-export-share i {
-  font-size: 1rem;
-}
-
-@media (max-width: 768px) {
-  .archive-specific-table .shop, 
-  .archive-specific-table td.shop, 
-  .archive-specific-table th.shop {
-    width: 95px !important;
-    min-width: 95px !important;
-  }
-  
-  .export-container {
-    justify-content: center;
-  }
-}
+.date-header, .date-cell { width: 85px !important; min-width: 85px !important; }
+.date-cell { font-weight: 600; color: var(--primary); white-space: nowrap; font-size: 0.55rem; }
+.shop-name-cell { font-size: 0.8rem !important; }
+.modern-table td.code { font-size: 0.75rem; color: var(--gray-600); font-style: italic; }
+.archive-specific-table .shop, .archive-specific-table td.shop, .archive-specific-table th.shop { width: 145px !important; min-width: 145px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+.export-container { display: flex; justify-content: flex-end; margin-top: 10px; margin-bottom: 15px; padding: 0 5px; }
+.btn-export-share { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; }
+.btn-export-share:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
+.btn-export-share i { font-size: 1rem; }
+@media (max-width: 768px) { .archive-specific-table .shop, .archive-specific-table td.shop, .archive-specific-table th.shop { width: 115px !important; min-width: 115px !important; } .date-header, .date-cell { width: 70px !important; min-width: 70px !important; } .export-container { justify-content: center; } }
 </style>

@@ -115,7 +115,8 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   async function searchInAllArchives(query) {
-    if (!query || query.length < 2) return;
+    // تم إزالة شرط طول الحرف للسماح بالبحث مع كل حرف كما طلب المستخدم
+    if (!query) return;
     
     isLoading.value = true;
     isGlobalSearching.value = true;
@@ -125,7 +126,7 @@ export const useArchiveStore = defineStore('archive', () => {
       const allKeys = await localforage.keys();
       const archKeys = allKeys.filter(k => k.startsWith(DB_PREFIX));
 
-      // Fetch all archive data in parallel for a massive performance boost.
+      // جلب جميع البيانات المحلية بشكل متوازي
       const allData = await Promise.all(archKeys.map(key => localforage.getItem(key)));
 
       const results = allData.flatMap((data, index) => {
@@ -142,10 +143,12 @@ export const useArchiveStore = defineStore('archive', () => {
       });
 
       rows.value = results;
+      // لا نصفر التاريخ المختار هنا إذا أردنا السماح بالتصفية المحلية أولاً، 
+      // ولكن التصميم الحالي يعتمد على أن البحث الشامل يغطي كل التواريخ
       selectedDate.value = '';
     } catch (err) {
       logger.error('❌ Global Search Error:', err);
-      addNotification('حدث خطأ أثناء البحث الشامل', 'error');
+      // لا نظهر تنبيه في كل حرف لتجنب الإزعاج، نكتفي باللوج
     } finally {
       isLoading.value = false;
     }

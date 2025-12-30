@@ -9,7 +9,7 @@
     <!-- التاريخ واليوم -->
     <div class="date-display">
       <i class="fas fa-calendar-alt calendar-icon"></i>
-      <span class="label">اليوم:</span>
+      <span class="label">اليووم:</span>
       <span class="value">{{ currentDay }}</span>
       <span class="separator">|</span>
       <span class="label">التاريخ:</span>
@@ -61,9 +61,9 @@
         <tbody>
           <tr v-for="(row, index) in localFilteredRows" :key="row.id">
             <!-- المحل -->
-            <td v-show="isVisible('shop')" class="shop" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }">
-              <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
-              <span v-else class="readonly-field">{{ row.shop }}</span>
+            <td v-show="isVisible('shop')" class="shop no-wrap-cell" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }" :title="row.shop">
+              <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" :title="row.shop" />
+              <span v-else class="readonly-field" :title="row.shop">{{ row.shop }}</span>
             </td>
 
             <!-- الكود -->
@@ -175,7 +175,7 @@
                 class="bold-input text-center font-bold master-limit-input"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
-                @input="handleMoneyInput($event, (val) => store.setMasterLimit(parseFloat(val) || 0), { fieldName: 'ليمت الماستر' })"
+                @input="handleMoneyInput($event, (val) => store.setMasterLimit(parseFloat(val) || 0), { fieldName: 'ليمت الماستر', maxLimit: 499999 })"
               />
             </div>
 
@@ -191,7 +191,7 @@
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل الليمت الإضافي"
-                @input="handleMoneyInput($event, (val) => store.setExtraLimit(parseFloat(val) || 0), { fieldName: 'الليمت الإضافي' })"
+                @input="handleMoneyInput($event, (val) => store.setExtraLimit(parseFloat(val) || 0), { fieldName: 'الليمت الإضافي', maxLimit: 499999 })"
               />
             </div>
           </div>
@@ -390,18 +390,24 @@ const updateShop = (row, index, e) => updateField(row, index, 'shop', e.target.v
 const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
 
 const updateAmount = (row, index, e) => {
-  handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل' });
+  handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
 };
 
 const updateExtra = (row, index, e) => {
   handleMoneyInput(e, (val) => {
     if (val === '-') row.extra = '-';
     else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
-  }, { allowNegative: true, fieldName: 'المبلغ الإضافي' });
+  }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
 };
 
 const updateCollector = (row, index, e) => {
-  handleMoneyInput(e, (val) => updateField(row, index, 'collector', val ? parseFloat(val) : null, true), { fieldName: 'مبلغ المحصل' });
+  const amountVal = parseFloat(row.amount) || 0;
+  const collectorMaxLimit = amountVal + 2999;
+  
+  handleMoneyInput(e, (val) => updateField(row, index, 'collector', val ? parseFloat(val) : null, true), { 
+    fieldName: 'مبلغ المحصل', 
+    maxLimit: collectorMaxLimit 
+  });
 };
 
 const toggleSign = (row, field) => {
@@ -490,6 +496,18 @@ watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initiali
 </script>
 
 <style scoped>
+/* تصغير حجم خط عناوين الجدول */
+.modern-table thead th {
+  font-size: 0.85rem !important;
+}
+
+/* منع التفاف النص في عمود المحل والتأكد من عدم التداخل */
+.no-wrap-cell {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
 /* التباعد الموحد */
 .mx-2 { margin: 0 8px; }
 
@@ -499,6 +517,7 @@ watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initiali
   font-weight: 500;
   opacity: 0.8;
   display: block;
+  pointer-events: none;
 }
 
 .small-label {
@@ -694,5 +713,16 @@ watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initiali
   .export-container {
     justify-content: center;
   }
+}
+
+/* Sticky Toast Styles */
+:deep(.sticky-warning-toast) {
+  position: fixed !important;
+  top: 10px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  border: 1px solid #ffeeba !important;
 }
 </style>

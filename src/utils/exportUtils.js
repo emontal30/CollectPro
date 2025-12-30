@@ -27,7 +27,7 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
     input: 'radio',
     inputOptions: {
       'image': '📷 صورة (PNG)',
-      'pdf': '📄 ملف (PDF) - حجم مضغوط',
+      'pdf': '📄 ملف (PDF) - صورة مطبوعة',
       'excel': '📊 شيت اكسل (XLSX)'
     },
     inputValue: 'image',
@@ -44,21 +44,34 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
       return await exportToExcel(elementId, fileName);
     } 
     
-    // إعدادات html2canvas مع مراعاة الخطوط والتنسيقات الموحدة
+    // إعدادات html2canvas مع مراعاة الخطوط والتنسيقات الموحدة لضمان ظهور العربية
     const canvas = await html2canvas(element, {
-      scale: 1.5, // توازن بين الجودة والمساحة
+      scale: 2, // زيادة الجودة لضمان وضوح النص العربي
       useCORS: true,
+      allowTaint: true,
       backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface-bg') || '#ffffff',
       logging: false,
       onclone: (clonedDoc) => {
         const clonedElement = clonedDoc.getElementById(elementId);
         if (clonedElement) {
-            // تطبيق تنسيقات الطباعة/التصدير
+            // تطبيق تنسيقات الطباعة/التصدير لضمان ظهور النص العربي بشكل صحيح
+            clonedElement.style.direction = 'rtl';
+            clonedElement.style.textAlign = 'right';
             clonedElement.style.padding = '20px';
             clonedElement.style.fontFamily = "'Cairo', sans-serif";
             
-            // إخفاء العناصر غير المرغوب فيها عند التصدير (مثل أزرار الإجراءات)
-            const actions = clonedElement.querySelectorAll('.btn-toggle-sign, .btn-settings-table');
+            // إصلاح محاذاة الأعمدة في النسخة المنسوخة
+            const cells = clonedElement.querySelectorAll('td, th');
+            cells.forEach(cell => {
+                cell.style.fontFamily = "'Cairo', sans-serif";
+                // التأكد من أن الأرقام تظهر بشكل جيد
+                if (!cell.classList.contains('shop')) {
+                    cell.style.textAlign = 'center';
+                }
+            });
+
+            // إخفاء العناصر غير المرغوب فيها عند التصدير
+            const actions = clonedElement.querySelectorAll('.btn-toggle-sign, .btn-settings-table, .btn-clear-search');
             actions.forEach(el => el.style.display = 'none');
         }
       }
@@ -66,7 +79,7 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
 
     // --- معالجة الصور ---
     if (selectedFormat === 'image') {
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.8));
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
       const file = new File([blob], `${fileName}.png`, { type: 'image/png' });
 
       try {
@@ -78,13 +91,14 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
       
       const link = document.createElement('a');
       link.download = `${fileName}.png`;
-      link.href = canvas.toDataURL('image/png', 0.8);
+      link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
       return { success: true, message: 'تم تحميل الصورة بنجاح' };
 
     // --- معالجة PDF ---
     } else if (selectedFormat === 'pdf') {
-      const imgData = canvas.toDataURL('image/jpeg', 0.7); // ضغط JPEG لتقليل المساحة
+      // نستخدم الصورة داخل PDF لأن jsPDF لا يدعم العربية بشكل مباشر بدون ملفات خطوط معقدة
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       const pdf = new jsPDF({
         orientation: canvas.width > canvas.height ? 'l' : 'p',
         unit: 'mm',
@@ -93,11 +107,17 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+      
+      // حساب الأبعاد للحفاظ على التناسب
+      const margin = 10;
+      const maxWidth = pdfWidth - (margin * 2);
+      const maxHeight = pdfHeight - (margin * 2);
+      
+      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
       const finalWidth = canvas.width * ratio;
       const finalHeight = canvas.height * ratio;
       
-      pdf.addImage(imgData, 'JPEG', (pdfWidth - finalWidth) / 2, 10, finalWidth, finalHeight, undefined, 'FAST');
+      pdf.addImage(imgData, 'JPEG', (pdfWidth - finalWidth) / 2, margin, finalWidth, finalHeight, undefined, 'FAST');
       
       const pdfBlob = pdf.output('blob');
       const pdfFile = new File([pdfBlob], `${fileName}.pdf`, { type: 'application/pdf' });
@@ -120,20 +140,31 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
 };
 
 /**
- * تصدير للاكسل مع دعم الـ RTL والتراجع التلقائي للتحميل
+ * تصدير للاكسل مع تحسين دعم الرموز واللغة العربية
  */
 const exportToExcel = async (elementId, fileName) => {
   try {
-    const table = document.getElementById(elementId).querySelector('table');
-    if (!table) return { success: false, message: 'لم يتم العثور على جدول البيانات' };
+    const tableElement = document.getElementById(elementId).querySelector('table');
+    if (!tableElement) return { success: false, message: 'لم يتم العثور على جدول البيانات' };
 
-    const wb = XLSX.utils.table_to_book(table, { sheet: "Data", raw: true });
+    // تحويل الجدول إلى شيت مع الحفاظ على التنسيق
+    const wb = XLSX.utils.table_to_book(tableElement, { 
+        sheet: "تقرير الأرشيف",
+        raw: false, // لضمان التعامل مع النصوص كالسلاسل
+        dateNF: 'yyyy-mm-dd'
+    });
     
-    // ضبط اتجاه الشيت من اليمين لليسار
+    // ضبط إعدادات اللغة والاتجاه في ملف الإكسل
     if(!wb.Workbook) wb.Workbook = {};
     wb.Workbook.Views = [{ RTL: true }];
     
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    // كتابة الملف بصيغة تدعم اليونيكود (العربية)
+    const excelBuffer = XLSX.write(wb, { 
+        bookType: 'xlsx', 
+        type: 'array',
+        bookSST: false // تحسين التوافقية
+    });
+    
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const file = new File([blob], `${fileName}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 

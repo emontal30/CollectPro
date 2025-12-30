@@ -38,7 +38,7 @@ const getIconClass = (type) => {
 <style scoped>
 .notification-container {
   position: fixed;
-  top: 100px;
+  top: 20px; /* تم تعديله من 100px ليظهر دائماً بالاعلى */
   right: 20px;
   z-index: 10000;
   max-width: 400px;
@@ -155,6 +155,7 @@ const getIconClass = (type) => {
     right: 10px;
     left: 10px;
     max-width: none;
+    top: 10px; /* تم تعديله للهواتف ايضاً */
   }
 
   .notification-content {

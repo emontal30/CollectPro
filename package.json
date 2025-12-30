@@ -1,10 +1,10 @@
 {
   "name": "collectpro",
-  "version": "2.9.6",
+  "version": "2.9.7",
   "description": "Modern collection management application",
   "main": "index.js",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite --host --port 3001",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",

@@ -96,41 +96,48 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id">
-              <td class="td-checkbox">
-                <input type="checkbox" v-model="selectedUsers" :value="user.id">
-              </td>
-              <td>
-                <div class="user-info-cell">
-                  <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
-                  <div class="user-email text-xs text-muted">{{ user.email }}</div>
-                  <div class="user-short-id">ID: {{ user.id.slice(0, 8) }}</div>
-                </div>
-              </td>
-              <td class="col-status">
-                <div class="status-column centered">
-                  <span v-if="user.hasActiveSub" class="status-badge status-active">نشط</span>
-                  <span v-else class="status-badge status-cancelled">غير نشط</span>
-                  
-                  <div class="expiry-date-sub">من: {{ store.formatDate(user.created_at) }}</div>
-                  <div v-if="user.hasActiveSub" class="expiry-date-sub">إلى: {{ store.formatDate(user.expiryDate) }}</div>
-                </div>
-              </td>
-              <td class="col-subscription-days">
-                <div class="input-with-notch">
-                  <input v-model.number="user.manualDays" type="number" class="editable-input w-full no-spin" placeholder="أيام">
-                  <button class="btn-notch-sign" @click="toggleUserSign(user)">-</button>
-                </div>
-              </td>
-              <td class="text-center">
-                <button 
-                  class="btn btn--icon"
-                  :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
-                  @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
-                  <i class="fas fa-play-circle"></i>
-                </button>
+            <tr v-if="store.isLoading">
+              <td colspan="5" class="text-center p-3">
+                <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل المستخدمين...
               </td>
             </tr>
+            <template v-else>
+              <tr v-for="user in filteredUsers" :key="user.id">
+                <td class="td-checkbox">
+                  <input type="checkbox" v-model="selectedUsers" :value="user.id">
+                </td>
+                <td>
+                  <div class="user-info-cell">
+                    <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
+                    <div class="user-email text-xs text-muted">{{ user.email }}</div>
+                    <div class="user-short-id">ID: {{ user.id.slice(0, 8) }}</div>
+                  </div>
+                </td>
+                <td class="col-status">
+                  <div class="status-column centered">
+                    <span v-if="user.hasActiveSub" class="status-badge status-active">نشط</span>
+                    <span v-else class="status-badge status-cancelled">غير نشط</span>
+                    
+                    <div class="expiry-date-sub">من: {{ store.formatDate(user.created_at) }}</div>
+                    <div v-if="user.hasActiveSub" class="expiry-date-sub">إلى: {{ store.formatDate(user.expiryDate) }}</div>
+                  </div>
+                </td>
+                <td class="col-subscription-days">
+                  <div class="input-with-notch">
+                    <input v-model.number="user.manualDays" type="number" class="editable-input w-full no-spin" placeholder="أيام">
+                    <button class="btn-notch-sign" @click="toggleUserSign(user)">-</button>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <button 
+                    class="btn btn--icon"
+                    :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
+                    @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
+                    <i class="fas fa-play-circle"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -142,7 +149,7 @@
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0">
+        <table class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0 || store.isLoading">
           <thead>
             <tr>
               <th>المستخدم</th>
@@ -153,27 +160,34 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sub in store.pendingSubscriptions" :key="sub.id">
-              <td>
-                <div class="user-info-cell">
-                  <div class="user-name font-bold">{{ sub.users?.full_name || 'مستخدم' }}</div>
-                  <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
-                  <div class="user-short-id">ID: {{ sub.user_id?.slice(0, 8) }}</div>
-                </div>
-              </td>
-              <td>{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
-              <td class="font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
-              <td>{{ store.formatDate(sub.created_at) }}</td>
-              <td class="text-center">
-                <div class="d-flex justify-center gap-2">
-                  <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
-                  <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
-                </div>
+            <tr v-if="store.isLoading">
+              <td colspan="5" class="text-center p-3">
+                <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل الطلبات المعلقة...
               </td>
             </tr>
+            <template v-else>
+              <tr v-for="sub in store.pendingSubscriptions" :key="sub.id">
+                <td>
+                  <div class="user-info-cell">
+                    <div class="user-name font-bold">{{ sub.users?.full_name || 'مستخدم' }}</div>
+                    <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
+                    <div class="user-short-id">ID: {{ sub.user_id?.slice(0, 8) }}</div>
+                  </div>
+                </td>
+                <td>{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
+                <td class="font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
+                <td>{{ store.formatDate(sub.created_at) }}</td>
+                <td class="text-center">
+                  <div class="d-flex justify-center gap-2">
+                    <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
+                    <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
-        <div v-else class="no-data p-5 text-center text-muted"><p>لا توجد طلبات معلقة</p></div>
+        <div v-else-if="!store.isLoading" class="no-data p-5 text-center text-muted"><p>لا توجد طلبات معلقة</p></div>
       </div>
     </section>
 
@@ -195,7 +209,7 @@
         </select>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table auto-layout">
+        <table class="modern-table auto-layout" v-if="store.allSubscriptions.length > 0 || store.isLoading">
           <thead>
             <tr>
               <th>المستخدم</th>
@@ -205,37 +219,45 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sub in store.allSubscriptions" :key="sub.id">
-              <td>
-                <div class="user-info-cell">
-                  <div class="user-name font-bold">{{ sub.users?.full_name || sub.users?.email }}</div>
-                  <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
-                  <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
-                </div>
-              </td>
-              <td class="col-status text-center">
-                <span class="status-badge" :class="`status-${sub.status}`">
-                  {{ sub.status === 'active' ? 'نشط' : (sub.status === 'cancelled' ? 'معلق' : (sub.status === 'expired' ? 'منتهي' : sub.status)) }}
-                </span>
-                <div v-if="sub.end_date" class="expiry-date-sub">إلى: {{ store.formatDate(sub.end_date) }}</div>
-              </td>
-              <td class="col-days text-center font-bold">
-                <span v-if="sub.status === 'active'" :style="{ color: getRemainingDaysColor(sub.end_date) }">
-                  {{ calculateRemainingDays(sub.end_date) }}
-                </span>
-                <span v-else>-</span>
-              </td>
-              <td class="text-center">
-                <div class="d-flex justify-center gap-1">
-                  <button class="btn btn--icon text-info" title="تفاصيل" @click="showSubscriptionDetails(sub)"><i class="fas fa-eye"></i></button>
-                  <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')"><i class="fas fa-pause"></i></button>
-                  <button v-if="sub.status === 'cancelled'" class="btn btn--icon text-success" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')"><i class="fas fa-play"></i></button>
-                  <button class="btn btn--icon text-danger" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')"><i class="fas fa-trash"></i></button>
-                </div>
+            <tr v-if="store.isLoading">
+              <td colspan="4" class="text-center p-3">
+                <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل جميع الاشتراكات...
               </td>
             </tr>
+            <template v-else>
+              <tr v-for="sub in store.allSubscriptions" :key="sub.id">
+                <td>
+                  <div class="user-info-cell">
+                    <div class="user-name font-bold">{{ sub.users?.full_name || sub.users?.email }}</div>
+                    <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
+                    <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
+                  </div>
+                </td>
+                <td class="col-status text-center">
+                  <span class="status-badge" :class="`status-${sub.status} text-center` ">
+                    {{ sub.status === 'active' ? 'نشط' : (sub.status === 'cancelled' ? 'معلق' : (sub.status === 'expired' ? 'منتهي' : sub.status)) }}
+                  </span>
+                  <div v-if="sub.end_date" class="expiry-date-sub">إلى: {{ store.formatDate(sub.end_date) }}</div>
+                </td>
+                <td class="col-days text-center font-bold">
+                  <span v-if="sub.status === 'active'" :style="{ color: getRemainingDaysColor(sub.end_date) }">
+                    {{ calculateRemainingDays(sub.end_date) }}
+                  </span>
+                  <span v-else>-</span>
+                </td>
+                <td class="text-center">
+                  <div class="d-flex justify-center gap-1">
+                    <button class="btn btn--icon text-info" title="تفاصيل" @click="showSubscriptionDetails(sub)"><i class="fas fa-eye"></i></button>
+                    <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')"><i class="fas fa-pause"></i></button>
+                    <button v-if="sub.status === 'cancelled'" class="btn btn--icon text-success" title="استئناف" @click="store.handleSubscriptionAction(sub.id, 'reactivate')"><i class="fas fa-play"></i></button>
+                    <button class="btn btn--icon text-danger" title="حذف" @click="store.handleSubscriptionAction(sub.id, 'delete')"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
+        <div v-else-if="!store.isLoading" class="no-data p-5 text-center text-muted"><p>لا توجد اشتراكات لعرضها</p></div>
       </div>
     </section>
 
@@ -273,7 +295,7 @@
           </div>
           <div class="detail-item">
             <label>الحالة الحالية:</label>
-            <span class="status-badge" :class="`status-${selectedSub.status}`">{{ selectedSub.status }}</span>
+            <span class="status-badge" :class="`status-${selectedSub.status} text-center` ">{{ selectedSub.status }}</span>
           </div>
           <div class="detail-item">
             <label>تاريخ طلب الاشتراك:</label>
@@ -294,12 +316,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, inject, watch } from 'vue';
+import { ref, onMounted, computed, inject, watch, onActivated } from 'vue';
 import { useAdminStore } from '@/stores/adminStore';
 import { useAuthStore } from '@/stores/auth';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import logger from '@/utils/logger';
+import { onBeforeRouteUpdate } from 'vue-router';
 
 const store = useAdminStore();
 const authStore = useAuthStore();
@@ -346,24 +369,21 @@ const handleBulkActivate = async () => {
   if (!bulkDays.value || isNaN(bulkDays.value)) {
     return addNotification('يرجى إدخال عدد أيام صحيح', 'error');
   }
-
   const result = await confirm({
     title: 'تأكيد التفعيل الجماعي',
     text: `هل أنت متأكد من تفعيل اشتراك لمدة ${bulkDays.value} يوم لعدد ${selectedUsers.value.length} مستخدم؟`,
     icon: 'question'
   });
-
   if (result.isConfirmed) {
     let successCount = 0;
     for (const userId of selectedUsers.value) {
       try {
-        await store.activateManualSubscription(userId, bulkDays.value, false, true);
+        await store.activateManualSubscription(userId, bulkDays.value, false, true, true);
         successCount++;
       } catch (e) {
         console.error('Bulk activation failed for user:', userId, e);
       }
     }
-    
     selectedUsers.value = [];
     bulkDays.value = null;
     addNotification(`تم تفعيل الاشتراك لـ ${successCount} مستخدم.`, 'success');
@@ -382,12 +402,8 @@ const handleToggleEnforcement = async (event) => {
         confirmButtonText: newVal ? 'تفعيل القفل 🔒' : 'فتح التطبيق 🔓',
         confirmButtonColor: newVal ? 'var(--danger)' : 'var(--primary)'
     });
-
-    if (result.isConfirmed) {
-        await store.toggleSubscriptionEnforcement(newVal);
-    } else {
-        event.target.checked = !newVal;
-    }
+    if (result.isConfirmed) await store.toggleSubscriptionEnforcement(newVal);
+    else event.target.checked = !newVal;
 };
 
 const filteredUsers = computed(() => {
@@ -411,8 +427,8 @@ const getRemainingDaysColor = (endDate) => {
   return 'inherit';
 };
 
-const initAdminData = async () => {
-  if (!authStore.isAdmin) return;
+const initAdminData = async (force = false) => {
+  if (!authStore.isAdmin || (store.isLoading && !force)) return;
   try {
     await store.loadDashboardData();
   } catch (err) {
@@ -420,120 +436,55 @@ const initAdminData = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(() => { initAdminData(); });
+onActivated(() => { initAdminData(); });
+onBeforeRouteUpdate((to, from, next) => {
   initAdminData();
+  next();
 });
 
-// مراقبة حالة الأدمن: إذا أصبح متاحاً نحمل البيانات
 watch(() => authStore.isAdmin, (newVal) => {
-  if (newVal && store.usersList.length === 0) {
-    initAdminData();
-  }
+  if (newVal) initAdminData();
 });
 </script>
 
 <style scoped>
-/* Base Styles */
 .admin-dashboard { padding-bottom: 2rem; }
-
-/* إخفاء أسهم الأرقام */
-.no-spin::-webkit-inner-spin-button,
-.no-spin::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+.no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .no-spin { -moz-appearance: textfield; }
-
-/* Notch Button Component */
-.input-with-notch {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.btn-notch-sign {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  background: var(--border-color, #ddd);
-  color: var(--primary);
-  border: none;
-  border-radius: 0 4px 0 0;
-  width: 18px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 14px;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: all 0.2s;
-  padding: 0;
-  line-height: 0;
-}
-
-.btn-notch-sign:hover {
-  opacity: 1;
-  background: var(--primary);
-  color: white;
-}
-
-/* Bulk Actions */
+.input-with-notch { position: relative; display: flex; align-items: center; }
+.btn-notch-sign { position: absolute; left: 0; bottom: 0; background: var(--border-color, #ddd); color: var(--primary); border: none; border-radius: 0 4px 0 0; width: 18px; height: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; cursor: pointer; opacity: 0.7; transition: all 0.2s; padding: 0; line-height: 0; }
+.btn-notch-sign:hover { opacity: 1; background: var(--primary); color: white; }
 .bulk-actions { display: flex; align-items: center; gap: 8px; }
-.bulk-input { 
-  width: 70px; 
-  padding: 4px 8px; 
-  border-radius: 6px; 
-  border: 1px solid rgba(255,255,255,0.3); 
-  background: rgba(255,255,255,0.1); 
-  color: white;
-  font-weight: bold;
-}
-
-/* Cards & Sections */
+.bulk-input { width: 70px; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-weight: bold; }
 .admin-section { margin-bottom: 2rem; background: var(--surface-bg); border-radius: var(--border-radius-lg); overflow: hidden; }
 .protection-card { border: 1px solid var(--border-color); }
 .protection-content { padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
 .protection-info { flex: 1; }
 .protection-desc { font-size: 0.9rem; color: var(--text-muted); }
 .warning-text { display: block; margin-top: 0.5rem; font-weight: 700; color: var(--primary); }
-
-/* Switch Slider */
 .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
 .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
 input:checked + .slider { background-color: var(--primary); }
 input:checked + .slider:before { transform: translateX(26px); }
-
-/* Table Adjustments */
 .modern-table.auto-layout { table-layout: auto !important; width: 100%; }
 .modern-table th, .modern-table td { white-space: nowrap; }
 .col-status { width: 120px; }
 .col-days { width: 80px; }
-
-/* Status Badges */
 .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
 .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-/* User Info */
 .user-info-cell { text-align: right; }
 .user-short-id { font-size: 10px; color: var(--gray-600); background: var(--gray-100); padding: 1px 4px; border-radius: 4px; margin-top: 4px; font-family: monospace; }
 .expiry-date-sub { font-size: 10px; color: var(--gray-600); }
-
-/* Utils */
 .spinner-tiny { width: 1rem; height: 1rem; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* Details Modal */
 .details-grid { display: grid; gap: 15px; }
 .detail-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color); }
 .full-width { grid-column: 1 / -1; border-top: 1px dashed var(--border-color); margin: 10px 0; }
-
-/* Dark Mode Adjustments */
 body.dark .user-short-id { background: rgba(255, 255, 255, 0.05); color: var(--gray-400); }
 body.dark .bg-light { background-color: #0f172a !important; border-color: #334155 !important; }
 body.dark .detail-item label { color: var(--gray-400); }

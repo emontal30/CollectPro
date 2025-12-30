@@ -88,7 +88,7 @@ export function isNotFutureDate(date) {
  * @returns {object} { isValid, value, error }
  */
 export function validateAndSanitizeMoney(value, options = {}) {
-  const { maxLimit = 10000, allowNegative = false, fieldName = 'المبلغ' } = options;
+  const { maxLimit = Infinity, allowNegative = false, fieldName = 'المبلغ' } = options;
   
   if (value === '' || value === null || value === undefined) {
     return { isValid: true, value: null }; // Allow empty for optional fields logic
@@ -136,9 +136,6 @@ export const handleMoneyInput = (event, updateCallback, options = {}) => {
   let rawValue = input.value;
 
   // 1. Prevent non-numeric characters (except . and - if allowed)
-  // This is handled partly by input type="text" with inputmode="decimal" but we reinforce here
-  // We allow ONE decimal point and ONE minus sign at the start if allowNegative is true.
-  
   const allowNegative = options.allowNegative || false;
   let regex = allowNegative ? /[^0-9.-]/g : /[^0-9.]/g;
   
@@ -162,24 +159,26 @@ export const handleMoneyInput = (event, updateCallback, options = {}) => {
 
   const validation = validateAndSanitizeMoney(rawValue, options);
 
-  if (!validation.isValid && !validation.isWarning && validation.error) {
-     // Hard invalid (like text that slipped through or logic error)
-     // Usually regex handles the text, logic handles the rest.
-     // If updateCallback expects a clean number, give it valid or null
-     // But wait, user might be typing. 
-  }
-
   if (validation.isWarning) {
-     // Debounced warning could be implemented here or in the component
-     // For now, we return the warning status so the component can show a toast
      if (!input.dataset.warningShown) {
+        // Professional Sticky Toast
         Swal.fire({
             toast: true,
-            position: 'top-end',
+            position: 'top',
             icon: 'warning',
-            title: validation.error,
+            title: 'تنبيه لقيمة غير منطقية',
+            text: validation.error,
             showConfirmButton: false,
-            timer: 3000
+            timer: 4000,
+            timerProgressBar: true,
+            background: '#fff3cd',
+            color: '#856404',
+            iconColor: '#856404',
+            width: 'auto',
+            padding: '1rem',
+            customClass: {
+              popup: 'sticky-warning-toast'
+            }
         });
         input.dataset.warningShown = "true";
         setTimeout(() => { delete input.dataset.warningShown; }, 5000); // Reset warning flag after 5s
@@ -187,7 +186,6 @@ export const handleMoneyInput = (event, updateCallback, options = {}) => {
   }
 
   // Pass raw value or parsed number depending on need. 
-  // Usually we pass the raw string to the model during typing to allow "10."
   updateCallback(rawValue);
 };
 
