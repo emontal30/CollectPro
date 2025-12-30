@@ -5,7 +5,13 @@
       <!-- Logo and App Name on the left -->
       <div class="logo-section">
         <img src="/logo-momkn.png" alt="شعار التطبيق" class="header-logo" />
-        <span class="app-title">CollectPro</span>
+        <div class="title-wrapper">
+          <span class="app-title">Collect<span 
+            class="pro-part" 
+            :class="statusClass"
+            :title="statusTitle"
+          >Pro</span></span>
+        </div>
       </div>
 
       <!-- Menu toggle on the right -->
@@ -17,13 +23,38 @@
 </template>
 
 <script setup>
-import { useSidebarStore } from '@/stores/sidebarStore'
+import { computed, onMounted } from 'vue';
+import { useSidebarStore } from '@/stores/sidebarStore';
+import { useSyncStore } from '@/stores/syncStore';
 
-const sidebarStore = useSidebarStore()
+const sidebarStore = useSidebarStore();
+const syncStore = useSyncStore();
 
 const toggleSidebar = () => {
-  sidebarStore.toggleSidebar()
-}
+  sidebarStore.toggleSidebar();
+};
+
+onMounted(() => {
+  syncStore.checkQueue();
+});
+
+const statusClass = computed(() => {
+  switch (syncStore.syncStatus) {
+    case 'offline': return 'status-offline';
+    case 'pending': return 'status-pending';
+    case 'synced': return 'status-synced';
+    default: return 'status-synced';
+  }
+});
+
+const statusTitle = computed(() => {
+  switch (syncStore.syncStatus) {
+    case 'offline': return 'أنت غير متصل بالإنترنت - البيانات محفوظة محلياً';
+    case 'pending': return 'جاري المزامنة - توجد بيانات قيد الانتظار';
+    case 'synced': return 'متصل - جميع البيانات متزامنة';
+    default: return '';
+  }
+});
 </script>
 
 <style scoped>
@@ -69,6 +100,12 @@ const toggleSidebar = () => {
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
+.title-wrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+
 .app-title {
   font-size: 1.5rem;
   font-weight: 800;
@@ -76,6 +113,30 @@ const toggleSidebar = () => {
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
   letter-spacing: 0.5px;
   font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+}
+
+/* PRO Part Styles within Title */
+.pro-part {
+  color: #fbbf24; /* Amber-400 Default Gold-ish */
+  transition: color 0.3s ease;
+  cursor: help;
+  padding: 0 2px;
+  text-shadow: none; /* No shadow as requested */
+}
+
+/* Status Colors - Clean colors only, no effects */
+.pro-part.status-synced {
+  color: #a7f3d0; /* Emerald-200 Light Green */
+}
+
+.pro-part.status-pending {
+  color: #fb923c; /* Orange-400 */
+}
+
+.pro-part.status-offline {
+  color: #fca5a5; /* Red-300 Light Red */
 }
 
 .menu-toggle {

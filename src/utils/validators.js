@@ -1,3 +1,5 @@
+import Swal from 'sweetalert2';
+
 /**
  * Validate email format
  * @param {string} email - Email to validate
@@ -80,6 +82,116 @@ export function isNotFutureDate(date) {
 }
 
 /**
+ * Validate numeric input and sanitize
+ * @param {string|number} value - The input value
+ * @param {object} options - Options { maxLimit, allowNegative }
+ * @returns {object} { isValid, value, error }
+ */
+export function validateAndSanitizeMoney(value, options = {}) {
+  const { maxLimit = 10000, allowNegative = false, fieldName = 'المبلغ' } = options;
+  
+  if (value === '' || value === null || value === undefined) {
+    return { isValid: true, value: null }; // Allow empty for optional fields logic
+  }
+
+  // Remove commas and spaces
+  let cleanValue = String(value).replace(/,/g, '').trim();
+
+  // Check if it's a valid number format
+  if (isNaN(cleanValue) || cleanValue === '') {
+     // If it's just a minus sign and negative is allowed, it's a transient state (typing)
+     if (allowNegative && cleanValue === '-') return { isValid: true, value: '-' };
+     return { isValid: false, value: null, error: 'يرجى إدخال أرقام فقط' };
+  }
+
+  let numValue = parseFloat(cleanValue);
+
+  // Check for negative if not allowed
+  if (!allowNegative && numValue < 0) {
+    return { isValid: false, value: Math.abs(numValue), error: 'لا يمكن إدخال قيم سالبة هنا' };
+  }
+
+  // Check for huge limit
+  if (Math.abs(numValue) > maxLimit) {
+    return { 
+      isValid: false, 
+      value: numValue, 
+      isWarning: true, // It's a warning, not a hard block usually, but here we flag it
+      error: `قيمة ${fieldName} تبدو غير منطقية (أكبر من ${maxLimit.toLocaleString()})`
+    };
+  }
+
+  return { isValid: true, value: numValue };
+}
+
+/**
+ * Real-time input handler for money fields
+ * Prevents non-numeric input and warns on large values
+ * @param {Event} event - The input event
+ * @param {Function} updateCallback - Callback to update the model
+ * @param {object} options - Options for validation
+ */
+export const handleMoneyInput = (event, updateCallback, options = {}) => {
+  const input = event.target;
+  let rawValue = input.value;
+
+  // 1. Prevent non-numeric characters (except . and - if allowed)
+  // This is handled partly by input type="text" with inputmode="decimal" but we reinforce here
+  // We allow ONE decimal point and ONE minus sign at the start if allowNegative is true.
+  
+  const allowNegative = options.allowNegative || false;
+  let regex = allowNegative ? /[^0-9.-]/g : /[^0-9.]/g;
+  
+  if (regex.test(rawValue)) {
+    rawValue = rawValue.replace(regex, '');
+    input.value = rawValue; // Reflect cleaning immediately
+  }
+
+  // Handle multiple dots
+  const parts = rawValue.split('.');
+  if (parts.length > 2) {
+    rawValue = parts[0] + '.' + parts.slice(1).join('');
+    input.value = rawValue;
+  }
+
+  // Handle minus sign position
+  if (allowNegative && rawValue.indexOf('-') > 0) {
+     rawValue = '-' + rawValue.replace(/-/g, '');
+     input.value = rawValue;
+  }
+
+  const validation = validateAndSanitizeMoney(rawValue, options);
+
+  if (!validation.isValid && !validation.isWarning && validation.error) {
+     // Hard invalid (like text that slipped through or logic error)
+     // Usually regex handles the text, logic handles the rest.
+     // If updateCallback expects a clean number, give it valid or null
+     // But wait, user might be typing. 
+  }
+
+  if (validation.isWarning) {
+     // Debounced warning could be implemented here or in the component
+     // For now, we return the warning status so the component can show a toast
+     if (!input.dataset.warningShown) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'warning',
+            title: validation.error,
+            showConfirmButton: false,
+            timer: 3000
+        });
+        input.dataset.warningShown = "true";
+        setTimeout(() => { delete input.dataset.warningShown; }, 5000); // Reset warning flag after 5s
+     }
+  }
+
+  // Pass raw value or parsed number depending on need. 
+  // Usually we pass the raw string to the model during typing to allow "10."
+  updateCallback(rawValue);
+};
+
+/**
  * Validate harvest record data
  * @param {Object} record - Harvest record to validate
  * @returns {Object} Validation result with isValid and errors
@@ -97,16 +209,17 @@ export function validateHarvestRecord(record) {
     errors.code = 'الكود يجب أن يكون أقل من 50 حرف'
   }
 
-  if (!isPositiveNumber(record.amount)) {
+  // Strict number validation for final submission
+  if (record.amount !== null && record.amount !== '' && !isPositiveNumber(parseFloat(record.amount))) {
     errors.amount = 'المبلغ يجب أن يكون رقماً موجباً'
   }
 
-  if (record.extra !== undefined && record.extra !== null && record.extra < 0) {
-    errors.extra = 'القيمة الإضافية يجب أن تكون رقماً موجباً أو صفر'
+  if (record.extra !== undefined && record.extra !== null && record.extra !== '' && isNaN(parseFloat(record.extra))) {
+    errors.extra = 'القيمة الإضافية غير صالحة'
   }
-
-  if (record.collector && !isValidLength(record.collector, 0, 100)) {
-    errors.collector = 'اسم المجمع يجب أن يكون أقل من 100 حرف'
+  
+  if (record.collector !== undefined && record.collector !== null && record.collector !== '' && isNaN(parseFloat(record.collector))) {
+    errors.collector = 'قيمة المحصل غير صالحة'
   }
 
   return {

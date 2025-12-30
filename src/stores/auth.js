@@ -5,7 +5,7 @@ import { useNotifications } from '@/composables/useNotifications';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
 import logger from '@/utils/logger.js';
-import api from '@/services/api';
+import api, { apiInterceptor } from '@/services/api';
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
@@ -15,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isInitialized = ref(false)
   const isSubscriptionEnforced = ref(false)
   const authListener = ref(null)
-  const isPerformingAdminAction = ref(false); // Flag to prevent race conditions
+  const isPerformingAdminAction = ref(false);
 
   const { addNotification } = useNotifications()
   const settingsStore = useSettingsStore()
@@ -55,27 +55,28 @@ export const useAuthStore = defineStore('auth', () => {
       const cached = localStorage.getItem('sys_config_enforce');
       if (cached !== null) {
         isSubscriptionEnforced.value = cached === 'true';
-      } else {
-        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
       }
-      const { data: config, error } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'enforce_subscription')
-        .maybeSingle();
-      if (error) throw error;
+
+      const { data: config, error } = await apiInterceptor(
+        supabase
+          .from('system_config')
+          .select('value')
+          .eq('key', 'enforce_subscription')
+          .maybeSingle()
+      );
+
+      if (error) {
+        if (error.status === 'network_error' || error.status === 'offline') return;
+        throw error;
+      }
+
       if (config) {
         const value = config.value === 'true' || config.value === true;
         isSubscriptionEnforced.value = value;
         localStorage.setItem('sys_config_enforce', String(value));
-        logger.info(`⚙️ System Config Loaded: enforce_subscription = ${value}`);
-      } else {
-        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
-        localStorage.setItem('sys_config_enforce', String(DEFAULT_ENFORCE));
-        logger.info(`ℹ️ Config key not found, using default: ${DEFAULT_ENFORCE}`);
       }
     } catch (err) {
-      logger.warn('⚠️ Config Load Warning (Using fallback):', err.message);
+      logger.warn('⚠️ Config Load Warning:', err.message);
       if (isSubscriptionEnforced.value === null) {
         isSubscriptionEnforced.value = DEFAULT_ENFORCE;
       }
@@ -87,23 +88,24 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       await loadSystemConfig();
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { session, error } = await api.auth.getSession();
       if (error) throw error;
+      
       if (session?.user) {
         user.value = session.user;
         await syncUserProfile(session.user);
         settingsStore.applySettings();
         cleanUrlHash();
       }
-      if (authListener.value) {
+
+      if (authListener.value && authListener.value.subscription) {
         authListener.value.subscription.unsubscribe();
       }
-      const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+
+      const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
         logger.info(`🔐 Auth State Change: ${event}`);
-        if (isPerformingAdminAction.value) {
-          logger.info('Auth state change ignored during admin action.');
-          return;
-        }
+        if (isPerformingAdminAction.value) return;
+
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
@@ -111,10 +113,10 @@ export const useAuthStore = defineStore('auth', () => {
             settingsStore.applySettings();
           }
         } else if (event === 'SIGNED_OUT') {
-          user.value = null;
-          userProfile.value = null;
+          clearAuthData();
         }
       });
+      
       authListener.value = listener;
     } catch (err) {
       logger.error('💥 Auth Init Error:', err);
@@ -125,16 +127,34 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * تنظيف بيانات الهوية فقط عند تسجيل الخروج
+   * مع الإبقاء على البيانات المحلية (التحصيلات والأرشيف) بناءً على طلب المستخدم
+   */
+  function clearAuthData() {
+    try {
+      // 1. Auth Store
+      user.value = null;
+      userProfile.value = null;
+      
+      // 2. Subscription Store (يجب تنظيفه لأسباب أمنية)
+      const subStore = useMySubscriptionStore();
+      subStore.clearSubscription();
+      
+      // 3. Local Storage (تنظيف المسار الأخير وبيانات الاشتراك فقط)
+      localStorage.removeItem('app_last_route');
+      localStorage.removeItem('my_subscription_data_v2');
+      
+      logger.info('🧹 Auth Data Cleared. Local business data preserved.');
+    } catch (err) {
+      logger.error('Error during auth cleanup:', err);
+    }
+  }
+
   async function loginWithGoogle() {
     isLoading.value = true;
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/app/dashboard`,
-          queryParams: { prompt: 'select_account', access_type: 'offline' }
-        }
-      });
+      const { error } = await api.auth.signInWithGoogle();
       if (error) throw error;
     } catch (err) {
       addNotification('فشل تسجيل الدخول: ' + err.message, 'error');
@@ -144,27 +164,37 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    if (isLoading.value) return;
+    
     isLoading.value = true;
     try {
-      logger.info('🚀 Initiating user logout...');
-      if (authListener.value) {
+      logger.info('🚀 Initiating graceful logout...');
+      
+      if (authListener.value && authListener.value.subscription) {
         authListener.value.subscription.unsubscribe();
         authListener.value = null;
       }
-      user.value = null;
-      userProfile.value = null;
+
+      const logoutPromise = api.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Logout Timeout')), 3000)
+      );
+
+      try {
+        await Promise.race([logoutPromise, timeoutPromise]);
+      } catch (e) {
+        logger.warn('⚠️ Server logout timed out, proceeding with local logout.');
+      }
+
+      clearAuthData();
       isInitialized.value = false;
-      const subStore = useMySubscriptionStore();
-      subStore.clearSubscription();
-      localStorage.removeItem('app_last_route');
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+
       logger.info('✅ User signed out successfully.');
       return true;
     } catch (err) {
-      logger.error('💥 Logout failed:', err);
-      addNotification('فشل تسجيل الخروج، يرجى المحاولة مرة أخرى', 'error');
-      return false;
+      logger.error('💥 Logout error:', err);
+      clearAuthData();
+      return true; 
     } finally {
       isLoading.value = false;
     }
@@ -181,6 +211,7 @@ export const useAuthStore = defineStore('auth', () => {
     initializeAuth,
     loginWithGoogle,
     logout,
-    setAdminAction
+    setAdminAction,
+    clearAuthData
   };
 });

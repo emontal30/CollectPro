@@ -2,18 +2,14 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  
+  <!-- Viewport Configuration with Responsive Logic -->
   <script>
     (function() {
       var viewport = document.createElement('meta');
       viewport.name = "viewport";
-      
-      // العرض المطلوب الثابت
       var targetWidth = 768;
-      
       if (window.screen.width < targetWidth) {
-        // نحدد العرض الثابت 768px
-        // نترك للمتصفح حساب initial-scale تلقائياً ليناسب الشاشة (Shrink-to-fit)
-        // مع السماح بالزوم اليدوي حتى 5 أضعاف
         viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
       } else {
         viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
@@ -21,6 +17,11 @@
       document.getElementsByTagName('head')[0].appendChild(viewport);
     })();
   </script>
+  
+  <!-- Speed Optimizations: Preconnect & Preload -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" href="/manifest/icon-192x192.png" as="image" />
   
   <!-- Primary Meta Tags -->
   <title>CollectPro - نظام إدارة التحصيلات الاحترافي</title>
@@ -35,8 +36,8 @@
   <meta property="og:url" content="https://collectpro.vercel.app/" />
   <meta property="og:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
   <meta property="og:description" content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
-  <meta property="og:image" content="https://collectpro.vercel.app/logo-momkn.png" />
-  <meta property="og:image:secure_url" content="https://collectpro.vercel.app/logo-momkn.png" />
+  <meta property="og:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
+  <meta property="og:image:secure_url" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -48,29 +49,27 @@
   <meta property="twitter:url" content="https://collectpro.vercel.app/" />
   <meta property="twitter:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
   <meta property="twitter:description" content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
-  <meta property="twitter:image" content="https://collectpro.vercel.app/logo-momkn.png" />
+  <meta property="twitter:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
 
-  <!-- Theme & Mobile App -->
+  <!-- Theme & Mobile App Support -->
   <meta name="theme-color" content="#007965"/>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="CollectPro">
   
-  <!-- Essential: Manifest Link -->
+  <!-- Manifest & Icons -->
   <link rel="manifest" href="/manifest.json" />
-  
-  <!-- Icons -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="120x120" href="/ios/apple-touch-icon-120x120.png">
   <link rel="apple-touch-icon" sizes="152x152" href="/ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/ios/apple-touch-icon-180x180.png">
 
-  <!-- External Resources -->
+  <!-- External Stylesheets -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
   
-  <!-- Dark mode initialization -->
+  <!-- Dark mode instant initialization -->
   <script>
     try {
       const settings = localStorage.getItem('settings');
@@ -89,9 +88,10 @@
       --safe-area-bottom: env(safe-area-inset-bottom, 0px);
       --safe-area-left: env(safe-area-inset-left, 0px);
       --safe-area-right: env(safe-area-inset-right, 0px);
+      --primary-color: #007965;
     }
 
-    /* منع الزوم التلقائي المزعج عند التركيز على الحقول */
+    /* Prevent annoying zoom on focus in iOS */
     @media screen and (max-width: 767px) {
       input, select, textarea {
         font-size: 16px !important;
@@ -122,9 +122,96 @@
       display: flex;
       flex-direction: column;
     }
+
+    /* Professional Splash Screen Style */
+    #initial-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html.dark #initial-loader { background: #0f172a; }
+
+    .loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .loader-logo { 
+      width: 120px; 
+      height: 120px; 
+      border-radius: 24px; 
+      box-shadow: 0 15px 35px rgba(0, 121, 101, 0.15);
+      animation: logoPulse 2s infinite ease-in-out;
+    }
+
+    .loader-brand {
+      font-family: 'Poppins', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: 1px;
+    }
+    html.dark .loader-brand { color: #2dd4bf; }
+
+    .loader-spinner {
+      width: 40px;
+      height: 4px;
+      background: rgba(0, 121, 101, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    html.dark .loader-spinner { background: rgba(255, 255, 255, 0.1); }
+
+    .loader-spinner::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 40%;
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 4px;
+      animation: loadingSlide 1.5s infinite ease-in-out;
+    }
+    html.dark .loader-spinner::after { background: #2dd4bf; }
+
+    @keyframes logoPulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+
+    @keyframes loadingSlide {
+      0% { left: -40%; }
+      50% { left: 100%; }
+      100% { left: -40%; }
+    }
+
+    body.loaded #initial-loader { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
+  <!-- Splash Screen -->
+  <div id="initial-loader">
+    <div class="loader-content">
+      <img src="/manifest/icon-192x192.png" alt="CollectPro" class="loader-logo" />
+      <div class="loader-brand">Collect<span style="color: #2dd4bf;">Pro</span></div>
+      <div class="loader-spinner"></div>
+    </div>
+  </div>
+
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
 </body>

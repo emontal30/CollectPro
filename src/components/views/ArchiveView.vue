@@ -66,7 +66,7 @@
       <button @click="clearSearch" class="btn-clear-search">إلغاء البحث</button>
     </div>
 
-    <div class="table-wrapper">
+    <div id="archive-table-container" class="table-wrapper">
       <table class="modern-table archive-specific-table w-full">
         <thead>
           <tr class="archive-header-row">
@@ -122,16 +122,25 @@
       </table>
     </div>
 
+    <!-- Export Button -->
+    <div class="export-container" v-if="store.rows.length > 0">
+      <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
+        <i class="fas fa-share-alt"></i>
+        <span>مشاركة الجدول</span>
+      </button>
+    </div>
+
     <div class="buttons-container footer-sticky">
       <div class="buttons-row">
-        <router-link to="/app/harvest" class="btn btn-secondary">
+        <router-link to="/app/harvest" class="btn btn-secondary btn-full">
           <i class="fas fa-arrow-left"></i>
           <span>العودة للتحصيلات</span>
         </router-link>
+      </div>
 
+      <div class="buttons-row" v-if="store.selectedDate && !store.isLoading && !store.isGlobalSearching">
         <button 
-          v-if="store.selectedDate && !store.isLoading && !store.isGlobalSearching" 
-          class="btn btn-danger" 
+          class="btn btn-danger btn-full" 
           @click="deleteCurrentArchive"
         >
           <i class="fas fa-trash-alt"></i>
@@ -151,6 +160,7 @@ import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import logger from '@/utils/logger.js';
 import { getNetClass, getNetIcon } from '@/utils/formatters.js';
 import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
+import { exportAndShareTable } from '@/utils/exportUtils.js';
 
 const store = useArchiveStore();
 const searchQuery = ref('');
@@ -211,6 +221,14 @@ const handleSearch = () => {
 const clearSearch = () => {
   searchQuery.value = '';
   handleSearch();
+};
+
+const handleExport = async () => {
+  addNotification('جاري تجهيز الأرشيف للمشاركة...', 'info');
+  const fileName = searchQuery.value ? `ارشيف_بحث_${searchQuery.value}` : `ارشيف_${store.selectedDate}`;
+  const result = await exportAndShareTable('archive-table-container', fileName);
+  if (result.success && result.message) addNotification(result.message, 'success');
+  else if (!result.success) addNotification(result.message, 'error');
 };
 
 const deleteCurrentArchive = async () => {
@@ -288,6 +306,8 @@ const deleteCurrentArchive = async () => {
   border-color: var(--danger);
 }
 
+.btn-full { width: 100%; }
+
 .date-cell {
   font-weight: 600;
   color: var(--primary);
@@ -305,7 +325,6 @@ const deleteCurrentArchive = async () => {
   font-style: italic;
 }
 
-/* تعديل عرض عمود المحل في صفحة الأرشيف ومنع التواء النص */
 .archive-specific-table .shop, 
 .archive-specific-table td.shop, 
 .archive-specific-table th.shop {
@@ -316,12 +335,50 @@ const deleteCurrentArchive = async () => {
   text-overflow: ellipsis !important;
 }
 
+/* Export Button Styles */
+.export-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  padding: 0 5px;
+}
+
+.btn-export-share {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-export-share:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+.btn-export-share i {
+  font-size: 1rem;
+}
+
 @media (max-width: 768px) {
   .archive-specific-table .shop, 
   .archive-specific-table td.shop, 
   .archive-specific-table th.shop {
     width: 95px !important;
     min-width: 95px !important;
+  }
+  
+  .export-container {
+    justify-content: center;
   }
 }
 </style>

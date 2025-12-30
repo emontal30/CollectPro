@@ -4,8 +4,10 @@
     :disabled="isLoading"
     @click="handleClick"
   >
-    <i :class="iconClass"></i>
-    {{ buttonText }}
+    <div class="icon-container" :class="{ 'is-loading': isLoading }">
+      <i :class="iconClass"></i>
+    </div>
+    <span class="btn-text">{{ buttonText }}</span>
   </button>
 </template>
 
@@ -52,7 +54,7 @@ export default {
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border: none;
   border-radius: 16px;
   background: linear-gradient(135deg, #007965 0%, #00a080 100%);
@@ -63,6 +65,7 @@ export default {
   box-shadow: 0 8px 20px rgba(0, 121, 101, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: 'Cairo', sans-serif;
+  gap: 12px;
 }
 
 /* Shine Effect */
@@ -96,41 +99,58 @@ export default {
 /* Disabled State */
 .google-login-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 /* Icon Container */
-.google-login-btn i {
-  margin-left: 12px;
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.9);
+.icon-container {
+  width: 32px;
+  height: 32px;
+  background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.icon-container i {
   color: #ea4335;
-  font-size: 24px;
-  transition: transform 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 18px;
 }
 
-/* Icon Hover Effect */
-.google-login-btn:not(:disabled):hover i:not(.fa-spin) {
-  transform: scale(1.1);
-  background: white;
+/* Loading State for Icon Container */
+.icon-container.is-loading {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-/* Loading Spin Animation */
+.icon-container.is-loading i {
+  color: white !important;
+  font-size: 22px;
+}
+
+/* Spin Animation */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
 .fa-spin {
-  animation: spin 1s linear infinite;
-  color: white !important; /* Spinner is white */
-  background: transparent !important; /* Remove white circle bg for spinner */
-  box-shadow: none !important;
+  animation: spin 0.8s linear infinite !important;
+}
+
+/* Button Text */
+.btn-text {
+  margin-right: 4px;
+}
+
+/* Media Queries */
+@media (max-width: 400px) {
+  .google-login-btn {
+    font-size: 14px;
+    padding: 12px 15px;
+  }
 }
 </style>

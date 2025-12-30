@@ -1,12 +1,12 @@
 ﻿<template>
   <div class="harvest-page">
-    
     <PageHeader 
       title="التحصيلات" 
       subtitle="إدارة وتتبع جميع تحصيلات العملاء"
       icon="💰"
     />
 
+    <!-- التاريخ واليوم -->
     <div class="date-display">
       <i class="fas fa-calendar-alt calendar-icon"></i>
       <span class="label">اليوم:</span>
@@ -16,6 +16,7 @@
       <span class="value">{{ currentDate }}</span>
     </div>
 
+    <!-- إعدادات الأعمدة -->
     <ColumnVisibility
       v-model="showSettings"
       :columns="harvestColumns"
@@ -23,6 +24,7 @@
       @save="apply"
     />
 
+    <!-- أدوات التحكم والبحث -->
     <div class="search-control">
       <div class="customer-count-badge" v-show="isVisible('shop')">
         <div class="count-label">عدد العملاء</div>
@@ -43,7 +45,8 @@
       </button>
     </div>
 
-    <div class="table-wrapper">
+    <!-- جدول التحصيلات -->
+    <div id="harvest-table-container" class="table-wrapper">
       <table class="modern-table w-full">
         <thead>
           <tr>
@@ -57,10 +60,13 @@
         </thead>
         <tbody>
           <tr v-for="(row, index) in localFilteredRows" :key="row.id">
+            <!-- المحل -->
             <td v-show="isVisible('shop')" class="shop" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }">
               <input v-if="!row.isImported" :value="row.shop" type="text" placeholder="اسم المحل" class="editable-input" @input="updateShop(row, index, $event)" />
               <span v-else class="readonly-field">{{ row.shop }}</span>
             </td>
+
+            <!-- الكود -->
             <td v-show="isVisible('code')" class="code">
               <input 
                 v-if="!row.isImported"
@@ -73,6 +79,8 @@
               />
               <span v-else class="readonly-field">{{ row.code }}</span>
             </td>
+
+            <!-- التحويل -->
             <td v-show="isVisible('amount')" class="amount">
               <input
                 v-if="!row.isImported"
@@ -82,10 +90,11 @@
                 class="amount-input centered-input"
                 lang="en"
                 @input="updateAmount(row, index, $event)"
-                @blur="updateAmount(row, index, $event)"
               />
               <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
             </td>
+
+            <!-- اخرى -->
             <td v-show="isVisible('extra')" class="extra">
               <div class="input-with-action">
                 <input
@@ -93,13 +102,15 @@
                   inputmode="decimal"
                   :value="formatInputNumber(row.extra)"
                   class="centered-input text-center-important"
+                  :class="{ 'negative-extra': (parseFloat(row.extra) || 0) < 0 }"
                   lang="en"
                   @input="updateExtra(row, index, $event)"
-                  @blur="updateExtra(row, index, $event)"
                 />
                 <button class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
               </div>
             </td>
+
+            <!-- المحصل -->
             <td v-show="isVisible('collector')" class="collector">
               <input
                 type="text"
@@ -108,12 +119,12 @@
                 class="centered-input"
                 lang="en"
                 @input="updateCollector(row, index, $event)"
-                @blur="updateCollector(row, index, $event)"
               />
             </td>
 
+            <!-- الصافي -->
             <td v-show="isVisible('net')" class="net numeric" :class="getRowNetStatus(row)">
-              {{ store.formatNumber((parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) ) }}
+              {{ store.formatNumber(calculateNet(row)) }}
               <i :class="getRowNetIcon(row)"></i>
             </td>
           </tr>
@@ -126,7 +137,7 @@
             <td v-show="isVisible('extra')" class="extra text-center">{{ store.formatNumber(filteredTotals.extra) }}</td>
             <td v-show="isVisible('collector')" class="collector text-center">{{ store.formatNumber(filteredTotals.collector) }}</td>
             <td v-show="isVisible('net')" class="net numeric" :class="getFilteredTotalNetClass">
-              {{ store.formatNumber((parseFloat(filteredTotals.collector) || 0) - ((parseFloat(filteredTotals.amount) || 0) + (parseFloat(filteredTotals.extra) || 0)) ) }}
+              {{ store.formatNumber(filteredTotalNetValue) }}
               <i :class="getFilteredTotalNetIcon"></i>
             </td>
           </tr>
@@ -137,6 +148,15 @@
       </div>
     </div>
 
+    <!-- أزرار التصدير والمشاركة -->
+    <div class="export-container" v-if="localFilteredRows.length > 0">
+      <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
+        <i class="fas fa-share-alt"></i>
+        <span>مشاركة الجدول</span>
+      </button>
+    </div>
+
+    <!-- ملخص البيان -->
     <div class="summary-container">
       <section id="summary">
         <h2 class="summary-title"><i class="fas fa-file-invoice-dollar summary-title-icon text-primary"></i> ملخص البيان</h2>
@@ -155,8 +175,7 @@
                 class="bold-input text-center font-bold master-limit-input"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
-                @input="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
-                @blur="store.setMasterLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @input="handleMoneyInput($event, (val) => store.setMasterLimit(parseFloat(val) || 0), { fieldName: 'ليمت الماستر' })"
               />
             </div>
 
@@ -172,8 +191,7 @@
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل الليمت الإضافي"
-                @input="store.setExtraLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
-                @blur="store.setExtraLimit(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @input="handleMoneyInput($event, (val) => store.setExtraLimit(parseFloat(val) || 0), { fieldName: 'الليمت الإضافي' })"
               />
             </div>
           </div>
@@ -191,8 +209,7 @@
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل رصيد الماستر الحالي"
-                @input="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
-                @blur="store.setCurrentBalance(parseFloat($event.target.value.replace(/,/g, '')) || 0)"
+                @input="handleMoneyInput($event, (val) => store.setCurrentBalance(parseFloat(val) || 0), { fieldName: 'رصيد الماستر الحالي' })"
               />
             </div>
           </div>
@@ -233,6 +250,7 @@
       </section>
     </div>
 
+    <!-- أزرار التنقل والعمليات -->
     <div class="buttons-container">
       <div class="buttons-row">
         <router-link to="/app/dashboard" class="btn btn-dashboard btn-dashboard--home">
@@ -257,7 +275,6 @@
         </button>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -272,14 +289,17 @@ import localforage from 'localforage';
 import logger from '@/utils/logger.js';
 import { formatInputNumber, getNetClass, getNetIcon } from '@/utils/formatters.js';
 import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
+import { exportAndShareTable } from '@/utils/exportUtils.js';
+import { handleMoneyInput } from '@/utils/validators.js';
 
+// --- الاستخدامات والتعريفات الأساسية ---
 const store = useHarvestStore();
 const archiveStore = useArchiveStore();
 const route = useRoute();
+const { confirm, addNotification } = inject('notifications');
 
-// Local search query for smooth typing
+// --- حالة البحث والتحكم في الأعمدة ---
 const searchQueryLocal = ref('');
-
 const harvestColumns = [
   { key: 'shop', label: '🏪 المحل' },
   { key: 'code', label: '🔢 الكود' },
@@ -289,42 +309,59 @@ const harvestColumns = [
 
 const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(harvestColumns, 'columns.visibility.harvest');
 
-const { confirm, addNotification } = inject('notifications');
+// --- الخواص المحسوبة (Computed Properties) ---
 
-// Local filtering for performance - COMPLETELY LOCAL & INSTANT
+/**
+ * فلترة الصفوف محلياً لضمان سرعة الاستجابة أثناء الكتابة
+ */
 const localFilteredRows = computed(() => {
   const data = store.rows || [];
-  const query = searchQueryLocal.value ? searchQueryLocal.value.toLowerCase().trim() : '';
-  
+  const query = searchQueryLocal.value?.toLowerCase().trim();
   if (!query) return data;
 
-  return data.filter(row => {
-    const shopMatch = row.shop && row.shop.toLowerCase().includes(query);
-    const codeMatch = row.code && row.code.toString().toLowerCase().includes(query);
-    return shopMatch || codeMatch;
-  });
+  return data.filter(row => 
+    (row.shop && row.shop.toLowerCase().includes(query)) || 
+    (row.code && row.code.toString().toLowerCase().includes(query))
+  );
 });
 
-const handleSearchInput = (e) => {
-  // التحديث فوري هنا لضمان عمل الـ Computed Property لحظياً
-  searchQueryLocal.value = e.target.value;
+const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
+const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
+
+/**
+ * حساب إجماليات الصفوف المفلترة فقط
+ */
+const filteredTotals = computed(() => {
+  return localFilteredRows.value.reduce((acc, row) => {
+    acc.amount += parseFloat(row.amount) || 0;
+    acc.extra += parseFloat(row.extra) || 0;
+    acc.collector += parseFloat(row.collector) || 0;
+    return acc;
+  }, { amount: 0, extra: 0, collector: 0 });
+});
+
+// منطق الصافي الموحد
+const calculateNet = (row) => {
+  const collector = parseFloat(row.collector) || 0;
+  const amount = parseFloat(row.amount) || 0;
+  const extra = parseFloat(row.extra) || 0;
+  return collector - (amount + extra);
 };
 
-onActivated(() => {
-  store.initialize && store.initialize();
-  searchQueryLocal.value = store.searchQuery || '';
+const filteredTotalNetValue = computed(() => {
+  const totals = filteredTotals.value;
+  return totals.collector - (totals.amount + totals.extra);
 });
 
-watch(() => route.name, (newName) => {
-  if (newName === 'Harvest') store.initialize && store.initialize();
-});
+// أيقونات وتنسيقات الصافي
+const getRowNetStatus = (row) => getNetClass(calculateNet(row));
+const getRowNetIcon = (row) => getNetIcon(calculateNet(row));
+const getFilteredTotalNetClass = computed(() => getNetClass(filteredTotalNetValue.value));
+const getFilteredTotalNetIcon = computed(() => getNetIcon(filteredTotalNetValue.value));
 
-const syncSearchToStore = () => {
-  store.searchQuery = searchQueryLocal.value;
-};
+// --- الدوال الأساسية (Methods) ---
 
-onDeactivated(syncSearchToStore);
-onBeforeUnmount(syncSearchToStore);
+const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
 
 const syncWithCounterStore = () => {
   try {
@@ -336,95 +373,48 @@ const syncWithCounterStore = () => {
   }
 };
 
-onMounted(() => {
-  store.initialize && store.initialize();
-  loadColumns();
-  store.loadDataFromStorage();
-  syncWithCounterStore();
-  searchQueryLocal.value = store.searchQuery || '';
-  window.addEventListener('focus', syncWithCounterStore);
-  onBeforeUnmount(() => window.removeEventListener('focus', syncWithCounterStore));
-});
-
 const checkAndAddEmptyRow = (index) => {
   if (searchQueryLocal.value) return; 
-  if (index === store.rows.length - 1) {
-    store.addRow();
-  }
+  if (index === store.rows.length - 1) store.addRow();
 };
 
-const updateShop = (row, index, event) => { row.shop = event.target.value; store.saveRowsToStorage(); checkAndAddEmptyRow(index); };
-const updateCode = (row, index, event) => { row.code = event.target.value; store.saveRowsToStorage(); checkAndAddEmptyRow(index); };
+// تحديث الحقول مع حفظ البيانات
+const updateField = (row, index, field, value, syncCounter = false) => {
+  row[field] = value;
+  store.saveRowsToStorage();
+  checkAndAddEmptyRow(index);
+  if (syncCounter) syncWithCounterStore();
+};
+
+const updateShop = (row, index, e) => updateField(row, index, 'shop', e.target.value);
+const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
+
+const updateAmount = (row, index, e) => {
+  handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل' });
+};
+
+const updateExtra = (row, index, e) => {
+  handleMoneyInput(e, (val) => {
+    if (val === '-') row.extra = '-';
+    else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
+  }, { allowNegative: true, fieldName: 'المبلغ الإضافي' });
+};
+
+const updateCollector = (row, index, e) => {
+  handleMoneyInput(e, (val) => updateField(row, index, 'collector', val ? parseFloat(val) : null, true), { fieldName: 'مبلغ المحصل' });
+};
 
 const toggleSign = (row, field) => {
   const currentVal = row[field];
-  if (currentVal === null || currentVal === undefined || currentVal === '') {
-    row[field] = '-';
-  } else if (currentVal === '-') {
-    row[field] = null;
-  } else {
-    row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
-  }
+  if (!currentVal || currentVal === '') row[field] = '-';
+  else if (currentVal === '-') row[field] = null;
+  else row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
+  
   store.saveRowsToStorage();
   if (field === 'collector') syncWithCounterStore();
 };
 
-const handleNumericInput = (event, row, field) => {
-  const val = event.target.value;
-  if (val === '-') {
-    row[field] = '-';
-    return;
-  }
-  const parsed = parseFloat(val.replace(/,/g, ''));
-  row[field] = isNaN(parsed) ? null : parsed;
-};
-
-const updateAmount = (row, index, event) => { 
-  handleNumericInput(event, row, 'amount');
-  store.saveRowsToStorage(); 
-  checkAndAddEmptyRow(index); 
-};
-const updateExtra = (row, index, event) => { 
-  handleNumericInput(event, row, 'extra');
-  store.saveRowsToStorage(); 
-  checkAndAddEmptyRow(index); 
-};
-const updateCollector = (row, index, event) => { 
-  handleNumericInput(event, row, 'collector');
-  store.saveRowsToStorage(); 
-  checkAndAddEmptyRow(index); 
-  syncWithCounterStore(); 
-};
-
-const currentDate = computed(() => new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
-const currentDay = computed(() => new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
-
-const filteredTotals = computed(() => {
-  return localFilteredRows.value.reduce((acc, row) => {
-    acc.amount += parseFloat(row.amount) || 0;
-    acc.extra += parseFloat(row.extra) || 0;
-    acc.collector += parseFloat(row.collector) || 0;
-    return acc;
-  }, { amount: 0, extra: 0, collector: 0 });
-});
-
-const getRowNetStatus = (row) => {
-  const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  return getNetClass(net);
-};
-const getRowNetIcon = (row) => {
-  const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-  return getNetIcon(net);
-};
-
-const getFilteredTotalNetClass = computed(() => {
-  const net = (parseFloat(filteredTotals.value.collector) || 0) - ((parseFloat(filteredTotals.value.amount) || 0) + (parseFloat(filteredTotals.value.extra) || 0));
-  return getNetClass(net);
-});
-const getFilteredTotalNetIcon = computed(() => {
-  const net = (parseFloat(filteredTotals.value.collector) || 0) - ((parseFloat(filteredTotals.value.amount) || 0) + (parseFloat(filteredTotals.value.extra) || 0));
-  return getNetIcon(net);
-});
+// --- عمليات الأرشفة والمسح ---
 
 const confirmClearAll = async () => {
   const result = await confirm({
@@ -432,7 +422,6 @@ const confirmClearAll = async () => {
     text: 'هل أنت متأكد من مسح جميع البيانات الحالية في الجدول؟ لا يمكن التراجع عن هذه الخطوة.',
     icon: 'warning',
     confirmButtonText: 'نعم، مسح الكل',
-    cancelButtonText: 'إلغاء',
     confirmButtonColor: '#dc3545'
   });
 
@@ -455,20 +444,56 @@ const archiveToday = async () => {
   });
   if (!confirmResult.isConfirmed) return;
   
-  syncSearchToStore(); 
+  store.searchQuery = searchQueryLocal.value; 
   const result = await store.archiveTodayData();
   if (result.success) { 
     addNotification(result.message, 'success'); 
     store.clearAll(); 
     searchQueryLocal.value = ''; 
+  } else {
+    addNotification(result.message, 'error');
   }
-  else addNotification(result.message, 'error');
 };
+
+const handleExport = async () => {
+  addNotification('جاري تجهيز البيانات للمشاركة...', 'info');
+  const fileName = searchQueryLocal.value ? `تحصيلات_بحث_${searchQueryLocal.value}` : `تحصيلات_${currentDate.value.replace(/\//g, '-')}`;
+  const result = await exportAndShareTable('harvest-table-container', fileName);
+  if (result.success && result.message) addNotification(result.message, 'success');
+  else if (!result.success) addNotification(result.message, 'error');
+};
+
+// --- دورة الحياة (Lifecycle Hooks) ---
+
+onMounted(() => {
+  store.initialize?.();
+  loadColumns();
+  store.loadDataFromStorage();
+  syncWithCounterStore();
+  searchQueryLocal.value = store.searchQuery || '';
+  window.addEventListener('focus', syncWithCounterStore);
+});
+
+onActivated(() => {
+  store.initialize?.();
+  searchQueryLocal.value = store.searchQuery || '';
+});
+
+onBeforeUnmount(() => {
+  store.searchQuery = searchQueryLocal.value;
+  window.removeEventListener('focus', syncWithCounterStore);
+});
+
+onDeactivated(() => { store.searchQuery = searchQueryLocal.value; });
+
+watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initialize?.(); });
 </script>
 
 <style scoped>
+/* التباعد الموحد */
 .mx-2 { margin: 0 8px; }
 
+/* ملصقات ونصوص صغيرة */
 .small-text {
   font-size: 0.75rem;
   font-weight: 500;
@@ -483,17 +508,18 @@ const archiveToday = async () => {
   margin-right: 4px;
 }
 
+/* ليمت الماستر */
 .master-limit-input {
   border: 2px solid var(--primary-light) !important;
   background-color: rgba(var(--primary-rgb), 0.05) !important;
 }
 
 .crown-gold {
-  color: #ffc107; /* Golden color */
+  color: #ffc107;
   filter: drop-shadow(0 0 1px rgba(0,0,0,0.2));
 }
 
-/* Input with Notch Sign Action */
+/* حقل الإدخال مع زر تغيير الإشارة */
 .input-with-action {
   position: relative;
   display: flex;
@@ -506,6 +532,16 @@ const archiveToday = async () => {
   text-align: center !important;
 }
 
+/* تنسيق المبالغ السالبة في عمود "اخرى" */
+.negative-extra {
+  color: #ff6b6b !important;
+  font-weight: bold;
+}
+
+:deep(body.dark) .negative-extra {
+  color: #ff8e8e !important;
+}
+
 .btn-toggle-sign {
   position: absolute;
   left: 0;
@@ -513,7 +549,7 @@ const archiveToday = async () => {
   background: var(--border-color);
   color: var(--primary);
   border: none;
-  border-radius: 0 var(--border-radius-sm) 0 0; /* Notch shape */
+  border-radius: 0 var(--border-radius-sm) 0 0;
   width: 20px;
   height: 14px;
   display: flex;
@@ -524,12 +560,11 @@ const archiveToday = async () => {
   cursor: pointer;
   z-index: 5;
   opacity: 0.5;
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   padding: 0;
   line-height: 0;
 }
 
-/* Dark mode for notch */
 :deep(body.dark) .btn-toggle-sign {
   background: rgba(255, 255, 255, 0.1);
   color: var(--gray-400);
@@ -541,7 +576,7 @@ const archiveToday = async () => {
   color: white;
 }
 
-/* Date Display Styling - Unified */
+/* عرض التاريخ */
 .date-display {
   display: flex;
   align-items: center;
@@ -550,7 +585,7 @@ const archiveToday = async () => {
   margin-bottom: 25px;
   padding: 15px 20px;
   background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.03));
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   border: 1px solid var(--border-color);
 }
 
@@ -574,6 +609,7 @@ const archiveToday = async () => {
   font-weight: 300;
 }
 
+/* شارة عدد العملاء */
 .customer-count-badge {
   display: flex;
   flex-direction: column;
@@ -581,7 +617,7 @@ const archiveToday = async () => {
   justify-content: center;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   padding: 4px 12px;
   min-width: 80px;
   box-shadow: var(--shadow-sm);
@@ -608,6 +644,37 @@ const archiveToday = async () => {
   border-bottom: 1px solid var(--border-color);
 }
 
+/* أزرار التصدير والمشاركة */
+.export-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  padding: 0 5px;
+}
+
+.btn-export-share {
+  background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3);
+  transition: var(--transition);
+}
+
+.btn-export-share:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+/* الميديا كويري للهواتف */
 @media (max-width: 768px) {
   .search-control {
     flex-wrap: wrap;
@@ -623,6 +690,9 @@ const archiveToday = async () => {
   }
   .btn-settings-table {
     order: 3;
+  }
+  .export-container {
+    justify-content: center;
   }
 }
 </style>

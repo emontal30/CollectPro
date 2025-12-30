@@ -14,10 +14,6 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        devOptions: {
-          enabled: true,
-          type: 'module',
-        },
         workbox: {
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
@@ -26,15 +22,13 @@ export default defineConfig(({ mode }) => {
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
-              // تم تغيير الاستراتيجية من StaleWhileRevalidate إلى NetworkFirst
-              // لضمان دقة البيانات المالية (التحصيلات) وتجنب رؤية بيانات قديمة
               handler: 'NetworkFirst', 
               options: {
                 cacheName: 'supabase-api-cache',
-                networkTimeoutSeconds: 10, // الانتظار لمدة 10 ثوانٍ قبل العودة للكاش في حالة ضعف الشبكة
+                networkTimeoutSeconds: 5,
                 expiration: {
                   maxEntries: 500,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -42,13 +36,17 @@ export default defineConfig(({ mode }) => {
               },
             },
             {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              // كاش لملفات الخطوط والأيقونات (FontAwesome & Google Fonts)
+              urlPattern: /^https:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|cdnjs\.cloudflare\.com)\/.*/i,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'google-fonts-cache',
+                cacheName: 'external-resources-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 50,
                   maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
                 },
               },
             },
@@ -96,6 +94,15 @@ export default defineConfig(({ mode }) => {
       sourcemap: !isProd,
       minify: 'esbuild',
       target: 'es2020',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router', 'pinia'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-utils': ['sweetalert2', 'localforage', 'axios']
+          }
+        }
+      }
     },
     server: {
       port: 3001,

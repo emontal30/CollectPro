@@ -150,7 +150,7 @@
       </div>
 
       <!-- ملخص الفئات -->
-      <div class="categories-section categories-card">
+      <div id="categories-summary-container" class="categories-section categories-card">
         <div class="card-header centered-header">
           <h2 class="counter-title">ملخص الفئات</h2>
           <button @click="toggleSort(3)" class="sort-btn header-action">
@@ -204,8 +204,8 @@
           <span>إعادة تعيين</span>
         </button>
         <button class="action-btn export" @click="exportData">
-          <i class="fas fa-file-export"></i>
-          <span>تصدير الملخص</span>
+          <i class="fas fa-share-alt"></i>
+          <span>مشاركة الملخص</span>
         </button>
       </div>
 
@@ -217,7 +217,7 @@
 import { inject, onMounted, ref, computed } from 'vue';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
-import html2canvas from 'html2canvas';
+import { exportAndShareTable } from '@/utils/exportUtils.js';
 
 const store = useCounterStore();
 const sortOrder1 = ref('desc');
@@ -255,27 +255,11 @@ onMounted(() => {
 });
 
 const exportData = async () => {
-  const element = document.querySelector('.categories-export');
-  if (!element) return;
-  try {
-    const canvas = await html2canvas(element, {
-      backgroundColor: getComputedStyle(document.body).getPropertyValue('--content-bg') || '#ffffff',
-      scale: 2,
-    });
-    canvas.toBlob(blob => {
-      if (blob && navigator.share) {
-        const file = new File([blob], `counter-${Date.now()}.png`, { type: 'image/png' });
-        navigator.share({ title: 'ملخص الفئات', files: [file] });
-      } else if (blob) {
-        const link = document.createElement('a');
-        link.download = `counter-${Date.now()}.png`;
-        link.href = URL.createObjectURL(blob);
-        link.click();
-      }
-    });
-  } catch (err) {
-    addNotification('فشل التصدير', 'error');
-  }
+  addNotification('جاري تجهيز الملخص للمشاركة...', 'info');
+  const result = await exportAndShareTable('categories-summary-container', `ملخص_فئات_${Date.now()}`);
+  
+  if (result.success && result.message) addNotification(result.message, 'success');
+  else if (!result.success) addNotification(result.message, 'error');
 };
 
 const handleResetAll = async () => {

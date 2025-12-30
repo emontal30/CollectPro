@@ -1,11 +1,13 @@
 import localforage from 'localforage';
 import { useArchiveStore } from '@/stores/archiveStore';
+import { useAuthStore } from '@/stores/auth';
 import { useNotifications } from '@/composables/useNotifications';
+import { useSyncStore } from '@/stores/syncStore'; // Import new store
 import logger from '@/utils/logger.js';
 import { supabase } from '@/supabase';
 import api from '@/services/api';
 
-const QUEUE_KEY = 'archive_sync_queue';
+export const QUEUE_KEY = 'archive_sync_queue'; // Exported for store usage
 
 /**
  * إضافة عملية (حفظ أو حذف) إلى طابور المزامنة
@@ -14,7 +16,6 @@ async function addToSyncQueue(item) {
   try {
     let queue = (await localforage.getItem(QUEUE_KEY)) || [];
     
-    // توحيد الحصول على التاريخ والنوع
     const type = item.type || 'daily_archive';
     const source = item.payload || item;
     const date = source.archive_date || source.date;
@@ -43,6 +44,11 @@ async function addToSyncQueue(item) {
         logger.info(`🔄 Updated sync queue: [${type}] for ${date}`);
       }
     }
+    
+    // Update Sync Status UI
+    const syncStore = useSyncStore();
+    syncStore.checkQueue();
+
   } catch (err) {
     logger.error('❌ SyncQueue Add Error:', err);
   }
@@ -52,32 +58,31 @@ async function addToSyncQueue(item) {
  * معالجة العمليات المنتظرة في الطابور
  */
 async function processQueue() {
+  const authStore = useAuthStore();
   const archiveStore = useArchiveStore();
+  const syncStore = useSyncStore(); // Use Sync Store
   const { addNotification } = useNotifications();
-  
-  let queue = (await localforage.getItem(QUEUE_KEY)) || [];
-  if (queue.length === 0) return;
 
-  if (!navigator.onLine) return;
+  // 1. التحقق من الاتصال ووجود مستخدم مسجل دخول
+  if (!navigator.onLine || !authStore.isAuthenticated || !authStore.user?.id) {
+    syncStore.checkQueue(); // Update status even if we don't process
+    return;
+  }
+
+  let queue = (await localforage.getItem(QUEUE_KEY)) || [];
+  
+  if (queue.length === 0) {
+    syncStore.checkQueue();
+    return;
+  }
 
   logger.info(`🔄 Processing sync queue: ${queue.length} item(s)`);
 
-  const remainingQueue = [...queue];
   const syncedArchives = [];
   const deletedArchives = [];
+  const failedItems = [];
 
-  // استخدام حلقة while لمعالجة العناصر واحداً تلو الآخر
-  // ولكن يجب الانتباه لعدم الدخول في حلقة لا نهائية إذا فشل عنصر باستمرار
-  // لذلك نستخدم نسخة من الطابور ونحذف منها ما ينجح
-  
-  // سنقوم بمعالجة النسخة الحالية فقط، وإذا فشل شيء يبقى للمرة القادمة
-  const currentBatch = [...queue];
-  const successIndices = [];
-
-  for (let i = 0; i < currentBatch.length; i++) {
-    if (!navigator.onLine) break;
-
-    const item = currentBatch[i];
+  for (const item of queue) {
     const type = item.type;
     const source = item.payload || item;
     const date = source.archive_date || source.date;
@@ -87,83 +92,68 @@ async function processQueue() {
         const { error } = await supabase
           .from('daily_archives')
           .delete()
-          .eq('user_id', source.user_id)
+          .eq('user_id', authStore.user.id)
           .eq('archive_date', date);
         
         if (error) throw error;
-        logger.info(`🗑️ Offline delete synced: ${date}`);
         deletedArchives.push(date);
       } else {
-        // عملية أرشفة أو تحديث
-        // استخدام API مباشرة بدلاً من دالة غير موجودة في الـ Store
-        const { error } = await api.archive.saveDailyArchive(source.user_id, date, source.data);
-        
+        // استخدام API الأرشفة الموحد
+        const { error } = await api.archive.saveDailyArchive(authStore.user.id, date, source.data);
         if (error) throw error;
-
-        logger.info(`✅ Offline archive synced: ${date}`);
         syncedArchives.push(date);
       }
-
-      successIndices.push(i);
-
     } catch (err) {
       logger.error(`❌ Sync failed for [${type}] ${date}:`, err);
-      // لا نتوقف، نحاول مع العنصر التالي، لكن هذا العنصر سيبقى في الطابور
+      failedItems.push(item); // الاحتفاظ بالعناصر الفاشلة للمرة القادمة
     }
   }
 
-  // تحديث الطابور بإزالة العناصر الناجحة فقط
-  if (successIndices.length > 0) {
-    // تصفية الطابور الأصلي (قد يكون تغير في هذه الأثناء، لذا نحمل ونحفظ بحذر)
-    // لكن هنا نفترض أن الطابور لم يتغير كثيراً.
-    // الأفضل إعادة قراءة الطابور وحذف ما تم إنجازه
-    const freshQueue = (await localforage.getItem(QUEUE_KEY)) || [];
-    
-    // نحذف العناصر التي تطابق ما تم إنجازه (بناءً على المحتوى لأن الـ Index قد يتغير)
-    const newQueue = freshQueue.filter(q => {
-        const qDate = (q.payload || q).archive_date || (q.payload || q).date;
-        const qType = q.type;
-        // إذا كان التاريخ والنوع موجودين في قائمة الناجحين، نحذفه (لا نرجعه)
-        const isSynced = syncedArchives.includes(qDate) && qType !== 'delete_archive'; 
-        const isDeleted = deletedArchives.includes(qDate) && qType === 'delete_archive';
-        
-        return !isSynced && !isDeleted;
-    });
+  // 2. تحديث الطابور بما تبقى فقط
+  await localforage.setItem(QUEUE_KEY, failedItems);
+  
+  // Update Sync Status UI immediately
+  syncStore.checkQueue();
 
-    await localforage.setItem(QUEUE_KEY, newQueue);
-  }
-
-  // إرسال تنبيهات للمستخدم بعد انتهاء المزامنة
+  // 3. إرسال تنبيهات مفصلة للمستخدم
   if (syncedArchives.length > 0) {
-    const datesStr = syncedArchives.join(', ');
-    addNotification(`تم مزامنة أرشيف التواريخ: ${datesStr} سحابياً ✅`, 'success');
-    await archiveStore.loadAvailableDates(); 
+    addNotification(`تم مزامنة أرشيف: ${syncedArchives.join(', ')} سحابياً ✅`, 'success');
   }
 
   if (deletedArchives.length > 0) {
-    const datesStr = deletedArchives.join(', ');
-    addNotification(`تم حذف التواريخ: ${datesStr} من السحاب بنجاح 🗑️`, 'success');
-    await archiveStore.loadAvailableDates();
+    addNotification(`تم حذف التواريخ: ${deletedArchives.join(', ')} من السحاب 🗑️`, 'success');
+  }
+
+  if (syncedArchives.length > 0 || deletedArchives.length > 0) {
+    await archiveStore.loadAvailableDates(); 
   }
 }
 
 /**
- * تهيئة مستمع حالة الشبكة
+ * تهيئة مستمع المزامنة
  */
 function initializeSyncListener() {
-  window.removeEventListener('online', processQueue); 
+  const syncStore = useSyncStore();
+  
+  window.removeEventListener('online', processQueue);
   window.addEventListener('online', processQueue);
-  if (navigator.onLine) processQueue();
-  logger.info('👂 Archive Sync Listener Active');
+  
+  // Initial check
+  syncStore.checkQueue();
+
+  // تشغيل أولي بعد استقرار الـ Auth (بعد 5 ثواني من التحميل)
+  setTimeout(processQueue, 5000);
 }
 
 /**
- * مسح الطابور بالكامل (للطوارئ)
+ * مسح الطابور بالكامل (وظيفة للطوارئ)
  */
 async function clearSyncQueue() {
+  const syncStore = useSyncStore();
   try {
     await localforage.removeItem(QUEUE_KEY);
     logger.info('🗑️ Sync queue cleared');
+    syncStore.checkQueue();
     return true;
   } catch (err) {
     logger.error('❌ Clear Sync Queue Error:', err);
