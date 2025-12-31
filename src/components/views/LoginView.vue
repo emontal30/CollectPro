@@ -353,16 +353,16 @@ const installApp = async () => {
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 20px;
+  padding: 5px; /* Reduced to make card almost touch the edges */
 }
 
 .login-card {
   background: var(--surface-bg);
   border-radius: var(--border-radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: 50px 40px;
+  padding: 60px 40px; /* Increased vertical padding to make card taller and "almost touch" */
   width: 100%;
-  max-width: 480px;
+  max-width: 768px;
   text-align: center;
   position: relative;
   border: 1px solid var(--border-color);
@@ -395,7 +395,7 @@ const installApp = async () => {
   font-size: 34px;
   font-weight: 800;
   color: var(--primary);
-  margin: 0 0 15px; 
+  margin: 0 0 15px;
   letter-spacing: -0.5px;
   position: relative; 
   display: inline-block;
@@ -693,22 +693,23 @@ const installApp = async () => {
 
 @media (max-width: 480px) {
   .login-container { 
-    padding: 8px; 
-    align-items: stretch; 
+    padding: 0px; /* Touching edges on small screens */
+    align-items: center; 
   }
   .login-card { 
-    padding: 55px 20px; 
+    padding: 60px 20px; 
     max-width: 100%; 
-    border-radius: 24px;
+    border-radius: 0px; /* Full width touch */
+    border: none;
   }
-  .logo-img { height: 75px; margin-bottom: 12px; }
-  .logo-container { margin-bottom: 15px; }
-  .app-name { font-size: 28px; }
-  .subtitle { font-size: 14px; }
-  .btn-container { margin: 20px 0 10px; }
-  .google-login-btn { padding: 14px 15px; border-radius: 12px; }
-  .privacy-divider { margin: 20px auto; }
-  .footer-info { margin-top: 20px; }
-  .footer-controls { margin-bottom: 15px; gap: 10px; }
+  .logo-img { height: 85px; margin-bottom: 20px; }
+  .logo-container { margin-bottom: 20px; }
+  .app-name { font-size: 32px; }
+  .subtitle { font-size: 15px; }
+  .btn-container { margin: 25px 0 15px; }
+  .google-login-btn { padding: 16px 20px; border-radius: 16px; }
+  .privacy-divider { margin: 25px auto; }
+  .footer-info { margin-top: 25px; }
+  .footer-controls { margin-bottom: 18px; gap: 12px; }
 }
 </style>

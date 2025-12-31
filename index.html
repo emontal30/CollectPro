@@ -3,41 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   
-  <!-- Viewport Configuration with Responsive Logic (Updated for Rotation) -->
+  <!-- 1. Viewport & Responsive Logic (Original Logic Restored) -->
   <script>
     (function() {
       function updateViewport() {
         var viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
         viewport.name = "viewport";
         var targetWidth = 768;
-        
-        // إذا كان الجهاز في وضع الطول (Portrait) وأصغر من 768px، اجبر العرض على 768px
-        // أما إذا كان في وضع العرض (Landscape) فاستخدم عرض الجهاز الطبيعي
         if (window.innerHeight > window.innerWidth && window.screen.width < targetWidth) {
           viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
         } else {
           viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
         }
-        
         if (!document.querySelector('meta[name="viewport"]')) {
           document.getElementsByTagName('head')[0].appendChild(viewport);
         }
       }
-
       updateViewport();
       window.addEventListener('orientationchange', function() {
-        // تأخير بسيط لضمان تحديث قيم العرض والارتفاع بعد التدوير
         setTimeout(updateViewport, 200);
       });
     })();
   </script>
   
-  <!-- Speed Optimizations: Preconnect & Preload -->
+  <!-- 2. Performance Optimizations (Resource Hints) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" href="/manifest/icon-192x192.png" as="image" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
   
-  <!-- Primary Meta Tags -->
+  <link rel="preload" href="/manifest/icon-192x192.png" as="image" />
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" as="style" />
+  
+  <!-- 3. Primary SEO Meta Tags -->
   <title>CollectPro - نظام إدارة التحصيلات الاحترافي</title>
   <meta name="title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
   <meta name="description" content="CollectPro هو الحل الأمثل لإدارة التحصيلات المالية، تتبع الديون، وإصدار التقارير الدقيقة. واجهة سهلة الاستخدام، نظام أرشفة ذكي، وعمل كامل بدون إنترنت." />
@@ -45,7 +44,7 @@
   <meta name="author" content="CollectPro Team" />
   <meta name="robots" content="index, follow" />
 
-  <!-- Open Graph / Facebook / WhatsApp -->
+  <!-- 4. Open Graph / Facebook / WhatsApp (Full Recovery) -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://collectpro.vercel.app/" />
   <meta property="og:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
@@ -58,21 +57,21 @@
   <meta property="og:locale" content="ar_AR" />
   <meta property="og:site_name" content="CollectPro" />
 
-  <!-- Twitter -->
+  <!-- 5. Twitter (Full Recovery) -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://collectpro.vercel.app/" />
   <meta property="twitter:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
   <meta property="twitter:description" content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
   <meta property="twitter:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
 
-  <!-- Theme & Mobile App Support -->
+  <!-- 6. Theme & Mobile App Support -->
   <meta name="theme-color" content="#007965" id="theme-color-meta"/>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="CollectPro">
   
-  <!-- Manifest & Icons -->
+  <!-- 7. Manifest & Icons -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
@@ -80,10 +79,10 @@
   <link rel="apple-touch-icon" sizes="152x152" href="/ios/apple-touch-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/ios/apple-touch-icon-180x180.png">
 
-  <!-- External Stylesheets -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <!-- 8. FontAwesome (Performance Optimization: Non-blocking) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" media="print" onload="this.media='all'" />
   
-  <!-- Dark mode instant initialization (Crucial to prevent white flash) -->
+  <!-- 9. Dark Mode Instant Init (Prevent White Flash) -->
   <script>
     (function() {
       try {
@@ -92,19 +91,13 @@
           const parsed = JSON.parse(savedSettings);
           if (parsed.darkMode === true) {
             document.documentElement.classList.add('dark');
-            // Update theme color meta immediately
             const meta = document.getElementById('theme-color-meta');
             if (meta) meta.setAttribute('content', '#0f172a');
           }
-        } else {
-          // Detect system preference if no settings saved
-          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-          }
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
         }
-      } catch (e) {
-        console.error('Error in dark mode init:', e);
-      }
+      } catch (e) {}
     })();
   </script>
   
@@ -119,11 +112,9 @@
       --bg-dark: #0f172a;
     }
 
-    /* Prevent annoying zoom on focus in iOS */
+    /* Prevent annoying zoom on focus in iOS (Restored) */
     @media screen and (max-width: 767px) {
-      input, select, textarea {
-        font-size: 16px !important;
-      }
+      input, select, textarea { font-size: 16px !important; }
     }
 
     body {
@@ -140,100 +131,46 @@
       touch-action: manipulation;
     }
     
-    html.dark body {
-      background-color: var(--bg-dark) !important;
-      color: #ffffff !important;
-    }
+    html.dark body { background-color: var(--bg-dark) !important; color: #ffffff !important; }
     
-    #app {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    #app { min-height: 100vh; display: flex; flex-direction: column; }
 
-    /* Professional Splash Screen Style */
+    /* 10. Initial Splash Screen Styles (Restored & Optimized) */
     #initial-loader {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: var(--bg-light);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       z-index: 9999;
-      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    html.dark #initial-loader { 
-      background: var(--bg-dark) !important; 
-    }
+    html.dark #initial-loader { background: var(--bg-dark) !important; }
 
-    .loader-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 30px;
-    }
-
+    .loader-content { display: flex; flex-direction: column; align-items: center; gap: 30px; }
     .loader-logo { 
-      width: 120px; 
-      height: 120px; 
-      border-radius: 24px; 
+      width: 120px; height: 120px; border-radius: 24px; 
       box-shadow: 0 15px 35px rgba(0, 121, 101, 0.15);
       animation: logoPulse 2s infinite ease-in-out;
     }
-
-    .loader-brand {
-      font-family: 'Poppins', sans-serif;
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--primary-color);
-      letter-spacing: 1px;
-    }
+    .loader-brand { font-family: 'Poppins', system-ui, sans-serif; font-size: 24px; font-weight: 800; color: var(--primary-color); letter-spacing: 1px; }
     html.dark .loader-brand { color: #2dd4bf; }
 
-    .loader-spinner {
-      width: 40px;
-      height: 4px;
-      background: rgba(0, 121, 101, 0.1);
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
-    }
+    .loader-spinner { width: 140px; height: 4px; background: rgba(0, 121, 101, 0.1); border-radius: 4px; overflow: hidden; position: relative; }
     html.dark .loader-spinner { background: rgba(255, 255, 255, 0.1); }
 
     .loader-spinner::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 40%;
-      height: 100%;
-      background: var(--primary-color);
-      border-radius: 4px;
+      content: ''; position: absolute; left: -40%; width: 40%; height: 100%;
+      background: var(--primary-color); border-radius: 4px;
       animation: loadingSlide 1.5s infinite ease-in-out;
     }
     html.dark .loader-spinner::after { background: #2dd4bf; }
 
-    @keyframes logoPulse {
-      0% { transform: scale(1); opacity: 0.9; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.9; }
-    }
-
-    @keyframes loadingSlide {
-      0% { left: -40%; }
-      50% { left: 100%; }
-      100% { left: -40%; }
-    }
-
+    @keyframes logoPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
+    @keyframes loadingSlide { 0% { left: -40%; } 50% { left: 100%; } 100% { left: -40%; } }
     body.loaded #initial-loader { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
-  <!-- Splash Screen -->
+  <!-- 11. Splash Screen -->
   <div id="initial-loader">
     <div class="loader-content">
       <img src="/manifest/icon-192x192.png" alt="CollectPro" class="loader-logo" />

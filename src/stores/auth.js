@@ -12,11 +12,10 @@ export const useAuthStore = defineStore('auth', () => {
   // --- State ---
   const user = ref(null)
   const userProfile = ref(null) 
-  const isLoading = ref(true) // نبدأ بـ true لمنع الوميض
+  const isLoading = ref(true) 
   const isInitialized = ref(false)
   const isSubscriptionEnforced = ref(false)
   const authListener = ref(null)
-  // تم إزالة isPerformingAdminAction لأنه يسبب تعليق التحديثات
 
   const { addNotification } = useNotifications()
   const settingsStore = useSettingsStore()
@@ -25,7 +24,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   // --- Getters ---
   const isAuthenticated = computed(() => !!user.value)
-  // تحسين: التحقق من الرول مع حماية من القيم الفارغة
   const isAdmin = computed(() => userProfile.value?.role === 'admin')
 
   // --- Actions ---
@@ -39,15 +37,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * تنظيف الهاش من الرابط مع الحفاظ على حالة التاريخ
+   */
   function cleanUrlHash() {
-    if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
-      window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    if (typeof window === 'undefined') return;
+    
+    const hash = window.location.hash;
+    if (hash && (hash.includes('access_token') || hash.includes('error'))) {
+      // استخدام URL API للحفاظ على نظافة الكود
+      const url = new URL(window.location.href);
+      url.hash = '';
+      
+      // الحفاظ على history.state لتجنب تحذير Vue Router
+      window.history.replaceState(window.history.state, '', url.toString());
+      logger.info('🧹 URL Hash cleaned while preserving history state');
     }
   }
 
-  /**
-   * تحميل البروفايل من الكاش فوراً (synchronous)
-   */
   function loadProfileFromCache() {
     const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
     if (cachedProfile) {
@@ -62,17 +69,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function syncUserProfile(userData) {
     if (!userData) return;
-    
-    // محاولة التحميل من الكاش أولاً إذا لم يكن محملاً
     if (!userProfile.value) loadProfileFromCache();
-
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     
     try {
-      // جلب البيانات الحديثة في الخلفية
       const result = await api.user.syncUserProfile(userData)
       if (result && !result.error && result.profile) {
-        // تحديث الحالة فقط إذا تغيرت البيانات لتجنب إعادة الرسم غير الضرورية
         if (JSON.stringify(userProfile.value) !== JSON.stringify(result.profile)) {
            userProfile.value = result.profile;
            localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
@@ -101,51 +103,41 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function initializeAuth() {
     if (isInitialized.value) return;
-    
     isLoading.value = true;
     
     try {
-      // 1. استرجاع البيانات المحلية فوراً لتسريع الواجهة
       loadProfileFromCache();
-      await loadSystemConfig(); // ننتظر الكونفج لأنه سريع ومهم للتوجيه
+      await loadSystemConfig();
 
-      // 2. التحقق من الجلسة
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
         user.value = session.user;
-        
-        // 3. إنهاء حالة التحميل فوراً للسماح للصفحات (Dashboard/Archive) بالعمل
-        // البيانات الحديثة ستأتي في الخلفية
         isLoading.value = false;
         isInitialized.value = true;
 
-        // 4. العمليات الخلفية (Background Tasks)
-        // لا نستخدم await هنا لعدم تعطيل الواجهة
         Promise.all([
             navigator.onLine ? api.auth.getUser().then(({user: u}) => { if(u) user.value = u }) : Promise.resolve(),
             syncUserProfile(session.user),
             settingsStore.applySettings()
         ]).then(() => {
             cleanUrlHash();
-            triggerOneTimeLoginReload();
+            // تقليل الحاجة لإعادة التحميل إلا في حالات الضرورة القصوى
+            // triggerOneTimeLoginReload(); 
         });
 
       } else {
-        // لا يوجد مستخدم
         isLoading.value = false;
         isInitialized.value = true;
+        cleanUrlHash(); // تنظيف حتى لو لم يكن هناك جلسة (حالات الخطأ)
       }
 
-      // 5. إعداد المستمع
       if (authListener.value?.subscription) authListener.value.subscription.unsubscribe();
 
       const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
-        // تم إزالة شرط isPerformingAdminAction لمنع تعليق التحديثات
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
-            // تحديث صامت للبروفايل
             syncUserProfile(session.user);
           }
         } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
@@ -173,7 +165,6 @@ export const useAuthStore = defineStore('auth', () => {
       
       if (userId) clearCacheOnLogout(userId).catch(e => logger.warn('Cache clear error', e));
       
-      const keysToKeep = ['app_settings_v1'];
       Object.keys(localStorage).forEach(key => {
         if (
           key.startsWith('sb-') || 
