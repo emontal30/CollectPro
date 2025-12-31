@@ -1,7 +1,7 @@
 {
   "name": "CollectPro - نظام إدارة التحصيلات",
   "short_name": "CollectPro",
-  "version": "2.9.7",
+  "version": "2.9.8",
   "description": "تطبيق تحصيل شامل واحترافى",
   "start_url": "/",
   "scope": "/",

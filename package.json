@@ -1,6 +1,6 @@
 {
   "name": "collectpro",
-  "version": "2.9.7",
+  "version": "2.9.8",
   "description": "Modern collection management application",
   "main": "index.js",
   "scripts": {

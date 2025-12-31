@@ -111,7 +111,6 @@
 import { onMounted, onUnmounted, ref, inject } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
-import cacheManager from '@/services/cacheManager';
 import logger from '@/utils/logger.js'
 import localforage from 'localforage';
 
@@ -694,8 +693,8 @@ const installApp = async () => {
 
 @media (max-width: 480px) {
   .login-container { 
-    padding: 10px 50px; 
-    align-items: center; 
+    padding: 8px; 
+    align-items: stretch; 
   }
   .login-card { 
     padding: 55px 20px; 
