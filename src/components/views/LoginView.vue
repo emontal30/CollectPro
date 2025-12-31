@@ -351,16 +351,16 @@ const installApp = async () => {
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: center; /* Center to show top/bottom curves */
   width: 100%;
-  padding: 5px; /* Reduced to make card almost touch the edges */
+  padding: 15px; /* Gap to visualize the curves */
 }
 
 .login-card {
   background: var(--surface-bg);
-  border-radius: var(--border-radius-xl);
+  border-radius: 32px; /* Smooth curvy edges */
   box-shadow: var(--shadow-lg);
-  padding: 60px 40px; /* Increased vertical padding to make card taller and "almost touch" */
+  padding: 40px; 
   width: 100%;
   max-width: 768px;
   text-align: center;
@@ -371,6 +371,7 @@ const installApp = async () => {
   justify-content: center;
   align-items: center;
   transition: var(--transition);
+  min-height: calc(100vh - 30px); /* Almost full height */
 }
 
 /* =========================================
@@ -693,14 +694,15 @@ const installApp = async () => {
 
 @media (max-width: 480px) {
   .login-container { 
-    padding: 0px; /* Touching edges on small screens */
+    padding: 10px; 
     align-items: center; 
   }
   .login-card { 
-    padding: 60px 20px; 
+    padding: 40px 20px; 
     max-width: 100%; 
-    border-radius: 0px; /* Full width touch */
-    border: none;
+    border-radius: 32px; /* Stay curvy on mobile */
+    border: 1px solid var(--border-color);
+    min-height: calc(100vh - 20px);
   }
   .logo-img { height: 85px; margin-bottom: 20px; }
   .logo-container { margin-bottom: 20px; }
