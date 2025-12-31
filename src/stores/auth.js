@@ -12,11 +12,11 @@ export const useAuthStore = defineStore('auth', () => {
   // --- State ---
   const user = ref(null)
   const userProfile = ref(null) 
-  const isLoading = ref(false)
+  const isLoading = ref(true) // نبدأ بـ true لمنع الوميض
   const isInitialized = ref(false)
   const isSubscriptionEnforced = ref(false)
   const authListener = ref(null)
-  const isPerformingAdminAction = ref(false);
+  // تم إزالة isPerformingAdminAction لأنه يسبب تعليق التحديثات
 
   const { addNotification } = useNotifications()
   const settingsStore = useSettingsStore()
@@ -25,66 +25,58 @@ export const useAuthStore = defineStore('auth', () => {
 
   // --- Getters ---
   const isAuthenticated = computed(() => !!user.value)
+  // تحسين: التحقق من الرول مع حماية من القيم الفارغة
   const isAdmin = computed(() => userProfile.value?.role === 'admin')
 
   // --- Actions ---
-  
-  function setAdminAction(status) {
-    isPerformingAdminAction.value = status;
-  }
 
-  /**
-   * دالة سحرية لإعادة تحميل الصفحة مرة واحدة لضبط الزوم
-   */
   function triggerOneTimeLoginReload() {
     const RELOAD_KEY = 'app_login_sync_performed';
     if (!sessionStorage.getItem(RELOAD_KEY)) {
       sessionStorage.setItem(RELOAD_KEY, 'true');
-      logger.info('🔄 Performing one-time login reload for UI/Zoom adaptation...');
+      logger.info('🔄 Performing one-time login reload...');
       window.location.reload();
     }
   }
 
   function cleanUrlHash() {
     if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
-      logger.info('🧹 Cleaning sensitive data from URL hash');
       window.history.replaceState(null, null, window.location.pathname + window.location.search);
     }
   }
 
   /**
-   * مزامنة وحفظ بيانات البروفايل محلياً
+   * تحميل البروفايل من الكاش فوراً (synchronous)
    */
-  async function syncUserProfile(userData) {
-    if (!userData) return
-
-    // 1. محاولة تحميل البروفايل من الكاش أولاً (لسرعة الاستجابة ودعم الأوفلاين)
+  function loadProfileFromCache() {
     const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
     if (cachedProfile) {
-      try {
-        userProfile.value = JSON.parse(cachedProfile);
-        logger.info('📦 User profile loaded from local cache');
+      try { 
+        userProfile.value = JSON.parse(cachedProfile); 
+        logger.info('📦 Profile loaded from cache');
       } catch (e) {
-        logger.warn('Failed to parse user profile cache');
+        logger.warn('Failed to parse cached profile');
       }
     }
+  }
 
-    // 2. إذا كان أوفلاين، اكتفِ بالكاش
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-       logger.info('📴 Offline: Using cached profile');
-       return;
-    }
+  async function syncUserProfile(userData) {
+    if (!userData) return;
     
-    // 3. تحديث البيانات من السيرفر إذا كان أونلاين
+    // محاولة التحميل من الكاش أولاً إذا لم يكن محملاً
+    if (!userProfile.value) loadProfileFromCache();
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    
     try {
+      // جلب البيانات الحديثة في الخلفية
       const result = await api.user.syncUserProfile(userData)
-      if (result.isOffline) return;
-      if (result.error) throw result.error
-      
-      if (result.profile) {
-        userProfile.value = result.profile;
-        // حفظ في الكاش للمرة القادمة
-        localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+      if (result && !result.error && result.profile) {
+        // تحديث الحالة فقط إذا تغيرت البيانات لتجنب إعادة الرسم غير الضرورية
+        if (JSON.stringify(userProfile.value) !== JSON.stringify(result.profile)) {
+           userProfile.value = result.profile;
+           localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+        }
       }
     } catch (err) {
       logger.warn('Profile Sync Warning:', err.message)
@@ -92,120 +84,110 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loadSystemConfig() {
-    const DEFAULT_ENFORCE = false;
     try {
       const cached = localStorage.getItem('sys_config_enforce');
-      if (cached !== null) {
-        isSubscriptionEnforced.value = cached === 'true';
+      if (cached !== null) isSubscriptionEnforced.value = cached === 'true';
+      
+      if (navigator.onLine) {
+        const { data: config } = await apiInterceptor(supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle());
+        if (config) {
+          const value = config.value === 'true' || config.value === true;
+          isSubscriptionEnforced.value = value;
+          localStorage.setItem('sys_config_enforce', String(value));
+        }
       }
-
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        return;
-      }
-
-      const { data: config, error } = await apiInterceptor(
-        supabase
-          .from('system_config')
-          .select('value')
-          .eq('key', 'enforce_subscription')
-          .maybeSingle()
-      );
-
-      if (error) {
-        if (error.status === 'network_error' || error.status === 'offline') return;
-        throw error;
-      }
-
-      if (config) {
-        const value = config.value === 'true' || config.value === true;
-        isSubscriptionEnforced.value = value;
-        localStorage.setItem('sys_config_enforce', String(value));
-      }
-    } catch (err) {
-      logger.warn('⚠️ Config Load Warning:', err.message);
-      if (isSubscriptionEnforced.value === null) {
-        isSubscriptionEnforced.value = DEFAULT_ENFORCE;
-      }
-    }
+    } catch (err) {}
   }
 
   async function initializeAuth() {
-    if (isInitialized.value) return
+    if (isInitialized.value) return;
+    
     isLoading.value = true;
+    
     try {
-      await loadSystemConfig();
+      // 1. استرجاع البيانات المحلية فوراً لتسريع الواجهة
+      loadProfileFromCache();
+      await loadSystemConfig(); // ننتظر الكونفج لأنه سريع ومهم للتوجيه
 
-      // Supabase تلقائياً يستعيد الجلسة من localStorage
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        logger.error('Session check error:', error);
-      }
+      // 2. التحقق من الجلسة
+      const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
         user.value = session.user;
-        await syncUserProfile(session.user);
-        settingsStore.applySettings();
-        cleanUrlHash();
         
-        triggerOneTimeLoginReload();
+        // 3. إنهاء حالة التحميل فوراً للسماح للصفحات (Dashboard/Archive) بالعمل
+        // البيانات الحديثة ستأتي في الخلفية
+        isLoading.value = false;
+        isInitialized.value = true;
+
+        // 4. العمليات الخلفية (Background Tasks)
+        // لا نستخدم await هنا لعدم تعطيل الواجهة
+        Promise.all([
+            navigator.onLine ? api.auth.getUser().then(({user: u}) => { if(u) user.value = u }) : Promise.resolve(),
+            syncUserProfile(session.user),
+            settingsStore.applySettings()
+        ]).then(() => {
+            cleanUrlHash();
+            triggerOneTimeLoginReload();
+        });
+
+      } else {
+        // لا يوجد مستخدم
+        isLoading.value = false;
+        isInitialized.value = true;
       }
 
-      if (authListener.value && authListener.value.subscription) {
-        authListener.value.subscription.unsubscribe();
-      }
+      // 5. إعداد المستمع
+      if (authListener.value?.subscription) authListener.value.subscription.unsubscribe();
 
       const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
-        logger.info(`🔐 Auth State Change: ${event}`);
-        if (isPerformingAdminAction.value) return;
-
+        // تم إزالة شرط isPerformingAdminAction لمنع تعليق التحديثات
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
             user.value = session.user;
-            await syncUserProfile(session.user);
-            settingsStore.applySettings();
-            
-            if (event === 'SIGNED_IN') {
-              triggerOneTimeLoginReload();
-            }
+            // تحديث صامت للبروفايل
+            syncUserProfile(session.user);
           }
-        } else if (event === 'SIGNED_OUT') {
+        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
           await logoutCleanup();
+          if (window.location.pathname !== '/') window.location.href = '/';
         }
       });
-      
       authListener.value = listener;
+
     } catch (err) {
-      logger.error('💥 Auth Init Critical Error:', err);
-    } finally {
-      isInitialized.value = true;
+      logger.error('💥 Auth Init Error:', err);
       isLoading.value = false;
+      isInitialized.value = true;
     }
   }
 
   async function logoutCleanup() {
     try {
+      const userId = user.value?.id;
       user.value = null;
       userProfile.value = null;
       
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
       
-      await clearCacheOnLogout();
-
+      if (userId) clearCacheOnLogout(userId).catch(e => logger.warn('Cache clear error', e));
+      
+      const keysToKeep = ['app_settings_v1'];
       Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth.token')) {
+        if (
+          key.startsWith('sb-') || 
+          key.includes('auth-token') || 
+          key.includes('supabase.auth.token') ||
+          key === USER_PROFILE_CACHE_KEY ||
+          key === 'sys_config_enforce' ||
+          key === 'my_subscription_data_v2' ||
+          key === 'app_last_route'
+        ) {
           localStorage.removeItem(key);
         }
       });
-
       sessionStorage.removeItem('app_login_sync_performed');
-      localStorage.removeItem('app_last_route');
-      localStorage.removeItem('my_subscription_data_v2');
-      localStorage.removeItem('sys_config_enforce');
-      localStorage.removeItem(USER_PROFILE_CACHE_KEY); // مسح كاش البروفايل
-      
-      logger.info('🧹 Deep Auth & Cache Cleanup Completed.');
     } catch (err) {
       logger.error('Error during logout cleanup:', err);
     }
@@ -218,57 +200,43 @@ export const useAuthStore = defineStore('auth', () => {
       if (error) throw error;
     } catch (err) {
       addNotification('فشل تسجيل الدخول: ' + err.message, 'error');
-    } finally {
       isLoading.value = false;
     }
   }
 
   async function logout() {
-    if (isLoading.value) return;
-    
     isLoading.value = true;
     try {
-      logger.info('🚀 Initiating deep logout...');
-      
-      if (authListener.value && authListener.value.subscription) {
+      if (authListener.value?.subscription) {
         authListener.value.subscription.unsubscribe();
         authListener.value = null;
       }
-
-      try {
-        await api.auth.signOut();
-      } catch (e) {
-        logger.warn('⚠️ Server-side logout failed, proceeding locally.');
-      }
-
+      
+      const signOutPromise = api.auth.signOut();
+      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT' }), 2000));
+      
+      await Promise.race([signOutPromise, timeoutPromise]);
       await logoutCleanup();
-      isInitialized.value = false;
-
-      logger.info('✅ Logout completed successfully.');
-      window.location.href = '/'; 
-      return true;
+      
+      window.location.replace('/');
     } catch (err) {
-      logger.error('💥 Logout error:', err);
+      logger.error('Logout error:', err);
       await logoutCleanup();
-      window.location.href = '/';
-      return true; 
-    } finally {
-      isLoading.value = false;
+      window.location.replace('/');
     }
   }
 
   return {
-    user,
-    userProfile,
-    isLoading,
-    isInitialized,
-    isAuthenticated,
+    user, 
+    userProfile, 
+    isLoading, 
+    isInitialized, 
+    isAuthenticated, 
     isAdmin,
-    isSubscriptionEnforced,
-    initializeAuth,
-    loginWithGoogle,
-    logout,
-    setAdminAction,
+    isSubscriptionEnforced, 
+    initializeAuth, 
+    loginWithGoogle, 
+    logout, 
     logoutCleanup
   };
 });

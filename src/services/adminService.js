@@ -18,34 +18,36 @@ export const adminService = {
           .maybeSingle()
       );
 
-      // 2. حساب المستخدمين النشطين فعلياً خلال الفترة المحددة
-      // نستخدم updated_at كبديل لآخر نشاط لأن last_sign_in_at غير موجود في الجدول العام
+      // 2. حساب المستخدمين النشطين (الذين قاموا بعمليات إدخال بيانات خلال الفترة)
       const dateLimit = new Date();
       dateLimit.setDate(dateLimit.getDate() - activeDays);
       
-      const { count: activeUsersCount } = await apiInterceptor(
+      const { data: activeUsersData } = await apiInterceptor(
         supabase
-          .from('users')
-          .select('id', { count: 'exact', head: true })
+          .from('daily_archives')
+          .select('user_id')
           .gte('updated_at', dateLimit.toISOString())
       );
 
-      // 3. جلب العدادات الأخرى خفيفة الوزن
-      const [cancelledRes, expiredRes] = await Promise.all([
+      const uniqueActiveUsers = activeUsersData ? new Set(activeUsersData.map(u => u.user_id)).size : 0;
+
+      // 3. جلب العدادات الأخرى بشكل مباشر لضمان الدقة 100%
+      const [cancelledRes, expiredRes, pendingRes] = await Promise.all([
         apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired'))
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'))
       ]);
 
       const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
 
       return {
         totalUsers: stats.total_users || 0,
-        pendingRequests: stats.pending_requests || 0,
+        pendingRequests: pendingRes.count || 0, // جلب العدد الحقيقي المباشر
         activeSubscriptions: stats.active_subscriptions || 0,
         totalRevenue: stats.total_revenue || 0,
         cancelled: cancelledRes.count || 0,
         expired: expiredRes.count || 0,
-        activeUsers: activeUsersCount || 0 
+        activeUsers: uniqueActiveUsers 
       };
     } catch (err) {
       logger.error('Error fetching admin stats:', err);
@@ -123,7 +125,7 @@ export const adminService = {
   },
 
   /**
-   * 5. معالجة تفعيل/إلغاء الاشتراك (منع التكرار)
+   * 5. معالجة تفعيل/إلغاء الاشتراك
    */
   async handleSubscriptionAction(id, action) {
     const now = new Date();

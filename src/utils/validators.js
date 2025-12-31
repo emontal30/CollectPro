@@ -82,6 +82,55 @@ export function isNotFutureDate(date) {
 }
 
 /**
+ * Show a modern bubble warning above an element
+ * @param {HTMLElement} element - The reference element
+ * @param {string} message - Warning message
+ */
+export function showBubbleWarning(element, message) {
+  if (!element) return;
+  
+  // Remove existing bubble for this element if any
+  const existingBubble = document.querySelector(`.field-warning-bubble[data-ref="${element.id || 'unnamed'}"]`);
+  if (existingBubble) existingBubble.remove();
+
+  const bubble = document.createElement('div');
+  bubble.className = 'field-warning-bubble';
+  bubble.dataset.ref = element.id || 'unnamed';
+  bubble.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>${message}</span>`;
+  
+  document.body.appendChild(bubble);
+
+  const updatePosition = () => {
+    const rect = element.getBoundingClientRect();
+    bubble.style.top = `${rect.top - 12}px`;
+    bubble.style.left = `${rect.left + rect.width / 2}px`;
+  };
+
+  updatePosition();
+  
+  // Show with animation
+  requestAnimationFrame(() => {
+    bubble.classList.add('visible');
+  });
+
+  // Remove after some time
+  const removeBubble = () => {
+    bubble.classList.remove('visible');
+    setTimeout(() => {
+      if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+    }, 400);
+    element.removeEventListener('blur', removeBubble);
+    element.removeEventListener('input', removeBubble);
+  };
+
+  element.addEventListener('blur', removeBubble);
+  element.addEventListener('input', removeBubble);
+  
+  // Auto-hide after 5 seconds (Updated from 3.5s)
+  setTimeout(removeBubble, 5000);
+}
+
+/**
  * Validate numeric input and sanitize
  * @param {string|number} value - The input value
  * @param {object} options - Options { maxLimit, allowNegative }
@@ -161,27 +210,10 @@ export const handleMoneyInput = (event, updateCallback, options = {}) => {
 
   if (validation.isWarning) {
      if (!input.dataset.warningShown) {
-        // Professional Sticky Toast
-        Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'warning',
-            title: 'تنبيه لقيمة غير منطقية',
-            text: validation.error,
-            showConfirmButton: false,
-            timer: 4000,
-            timerProgressBar: true,
-            background: '#fff3cd',
-            color: '#856404',
-            iconColor: '#856404',
-            width: 'auto',
-            padding: '1rem',
-            customClass: {
-              popup: 'sticky-warning-toast'
-            }
-        });
+        showBubbleWarning(input, validation.error);
         input.dataset.warningShown = "true";
-        setTimeout(() => { delete input.dataset.warningShown; }, 5000); // Reset warning flag after 5s
+        // Reset warning flag after 5.5s to sync with new 5s display duration
+        setTimeout(() => { delete input.dataset.warningShown; }, 5500); 
      }
   }
 

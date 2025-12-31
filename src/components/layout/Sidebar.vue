@@ -71,11 +71,12 @@
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
         </button>
         <button 
-          class="sidebar-action-btn" 
+          class="sidebar-action-btn dark-mode-toggle-btn" 
           title="تبديل الوضع الليلي"
           @click="toggleDarkMode"
         >
-          <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+          <i v-if="isDarkMode" class="fas fa-sun sun-icon"></i>
+          <i v-else class="fas fa-moon moon-icon"></i>
         </button>
       </div>
 
@@ -214,73 +215,43 @@ const handleRefreshData = async () => {
   if (result.isConfirmed) {
     isRefreshing.value = true;
     try {
-      // 1. التحقق من حالة الإصدار قبل البدء
       const oldVersion = localStorage.getItem('app_version');
       const currentVersion = __APP_VERSION__;
       const hasNewUpdate = oldVersion && oldVersion !== currentVersion;
-
-      // 2. أخذ نسخة احتياطية من البيانات الهامة (Backup)
-      const backup = {
-        localStorage: {},
-        indexedDB: {}
-      };
-
-      // -- نسخ المفاتيح الأساسية من localStorage
+      const backup = { localStorage: {}, indexedDB: {} };
       const lsKeys = ['clientData', 'masterLimit', 'extraLimit', 'currentBalance', 'moneyCountersData', 'app_settings_v1'];
       lsKeys.forEach(key => {
         const val = localStorage.getItem(key);
         if (val !== null) backup.localStorage[key] = val;
       });
-
-      // -- الحفاظ على جلسة الدخول (Supabase)
       Object.keys(localStorage).forEach(key => {
         if (key.includes('auth-token')) backup.localStorage[key] = localStorage.getItem(key);
       });
-
-      // -- نسخ الأرشيف والتحصيلات من IndexedDB
       const idbKeys = await localforage.keys();
       for (const key of idbKeys) {
         if (key.startsWith('arch_data_') || key === 'harvest_rows') {
           backup.indexedDB[key] = await localforage.getItem(key);
         }
       }
-
-      // 3. تنظيف شامل (Clear)
       localStorage.clear();
       await localforage.clear();
-
-      // 4. استعادة البيانات (Restore)
       Object.entries(backup.localStorage).forEach(([key, val]) => localStorage.setItem(key, val));
       for (const [key, val] of Object.entries(backup.indexedDB)) {
         await localforage.setItem(key, val);
       }
-      
-      // تحديث رقم الإصدار في التخزين
       localStorage.setItem('app_version', currentVersion);
-
-      // 5. المزامنة السحابية في الخلفية
       await subStore.forceRefresh(authStore.user);
       await checkEnforcementStatus();
       await archiveStore.loadAvailableDates();
-
-      // 6. التعامل مع الإشعارات بناءً على حالة التحديث
       if (hasNewUpdate) {
         addNotification(`تمت الترقية بنجاح إلى الإصدار رقم ${currentVersion} 🚀`, 'success');
-        // انتظار بسيط ليقرأ المستخدم رسالة الترقية قبل رسالة النجاح النهائية
         await new Promise(r => setTimeout(r, 1500));
-        addNotification('تم تحديث البيانات وتنظيف الكاش بنجاح ✅', 'success');
+        addNotification('تم تحديث البيانات بنجاح ✅', 'success');
       } else {
-        addNotification('أنت تستخدم أحدث إصدار من التطبيق بالفعل ✅', 'info');
-        // في حالة عدم وجود تحديث، العملية تمت في الخلفية بصمت كما طلبت
+        addNotification('أنت تستخدم أحدث إصدار بالفعل ✅', 'info');
       }
-
-      // 7. ريفرش للصفحة لضمان تحميل كل شيء على نظافة
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-
+      setTimeout(() => { window.location.reload(); }, 2000);
     } catch (e) {
-      logger.error('Refresh Error:', e);
       addNotification('حدث خطأ أثناء محاولة التحديث', 'error');
     } finally {
       isRefreshing.value = false;
@@ -290,17 +261,14 @@ const handleRefreshData = async () => {
 
 onMounted(async () => {
   await checkEnforcementStatus();
-  if (authStore.user) {
-    await subStore.init(authStore.user);
-  }
+  if (authStore.user) { await subStore.init(authStore.user); }
 });
 
 const handleLogout = async () => {
   store.closeSidebar();
-
   const result = await confirm({
     title: 'تأكيد تسجيل الخروج',
-    text: 'هل أنت متأكد من تسجيل الخروج من حسابك؟',
+    text: 'هل أنت متأكد من تسجيل الخروج؟',
     icon: 'question',
     confirmButtonText: 'تسجيل الخروج',
     confirmButtonColor: '#dc3545'
@@ -308,9 +276,7 @@ const handleLogout = async () => {
   if (!result.isConfirmed) return;
   try {
     const success = await authStore.logout();
-    if (success) {
-      router.push('/');
-    }
+    if (success) { router.push('/'); }
   } catch (error) {
     addNotification('حدث خطأ أثناء تسجيل الخروج', 'error');
   }
@@ -329,7 +295,6 @@ const handleLogout = async () => {
     display: flex;
     flex-direction: column;
     padding-top: 20px;
-    /* تحسين الحركة باستخدام transform بدلاً من right */
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
     z-index: 2000;
@@ -337,7 +302,6 @@ const handleLogout = async () => {
     box-shadow: -5px 0 15px rgba(0,0,0,0.1);
     visibility: hidden;
     pointer-events: none;
-    /* تحسين الأداء الرسومي */
     will-change: transform;
 }
 
@@ -347,15 +311,8 @@ const handleLogout = async () => {
   pointer-events: auto;
 }
 
-.locked-link {
-    opacity: 0.6;
-}
-.lock-icon-mini {
-    margin-right: auto;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.7);
-    animation: lockShake 3s infinite;
-}
+.locked-link { opacity: 0.6; }
+.lock-icon-mini { margin-right: auto; font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); animation: lockShake 3s infinite; }
 
 @keyframes lockShake {
     0%, 90%, 100% { transform: rotate(0); }
@@ -379,11 +336,7 @@ const handleLogout = async () => {
 .sidebar-content { flex: 1; }
 .sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
-.footer-actions-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
+.footer-actions-row { display: flex; justify-content: space-between; gap: 10px; }
 
 .sidebar-action-btn {
   flex: 1;
@@ -400,93 +353,41 @@ const handleLogout = async () => {
   font-size: 1.1rem;
 }
 
-.sidebar-action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
+/* تمييز أيقونات الوضع الليلي والنهاري بألوان محددة */
+.sun-icon {
+  color: #ffca28; /* لون أصفر ذهبي للشمس */
 }
 
-.sidebar-action-btn:active {
-  transform: translateY(0);
+.moon-icon {
+  color: #c7d2fe; /* لون أزرق سماوي/بنفسجي هادئ للقمر */
 }
 
-.footer-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 15px 0;
-  width: 100%;
-}
+.sidebar-action-btn:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+.sidebar-action-btn:active { transform: translateY(0); }
+
+.footer-divider { height: 1px; background: rgba(255, 255, 255, 0.1); margin: 15px 0; width: 100%; }
 
 .subscription-container { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin-top: 12px; }
 .subscription-title { color: rgba(255, 255, 255, 0.7); font-size: 11px; font-weight: 600; margin: 0 0 6px 0; text-align: right; }
 
-.subscription-info-box {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.subscription-main-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.status-icon {
-  font-size: 1rem;
-}
-.status-text {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #fff;
-}
-.subscription-details-row {
-  padding-right: 24px;
-}
-.details-text {
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.8);
-}
+.subscription-info-box { display: flex; flex-direction: column; gap: 2px; }
+.subscription-main-row { display: flex; align-items: center; gap: 8px; }
+.status-icon { font-size: 1rem; }
+.status-text { font-size: 1.1rem; font-weight: 800; color: #fff; }
+.subscription-details-row { padding-right: 24px; }
+.details-text { font-size: 0.8rem; font-weight: 400; color: rgba(255, 255, 255, 0.8); }
+.days-number { font-weight: 900; font-size: 1rem; margin: 0 2px; }
 
-.days-number {
-  font-weight: 900;
-  font-size: 1rem;
-  margin: 0 2px;
-}
-
-.subscription-info-box.active .status-text, 
-.subscription-info-box.active .days-number { color: #2ecc71; }
-
-.subscription-info-box.warning .status-text,
-.subscription-info-box.warning .days-number { color: #feca57; }
-
-.subscription-info-box.expired .status-text,
-.subscription-info-box.expired .days-number { color: #ff6b6b; }
-
-.subscription-info-box.pending .status-text,
-.subscription-info-box.pending .days-number { color: #3498db; }
+.subscription-info-box.active .status-text, .subscription-info-box.active .days-number { color: #2ecc71; }
+.subscription-info-box.warning .status-text, .subscription-info-box.warning .days-number { color: #feca57; }
+.subscription-info-box.expired .status-text, .subscription-info-box.expired .days-number { color: #ff6b6b; }
+.subscription-info-box.pending .status-text, .subscription-info-box.pending .days-number { color: #3498db; }
 
 .logout-btn { background: rgba(220, 53, 69, 0.9); border: none; border-radius: 12px; padding: 12px; color: white; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-links { list-style: none; padding: 0; }
 .nav-links a { display: flex; align-items: center; gap: 15px; padding: 14px 25px; color: rgba(255, 255, 255, 0.85); text-decoration: none; }
 .nav-links a.active { color: #fff; background: rgba(255, 255, 255, 0.15); font-weight: 700; }
 
-.overlay { 
-    position: fixed; 
-    top: 0; 
-    right: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0, 0, 0, 0.4); /* تخفيف لون الخلفية قليلاً */
-    opacity: 0; 
-    visibility: hidden; 
-    z-index: 1008; 
-    transition: opacity 0.3s ease, visibility 0.3s; 
-    /* إزالة blur أثناء الأنميشن لتحسين الأداء */
-}
-
-.overlay.active { 
-    opacity: 1; 
-    visibility: visible;
-    /* إضافة blur بسيط فقط عند الثبات */
-    backdrop-filter: blur(2px);
-}
+.overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); opacity: 0; visibility: hidden; z-index: 1008; transition: opacity 0.3s ease, visibility 0.3s; }
+.overlay.active { opacity: 1; visibility: visible; backdrop-filter: blur(2px); }
 </style>

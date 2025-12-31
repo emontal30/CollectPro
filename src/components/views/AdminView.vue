@@ -6,13 +6,11 @@
       icon="⚙️"
     />
 
-    <!-- زر إعادة المحاولة في حالة وجود خطأ أو تعليق -->
     <div v-if="store.fetchError" class="alert alert-danger m-3 d-flex justify-between align-center">
       <span><i class="fas fa-exclamation-triangle"></i> {{ store.fetchError }}</span>
       <button class="btn btn-sm btn-danger" @click="store.loadDashboardData(true)">إعادة المحاولة</button>
     </div>
 
-    <!-- قسم التحكم في حماية النظام -->
     <section class="admin-section protection-card">
       <div class="admin-section-header">
         <h2><i class="fas fa-shield-alt"></i> نظام حماية الاشتراكات</h2>
@@ -39,7 +37,6 @@
       </div>
     </section>
 
-    <!-- Stats Cards -->
     <div class="stats-container">
       <div v-for="(stat, key) in adminStats" :key="key" class="stat-card">
         <div class="stat-icon"><i :class="stat.icon"></i></div>
@@ -66,7 +63,6 @@
       </div>
     </div>
 
-    <!-- Users Table -->
     <section class="admin-section">
       <div class="admin-section-header">
         <div class="d-flex align-center gap-3">
@@ -152,7 +148,6 @@
       </div>
     </section>
 
-    <!-- Pending Subscriptions -->
     <section class="admin-section">
       <div class="admin-section-header">
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
@@ -200,7 +195,6 @@
       </div>
     </section>
 
-    <!-- All Subscriptions -->
     <section class="admin-section">
       <div class="admin-section-header">
         <h2><i class="fas fa-list"></i> جميع الاشتراكات</h2>
@@ -270,7 +264,6 @@
       </div>
     </section>
 
-    <!-- Modal التفاصيل -->
     <BaseModal 
       v-model:show="showDetailsModal" 
       :title="'تفاصيل اشتراك: ' + (selectedSub?.users?.full_name || 'مستخدم')"
@@ -436,25 +429,37 @@ const getRemainingDaysColor = (endDate) => {
   return 'inherit';
 };
 
+/**
+ * دالة تهيئة بيانات الأدمن
+ * @param {boolean} force - هل يجب فرض التحديث وتجاهل الكاش؟
+ */
 const initAdminData = async (force = false) => {
   if (!authStore.isAdmin) return;
   try {
-    // استخدام force=false لعدم إرهاق السيرفر بالاستدعاءات المتكررة عند كل تنقل
     await store.loadDashboardData(force);
   } catch (err) {
     logger.error('AdminView: Failed to load data', err);
   }
 };
 
-onMounted(() => { initAdminData(); });
-onActivated(() => { initAdminData(); });
+// ============================================
+// Lifecycle Hooks - تحديث البيانات عند الدخول
+// ============================================
+
+// عند تحميل المكون لأول مرة، نفرض التحديث (true) لضمان بيانات طازجة
+onMounted(() => { initAdminData(true); });
+
+// عند العودة للصفحة (إذا كانت مخزنة في KeepAlive)، نفرض التحديث أيضاً
+onActivated(() => { initAdminData(true); });
+
+// عند تحديث المسار (مثل تغيير الـ Query Params)، نفرض التحديث
 onBeforeRouteUpdate((to, from, next) => {
-  initAdminData();
+  initAdminData(true);
   next();
 });
 
 watch(() => authStore.isAdmin, (newVal) => {
-  if (newVal) initAdminData();
+  if (newVal) initAdminData(true);
 });
 </script>
 

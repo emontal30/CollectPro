@@ -1,41 +1,52 @@
 /**
- * Cache Manager - نظام إدارة الكاش الاحترافي
+ * Cache Manager - نظام إدارة الكاش الاحترافي المعزول
  * يدير: localStorage, IndexedDB, Memory Cache
- * مع آليات تنظيف تلقائية ومنع التراكم
+ * مع ميزات الأمان، ربط البيانات بالمستخدم، والتنظيف التلقائي
  */
 
 import localforage from 'localforage';
 import logger from '@/utils/logger.js'
 
-// تكوين حدود التخزين
+// 1. تكوين حدود التخزين (Config)
 const CACHE_CONFIG = {
   localStorage: {
     maxSize: 5 * 1024 * 1024, // 5MB
-    maxItems: 100,
+    maxItems: 150,
     ttl: 7 * 24 * 60 * 60 * 1000 // 7 أيام
   },
   indexedDB: {
-    maxSize: 50 * 1024 * 1024, // 50MB
-    maxItems: 1000,
+    maxSize: 100 * 1024 * 1024, // 100MB
+    maxItems: 2000,
     ttl: 30 * 24 * 60 * 60 * 1000 // 30 يوم
   },
   memory: {
-    maxItems: 50,
+    maxItems: 100,
     ttl: 60 * 60 * 1000 // ساعة واحدة
   }
 };
 
-// متاجر محلية
+// 2. المتاجر الداخلية (Internal Stores)
 const memoryCache = new Map();
 const cacheMetadata = {
   localStorage: new Map(),
   indexedDB: new Map()
 };
 
+// 3. وظائف المساعدة (Utility Functions)
+
+/**
+ * دالة للحصول على مفتاح معزول للمستخدم لضمان عدم تسريب البيانات بين الحسابات
+ */
+export function getScopedKey(key, userId) {
+  if (!userId) return key;
+  if (key.startsWith(`u_${userId}_`)) return key;
+  return `u_${userId}_${key}`;
+}
+
 /**
  * حساب حجم البيانات بالبايتات
  */
-function calculateSize(data) {
+export function calculateSize(data) {
   try {
     return new Blob([JSON.stringify(data)]).size;
   } catch {
@@ -44,29 +55,25 @@ function calculateSize(data) {
 }
 
 /**
- * Safe deep clone: try structuredClone, fallback to JSON clone
+ * Safe deep clone
  */
 export function safeDeepClone(data) {
   try {
-    if (typeof structuredClone === 'function') {
-      return structuredClone(data);
-    }
-  } catch (e) {
-    // fall through to JSON fallback
-  }
-
+    if (typeof structuredClone === 'function') return structuredClone(data);
+  } catch (e) {}
   try {
     return JSON.parse(JSON.stringify(data));
   } catch (err) {
-    logger.warn('⚠️ safeDeepClone failed, returning original data:', err);
     return data;
   }
 }
 
+// 4. وظائف الصيانة والتنظيف (Maintenance)
+
 /**
  * تنظيف البيانات المنتهية الصلاحية
  */
-async function cleanExpiredCache() {
+export async function cleanExpiredCache() {
   const now = Date.now();
   
   // تنظيف localStorage
@@ -75,11 +82,10 @@ async function cleanExpiredCache() {
       if (now - metadata.timestamp > CACHE_CONFIG.localStorage.ttl) {
         localStorage.removeItem(key);
         cacheMetadata.localStorage.delete(key);
-        logger.info(`🗑️ تم حذف (localStorage): ${key}`);
       }
     }
   } catch (err) {
-    logger.error('❌ خطأ في تنظيف localStorage:', err);
+    logger.error('❌ Error cleaning localStorage expiry:', err);
   }
 
   // تنظيف IndexedDB
@@ -88,18 +94,16 @@ async function cleanExpiredCache() {
       if (now - metadata.timestamp > CACHE_CONFIG.indexedDB.ttl) {
         await localforage.removeItem(key);
         cacheMetadata.indexedDB.delete(key);
-        logger.info(`🗑️ تم حذف (IndexedDB): ${key}`);
       }
     }
   } catch (err) {
-    logger.error('❌ خطأ في تنظيف IndexedDB:', err);
+    logger.error('❌ Error cleaning IndexedDB expiry:', err);
   }
 
   // تنظيف Memory Cache
   for (const [key, metadata] of memoryCache) {
     if (now - metadata.timestamp > CACHE_CONFIG.memory.ttl) {
       memoryCache.delete(key);
-      logger.info(`🗑️ تم حذف (Memory): ${key}`);
     }
   }
 }
@@ -107,36 +111,35 @@ async function cleanExpiredCache() {
 /**
  * تنظيف البيانات الزائدة (LRU - Least Recently Used)
  */
-async function evictLRU(storage) {
+export async function evictLRU(storage) {
   const config = CACHE_CONFIG[storage];
-  const metadata = cacheMetadata[storage];
+  const metadataMap = cacheMetadata[storage];
 
-  if (metadata.size <= config.maxSize) return;
+  if (metadataMap.size < config.maxItems) return;
 
-  // ترتيب حسب آخر استخدام
-  const sorted = Array.from(metadata.entries())
+  const sorted = Array.from(metadataMap.entries())
     .sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
 
-  // حذف 20% من البيانات الأقل استخداماً
-  const toDelete = Math.ceil(sorted.length * 0.2);
-  for (let i = 0; i < toDelete; i++) {
+  const toDeleteCount = Math.ceil(sorted.length * 0.2); // حذف 20%
+  for (let i = 0; i < toDeleteCount; i++) {
     const [key] = sorted[i];
     if (storage === 'localStorage') {
       localStorage.removeItem(key);
     } else {
       await localforage.removeItem(key);
     }
-    metadata.delete(key);
-    logger.info(`♻️ تم حذف (LRU ${storage}): ${key}`);
+    metadataMap.delete(key);
+    logger.info(`♻️ LRU Eviction (${storage}): ${key}`);
   }
 }
 
-/**
- * حفظ في localStorage
- */
-export async function setLocalStorageCache(key, data, metadata = {}) {
+// 5. وظائف التخزين والقراءة (Storage Operations)
+
+export async function setLocalStorageCache(key, data, options = {}) {
   try {
-    // التحقق من الحد الأقصى للعناصر
+    const { userId, metadata: customMetadata = {} } = options;
+    const finalKey = getScopedKey(key, userId);
+
     if (cacheMetadata.localStorage.size >= CACHE_CONFIG.localStorage.maxItems) {
       await evictLRU('localStorage');
     }
@@ -144,400 +147,303 @@ export async function setLocalStorageCache(key, data, metadata = {}) {
     const size = calculateSize(data);
     const now = Date.now();
 
-    localStorage.setItem(key, JSON.stringify({
+    localStorage.setItem(finalKey, JSON.stringify({
       data,
       timestamp: now,
-      metadata
+      metadata: customMetadata
     }));
 
-    cacheMetadata.localStorage.set(key, {
+    cacheMetadata.localStorage.set(finalKey, {
       size,
       timestamp: now,
       lastAccessed: now
     });
 
-    logger.info(`✅ حفظ (localStorage): ${key} (${Math.round(size / 1024)}KB)`);
     return true;
   } catch (err) {
-    logger.error(`❌ خطأ في حفظ (localStorage): ${key}`, err);
+    logger.error(`❌ Error setting localStorage cache: ${key}`, err);
     return false;
   }
 }
 
-/**
- * قراءة من localStorage
- */
-export function getLocalStorageCache(key) {
+export function getLocalStorageCache(key, userId = null) {
   try {
-    const item = localStorage.getItem(key);
+    const finalKey = getScopedKey(key, userId);
+    const item = localStorage.getItem(finalKey);
     if (!item) return null;
 
     const parsed = JSON.parse(item);
-    const metadata = cacheMetadata.localStorage.get(key);
+    const metadata = cacheMetadata.localStorage.get(finalKey);
     
+    const now = Date.now();
     if (metadata) {
-      metadata.lastAccessed = Date.now();
+      metadata.lastAccessed = now;
+    } else {
+      cacheMetadata.localStorage.set(finalKey, {
+        timestamp: parsed.timestamp || now,
+        lastAccessed: now
+      });
     }
 
-    logger.info(`📖 قراءة (localStorage): ${key}`);
     return parsed.data;
   } catch (err) {
-    logger.error(`❌ خطأ في قراءة (localStorage): ${key}`, err);
     return null;
   }
 }
 
-/**
- * حفظ في IndexedDB
- */
-export async function setIndexedDBCache(key, data, metadata = {}) {
+export async function setIndexedDBCache(key, data, options = {}) {
   try {
-    // تنظيف البيانات باستخدام safeDeepClone (structuredClone -> JSON fallback)
+    const { userId, metadata: customMetadata = {} } = options;
+    const finalKey = getScopedKey(key, userId);
     const cleanData = safeDeepClone(data);
 
-    // التحقق من الحد الأقصى للعناصر
     if (cacheMetadata.indexedDB.size >= CACHE_CONFIG.indexedDB.maxItems) {
       await evictLRU('indexedDB');
     }
 
-    const size = calculateSize(cleanData);
     const now = Date.now();
-
-    await localforage.setItem(key, {
+    await localforage.setItem(finalKey, {
       data: cleanData,
       timestamp: now,
-      metadata
+      metadata: customMetadata
     });
 
-    cacheMetadata.indexedDB.set(key, {
-      size,
+    cacheMetadata.indexedDB.set(finalKey, {
       timestamp: now,
       lastAccessed: now
     });
 
-    logger.info(`✅ حفظ (IndexedDB): ${key} (${Math.round(size / 1024)}KB)`);
     return true;
   } catch (err) {
-    logger.error(`❌ خطأ في حفظ (IndexedDB): ${key}`, err);
+    logger.error(`❌ Error setting IndexedDB cache: ${key}`, err);
     return false;
   }
 }
 
-/**
- * قراءة من IndexedDB
- */
-export async function getIndexedDBCache(key) {
+export async function getIndexedDBCache(key, userId = null) {
   try {
-    const item = await localforage.getItem(key);
+    const finalKey = getScopedKey(key, userId);
+    const item = await localforage.getItem(finalKey);
     if (!item) return null;
 
-    const metadata = cacheMetadata.indexedDB.get(key);
+    const now = Date.now();
+    const metadata = cacheMetadata.indexedDB.get(finalKey);
     if (metadata) {
-      metadata.lastAccessed = Date.now();
+      metadata.lastAccessed = now;
+    } else {
+      cacheMetadata.indexedDB.set(finalKey, {
+        timestamp: item.timestamp || now,
+        lastAccessed: now
+      });
     }
 
-    logger.info(`📖 قراءة (IndexedDB): ${key}`);
     return item.data;
   } catch (err) {
-    logger.error(`❌ خطأ في قراءة (IndexedDB): ${key}`, err);
     return null;
   }
 }
 
-/**
- * حفظ في Memory Cache
- */
-export function setMemoryCache(key, data, metadata = {}) {
+export function setMemoryCache(key, data, options = {}) {
   try {
-    // إذا تجاوزنا الحد الأقصى، احذف الأقل استخداماً
+    const { userId, metadata: customMetadata = {} } = options;
+    const finalKey = getScopedKey(key, userId);
+
     if (memoryCache.size >= CACHE_CONFIG.memory.maxItems) {
-      const sorted = Array.from(memoryCache.entries())
-        .sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
-      memoryCache.delete(sorted[0][0]);
-      logger.info(`♻️ تم حذف (Memory LRU): ${sorted[0][0]}`);
+      const oldestKey = memoryCache.keys().next().value;
+      memoryCache.delete(oldestKey);
     }
 
     const now = Date.now();
-    memoryCache.set(key, {
+    memoryCache.set(finalKey, {
       data,
       timestamp: now,
       lastAccessed: now,
-      metadata
+      metadata: customMetadata
     });
-
-    logger.info(`✅ حفظ (Memory): ${key}`);
     return true;
   } catch (err) {
-    logger.error(`❌ خطأ في حفظ (Memory): ${key}`, err);
     return false;
   }
 }
 
-/**
- * قراءة من Memory Cache
- */
-export function getMemoryCache(key) {
-  try {
-    const item = memoryCache.get(key);
-    if (!item) return null;
-
-    // تحديث آخر وصول
-    item.lastAccessed = Date.now();
-
-    logger.info(`📖 قراءة (Memory): ${key}`);
-    return item.data;
-  } catch (err) {
-    logger.error(`❌ خطأ في قراءة (Memory): ${key}`, err);
-    return null;
-  }
+export function getMemoryCache(key, userId = null) {
+  const finalKey = getScopedKey(key, userId);
+  const item = memoryCache.get(finalKey);
+  if (!item) return null;
+  item.lastAccessed = Date.now();
+  return item.data;
 }
 
-/**
- * حفظ ذكي متدرج (حاول Memory، ثم IndexedDB، ثم localStorage)
- */
-export async function setSmartCache(key, data, priority = 'auto') {
+// 6. الوظائف الذكية (Smart Functions)
+
+export async function setSmartCache(key, data, options = {}) {
   const size = calculateSize(data);
+  const { priority = 'auto' } = options;
 
-  if (priority === 'memory' || (priority === 'auto' && size < 100 * 1024)) {
-    return setMemoryCache(key, data);
-  } else if (priority === 'indexedDB' || (priority === 'auto' && size < 5 * 1024 * 1024)) {
-    return await setIndexedDBCache(key, data);
+  if (priority === 'memory' || (priority === 'auto' && size < 50 * 1024)) {
+    return setMemoryCache(key, data, options);
+  } else if (priority === 'indexedDB' || (priority === 'auto' && size < 2 * 1024 * 1024)) {
+    return await setIndexedDBCache(key, data, options);
   } else {
-    return await setLocalStorageCache(key, data);
+    return await setLocalStorageCache(key, data, options);
   }
 }
 
-/**
- * قراءة ذكية متدرجة
- */
-export async function getSmartCache(key) {
-  // جرب Memory أولاً (الأسرع)
-  let data = getMemoryCache(key);
+export async function getSmartCache(key, userId = null) {
+  let data = getMemoryCache(key, userId);
   if (data) return data;
 
-  // جرب IndexedDB (سريع)
-  data = await getIndexedDBCache(key);
+  data = await getIndexedDBCache(key, userId);
   if (data) {
-    // احفظه في Memory للمرات القادمة
-    setMemoryCache(key, data);
+    setMemoryCache(key, data, { userId });
     return data;
   }
 
-  // جرب localStorage (الأبطأ)
-  data = getLocalStorageCache(key);
+  data = getLocalStorageCache(key, userId);
   if (data) {
-    // احفظه في Memory للمرات القادمة
-    setMemoryCache(key, data);
+    setMemoryCache(key, data, { userId });
     return data;
   }
 
   return null;
 }
 
-/**
- * حذف من جميع المخزنات
- */
-export async function removeFromAllCaches(key) {
+// 7. وظائف الحذف والمسح (Cleanup Operations)
+
+export async function removeFromAllCaches(key, userId = null) {
   try {
-    memoryCache.delete(key);
-    localStorage.removeItem(key);
-    await localforage.removeItem(key);
-    cacheMetadata.localStorage.delete(key);
-    cacheMetadata.indexedDB.delete(key);
-    logger.info(`🗑️ تم حذف من جميع المخزنات: ${key}`);
+    const finalKey = getScopedKey(key, userId);
+    memoryCache.delete(finalKey);
+    localStorage.removeItem(finalKey);
+    await localforage.removeItem(finalKey);
+    cacheMetadata.localStorage.delete(finalKey);
+    cacheMetadata.indexedDB.delete(finalKey);
     return true;
   } catch (err) {
-    logger.error(`❌ خطأ في الحذف: ${key}`, err);
     return false;
   }
 }
 
-/**
- * تنظيف كامل (استخدم بحذر!)
- */
 export async function clearAllCaches() {
-  try {
-    memoryCache.clear();
-    localStorage.clear();
-    await localforage.clear();
-    cacheMetadata.localStorage.clear();
-    cacheMetadata.indexedDB.clear();
-    logger.info('🧹 تم تنظيف جميع المخزنات');
-    return true;
-  } catch (err) {
-    logger.error('❌ خطأ في التنظيف الكامل:', err);
-    return false;
-  }
+  memoryCache.clear();
+  localStorage.clear();
+  await localforage.clear();
+  cacheMetadata.localStorage.clear();
+  cacheMetadata.indexedDB.clear();
+  return true;
 }
 
-/**
- * تنظيف الكاش عند تحديث الإصدار مع الحفاظ على الأرشيف والإعدادات
- */
-export async function clearCacheOnVersionUpdate() {
-  try {
-    const ARCHIVE_PREFIX = 'arch_data_';
-    const SETTINGS_KEY = 'app_settings_v1';
-    
-    // 1. تنظيف Memory Cache
-    memoryCache.clear();
-    
-    // 2. تنظيف localStorage (باستثناء الأرشيف والإعدادات)
-    Object.keys(localStorage).forEach(key => {
-      if (!key.startsWith(ARCHIVE_PREFIX) && key !== SETTINGS_KEY && key !== 'app_version') {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // 3. تنظيف IndexedDB (باستثناء الأرشيف)
-    const keys = await localforage.keys();
-    for (const key of keys) {
-      if (!key.startsWith(ARCHIVE_PREFIX)) {
-        await localforage.removeItem(key);
-      }
-    }
-
-    logger.info('🧹 Version Update Cache Cleanup: Cleared non-essential data.');
-    return true;
-  } catch (err) {
-    logger.error('❌ Error during version update cache cleanup:', err);
-    return false;
-  }
-}
-
-/**
- * تنظيف الكاش عند تسجيل الخروج مع الحفاظ على الأرشيف
- */
-export async function clearCacheOnLogout() {
-  try {
-    const ARCHIVE_PREFIX = 'arch_data_';
-    
-    // 1. تنظيف Memory Cache (كاملة لأنها مؤقتة)
-    memoryCache.clear();
-    
-    // 2. تنظيف localStorage (باستثناء ما يبدأ بـ ARCHIVE_PREFIX وما يخص الإعدادات الأساسية إذا أردت)
-    Object.keys(localStorage).forEach(key => {
-      if (!key.startsWith(ARCHIVE_PREFIX)) {
-        localStorage.removeItem(key);
-      }
-    });
-    cacheMetadata.localStorage.clear();
-    
-    // 3. تنظيف IndexedDB (باستثناء جداول الأرشيف)
-    const keys = await localforage.keys();
-    for (const key of keys) {
-      if (!key.startsWith(ARCHIVE_PREFIX)) {
-        await localforage.removeItem(key);
-      }
-    }
-    cacheMetadata.indexedDB.clear();
-
-    logger.info('🧹 Logout Cache Cleanup: All cleared except Archives.');
-    return true;
-  } catch (err) {
-    logger.error('❌ Error during logout cache cleanup:', err);
-    return false;
-  }
-}
-
-/**
- * إحصائيات الكاش
- */
-export function getCacheStats() {
-  return {
-    memory: {
-      items: memoryCache.size,
-      max: CACHE_CONFIG.memory.maxItems
-    },
-    localStorage: {
-      items: cacheMetadata.localStorage.size,
-      max: CACHE_CONFIG.localStorage.maxItems
-    },
-    indexedDB: {
-      items: cacheMetadata.indexedDB.size,
-      max: CACHE_CONFIG.indexedDB.maxItems
-    }
-  };
-}
-
-/**
- * بدء التنظيف التلقائي المنتظم
- */
-export function startAutoCleaning(interval = 5 * 60 * 1000) { // كل 5 دقائق
-  logger.info('⏱️ بدء التنظيف التلقائي للكاش');
-  
-  setInterval(() => {
-    cleanExpiredCache().catch(err => {
-      logger.error('❌ خطأ في التنظيف التلقائي:', err);
-    });
-  }, interval);
-
-  // تنظيف عند إغلاق الصفحة
-  window.addEventListener('beforeunload', () => {
-    cleanExpiredCache().catch((e) => logger.error(e));
-  });
-}
-
-/**
- * حذف كاش معين بناءً على Pattern
- */
 export async function clearCacheByPattern(pattern) {
   try {
     const regex = new RegExp(pattern);
     let count = 0;
 
-    // حذف من Memory
     for (const [key] of memoryCache) {
-      if (regex.test(key)) {
-        memoryCache.delete(key);
-        count++;
-      }
+      if (regex.test(key)) { memoryCache.delete(key); count++; }
+    }
+    
+    Object.keys(localStorage).forEach(key => {
+      if (regex.test(key)) { localStorage.removeItem(key); count++; }
+    });
+
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      if (regex.test(key)) { await localforage.removeItem(key); count++; }
     }
 
-    // حذف من localStorage
-    for (const [key, metadata] of cacheMetadata.localStorage) {
-      if (regex.test(key)) {
-        localStorage.removeItem(key);
-        cacheMetadata.localStorage.delete(key);
-        count++;
-      }
-    }
-
-    // حذف من IndexedDB
-    for (const [key, metadata] of cacheMetadata.indexedDB) {
-      if (regex.test(key)) {
-        await localforage.removeItem(key);
-        cacheMetadata.indexedDB.delete(key);
-        count++;
-      }
-    }
-
-    logger.info(`♻️ تم حذف ${count} عناصر بناءً على Pattern: ${pattern}`);
     return count;
   } catch (err) {
-    logger.error(`❌ خطأ في حذف الكاش بـ Pattern: ${pattern}`, err);
     return 0;
   }
 }
 
-/**
- * التحقق من إصدار التطبيق وتنظيف الكاش إذا لزم الأمر
- */
+export async function clearCacheOnVersionUpdate() {
+  try {
+    const SETTINGS_KEY = 'app_settings_v1';
+    const ARCHIVE_PATTERN = /arch_data_/;
+    memoryCache.clear();
+    
+    Object.keys(localStorage).forEach(key => {
+      if (!ARCHIVE_PATTERN.test(key) && key !== SETTINGS_KEY && key !== 'app_version') {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      if (!ARCHIVE_PATTERN.test(key) && !key.includes('harvest_rows')) {
+        await localforage.removeItem(key);
+      }
+    }
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function clearCacheOnLogout(userId = null) {
+  try {
+    memoryCache.clear();
+    const userPrefix = userId ? `u_${userId}_` : null;
+    const ARCHIVE_PATTERN = /arch_data_/;
+
+    if (userPrefix) {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(userPrefix) && !ARCHIVE_PATTERN.test(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+      const keys = await localforage.keys();
+      for (const key of keys) {
+        if (key.startsWith(userPrefix) && !ARCHIVE_PATTERN.test(key) && !key.includes('harvest_rows')) {
+          await localforage.removeItem(key);
+        }
+      }
+    } else {
+      Object.keys(localStorage).forEach(key => {
+        if (!ARCHIVE_PATTERN.test(key) && key !== 'app_version') {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+// 8. المراقبة والإصدار (Monitoring & Versioning)
+
+export function getCacheStats() {
+  return {
+    memory: { items: memoryCache.size, max: CACHE_CONFIG.memory.maxItems },
+    localStorage: { items: cacheMetadata.localStorage.size, max: CACHE_CONFIG.localStorage.maxItems },
+    indexedDB: { items: cacheMetadata.indexedDB.size, max: CACHE_CONFIG.indexedDB.maxItems }
+  };
+}
+
+export function startAutoCleaning(interval = 10 * 60 * 1000) {
+  setInterval(() => {
+    cleanExpiredCache().catch(() => {});
+  }, interval);
+}
+
 export async function checkAppVersion() {
   try {
-    const currentVersion = __APP_VERSION__;
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
     const savedVersion = localStorage.getItem('app_version');
 
     if (savedVersion && savedVersion !== currentVersion) {
-      logger.info(`🔄 New version detected: ${currentVersion} (old: ${savedVersion}). Cleaning cache...`);
+      logger.info(`🔄 New version detected: ${currentVersion}. Cleaning cache...`);
       await clearCacheOnVersionUpdate();
     }
-
     localStorage.setItem('app_version', currentVersion);
   } catch (err) {
     logger.error('❌ Error checking app version:', err);
   }
 }
 
+// 9. التصدير الافتراضي (Default Export)
 export default {
   setLocalStorageCache,
   getLocalStorageCache,
@@ -550,12 +456,12 @@ export default {
   removeFromAllCaches,
   clearAllCaches,
   clearCacheOnLogout,
-  getCacheStats,
+  clearCacheOnVersionUpdate,
+  getScopedKey,
   startAutoCleaning,
-  clearCacheByPattern,
   cleanExpiredCache,
+  getCacheStats,
   safeDeepClone,
-  checkAppVersion
+  checkAppVersion,
+  clearCacheByPattern
 };
-
-export { cleanExpiredCache };
