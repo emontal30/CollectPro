@@ -9,7 +9,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   const subscription = ref(null);
   const history = ref([]);
   const user = ref(null);
-  const isLoading = ref(true); 
+  const isLoading = ref(false); // تم التغيير لـ false كافتراضي
   const isInitialized = ref(false);
   const serverTimeOffset = ref(0);
   let realtimeChannel = null;
@@ -40,76 +40,51 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   });
 
   const ui = computed(() => {
-    // 1. Pending Status
     if (subscription.value?.status === 'pending') {
-      return {
-        class: 'pending',
-        icon: 'fa-clock',
-        statusText: 'بانتظار التفعيل',
-        detailsPrefix: 'جاري مراجعة طلبك',
-        days: null,
-        detailsSuffix: ''
-      };
+      return { class: 'pending', icon: 'fa-clock', statusText: 'بانتظار التفعيل', detailsPrefix: 'جاري مراجعة طلبك', days: null, detailsSuffix: '' };
     }
-
-    // 2. Active Status
     if (isSubscribed.value) {
       const days = daysRemaining.value;
-      return {
-        class: days <= 7 ? 'warning' : 'active',
-        icon: days <= 7 ? 'fa-exclamation-circle' : 'fa-check-circle',
-        statusText: 'نشط',
-        detailsPrefix: 'متبقي ',
-        days: days,
-        detailsSuffix: ' يوم'
-      };
+      return { class: days <= 7 ? 'warning' : 'active', icon: days <= 7 ? 'fa-exclamation-circle' : 'fa-check-circle', statusText: 'نشط', detailsPrefix: 'متبقي ', days: days, detailsSuffix: ' يوم' };
     }
-
-    // 3. Expired or Cancelled
     if (subscription.value?.status === 'expired' || subscription.value?.status === 'cancelled') {
-        return {
-          class: 'expired',
-          icon: 'fa-times-circle',
-          statusText: 'غير نشط',
-          detailsPrefix: 'انتهى اشتراكك',
-          days: null,
-          detailsSuffix: ''
-        };
+        return { class: 'expired', icon: 'fa-times-circle', statusText: 'غير نشط', detailsPrefix: 'انتهى اشتراكك', days: null, detailsSuffix: '' };
     }
-
-    // 4. No Subscription at all (Never subscribed)
-    return {
-      class: 'expired',
-      icon: 'fa-user',
-      statusText: 'مجاني',
-      detailsPrefix: 'حسابك مجاني حالياً',
-      days: null,
-      detailsSuffix: ''
-    };
+    return { class: 'expired', icon: 'fa-user', statusText: 'مجاني', detailsPrefix: 'حسابك مجاني حالياً', days: null, detailsSuffix: '' };
   });
 
   async function init(currentUser = null) {
     if (isInitialized.value && user.value?.id === currentUser?.id) {
-      forceRefresh(currentUser);
       return;
     }
     
-    isLoading.value = true;
+    // 1. تحميل الكاش فوراً للسرعة
     const cachedData = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
         subscription.value = parsed.sub;
         history.value = parsed.hist || [];
+        isInitialized.value = true;
+        logger.info('📦 Subscription loaded from cache');
       } catch (e) {
         logger.warn('Failed to parse subscription cache.');
       }
     }
-    await forceRefresh(currentUser);
+
+    // 2. تحديث البيانات من السيرفر فقط إذا كان هناك إنترنت
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      forceRefresh(currentUser);
+    } else {
+      isInitialized.value = true;
+    }
+    
     setupEventListeners();
   }
 
   async function forceRefresh(currentUser = null) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    
     isLoading.value = true;
     try {
       const userToRefresh = currentUser || user.value;
@@ -157,7 +132,6 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
 
     } catch (err) {
       logger.error('ForceRefresh failed:', err);
-      clearSubscription();
     } finally {
       isLoading.value = false;
     }
@@ -169,7 +143,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   }
 
   function setupRealtimeListener() {
-    if (realtimeChannel || !user.value) return;
+    if (realtimeChannel || !user.value || !navigator.onLine) return;
     const channelId = `sub_realtime:${user.value.id}`;
     realtimeChannel = supabase.channel(channelId)
       .on('postgres_changes', { 

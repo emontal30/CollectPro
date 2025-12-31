@@ -32,6 +32,8 @@ export const useAdminStore = defineStore('admin', () => {
   
   const isLoading = ref(false);
   const isSubscriptionEnforced = ref(false);
+  const lastFetchTime = ref(0);
+  const fetchError = ref(null);
 
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
   const authStore = useAuthStore();
@@ -40,20 +42,49 @@ export const useAdminStore = defineStore('admin', () => {
     localStorage.setItem('admin_active_users_period', newVal);
   });
 
-  async function loadDashboardData() {
-    // تصفير القوائم لضمان ظهور حالة التحميل بوضوح
+  /**
+   * تحميل بيانات لوحة التحكم مع نظام حماية من التعليق وتوفير في الاستدعاءات
+   */
+  async function loadDashboardData(force = false) {
+    // 1. توفير الاستدعاءات: لا تقم بالتحميل إذا كانت البيانات حديثة (أقل من 3 دقائق) إلا لو طُلب ذلك
+    const now = Date.now();
+    if (!force && lastFetchTime.value && (now - lastFetchTime.value < 3 * 60 * 1000)) {
+      logger.info('🕒 Admin data is fresh, skipping fetch.');
+      return;
+    }
+
+    if (isLoading.value) return;
+
     isLoading.value = true;
+    fetchError.value = null;
+
+    // ضبط "تايم آوت" أمان لضمان عدم تعليق الواجهة
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+    );
+
     try {
-      await Promise.all([
-        fetchStats(true),
-        fetchPendingSubscriptions(),
-        fetchAllSubscriptions(),
-        fetchUsers(),
-        fetchSystemConfig()
+      // تنفيذ الطلبات مع حماية التايم آوت
+      await Promise.race([
+        Promise.all([
+          fetchStats(true),
+          fetchPendingSubscriptions(),
+          fetchAllSubscriptions(),
+          fetchUsers(),
+          fetchSystemConfig()
+        ]),
+        timeoutPromise
       ]);
+
+      lastFetchTime.value = Date.now();
+      logger.info('✅ Admin dashboard data loaded successfully.');
     } catch (err) {
-      logger.error('Error loading admin data:', err);
-      addNotification('فشل تحميل البيانات', 'error');
+      fetchError.value = err.message === 'TIMEOUT' ? 'استغرق التحميل وقتاً طويلاً، يرجى المحاولة مرة أخرى.' : 'فشل تحميل بعض البيانات من السيرفر.';
+      logger.error('❌ Error loading admin data:', err);
+      
+      if (err.message !== 'TIMEOUT') {
+        addNotification('حدث خطأ أثناء جلب البيانات من السحاب', 'error');
+      }
     } finally {
       isLoading.value = false;
     }
@@ -134,12 +165,14 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function fetchPendingSubscriptions() {
-    pendingSubscriptions.value = await api.admin.getPendingSubscriptions();
+    const data = await api.admin.getPendingSubscriptions();
+    if (data) pendingSubscriptions.value = data;
   }
 
   async function fetchAllSubscriptions(showFeedback = false) {
     try {
-      allSubscriptions.value = await api.admin.getAllSubscriptions(filters.value);
+      const data = await api.admin.getAllSubscriptions(filters.value);
+      if (data) allSubscriptions.value = data;
       if (showFeedback) addNotification('تم تحديث قائمة الاشتراكات', 'success');
     } catch (err) {
       logger.error('Error fetching all subscriptions:', err);
@@ -149,7 +182,8 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function fetchUsers(showFeedback = false) {
     try {
-      usersList.value = await api.admin.getUsers();
+      const data = await api.admin.getUsers();
+      if (data) usersList.value = data;
       if (showFeedback) addNotification('تم تحديث قائمة المستخدمين', 'success');
     } catch (err) {
       logger.error('Error fetching users:', err);
@@ -176,17 +210,22 @@ export const useAdminStore = defineStore('admin', () => {
 
     showLoading('جاري معالجة الطلب...');
     try {
+      const subBefore = allSubscriptions.value.find(s => s.id === id);
+      const targetUserId = subBefore?.user_id;
+
       const { error } = await api.admin.handleSubscriptionAction(id, action);
-      closeLoading();
+      
       if (error) throw error;
 
-      await showSuccess('تم تنفيذ العملية بنجاح');
-      await loadDashboardData();
+      await loadDashboardData(true); // فرض تحديث بعد أي إجراء
 
-      const sub = allSubscriptions.value.find(s => s.id === id);
-      if (sub?.user_id) {
-        eventBus.emit('subscription-updated', { userId: sub.user_id });
+      if (targetUserId) {
+        logger.info(`Emitting subscription-updated for user: ${targetUserId}`);
+        eventBus.emit('subscription-updated', { userId: targetUserId });
       }
+      
+      closeLoading();
+      await showSuccess('تم تنفيذ العملية بنجاح');
 
     } catch (err) {
       closeLoading();
@@ -224,12 +263,16 @@ export const useAdminStore = defineStore('admin', () => {
       if (error) throw error;
 
       if (shouldRefresh) {
-        closeLoading();
-        await showSuccess('تم تحديث الاشتراك بنجاح');
-        await loadDashboardData();
+        await loadDashboardData(true);
       }
       
+      logger.info(`Emitting subscription-updated for user: ${userId}`);
       eventBus.emit('subscription-updated', { userId });
+
+      if (shouldRefresh) {
+        closeLoading();
+        await showSuccess('تم تحديث الاشتراك بنجاح');
+      }
 
     } catch (err) {
       if (shouldRefresh) closeLoading();
@@ -245,7 +288,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   return {
-    stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced,
+    stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement
   };

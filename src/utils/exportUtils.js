@@ -15,6 +15,18 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
     return { success: false, message: 'لم يتم العثور على الجدول' };
   }
 
+  // تحديد الوضع الحالي (ليلي أم نهاري) لتكييف نافذة الاختيار
+  const isDark = document.body.classList.contains('dark') || 
+                 document.documentElement.classList.contains('dark') ||
+                 localStorage.getItem('theme') === 'dark';
+
+  const themeColors = {
+    background: isDark ? '#1e293b' : '#ffffff',
+    color: isDark ? '#f8fafc' : '#1e293b',
+    confirmButtonColor: 'var(--primary)',
+    cancelButtonColor: isDark ? '#334155' : '#64748b'
+  };
+
   // استخدام نظام التنبيهات الموحد لاختيار الصيغة
   const { value: selectedFormat } = await Swal.fire({
     title: 'تصدير التقرير',
@@ -23,7 +35,10 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
     showCancelButton: true,
     confirmButtonText: 'تأكيد',
     cancelButtonText: 'إلغاء',
-    confirmButtonColor: 'var(--primary)',
+    confirmButtonColor: themeColors.confirmButtonColor,
+    cancelButtonColor: themeColors.cancelButtonColor,
+    background: themeColors.background,
+    color: themeColors.color,
     input: 'radio',
     inputOptions: {
       'image': '📷 صورة (PNG)',
@@ -32,8 +47,24 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
     },
     inputValue: 'image',
     customClass: {
-      popup: 'swal-custom-z-index',
-      input: 'swal-radio-grid'
+      popup: `swal-custom-z-index ${isDark ? 'dark-alert-popup' : ''}`,
+      title: isDark ? 'dark-alert-title' : '',
+      htmlContainer: isDark ? 'dark-alert-text' : '',
+      input: `swal-radio-grid ${isDark ? 'dark-radio-grid' : ''}`
+    },
+    didOpen: () => {
+      // إصلاح لون النصوص داخل الراديو في الوضع الليلي
+      if (isDark) {
+        const labels = document.querySelectorAll('.swal2-radio label');
+        labels.forEach(label => {
+          label.style.color = '#f8fafc';
+        });
+        const radioContainer = document.querySelector('.swal2-radio');
+        if (radioContainer) {
+          radioContainer.style.background = 'transparent';
+          radioContainer.style.color = '#f8fafc';
+        }
+      }
     }
   });
 
@@ -49,7 +80,7 @@ export const exportAndShareTable = async (elementId, fileName = 'CollectPro_Repo
       scale: 2, // زيادة الجودة لضمان وضوح النص العربي
       useCORS: true,
       allowTaint: true,
-      backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface-bg') || '#ffffff',
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface-bg') || (isDark ? '#0f172a' : '#ffffff'),
       logging: false,
       onclone: (clonedDoc) => {
         const clonedElement = clonedDoc.getElementById(elementId);

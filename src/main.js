@@ -11,6 +11,9 @@ import { startAutoCleaning, checkAppVersion } from './services/cacheManager'
 import { setupCacheMonitor } from './services/cacheMonitor'
 import logger from '@/utils/logger.js'
 
+// --- Stores ---
+import { useSettingsStore } from './stores/settings'
+
 // 1. Create App Instance
 const app = createApp(App)
 const pinia = createPinia()
@@ -34,7 +37,12 @@ app.directive('click-outside', {
 app.use(pinia)
 app.use(router)
 
-// 4. Global PWA Install Prompt Handler
+// 4. Load & Apply Saved Settings (DarkMode, Zoom, etc.)
+// يتم استدعاؤها بعد app.use(pinia) لضمان جاهزية المخزن
+const settingsStore = useSettingsStore()
+settingsStore.loadSettings()
+
+// 5. Global PWA Install Prompt Handler
 window.addEventListener('beforeinstallprompt', (e) => {
   logger.info('🚀 Global: Captured beforeinstallprompt event.');
   e.preventDefault();
@@ -42,7 +50,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.dispatchEvent(new CustomEvent('pwa-install-prompt'));
 });
 
-// 5. Initialize Background Services
+// 6. Initialize Background Services
 checkAppVersion();
 startAutoCleaning(5 * 60 * 1000);
 
@@ -50,7 +58,7 @@ if (import.meta.env.DEV) {
   setupCacheMonitor();
 }
 
-// 6. Mount Application & Cleanup Splash Screen
+// 7. Mount Application & Cleanup Splash Screen
 // نستخدم الـ hook الخاص بالراوتر لضمان أن أول صفحة تم تحميلها قبل إخفاء الـ loader
 router.isReady().then(() => {
   app.mount('#app');

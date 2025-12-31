@@ -30,15 +30,24 @@
         <div class="count-label">عدد العملاء</div>
         <div class="count-value">{{ store.customerCount }}</div>
       </div>
-      <div class="search-input-wrapper">
-        <i class="fas fa-search control-icon"></i>
+      <div class="search-input-wrapper relative">
+        <i class="fas fa-search control-icon pr-2"></i>
         <input
           v-model="searchQueryLocal"
           type="text"
           placeholder="ابحث في المحل أو الكود..."
-          class="search-input"
+          class="search-input w-full"
           @input="handleSearchInput"
         />
+        <button 
+          v-if="searchQueryLocal" 
+          class="clear-search-btn" 
+          @click="clearSearch"
+          type="button"
+          title="حذف البحث"
+        >
+          <i class="fas fa-times-circle"></i>
+        </button>
       </div>
       <button class="btn-settings-table" title="عرض/اخفاء الأعمدة" @click="showSettings = true">
         <i class="fas fa-cog"></i>
@@ -362,6 +371,7 @@ const getFilteredTotalNetIcon = computed(() => getNetIcon(filteredTotalNetValue.
 // --- الدوال الأساسية (Methods) ---
 
 const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
+const clearSearch = () => { searchQueryLocal.value = ''; };
 
 const syncWithCounterStore = () => {
   try {
@@ -692,6 +702,34 @@ watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initiali
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
 }
+
+/* تحسين زر حذف البحث */
+.clear-search-btn {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--gray-500);
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  font-size: 1.2rem;
+}
+
+.clear-search-btn:hover {
+  color: var(--danger);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.relative { position: relative; }
+.w-full { width: 100%; }
+.pr-2 { padding-right: 8px; }
 
 /* الميديا كويري للهواتف */
 @media (max-width: 768px) {

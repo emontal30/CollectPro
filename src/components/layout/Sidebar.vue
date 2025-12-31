@@ -65,7 +65,7 @@
         </button>
         <button 
           class="sidebar-action-btn" 
-          title="تحديث البيانات"
+          title="تحدث البيانات"
           @click="handleRefreshData"
         >
           <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
@@ -321,7 +321,7 @@ const handleLogout = async () => {
 .sidebar {
     position: fixed;
     top: 0;
-    right: calc(var(--sidebar-width) * -1);
+    right: 0;
     width: var(--sidebar-width);
     height: 100vh;
     background: var(--primary, #007965);
@@ -329,16 +329,20 @@ const handleLogout = async () => {
     display: flex;
     flex-direction: column;
     padding-top: 20px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* تحسين الحركة باستخدام transform بدلاً من right */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
     z-index: 2000;
     overflow-y: auto;
     box-shadow: -5px 0 15px rgba(0,0,0,0.1);
     visibility: hidden;
     pointer-events: none;
+    /* تحسين الأداء الرسومي */
+    will-change: transform;
 }
 
 .sidebar.active {
-  right: 0;
+  transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
 }
@@ -464,6 +468,25 @@ const handleLogout = async () => {
 .nav-links { list-style: none; padding: 0; }
 .nav-links a { display: flex; align-items: center; gap: 15px; padding: 14px 25px; color: rgba(255, 255, 255, 0.85); text-decoration: none; }
 .nav-links a.active { color: #fff; background: rgba(255, 255, 255, 0.15); font-weight: 700; }
-.overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; z-index: 1008; transition: opacity 0.3s ease; }
-.overlay.active { opacity: 1; visibility: visible; }
+
+.overlay { 
+    position: fixed; 
+    top: 0; 
+    right: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.4); /* تخفيف لون الخلفية قليلاً */
+    opacity: 0; 
+    visibility: hidden; 
+    z-index: 1008; 
+    transition: opacity 0.3s ease, visibility 0.3s; 
+    /* إزالة blur أثناء الأنميشن لتحسين الأداء */
+}
+
+.overlay.active { 
+    opacity: 1; 
+    visibility: visible;
+    /* إضافة blur بسيط فقط عند الثبات */
+    backdrop-filter: blur(2px);
+}
 </style>

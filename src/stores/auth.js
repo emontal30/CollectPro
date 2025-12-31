@@ -21,6 +21,8 @@ export const useAuthStore = defineStore('auth', () => {
   const { addNotification } = useNotifications()
   const settingsStore = useSettingsStore()
 
+  const USER_PROFILE_CACHE_KEY = 'user_profile_cache_v1';
+
   // --- Getters ---
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => userProfile.value?.role === 'admin')
@@ -50,13 +52,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * مزامنة وحفظ بيانات البروفايل محلياً
+   */
   async function syncUserProfile(userData) {
     if (!userData) return
+
+    // 1. محاولة تحميل البروفايل من الكاش أولاً (لسرعة الاستجابة ودعم الأوفلاين)
+    const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
+    if (cachedProfile) {
+      try {
+        userProfile.value = JSON.parse(cachedProfile);
+        logger.info('📦 User profile loaded from local cache');
+      } catch (e) {
+        logger.warn('Failed to parse user profile cache');
+      }
+    }
+
+    // 2. إذا كان أوفلاين، اكتفِ بالكاش
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+       logger.info('📴 Offline: Using cached profile');
+       return;
+    }
+    
+    // 3. تحديث البيانات من السيرفر إذا كان أونلاين
     try {
       const result = await api.user.syncUserProfile(userData)
       if (result.isOffline) return;
       if (result.error) throw result.error
-      userProfile.value = result.profile
+      
+      if (result.profile) {
+        userProfile.value = result.profile;
+        // حفظ في الكاش للمرة القادمة
+        localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+      }
     } catch (err) {
       logger.warn('Profile Sync Warning:', err.message)
     }
@@ -68,6 +97,10 @@ export const useAuthStore = defineStore('auth', () => {
       const cached = localStorage.getItem('sys_config_enforce');
       if (cached !== null) {
         isSubscriptionEnforced.value = cached === 'true';
+      }
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return;
       }
 
       const { data: config, error } = await apiInterceptor(
@@ -101,8 +134,13 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       await loadSystemConfig();
-      const { session, error } = await api.auth.getSession();
-      if (error) throw error;
+
+      // Supabase تلقائياً يستعيد الجلسة من localStorage
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        logger.error('Session check error:', error);
+      }
       
       if (session?.user) {
         user.value = session.user;
@@ -110,7 +148,6 @@ export const useAuthStore = defineStore('auth', () => {
         settingsStore.applySettings();
         cleanUrlHash();
         
-        // تفعيل الإعادة لمرة واحدة عند اكتشاف جلسة نشطة
         triggerOneTimeLoginReload();
       }
 
@@ -128,7 +165,6 @@ export const useAuthStore = defineStore('auth', () => {
             await syncUserProfile(session.user);
             settingsStore.applySettings();
             
-            // تفعيل الإعادة لمرة واحدة عند تسجيل الدخول
             if (event === 'SIGNED_IN') {
               triggerOneTimeLoginReload();
             }
@@ -140,17 +176,13 @@ export const useAuthStore = defineStore('auth', () => {
       
       authListener.value = listener;
     } catch (err) {
-      logger.error('💥 Auth Init Error:', err);
-      await logoutCleanup();
+      logger.error('💥 Auth Init Critical Error:', err);
     } finally {
       isInitialized.value = true;
       isLoading.value = false;
     }
   }
 
-  /**
-   * تنظيف عميق لكل ما يخص الجلسة والكاش
-   */
   async function logoutCleanup() {
     try {
       user.value = null;
@@ -159,24 +191,21 @@ export const useAuthStore = defineStore('auth', () => {
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
       
-      // تنظيف الكاش الذكي (باستثناء الأرشيف)
       await clearCacheOnLogout();
 
-      // مسح مفاتيح Supabase المتبقية في localStorage
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth.token')) {
           localStorage.removeItem(key);
         }
       });
 
-      // مسح مفتاح الإعادة لضمان عملها عند تسجيل الدخول القادم
       sessionStorage.removeItem('app_login_sync_performed');
-
       localStorage.removeItem('app_last_route');
       localStorage.removeItem('my_subscription_data_v2');
       localStorage.removeItem('sys_config_enforce');
+      localStorage.removeItem(USER_PROFILE_CACHE_KEY); // مسح كاش البروفايل
       
-      logger.info('🧹 Deep Auth & Cache Cleanup Completed (Archives preserved).');
+      logger.info('🧹 Deep Auth & Cache Cleanup Completed.');
     } catch (err) {
       logger.error('Error during logout cleanup:', err);
     }

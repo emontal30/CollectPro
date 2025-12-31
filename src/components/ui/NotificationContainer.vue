@@ -38,11 +38,15 @@ const getIconClass = (type) => {
 <style scoped>
 .notification-container {
   position: fixed;
-  top: 20px; /* تم تعديله من 100px ليظهر دائماً بالاعلى */
-  right: 20px;
+  top: var(--header-height, 70px); /* يظهر مباشرة تحت التوب بار */
+  left: 0;
+  right: 0;
   z-index: 10000;
-  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   pointer-events: none;
+  padding: 10px;
 }
 
 .notification {
@@ -50,17 +54,19 @@ const getIconClass = (type) => {
   pointer-events: auto;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 100%;
+  max-width: 400px;
 }
 
 .notification:hover {
-  transform: translateX(-5px);
+  transform: translateY(2px);
 }
 
 .notification-content {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 12px 20px;
   border-radius: 12px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
@@ -68,40 +74,38 @@ const getIconClass = (type) => {
   font-family: 'Cairo', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  min-width: 300px;
-  max-width: 400px;
 }
 
 .notification-success {
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   color: white;
-  border-left: 5px solid #1e7e34;
+  border-bottom: 3px solid #1e7e34;
   box-shadow: 0 8px 25px rgba(40, 167, 69, 0.25);
 }
 
 .notification-error {
   background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
   color: white;
-  border-left: 5px solid #a82835;
+  border-bottom: 3px solid #a82835;
   box-shadow: 0 8px 25px rgba(220, 53, 69, 0.25);
 }
 
 .notification-warning {
   background: linear-gradient(135deg, #ffc107 0%, #ffb703 100%);
   color: #333;
-  border-left: 5px solid #ff9d00;
+  border-bottom: 3px solid #ff9d00;
   box-shadow: 0 8px 25px rgba(255, 193, 7, 0.25);
 }
 
 .notification-info {
   background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
   color: white;
-  border-left: 5px solid #0c5460;
+  border-bottom: 3px solid #0c5460;
   box-shadow: 0 8px 25px rgba(23, 162, 184, 0.25);
 }
 
 .notification i {
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -109,6 +113,7 @@ const getIconClass = (type) => {
   flex: 1;
   line-height: 1.4;
   font-weight: 500;
+  text-align: center;
 }
 
 .notification-close {
@@ -116,11 +121,11 @@ const getIconClass = (type) => {
   border: none;
   color: inherit;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 6px;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .notification-close:hover {
@@ -128,7 +133,6 @@ const getIconClass = (type) => {
   transform: scale(1.1);
 }
 
-/* Night mode rules migrated to src/assets/css/unified-dark-mode.css */
 /* Animation */
 .notification-enter-active,
 .notification-leave-active {
@@ -137,12 +141,12 @@ const getIconClass = (type) => {
 
 .notification-enter-from {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(-20px);
 }
 
 .notification-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(-20px);
 }
 
 .notification-move {
@@ -152,21 +156,17 @@ const getIconClass = (type) => {
 /* Mobile responsiveness */
 @media (max-width: 480px) {
   .notification-container {
-    right: 10px;
-    left: 10px;
-    max-width: none;
-    top: 10px; /* تم تعديله للهواتف ايضاً */
+    padding: 8px;
+    top: var(--header-height, 60px);
+  }
+
+  .notification {
+    max-width: 95%;
   }
 
   .notification-content {
-    min-width: auto;
-    max-width: none;
+    padding: 10px 14px;
     font-size: 13px;
-    padding: 14px 16px;
-  }
-
-  .notification i {
-    font-size: 16px;
   }
 }
 </style>

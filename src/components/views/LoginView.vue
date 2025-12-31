@@ -8,78 +8,76 @@
       <div class="login-container">
         <div class="login-card">
           
-          <div class="card-content-top">
-            <div class="logo-container">
-              <img src="/logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
-              <h1 class="app-name">CollectPro</h1>
-              <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
-            </div>
+          <div class="logo-container">
+            <img src="/logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
+            <h1 class="app-name">CollectPro</h1>
+            <p class="subtitle">نظام إدارة التحصيلات المتقدم</p>
+          </div>
 
-            <div class="btn-container">
-              <button 
-                class="google-login-btn" 
-                :class="{ 'is-loading': store.isLoading }"
-                :disabled="store.isLoading"
-                @click="store.loginWithGoogle"
-              >
-                <template v-if="store.isLoading">
-                  <i class="fas fa-spinner fa-spin"></i>
-                  <span>جاري التوجيه...</span>
-                </template>
+          <div class="btn-container">
+            <button 
+              class="google-login-btn" 
+              :class="{ 'is-loading': store.isLoading }"
+              :disabled="store.isLoading"
+              @click="store.loginWithGoogle"
+            >
+              <template v-if="store.isLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>جاري التوجيه...</span>
+              </template>
 
-                <template v-else>
-                  <i class="fab fa-google"></i>
-                  <span>تسجيل الدخول باستخدام Google</span>
-                </template>
-              </button>
-            </div>
+              <template v-else>
+                <i class="fab fa-google"></i>
+                <span>تسجيل الدخول باستخدام Google</span>
+              </template>
+            </button>
+          </div>
 
-            <p class="privacy-policy">
-              بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
-            </p>
+          <p class="privacy-policy">
+            بالتسجيل، أنت توافق على <a href="#">سياسة الخصوصية</a> و <a href="#">شروط الاستخدام</a>.
+          </p>
 
-            <hr class="privacy-divider">
+          <hr class="privacy-divider">
 
-            <div class="install-section-wrapper">
-              <transition name="fade" mode="out-in">
-                <div v-if="showInstallButton" class="install-app-section" key="install-btn">
-                  <button class="install-app-btn" @click="installApp">
-                    <div class="install-app-icon">
-                      <img src="/favicon.svg" alt="شعار التطبيق" />
-                    </div>
-                    
-                    <div class="install-btn-content">
-                      <span class="install-btn-title">تثبيت التطبيق</span>
-                      <span class="install-btn-subtitle">احصل على تجربة أفضل</span>
-                    </div>
-                    
-                    <div class="download-icon">
-                      <i class="fas fa-download"></i>
-                    </div>
-                  </button>
+          <div class="install-section-wrapper">
+            <transition name="fade" mode="out-in">
+              <div v-if="showInstallButton" class="install-app-section" key="install-btn">
+                <button class="install-app-btn" @click="installApp">
+                  <div class="install-app-icon">
+                    <img src="/favicon.svg" alt="شعار التطبيق" />
+                  </div>
+                  
+                  <div class="install-btn-content">
+                    <span class="install-btn-title">تثبيت التطبيق</span>
+                    <span class="install-btn-subtitle">احصل على تجربة أفضل</span>
+                  </div>
+                  
+                  <div class="download-icon">
+                    <i class="fas fa-download"></i>
+                  </div>
+                </button>
+              </div>
+
+              <div v-else-if="isInstallSuccess" class="install-feedback" key="install-feedback">
+                <div class="feedback-content">
+                  <i class="fas fa-circle-notch fa-spin text-orange"></i>
+                  <span class="pulse-text"> جاري تثبيت التطبيق...</span>
                 </div>
+              </div>
 
-                <div v-else-if="isInstallSuccess" class="install-feedback" key="install-feedback">
-                  <div class="feedback-content">
-                    <i class="fas fa-circle-notch fa-spin text-orange"></i>
-                    <span class="pulse-text"> جاري تثبيت التطبيق...</span>
-                  </div>
+              <div v-else class="app-installed-card" key="installed-card">
+                <div class="status-icon">
+                  <i class="fas fa-shield-alt"></i>
                 </div>
-
-                <div v-else class="app-installed-card" key="installed-card">
-                  <div class="status-icon">
-                    <i class="fas fa-shield-alt"></i>
-                  </div>
-                  <div class="status-content">
-                    <span class="status-title">نسخة الهاتف مثبتة</span>
-                    <span class="status-sub">استمتع بتطبيق تحصيل احترافى - باتصال آمن </span>
-                  </div>
-                  <div class="status-check">
-                    <i class="fas fa-check-circle"></i>
-                  </div>
+                <div class="status-content">
+                  <span class="status-title">نسخة الهاتف مثبتة</span>
+                  <span class="status-sub">استمتع بتطبيق تحصيل احترافى - باتصال آمن </span>
                 </div>
-              </transition>
-            </div>
+                <div class="status-check">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+              </div>
+            </transition>
           </div>
 
           <div class="footer-info">
@@ -131,12 +129,9 @@ onMounted(() => {
   store.initializeAuth();
   handleInstallPromptLogic();
   
-  // لضمان ملء الشاشة ومنع السكرول الأفقي
   document.body.style.minWidth = 'auto';
   document.documentElement.style.overflowX = 'hidden';
   document.body.style.overflowX = 'hidden';
-  document.body.style.margin = '0';
-  document.body.style.padding = '0';
 });
 
 onUnmounted(() => {
@@ -149,6 +144,9 @@ const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
 };
 
+/**
+ * وظيفة التحديث الموحدة (نفس منطق السايدبار)
+ */
 const handleRefresh = async () => {
   const result = await confirm({
     title: 'تحديث وتحسين النظام',
@@ -161,21 +159,30 @@ const handleRefresh = async () => {
   if (result.isConfirmed) {
     isRefreshing.value = true;
     try {
+      // 1. التحقق من الإصدار
       const oldVersion = localStorage.getItem('app_version');
       const currentVersion = __APP_VERSION__;
       const hasNewUpdate = oldVersion && oldVersion !== currentVersion;
 
-      const backup = { localStorage: {}, indexedDB: {} };
+      // 2. أخذ نسخة احتياطية (Backup)
+      const backup = {
+        localStorage: {},
+        indexedDB: {}
+      };
+
+      // -- نسخ مفاتيح localStorage الأساسية
       const lsKeys = ['clientData', 'masterLimit', 'extraLimit', 'currentBalance', 'moneyCountersData', 'app_settings_v1'];
       lsKeys.forEach(key => {
         const val = localStorage.getItem(key);
         if (val !== null) backup.localStorage[key] = val;
       });
 
+      // -- الحفاظ على جلسة الدخول
       Object.keys(localStorage).forEach(key => {
         if (key.includes('auth-token')) backup.localStorage[key] = localStorage.getItem(key);
       });
 
+      // -- نسخ بيانات IndexedDB (الأرشيف والتحصيلات)
       const idbKeys = await localforage.keys();
       for (const key of idbKeys) {
         if (key.startsWith('arch_data_') || key === 'harvest_rows') {
@@ -183,9 +190,11 @@ const handleRefresh = async () => {
         }
       }
 
+      // 3. تنظيف شامل (Clear)
       localStorage.clear();
       await localforage.clear();
       
+      // مسح الـ Service Worker والكاش البرمجي أيضاً لضمان ملفات جديدة
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         for (const reg of registrations) await reg.unregister();
@@ -195,13 +204,16 @@ const handleRefresh = async () => {
         for (const key of keys) await caches.delete(key);
       }
 
+      // 4. استعادة البيانات (Restore)
       Object.entries(backup.localStorage).forEach(([key, val]) => localStorage.setItem(key, val));
       for (const [key, val] of Object.entries(backup.indexedDB)) {
         await localforage.setItem(key, val);
       }
       
+      // تحديث رقم الإصدار
       localStorage.setItem('app_version', currentVersion);
 
+      // 5. الإشعارات
       if (hasNewUpdate) {
         addNotification(`تمت الترقية بنجاح إلى الإصدار رقم ${currentVersion} 🚀`, 'success');
         await new Promise(r => setTimeout(r, 1500));
@@ -210,6 +222,7 @@ const handleRefresh = async () => {
         addNotification('أنت تستخدم أحدث إصدار من التطبيق بالفعل ✅', 'info');
       }
 
+      // 6. إعادة تحميل الصفحة
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -309,7 +322,7 @@ const installApp = async () => {
   width: 100%;
   font-family: var(--font-family-sans);
   direction: rtl;
-  overflow: hidden; /* منع أي سكرول في الحاوية الرئيسية */
+  overflow-x: hidden;
   position: relative;
 }
 
@@ -342,7 +355,6 @@ const installApp = async () => {
   align-items: center;
   width: 100%;
   padding: 20px;
-  box-sizing: border-box;
 }
 
 .login-card {
@@ -360,7 +372,6 @@ const installApp = async () => {
   justify-content: center;
   align-items: center;
   transition: var(--transition);
-  box-sizing: border-box;
 }
 
 /* =========================================
@@ -488,6 +499,24 @@ const installApp = async () => {
   box-shadow: 0 1px 3px rgba(var(--primary-rgb), 0.2);
 }
 
+.privacy-divider::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(var(--primary-rgb), 0.1) 20%, 
+    rgba(var(--primary-rgb), 0.15) 50%, 
+    rgba(var(--primary-rgb), 0.1) 80%, 
+    transparent 100%
+  );
+  filter: blur(2px);
+  border-radius: 2px;
+}
+
 /* =========================================
    5. زر التثبيت والحالات
    ========================================= */
@@ -497,6 +526,12 @@ const installApp = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.install-app-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .install-app-btn {
@@ -520,11 +555,88 @@ const installApp = async () => {
   border-color: var(--gray-400);
 }
 
+.install-app-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--surface-bg);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
 .install-app-icon img { 
   width: 28px; 
   height: 28px; 
   animation: pulse-logo 2s infinite ease-in-out;
 }
+
+@keyframes pulse-logo {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
+.install-btn-content {
+  flex: 1;
+  text-align: center; 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.install-btn-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.install-btn-subtitle { font-size: 12px; color: var(--gray-600); }
+
+.download-icon { 
+  color: var(--primary); 
+  font-size: 18px; 
+  flex-shrink: 0;
+}
+
+.app-installed-card {
+  width: 100%;
+  max-width: 320px;
+  height: 80px;
+  background: rgba(var(--primary-rgb), 0.05);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.status-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface-bg);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.status-content {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.status-title { font-size: 14px; font-weight: 800; color: var(--primary); }
+.status-sub { font-size: 11px; color: var(--text-muted); }
+.status-check { color: var(--primary); font-size: 18px; }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* =========================================
    6. الفوتر والتحكم
@@ -557,6 +669,13 @@ const installApp = async () => {
   transition: all 0.2s ease;
 }
 
+.footer-action-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
 .developer-name { color: var(--gray-700); font-weight: 700; }
 
 .version-badge {
@@ -573,61 +692,24 @@ const installApp = async () => {
   to { transform: rotate(360deg); }
 }
 
-@keyframes pulse-logo {
-  0% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.9; }
-}
-
-/* =========================================
-   7. تجاوب الهاتف المحسن (ملء الشاشة)
-   ========================================= */
-@media (max-width: 500px) {
-  .login-wrapper {
-    background: var(--surface-bg); /* توحيد الخلفية في الهاتف */
-  }
-
+@media (max-width: 480px) {
   .login-container { 
-    padding: 0; /* إلغاء الهوامش الخارجية تماماً */
-    align-items: stretch; /* التمدد لملء الارتفاع */
+    padding: 10px 50px; 
+    align-items: center; 
   }
-
   .login-card { 
-    max-width: 100%;
-    width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-    border-radius: 0; /* إزالة الحواف المنحنية في وضع ملء الشاشة */
-    border: none; /* إزالة الحدود */
-    padding: 40px 24px;
-    justify-content: space-between;
-    box-shadow: none;
+    padding: 55px 20px; 
+    max-width: 100%; 
+    border-radius: 24px;
   }
-  
-  .card-content-top {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .logo-img { height: 85px; }
-  .app-name { font-size: 32px; }
-  .subtitle { font-size: 15px; }
-  
-  .footer-info { 
-    margin-top: auto; 
-    padding: 20px 0 10px;
-  }
-}
-
-/* تحسين إضافي للشاشات الصغيرة جداً أو العريضة */
-@media (max-height: 650px) and (max-width: 500px) {
-  .login-card {
-    padding: 20px 24px;
-  }
-  .logo-img { height: 60px; margin-bottom: 15px; }
+  .logo-img { height: 75px; margin-bottom: 12px; }
   .logo-container { margin-bottom: 15px; }
-  .privacy-divider { margin: 15px auto; }
+  .app-name { font-size: 28px; }
+  .subtitle { font-size: 14px; }
+  .btn-container { margin: 20px 0 10px; }
+  .google-login-btn { padding: 14px 15px; border-radius: 12px; }
+  .privacy-divider { margin: 20px auto; }
+  .footer-info { margin-top: 20px; }
+  .footer-controls { margin-bottom: 15px; gap: 10px; }
 }
 </style>

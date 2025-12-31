@@ -12,7 +12,9 @@ export const useArchiveStore = defineStore('archive', () => {
   const availableDates = ref([]);
   const selectedDate = ref('');
   const isLoading = ref(false);
+  const isLoadingDates = ref(false);
   const isGlobalSearching = ref(false);
+  const lastDatesFetchTime = ref(0);
 
   const { addNotification } = useNotifications();
   const authStore = useAuthStore();
@@ -37,44 +39,64 @@ export const useArchiveStore = defineStore('archive', () => {
     return `${year}-${month}-${day}`;
   }
 
-  async function loadAvailableDates() {
-    try {
-      const user = authStore.user;
-      if (!user) {
-        logger.warn('ArchiveStore: Cannot load dates, user not authenticated.');
-        return;
-      }
+  /**
+   * جلب التواريخ المتاحة مع إظهار التواريخ المحلية فوراً
+   */
+  async function loadAvailableDates(force = false) {
+    // توفير الاستهلاك: لا تقم بجلب بيانات السحابة إذا كانت حديثة (أقل من 2 دقيقة)
+    const now = Date.now();
+    const shouldFetchCloud = force || (now - lastDatesFetchTime.value > 2 * 60 * 1000);
 
+    try {
+      isLoadingDates.value = true;
+
+      // 1. جلب التواريخ المحلية فوراً (INSTANT)
       const allKeys = await localforage.keys();
       const localDates = allKeys
         .filter(k => k.startsWith(DB_PREFIX))
         .map(k => k.replace(DB_PREFIX, ''));
 
-      let cloudDates = [];
-      
-      const { dates, error } = await api.archive.getAvailableDates(user.id);
-      if (!error && dates) {
-        cloudDates = dates;
+      // تحديث القائمة فوراً بالبيانات المحلية لضمان عدم بقاء القائمة فارغة
+      const updateList = (cDates = []) => {
+        const dateMap = new Map();
+        localDates.forEach(d => { 
+          if (d && d.length >= 10) dateMap.set(d, { value: d, source: 'local' }); 
+        });
+        cDates.forEach(d => {
+          if (d) {
+            if (dateMap.has(d)) dateMap.get(d).source = 'synced'; 
+            else dateMap.set(d, { value: d, source: 'cloud' });
+          }
+        });
+        availableDates.value = Array.from(dateMap.values())
+          .filter(item => !isNaN(new Date(item.value).getTime()))
+          .sort((a, b) => new Date(b.value) - new Date(a.value));
+      };
+
+      updateList(); // عرض البيانات المحلية أولاً
+
+      // 2. جلب التواريخ من السحابة في الخلفية (إذا لزم الأمر)
+      if (shouldFetchCloud && authStore.user && navigator.onLine) {
+        try {
+          // استخدام تايم آوت لضمان عدم تعليق العملية
+          const cloudPromise = api.archive.getAvailableDates(authStore.user.id);
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 8000));
+          
+          const result = await Promise.race([cloudPromise, timeoutPromise]);
+          
+          if (result && !result.error && result.dates) {
+            updateList(result.dates);
+            lastDatesFetchTime.value = Date.now();
+          }
+        } catch (cloudErr) {
+          logger.warn('⚠️ ArchiveStore: Cloud dates fetch failed or timed out', cloudErr);
+        }
       }
 
-      const dateMap = new Map();
-      localDates.forEach(d => { 
-        if (d && d.length >= 10) dateMap.set(d, { value: d, source: 'local' }); 
-      });
-
-      cloudDates.forEach(d => {
-        if (d) {
-          if (dateMap.has(d)) dateMap.get(d).source = 'synced'; 
-          else dateMap.set(d, { value: d, source: 'cloud' });
-        }
-      });
-
-      availableDates.value = Array.from(dateMap.values())
-        .filter(item => !isNaN(new Date(item.value).getTime()))
-        .sort((a, b) => new Date(b.value) - new Date(a.value));
-        
     } catch (err) {
       logger.error('❌ ArchiveStore: loadAvailableDates Error:', err);
+    } finally {
+      isLoadingDates.value = false;
     }
   }
 
@@ -92,11 +114,11 @@ export const useArchiveStore = defineStore('archive', () => {
         rows.value = (Array.isArray(localData) ? localData : (localData.rows || [])).map(r => ({...r, date: dateStr}));
       } else {
         const user = authStore.user;
-        if (!user) {
-          logger.warn('ArchiveStore: Cannot fetch from cloud, user not authenticated.');
+        if (!user || !navigator.onLine) {
           rows.value = [];
           return;
         }
+        
         const { data, error } = await api.archive.getArchiveByDate(user.id, dateStr);
 
         if (!error && data) {
@@ -115,7 +137,6 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   async function searchInAllArchives(query) {
-    // تم إزالة شرط طول الحرف للسماح بالبحث مع كل حرف كما طلب المستخدم
     if (!query) return;
     
     isLoading.value = true;
@@ -125,8 +146,6 @@ export const useArchiveStore = defineStore('archive', () => {
     try {
       const allKeys = await localforage.keys();
       const archKeys = allKeys.filter(k => k.startsWith(DB_PREFIX));
-
-      // جلب جميع البيانات المحلية بشكل متوازي
       const allData = await Promise.all(archKeys.map(key => localforage.getItem(key)));
 
       const results = allData.flatMap((data, index) => {
@@ -143,12 +162,9 @@ export const useArchiveStore = defineStore('archive', () => {
       });
 
       rows.value = results;
-      // لا نصفر التاريخ المختار هنا إذا أردنا السماح بالتصفية المحلية أولاً، 
-      // ولكن التصميم الحالي يعتمد على أن البحث الشامل يغطي كل التواريخ
       selectedDate.value = '';
     } catch (err) {
       logger.error('❌ Global Search Error:', err);
-      // لا نظهر تنبيه في كل حرف لتجنب الإزعاج، نكتفي باللوج
     } finally {
       isLoading.value = false;
     }
@@ -175,7 +191,7 @@ export const useArchiveStore = defineStore('archive', () => {
         }
       }
 
-      await loadAvailableDates();
+      await loadAvailableDates(true);
       return { success: true, message: `تم حذف الأرشيف بنجاح 🗑️` };
     } catch (err) {
       logger.error('❌ ArchiveStore: deleteArchive Error:', err);
@@ -190,6 +206,7 @@ export const useArchiveStore = defineStore('archive', () => {
     availableDates, 
     selectedDate, 
     isLoading, 
+    isLoadingDates,
     isGlobalSearching,
     totals,
     getTodayLocal,

@@ -6,6 +6,12 @@
       icon="⚙️"
     />
 
+    <!-- زر إعادة المحاولة في حالة وجود خطأ أو تعليق -->
+    <div v-if="store.fetchError" class="alert alert-danger m-3 d-flex justify-between align-center">
+      <span><i class="fas fa-exclamation-triangle"></i> {{ store.fetchError }}</span>
+      <button class="btn btn-sm btn-danger" @click="store.loadDashboardData(true)">إعادة المحاولة</button>
+    </div>
+
     <!-- قسم التحكم في حماية النظام -->
     <section class="admin-section protection-card">
       <div class="admin-section-header">
@@ -40,7 +46,7 @@
         <div class="stat-content">
           <h3>{{ stat.label }}</h3>
           <p class="stat-value">
-             <span v-if="store.isLoading && key === 'activeUsers'" class="spinner-tiny"></span>
+             <span v-if="store.isLoading && !store.stats[key]" class="spinner-tiny"></span>
              <span v-else>{{ store.stats[key] || 0 }}</span>
              {{ stat.unit }}
           </p>
@@ -96,7 +102,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="store.isLoading">
+            <tr v-if="store.isLoading && store.usersList.length === 0">
               <td colspan="5" class="text-center p-3">
                 <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل المستخدمين...
               </td>
@@ -137,6 +143,9 @@
                   </button>
                 </td>
               </tr>
+              <tr v-if="filteredUsers.length === 0 && !store.isLoading">
+                 <td colspan="5" class="text-center p-3 text-muted">لا يوجد مستخدمين مطابقين للبحث</td>
+              </tr>
             </template>
           </tbody>
         </table>
@@ -160,7 +169,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="store.isLoading">
+            <tr v-if="store.isLoading && store.pendingSubscriptions.length === 0">
               <td colspan="5" class="text-center p-3">
                 <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل الطلبات المعلقة...
               </td>
@@ -219,7 +228,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="store.isLoading">
+            <tr v-if="store.isLoading && store.allSubscriptions.length === 0">
               <td colspan="4" class="text-center p-3">
                 <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل جميع الاشتراكات...
               </td>
@@ -387,7 +396,7 @@ const handleBulkActivate = async () => {
     selectedUsers.value = [];
     bulkDays.value = null;
     addNotification(`تم تفعيل الاشتراك لـ ${successCount} مستخدم.`, 'success');
-    await store.loadDashboardData();
+    await store.loadDashboardData(true);
   }
 };
 
@@ -428,9 +437,10 @@ const getRemainingDaysColor = (endDate) => {
 };
 
 const initAdminData = async (force = false) => {
-  if (!authStore.isAdmin || (store.isLoading && !force)) return;
+  if (!authStore.isAdmin) return;
   try {
-    await store.loadDashboardData();
+    // استخدام force=false لعدم إرهاق السيرفر بالاستدعاءات المتكررة عند كل تنقل
+    await store.loadDashboardData(force);
   } catch (err) {
     logger.error('AdminView: Failed to load data', err);
   }
@@ -488,4 +498,11 @@ input:checked + .slider:before { transform: translateX(26px); }
 body.dark .user-short-id { background: rgba(255, 255, 255, 0.05); color: var(--gray-400); }
 body.dark .bg-light { background-color: #0f172a !important; border-color: #334155 !important; }
 body.dark .detail-item label { color: var(--gray-400); }
+
+/* أنماط إضافية لزر إعادة المحاولة */
+.alert { padding: 0.75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: 0.25rem; }
+.alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+.d-flex { display: flex !important; }
+.justify-between { justify-content: space-between !important; }
+.align-center { align-items: center !important; }
 </style>

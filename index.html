@@ -3,18 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   
-  <!-- Viewport Configuration with Responsive Logic -->
+  <!-- Viewport Configuration with Responsive Logic (Updated for Rotation) -->
   <script>
     (function() {
-      var viewport = document.createElement('meta');
-      viewport.name = "viewport";
-      var targetWidth = 768;
-      if (window.screen.width < targetWidth) {
-        viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
-      } else {
-        viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
+      function updateViewport() {
+        var viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
+        viewport.name = "viewport";
+        var targetWidth = 768;
+        
+        // إذا كان الجهاز في وضع الطول (Portrait) وأصغر من 768px، اجبر العرض على 768px
+        // أما إذا كان في وضع العرض (Landscape) فاستخدم عرض الجهاز الطبيعي
+        if (window.innerHeight > window.innerWidth && window.screen.width < targetWidth) {
+          viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
+        } else {
+          viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
+        }
+        
+        if (!document.querySelector('meta[name="viewport"]')) {
+          document.getElementsByTagName('head')[0].appendChild(viewport);
+        }
       }
-      document.getElementsByTagName('head')[0].appendChild(viewport);
+
+      updateViewport();
+      window.addEventListener('orientationchange', function() {
+        // تأخير بسيط لضمان تحديث قيم العرض والارتفاع بعد التدوير
+        setTimeout(updateViewport, 200);
+      });
     })();
   </script>
   
@@ -52,7 +66,7 @@
   <meta property="twitter:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
 
   <!-- Theme & Mobile App Support -->
-  <meta name="theme-color" content="#007965"/>
+  <meta name="theme-color" content="#007965" id="theme-color-meta"/>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,17 +83,29 @@
   <!-- External Stylesheets -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
   
-  <!-- Dark mode instant initialization -->
+  <!-- Dark mode instant initialization (Crucial to prevent white flash) -->
   <script>
-    try {
-      const settings = localStorage.getItem('settings');
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        if (parsed.darkMode === true) {
-          document.documentElement.classList.add('dark');
+    (function() {
+      try {
+        const savedSettings = localStorage.getItem('app_settings_v1');
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed.darkMode === true) {
+            document.documentElement.classList.add('dark');
+            // Update theme color meta immediately
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) meta.setAttribute('content', '#0f172a');
+          }
+        } else {
+          // Detect system preference if no settings saved
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
         }
+      } catch (e) {
+        console.error('Error in dark mode init:', e);
       }
-    } catch (e) {}
+    })();
   </script>
   
   <style>
@@ -89,6 +115,8 @@
       --safe-area-left: env(safe-area-inset-left, 0px);
       --safe-area-right: env(safe-area-inset-right, 0px);
       --primary-color: #007965;
+      --bg-light: #f8fafc;
+      --bg-dark: #0f172a;
     }
 
     /* Prevent annoying zoom on focus in iOS */
@@ -105,15 +133,15 @@
       padding-bottom: var(--safe-area-bottom);
       padding-left: var(--safe-area-left);
       padding-right: var(--safe-area-right);
-      background-color: var(--light-bg, #f8fafc);
+      background-color: var(--bg-light);
       position: relative;
       overflow-x: auto; 
       -webkit-text-size-adjust: 100%;
       touch-action: manipulation;
     }
     
-    html.dark, html.dark body {
-      background: #0f172a !important;
+    html.dark body {
+      background-color: var(--bg-dark) !important;
       color: #ffffff !important;
     }
     
@@ -130,7 +158,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: #ffffff;
+      background: var(--bg-light);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -138,7 +166,9 @@
       z-index: 9999;
       transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    html.dark #initial-loader { background: #0f172a; }
+    html.dark #initial-loader { 
+      background: var(--bg-dark) !important; 
+    }
 
     .loader-content {
       display: flex;

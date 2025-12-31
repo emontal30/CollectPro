@@ -3,11 +3,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore'
 import logger from '@/utils/logger.js'
 
-// Lazy Loading Components
-const LoginView = () => import('@/components/views/LoginView.vue')
-const MainLayout = () => import('@/layouts/MainLayout.vue')
-const DashboardView = () => import('@/components/views/DashboardView.vue')
-const HarvestView = () => import('@/components/views/HarvestView.vue')
+// استيراد المكونات الأساسية مباشرة لسرعة الفتح (Eager Loading)
+import LoginView from '@/components/views/LoginView.vue'
+import MainLayout from '@/layouts/MainLayout.vue'
+import DashboardView from '@/components/views/DashboardView.vue'
+import HarvestView from '@/components/views/HarvestView.vue'
+
+// الإبقاء على المكونات الثانوية كـ Lazy Loading لتقليل حجم الحزمة الأولية
 const ArchiveView = () => import('@/components/views/ArchiveView.vue')
 const CounterView = () => import('@/components/views/CounterView.vue')
 const SubscriptionsView = () => import('@/components/views/SubscriptionsView.vue')
@@ -78,27 +80,17 @@ const routes = [
       }
     ]
   },
-  // --- Intelligent Catch-all Route ---
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     beforeEnter: (to, from, next) => {
-      logger.warn(`🚀 Route Not Found: ${to.path}. Redirecting...`);
       const authStore = useAuthStore();
       if (!authStore.isInitialized) {
         authStore.initializeAuth().then(() => {
-          if (authStore.isAuthenticated) {
-            next({ name: 'Dashboard' });
-          } else {
-            next({ name: 'Login' });
-          }
+          next(authStore.isAuthenticated ? { name: 'Dashboard' } : { name: 'Login' });
         });
       } else {
-        if (authStore.isAuthenticated) {
-          next({ name: 'Dashboard' });
-        } else {
-          next({ name: 'Login' });
-        }
+        next(authStore.isAuthenticated ? { name: 'Dashboard' } : { name: 'Login' });
       }
     },
     component: { template: '' }
@@ -114,6 +106,7 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   try {
+    // 1. المصادقة الأولية (تم تحسينها لتعود فوراً أوفلاين)
     if (!authStore.isInitialized) {
       await authStore.initializeAuth();
     }
@@ -122,13 +115,9 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.matched.some(r => r.meta.requiresAuth);
     const requiresGuest = to.matched.some(r => r.meta.requiresGuest);
     
-    if (to.name === 'NotFound') {
-        return next();
-    }
+    if (to.name === 'NotFound') return next();
 
-    if (requiresAuth && !isLoggedIn) {
-      return next({ path: '/' });
-    }
+    if (requiresAuth && !isLoggedIn) return next({ path: '/' });
 
     if (requiresGuest && isLoggedIn) {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
@@ -137,13 +126,13 @@ router.beforeEach(async (to, from, next) => {
     
     if (requiresAuth && isLoggedIn) {
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin);
-      if (requiresAdmin && !authStore.isAdmin) {
-        return next({ name: 'Dashboard' });
-      }
+      if (requiresAdmin && !authStore.isAdmin) return next({ name: 'Dashboard' });
 
       const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
       if (requiresSub && !authStore.isAdmin && authStore.isSubscriptionEnforced) {
         const subStore = useMySubscriptionStore();
+        
+        // 2. التحقق من الاشتراك (تم تحسينه ليعتمد على الكاش فوراً)
         if (!subStore.isInitialized) {
           await subStore.init(authStore.user);
         }
@@ -158,11 +147,7 @@ router.beforeEach(async (to, from, next) => {
 
   } catch (err) {
     logger.error('🚀 Router Guard Error:', err);
-    if (to.meta.requiresAuth) {
-      next('/');
-    } else {
-      next();
-    }
+    next(to.meta.requiresAuth ? '/' : undefined);
   }
 });
 

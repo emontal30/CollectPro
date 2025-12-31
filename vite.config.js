@@ -16,13 +16,16 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt', // تم التغيير من autoUpdate لضمان تحكم أفضل في التحديثات وعدم فقدان البيانات
         injectRegister: 'auto',
         workbox: {
           cleanupOutdatedCaches: true,
+          // تضمين كافة الملفات الضرورية للعمل أوفلاين عند الريفرش
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, 
+          // هذا الإعداد بالغ الأهمية لنجاح عملية الـ Refresh أوفلاين
           navigateFallback: 'index.html',
+          navigateFallbackAllowlist: [/^(?!\/__).*/], // السماح بكافة المسارات ما عدا مسارات النظام الداخلية
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
