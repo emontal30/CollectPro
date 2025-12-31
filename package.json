@@ -1,6 +1,6 @@
 {
   "name": "collectpro",
-  "version": "2.1.3",
+  "version": "2.3.3",
   "description": "تطبيق تحصيل شامل واحترافى",
   "scripts": {
     "dev": "vite",

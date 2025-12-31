@@ -1,12 +1,14 @@
 <template>
   <div class="login-wrapper" :class="{ 'loading': store.isLoading }">
-    <div class="animated-bg"></div>
     
     <div id="alert-container" class="alert-container"></div>
 
     <div class="login-page">
       <div class="login-container">
+        
         <div class="login-card">
+          
+          <div class="animated-bg"></div>
           
           <div class="logo-container">
             <img src="/logo-momkn.png" alt="شعار التطبيق" class="logo-img" />
@@ -325,16 +327,28 @@ const installApp = async () => {
   position: relative;
 }
 
+/* ============================
+   تعديل الخلفية المتحركة
+   ============================ */
 .animated-bg {
   content: '';
-  position: fixed;
+  position: absolute; /* داخل الكارد */
   top: -50%;
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, rgba(var(--primary-rgb), 0) 70%);
-  z-index: 0;
-  animation: rotate 30s linear infinite;
+  /* تدرجات ألوان حديثة ومتباينة (تدرجات الرمادى والكريمى) */
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(189, 189, 189, 0.08) 0deg,   /* رمادى فاتح جداً */
+    rgba(255, 253, 231, 0.1) 60deg,  /* كريمى ناعم */
+    rgba(158, 158, 158, 0.05) 120deg, /* رمادى متوسط */
+    rgba(255, 248, 225, 0.12) 180deg, /* كريمى دافئ */
+    rgba(224, 224, 224, 0.06) 240deg, /* رمادى لؤلؤى */
+    rgba(255, 255, 240, 0.08) 300deg  /* أبيض كريمى */
+  );
+  z-index: 0; /* تحت المحتوى */
+  animation: rotate 20s linear infinite; /* إبطاء الحركة قليلاً لتناسب الألوان الهادئة */
   pointer-events: none;
 }
 
@@ -351,14 +365,14 @@ const installApp = async () => {
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center; /* Center to show top/bottom curves */
+  align-items: center; 
   width: 100%;
-  padding: 15px; /* Gap to visualize the curves */
+  padding: 15px; 
 }
 
 .login-card {
   background: var(--surface-bg);
-  border-radius: 32px; /* Smooth curvy edges */
+  border-radius: 32px; 
   box-shadow: var(--shadow-lg);
   padding: 40px; 
   width: 100%;
@@ -371,7 +385,15 @@ const installApp = async () => {
   justify-content: center;
   align-items: center;
   transition: var(--transition);
-  min-height: calc(100vh - 30px); /* Almost full height */
+  min-height: calc(100vh - 30px); 
+  /* إضافة overflow: hidden لضمان أن الخلفية لا تتعدى حدود الكارد */
+  overflow: hidden; 
+}
+
+/* ضمان ظهور المحتوى فوق الخلفية المتحركة */
+.logo-container, .btn-container, .footer-info, .install-section-wrapper, .privacy-policy, .privacy-divider {
+  position: relative;
+  z-index: 1;
 }
 
 /* =========================================
@@ -380,6 +402,8 @@ const installApp = async () => {
 .logo-container {
   margin-bottom: 30px;
   width: 100%;
+  /* رفع الشعار والنصوص لأعلى درجتين (20px) */
+  transform: translateY(-20px);
 }
 
 .logo-img {
@@ -390,6 +414,8 @@ const installApp = async () => {
   display: block;
   margin-left: auto;
   margin-right: auto;
+  /* تكبير الشعار درجة واحدة (10%) */
+  transform: scale(1.1);
 }
 
 .app-name {
@@ -429,8 +455,11 @@ const installApp = async () => {
 }
 
 .google-login-btn {
-  width: 100%;
-  padding: 16px 20px;
+  /* تقليل العرض درجتين (85%) وتوسيطه */
+  width: 85%;
+  margin: 0 auto; 
+  /* زيادة الارتفاع درجة (22px padding) */
+  padding: 22px 20px;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
   border: none;
@@ -646,6 +675,8 @@ const installApp = async () => {
   font-size: 12px;
   color: var(--gray-500);
   width: 100%;
+  /* تحريك الفوتر لأسفل درجتين (20px) */
+  transform: translateY(40px);
 }
 
 .footer-controls {
@@ -709,7 +740,7 @@ const installApp = async () => {
   .app-name { font-size: 32px; }
   .subtitle { font-size: 15px; }
   .btn-container { margin: 25px 0 15px; }
-  .google-login-btn { padding: 16px 20px; border-radius: 16px; }
+  .google-login-btn { padding: 22px 20px; border-radius: 16px; width: 90%; }
   .privacy-divider { margin: 25px auto; }
   .footer-info { margin-top: 25px; }
   .footer-controls { margin-bottom: 18px; gap: 12px; }
