@@ -8,7 +8,7 @@
 
     <div class="date-display">
       <i class="fas fa-calendar-alt calendar-icon"></i>
-      <span class="label">اليووم:</span>
+      <span class="label">اليوم:</span>
       <span class="value">{{ currentDay }}</span>
       <span class="separator">|</span>
       <span class="label">التاريخ:</span>
