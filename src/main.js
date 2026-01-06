@@ -5,6 +5,7 @@ import router from './router'
 
 /* --- Global Design System (Single Entry Point) --- */
 import './assets/css/main.css'
+import './assets/css/itinerary.css'
 
 /* --- Services & Utils --- */
 import { startAutoCleaning, checkAppVersion } from './services/cacheManager'

@@ -39,6 +39,10 @@ export const useArchiveStore = defineStore('archive', () => {
     }, { amount: 0, extra: 0, collector: 0, net: 0 });
   });
 
+  const dateExists = computed(() => {
+    return (date) => availableDates.value.some(d => d.value === date);
+  });
+
   function getTodayLocal() {
     const d = new Date();
     const year = d.getFullYear();
@@ -268,6 +272,7 @@ export const useArchiveStore = defineStore('archive', () => {
     searchInAllArchives,
     deleteArchive,
     DB_PREFIX,
-    cleanupOldArchives
+    cleanupOldArchives,
+    dateExists
   };
 });

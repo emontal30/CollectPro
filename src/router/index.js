@@ -16,6 +16,7 @@ const SubscriptionsView = () => import('@/components/views/SubscriptionsView.vue
 const MySubscriptionView = () => import('@/components/views/MySubscriptionView.vue')
 const PaymentView = () => import('@/components/views/PaymentView.vue')
 const AdminView = () => import('@/components/views/AdminView.vue')
+const ItineraryView = () => import('@/components/views/ItineraryView.vue')
 
 const routes = [
   {
@@ -43,6 +44,12 @@ const routes = [
         path: 'harvest', 
         name: 'Harvest', 
         component: HarvestView,
+        meta: { requiresSubscription: true } 
+      },
+      { 
+        path: 'itinerary', 
+        name: 'Itinerary', 
+        component: ItineraryView,
         meta: { requiresSubscription: true } 
       },
       { 
@@ -106,7 +113,7 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
   try {
-    // 1. المصادقة الأولية (تم تحسينها لتعود فوراً أوفلاين)
+    // 1. المصادقة الأولية
     if (!authStore.isInitialized) {
       await authStore.initializeAuth();
     }
@@ -115,15 +122,19 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.matched.some(r => r.meta.requiresAuth);
     const requiresGuest = to.matched.some(r => r.meta.requiresGuest);
     
+    // التعامل مع الروابط غير الموجودة
     if (to.name === 'NotFound') return next();
 
+    // حماية المسارات التي تتطلب تسجيل دخول
     if (requiresAuth && !isLoggedIn) return next({ path: '/' });
 
+    // توجيه الضيوف المسجلين دخولهم إلى لوحة التحكم
     if (requiresGuest && isLoggedIn) {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
       return next(lastRoute);
     }
     
+    // التحقق من الصلاحيات والاشتراك
     if (requiresAuth && isLoggedIn) {
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin);
       if (requiresAdmin && !authStore.isAdmin) return next({ name: 'Dashboard' });
@@ -132,7 +143,7 @@ router.beforeEach(async (to, from, next) => {
       if (requiresSub && !authStore.isAdmin && authStore.isSubscriptionEnforced) {
         const subStore = useMySubscriptionStore();
         
-        // 2. التحقق من الاشتراك (تم تحسينه ليعتمد على الكاش فوراً)
+        // التحقق من الاشتراك
         if (!subStore.isInitialized) {
           await subStore.init(authStore.user);
         }
@@ -157,4 +168,4 @@ router.afterEach((to) => {
   }
 })
 
-export default router
+export default router;

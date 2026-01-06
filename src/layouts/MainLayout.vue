@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { provide, onMounted, watch, ref } from 'vue';
+import { provide, onMounted, onUnmounted, watch, ref } from 'vue';
 import Topbar from '@/components/layout/Topbar.vue';
 import Sidebar from '@/components/layout/Sidebar.vue';
 import Footer from '@/components/layout/Footer.vue';
@@ -51,11 +51,13 @@ import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
+import { useHarvestStore } from '@/stores/harvest';
 
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const subStore = useMySubscriptionStore();
 const sidebarStore = useSidebarStore();
+const harvestStore = useHarvestStore();
 const notifications = useNotifications();
 
 provide('notifications', notifications);
@@ -113,10 +115,26 @@ const checkSubscriptionExpiry = () => {
   }
 };
 
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'hidden') {
+    // Save any critical data here
+    if (harvestStore.isModified) {
+       harvestStore.saveRowsToStorage();
+       console.log('Harvest data saved due to page visibility change.');
+    }
+  }
+};
+
 onMounted(async () => {
   if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
   if (settingsStore?.loadSettings) settingsStore.loadSettings();
   if (subStore.isInitialized) checkSubscriptionExpiry();
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 
 watch(() => subStore.isInitialized, (val) => {

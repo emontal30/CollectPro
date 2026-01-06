@@ -10,7 +10,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const isLoadingSubscription = ref(false);
   let saveTimeout = null;
 
-  // استعادة البيانات عند التحميل (ما لم يتم مسحها في نفس الجلسة)
+  // استعادة البيانات عند التحميل
   const init = () => {
     const savedData = localStorage.getItem('clientData');
     const dataCleared = sessionStorage.getItem('dataCleared');
@@ -20,9 +20,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   };
 
-  // --- الدوال المساعدة (Helpers from script.js) ---
+  // --- الدوال المساعدة (Helpers) ---
   
-  // دالة تنقية البيانات (نفس المنطق الأصلي)
   function filterClientDataLines(raw) {
     if (!raw) return raw;
     const lines = raw.split("\n");
@@ -30,12 +29,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     lines.forEach((line) => {
       const trimmed = line.trim();
       if (!trimmed) return;
-      // الاحتفاظ بـ سطر العناوين
       if (trimmed.includes("المسلسل") && trimmed.includes("إجمالي البيع-التحويل-الرصيد")) {
         filtered.push(line);
         return;
       }
-      // الاحتفاظ بالأسطر التي تبدأ بأرقام (بيانات العملاء)
       if (/^[0-9٠-٩]+[\t\s]/.test(trimmed)) {
         filtered.push(line);
       }
@@ -43,16 +40,81 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return filtered.join("\n");
   }
 
+  // دالة تحويل الأرقام العربية إلى إنجليزية
+  const normalizeArabicNumbers = (str) => {
+    if (!str) return "";
+    return str.toString().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  };
+
+  // 2. (تحسين جذري وذكي) دالة استخراج بيانات خط السير بناءً على شكل البيانات الفعلي
+  function extractRouteData(raw) {
+    if (!raw) return [];
+
+    const lines = raw.split("\n");
+    const routeItems = [];
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      // المثال: 1	توب تن:15972 رصيده : 3016.230 نوع التعامل : مكن	01004402042	3000.000
+      
+      // 1. استخراج الرصيد (بعد "رصيده :")
+      let balance = 0;
+      const balanceMatch = trimmed.match(/رصيده\s*[:\s]+\s*([-+]?[0-9٠-٩\.]+)/);
+      if (balanceMatch) {
+          balance = parseFloat(normalizeArabicNumbers(balanceMatch[1])) || 0;
+      }
+
+      // 2. استخراج الاسم والكود
+      // نبحث عن النمط: [رقم مسلسل] [تاب/مسافات] [الاسم]:[الكود]
+      // سنقوم بتقسيم السطر أولاً بناءً على علامة ":" المرتبطة بالاسم والكود
+      let name = "";
+      let code = "";
+
+      if (trimmed.includes(":")) {
+          const parts = trimmed.split(":");
+          
+          // الجزء الذي قبل ":" يحتوي على المسلسل والاسم
+          const beforeColon = parts[0].trim();
+          // نزيل المسلسل من البداية (عادة يكون رقم في بداية السطر متبوعاً بمسافات)
+          name = beforeColon.replace(/^[0-9٠-٩]+\s+/, '').trim();
+          
+          // الجزء الذي بعد ":" يبدأ بالكود
+          const afterColon = parts[1].trim();
+          // نأخذ أول رقم يظهر بعد النقطتين (والذي هو الكود)
+          const codeMatch = afterColon.match(/^([0-9٠-٩]+)/);
+          if (codeMatch) {
+              code = normalizeArabicNumbers(codeMatch[1]);
+          }
+      }
+
+      // تحسين أخير للاسم: إذا كان الاسم لا يزال يحتوي على "رصيده" أو أي شيء آخر
+      if (name.includes("رصيده")) {
+          name = name.split("رصيده")[0].trim();
+      }
+
+      // التأكد من جودة البيانات قبل الإضافة
+      if (code && name) {
+          routeItems.push({
+              code: code,
+              name: name,
+              balance: balance
+          });
+      }
+    });
+
+    return routeItems;
+  }
+
   // --- الإجراءات (Actions) ---
 
-  // 1. لصق البيانات
   async function pasteData() {
     try {
       const text = await navigator.clipboard.readText();
       clientData.value = text;
       return { success: true };
     } catch (err) {
-      // في حالة فشل اللصق التلقائي (أذونات المتصفح)
       const manual = prompt("المتصفح منع الوصول للحافظة.\nألصق بياناتك هنا ثم اضغط موافق:");
       if (manual !== null) {
         clientData.value = manual;
@@ -62,54 +124,48 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  // 2. مسح البيانات
   function clearData() {
     clientData.value = "";
     localStorage.removeItem("clientData");
-    sessionStorage.setItem("dataCleared", "true"); // وضع علامة لمنع الاستعادة
+    localStorage.removeItem("harvestData");
+    localStorage.removeItem("routeData");
+    sessionStorage.setItem("dataCleared", "true");
   }
 
-  // 3. المعالجة والحفظ (Save & Go Logic)
   function processAndSave() {
-    let data = clientData.value.trim();
+    const rawData = clientData.value.trim();
     
-    if (!data) {
+    if (!rawData) {
       return { status: 'error', message: 'من فضلك أدخل البيانات أولاً!' };
     }
 
-    // تنقية البيانات
-    data = filterClientDataLines(data);
-    clientData.value = data; // تحديث الحقل بالنص المنقى
+    const harvestFilteredData = filterClientDataLines(rawData);
+    const routeParsedData = extractRouteData(rawData);
 
-    // التحقق من صحة البيانات (بداية الملف)
-    if (!data.startsWith("المسلسل")) {
-      const confirmSave = confirm("البيانات لا تبدأ بكلمة 'المسلسل'. هل تريد المتابعة وحفظ البيانات؟");
-      if (!confirmSave) return { status: 'cancelled' };
-    }
+    clientData.value = harvestFilteredData; 
 
-    // التحقق من وجود بيانات سابقة في التحصيلات (harvestData logic mock)
-    // هنا نفترض المنطق المباشر للحفظ
-    localStorage.setItem("clientData", data);
-    
-    // نقوم أيضاً بحفظها كـ harvestData لضمان نقلها للصفحة التالية كما في الكود الأصلي
-    localStorage.setItem("harvestData", data);
+    localStorage.setItem("clientData", harvestFilteredData);
+    localStorage.setItem("harvestData", harvestFilteredData);
+    localStorage.setItem("routeData", JSON.stringify(routeParsedData));
 
-    return { status: 'success' };
+    logger.info(`تم استخراج ${routeParsedData.length} عميل لخط السير.`);
+
+    return { 
+      status: 'success', 
+      harvestData: harvestFilteredData,
+      routeData: routeParsedData 
+    };
   }
 
-  // --- المراقبة (Auto-Save) ---
   watch(clientData, (newVal) => {
-    // إلغاء الحفظ السابق إذا كان موجوداً
     if (saveTimeout) {
       clearTimeout(saveTimeout);
     }
-    // حفظ تلقائي مع Debounce (تأخير 1 ثانية)
     saveTimeout = setTimeout(() => {
       localStorage.setItem("clientData", newVal.trim());
     }, 1000);
   });
 
-  // 4. تحميل حالة الاشتراك (اختياري)
   async function loadSubscriptionStatus() {
     try {
       isLoadingSubscription.value = true;
@@ -125,7 +181,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  // استدعاء التهيئة
   init();
 
   return {

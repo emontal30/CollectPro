@@ -92,8 +92,57 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async resetTable() {
-      this.rows = [{ id: Date.now(), shop: '', code: '', amount: '', extra: '', collector: '', net: 0 }];
+      this.rows = [{ id: Date.now(), shop: '', code: '', amount: '', extra: '', collector: '', net: 0, hasOverdue: false, hasOverpayment: false }];
       await this.saveRowsToStorage();
+    },
+
+    async fetchOverdueStores() {
+      return await localforage.getItem('overdue_stores') || [];
+    },
+
+    async applyOverdueStores(storesToApply) {
+      if (!storesToApply || storesToApply.length === 0) return;
+
+      storesToApply.forEach(overdueStore => {
+        const existingRow = this.rows.find(r => r.code && r.code.toString() === overdueStore.code.toString());
+        const overdueAmount = overdueStore.net * -1;
+
+        if (existingRow) {
+          existingRow.extra = (parseFloat(existingRow.extra) || 0) + overdueAmount;
+          if (overdueStore.net < 0) {
+            existingRow.hasOverdue = true;
+          } else {
+            existingRow.hasOverpayment = true;
+          }
+        } else {
+          if (this.rows.length === 1 && !this.rows[0].shop && !this.rows[0].code) {
+            this.rows.pop();
+          }
+          this.rows.push({
+            id: Date.now() + Math.random(),
+            shop: overdueStore.shop,
+            code: overdueStore.code,
+            amount: null,
+            extra: overdueAmount,
+            collector: null,
+            net: 0,
+            isImported: false,
+            hasOverdue: overdueStore.net < 0,
+            hasOverpayment: overdueStore.net > 0,
+          });
+        }
+      });
+
+      const lastRow = this.rows[this.rows.length - 1];
+      if (lastRow && (lastRow.shop || lastRow.code || lastRow.amount || lastRow.extra)) {
+        this.addRow();
+      }
+
+      await this.saveRowsToStorage();
+    },
+
+    async clearOverdueStores() {
+      await localforage.removeItem('overdue_stores');
     },
 
     async clearAll() {
@@ -121,12 +170,47 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    async getSecureCairoDate() {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
+      try {
+        const response = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=Africa/Cairo', {
+          signal: controller.signal
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API response not OK: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        logger.info('Time API response:', data); // For debugging
+
+        // Use dateTime and split it, as it's a more standard format (e.g., "2026-01-06T14:30:00")
+        const secureDate = data.dateTime ? data.dateTime.split('T')[0] : null;
+        
+        if (!secureDate || !/^\d{4}-\d{2}-\d{2}$/.test(secureDate)) {
+           throw new Error(`Invalid date format from API. Received: ${secureDate}`);
+        }
+
+        return secureDate;
+      } catch (error) {
+        logger.error('Secure time fetch failed, using fallback:', error.name === 'AbortError' ? 'Timeout' : error.message);
+        
+        const fallbackDate = new Date().toLocaleDateString('en-CA', {
+          timeZone: 'Africa/Cairo'
+        });
+        return fallbackDate;
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+
     async archiveTodayData() {
       try {
         this.isLoading = true;
         
-        // FIX: Always use the current date at the moment of archiving
-        this.currentDate = new Date().toISOString().split('T')[0];
+        const dateToSave = await this.getSecureCairoDate();
 
         const authStore = useAuthStore();
         const archiveStore = useArchiveStore();
@@ -139,16 +223,21 @@ export const useHarvestStore = defineStore('harvest', {
 
         if (validRows.length === 0) return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
 
-        const cleanRows = safeDeepClone(validRows).map(row => ({
-          shop: row.shop || '',
-          code: row.code || '',
-          amount: parseFloat(row.amount) || 0,
-          extra: parseFloat(row.extra) || 0,
-          collector: parseFloat(row.collector) || 0,
-          net: parseFloat(row.net) || 0
-        }));
+        const cleanRows = safeDeepClone(validRows).map(row => {
+          const amount = parseFloat(row.amount) || 0;
+          const extra = parseFloat(row.extra) || 0;
+          const collector = parseFloat(row.collector) || 0;
+          const net = collector - (amount + extra);
+          return {
+            shop: row.shop || '',
+            code: row.code || '',
+            amount,
+            extra,
+            collector,
+            net
+          };
+        });
         
-        const dateToSave = this.currentDate;
         const localKey = `arch_data_${dateToSave}`;
 
         // 1. الحفظ المحلي الفوري
@@ -184,6 +273,26 @@ export const useHarvestStore = defineStore('harvest', {
           await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
           message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
         }
+
+        // ===== START: Logic to save overdue payments =====
+        const overdueStores = validRows
+          .map(row => {
+            const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
+            return { ...row, net };
+          })
+          .filter(row => row.net !== 0)
+          .map(row => ({
+            shop: row.shop,
+            code: row.code,
+            net: row.net 
+          }));
+
+        if (overdueStores.length > 0) {
+          await localforage.setItem('overdue_stores', overdueStores);
+        } else {
+          await localforage.removeItem('overdue_stores');
+        }
+        // ===== END: Logic to save overdue payments =====
 
         return { success: true, message };
 
@@ -222,7 +331,9 @@ export const useHarvestStore = defineStore('harvest', {
             extra: null,
             collector: null,
             net: 0 - transferAmount,
-            isImported: true
+            isImported: true,
+            hasOverdue: false,
+            hasOverpayment: false
           });
         }
       });
@@ -244,11 +355,35 @@ export const useHarvestStore = defineStore('harvest', {
       return false;
     },
 
+    addRowWithData(newRowData) {
+      if (!newRowData || !newRowData.code) return;
+
+      // If the table is empty or just has the initial blank row, clear it first.
+      if (this.rows.length === 0 || (this.rows.length === 1 && !this.rows[0].code && !this.rows[0].shop)) {
+        this.rows = [];
+      }
+      
+      const newRow = {
+        id: Date.now() + Math.random(),
+        shop: newRowData.shop || '',
+        code: newRowData.code || '',
+        amount: newRowData.amount || null,
+        extra: null,
+        collector: null,
+        net: 0,
+        isImported: true, // Mark as imported to make it readonly
+        hasOverdue: false,
+        hasOverpayment: false
+      };
+      
+      this.rows.push(newRow);
+    },
+
     async addRow() {
       this.rows.push({
         id: Date.now() + Math.random(),
         serial: this.rows.length + 1,
-        shop: '', code: '', amount: '', extra: '', collector: '', net: 0, isImported: false
+        shop: '', code: '', amount: '', extra: '', collector: '', net: 0, isImported: false, hasOverdue: false, hasOverpayment: false
       });
       await this.saveRowsToStorage();
     },
@@ -284,6 +419,26 @@ export const useHarvestStore = defineStore('harvest', {
 
     formatNumber(num) {
       return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num || 0);
+    },
+
+    sortRowsByItineraryProfile(shopsOrder) {
+      if (!shopsOrder || shopsOrder.length === 0) {
+        logger.warn('Sort by profile called with no shops order.');
+        return;
+      }
+      
+      const orderMap = new Map();
+      shopsOrder.forEach((code, index) => {
+        orderMap.set(String(code), index);
+      });
+
+      this.rows.sort((a, b) => {
+        const orderA = orderMap.has(String(a.code)) ? orderMap.get(String(a.code)) : Infinity;
+        const orderB = orderMap.has(String(b.code)) ? orderMap.get(String(b.code)) : Infinity;
+        return orderA - orderB;
+      });
+
+      this.saveRowsToStorage();
     }
   }
 });

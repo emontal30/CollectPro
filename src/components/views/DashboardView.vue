@@ -181,10 +181,12 @@
 import { inject, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardStore } from '@/stores/dashboard';
+import { useItineraryStore } from '@/stores/itineraryStore'; // إضافة store خط السير
 import PageHeader from '@/components/layout/PageHeader.vue';
 
 const router = useRouter();
 const store = useDashboardStore();
+const itineraryStore = useItineraryStore(); // تعريف الـ store
 
 const activeTab = ref('manual');
 
@@ -226,9 +228,16 @@ const handleClear = async () => {
 const handleSaveAndGo = async () => {
   try {
     showStatusMessage('saving', '⏳ جاري حفظ البيانات...', 'يرجى الانتظار');
+    
+    // تنفيذ المعالجة والحفظ في الـ Dashboard Store
     const result = await store.processAndSave();
 
     if (result.status === 'success') {
+      // مزامنة البيانات المستخرجة مع Itinerary Store ليتم تحديث صفحة خط السير
+      if (result.routeData && result.routeData.length > 0) {
+        await itineraryStore.syncFromDashboard(result.routeData);
+      }
+
       showStatusMessage('success', '✅ تم حفظ البيانات بنجاح!', 'جاري الانتقال لصفحة التحصيلات...');
       setTimeout(() => {
         router.push('/app/harvest');
@@ -237,6 +246,7 @@ const handleSaveAndGo = async () => {
       showStatusMessage('error', '❌ فشل في حفظ البيانات', result.message);
     }
   } catch (error) {
+    console.error('Save error:', error);
     showStatusMessage('error', '❌ حدث خطأ أثناء الحفظ');
   }
 };
@@ -244,6 +254,12 @@ const handleSaveAndGo = async () => {
 onMounted(() => {
   document.getElementById('dataInput')?.focus();
 });
+</script>
+
+<script>
+export default {
+  name: 'DashboardView'
+}
 </script>
 
 <style scoped>

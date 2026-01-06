@@ -24,9 +24,12 @@
               {{ authStore.user?.email }}
             </span>
             <div class="user-id-row">
-              <span id="user-id" class="user-id">
+              <span id="user-id" class="user-id" title="معرف المستخدم الخاص بك">
                 ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
               </span>
+              <button @click="copyUserId" class="copy-id-btn" title="نسخ المعرف الكامل">
+                <i class="fas fa-copy"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -141,6 +144,17 @@ const router = useRouter();
 
 const { confirm, addNotification } = inject('notifications');
 
+const copyUserId = async () => {
+  if (!authStore.user?.id) return;
+  try {
+    await navigator.clipboard.writeText(authStore.user.id);
+    addNotification('تم نسخ المعرف بنجاح!', 'success');
+  } catch (err) {
+    logger.error('Failed to copy user ID:', err);
+    addNotification('فشل نسخ المعرف', 'error');
+  }
+};
+
 const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
 const isEnforced = ref(false); 
@@ -149,6 +163,7 @@ const navLinks = [
   { to: '/app/dashboard', label: 'إدخال البيانات', icon: 'fas fa-tachometer-alt', protected: true },
   { to: '/app/harvest', label: 'التحصيلات', icon: 'fas fa-donate', protected: true },
   { to: '/app/archive', label: 'الأرشيف', icon: 'fas fa-archive', protected: true },
+  { to: '/app/itinerary', label: 'خط السير', icon: 'fas fa-map-marked-alt', protected: true },
   { to: '/app/counter', label: 'عداد الأموال', icon: 'fas fa-calculator', protected: true },
   { to: '/app/subscriptions', label: 'الاشتراكات', icon: 'fas fa-credit-card', protected: false },
   { to: '/app/my-subscription', label: 'اشتراكي', icon: 'fas fa-user-shield', protected: false },
@@ -259,9 +274,37 @@ const handleRefreshData = async () => {
   }
 };
 
+// --- Offline Sync Logic ---
+async function processLocationQueue() {
+  const queue = await localforage.getItem('pending_locations_queue') || [];
+  if (queue.length === 0) return;
+
+  addNotification(`Syncing ${queue.length} pending location updates...`, 'info');
+
+  const { error } = await supabase.from('client_routes').upsert(queue, { onConflict: 'user_id, shop_code' });
+
+  if (error) {
+    addNotification('Failed to sync some locations.', 'error');
+    console.error('Supabase sync error:', error);
+    // Decide on error handling: keep failed items or discard?
+    // For now, we clear the queue to avoid repeated failures on same data.
+    await localforage.removeItem('pending_locations_queue');
+  } else {
+    addNotification('Offline locations synced successfully!', 'success');
+    await localforage.removeItem('pending_locations_queue');
+  }
+}
+
 onMounted(async () => {
   await checkEnforcementStatus();
   if (authStore.user) { await subStore.init(authStore.user); }
+
+  // Listen for online event to process queue
+  window.addEventListener('online', processLocationQueue);
+  // Also try to process on mount in case we are already online
+  if (navigator.onLine) {
+    processLocationQueue();
+  }
 });
 
 const handleLogout = async () => {
@@ -305,6 +348,11 @@ const handleLogout = async () => {
     will-change: transform;
 }
 
+.sidebar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
 .sidebar.active {
   transform: translateX(0);
   visibility: visible;
@@ -331,7 +379,21 @@ const handleLogout = async () => {
 .user-name { font-weight: 700; font-size: 1.1rem; color: #ffffff; margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; }
 .user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; word-break: break-all; }
 .user-id { font-size: 10px; color: rgba(255,255,255,0.7); font-family: monospace; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
-.user-id-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.user-id-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; }
+.copy-id-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+.copy-id-btn:hover {
+  color: #fff;
+}
 
 .sidebar-content { flex: 1; }
 .sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.1); }

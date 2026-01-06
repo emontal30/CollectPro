@@ -8,11 +8,41 @@
 
     <div class="date-display">
       <i class="fas fa-calendar-alt calendar-icon"></i>
-      <span class="label">اليووم:</span>
+      <span class="label">اليوم:</span>
       <span class="value">{{ currentDay }}</span>
       <span class="separator">|</span>
       <span class="label">التاريخ:</span>
       <span class="value">{{ currentDate }}</span>
+    </div>
+
+    <div class="action-bar mb-3 flex gap-2 justify-center flex-wrap">
+       <button class="btn btn-sm btn-outline-warning" @click="showMissingCenters" title="عرض المحلات الموجودة في خط السير ولم يتم العمل عليها اليوم">
+          <i class="fas fa-eye-slash"></i> مراكز لم يتم التحويل لها
+       </button>
+
+       <button class="btn btn-sm btn-outline-danger" @click="showOverdueModal" title="عرض مديونيات الأيام السابقة">
+          <i class="fas fa-history"></i> المتأخرات
+       </button>
+
+       <div class="relative" v-click-outside="() => showProfileDropdown = false">
+         <button class="btn btn-sm btn-outline-primary" @click="toggleProfileDropdown" title="ترتيب الجدول حسب قالب خط سير محفوظ">
+            <i class="fas fa-sort-amount-down"></i> ترتيب حسب خط السير
+            <i class="fas fa-chevron-down text-xs ml-2"></i>
+         </button>
+         <div v-if="showProfileDropdown" class="profile-dropdown">
+            <div v-if="savedItineraryProfiles.length === 0" class="dropdown-item disabled">
+              لا توجد قوالب محفوظة
+            </div>
+            <a 
+              v-for="profile in savedItineraryProfiles" 
+              :key="profile.slot_number" 
+              class="dropdown-item"
+              @click="applyItineraryProfile(profile)"
+            >
+              {{ profile.profile_name }}
+            </a>
+         </div>
+       </div>
     </div>
 
     <ColumnVisibility
@@ -67,7 +97,7 @@
         </thead>
         <tbody>
           <tr v-for="(row, index) in localFilteredRows" :key="row.id">
-            <td v-show="isVisible('shop')" class="shop no-wrap-cell" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative' }">
+            <td v-show="isVisible('shop')" class="shop no-wrap-cell" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative', 'has-overdue': row.hasOverdue, 'has-overpayment': row.hasOverpayment }">
               <input 
                 v-if="!row.isImported" 
                 :id="'shop-' + row.id" 
@@ -168,12 +198,85 @@
         <i class="fas fa-share-alt"></i>
         <span>مشاركة الجدول</span>
       </button>
+      <button class="btn-export-share btn-export-summary" @click="handleSummaryExport" title="مشاركة ملخص البيان كصورة">
+        <i class="fas fa-receipt"></i>
+        <span>مشاركة ملخص البيان</span>
+      </button>
     </div>
 
     <teleport to="body">
       <div v-if="showCustomTooltip" class="custom-tooltip" ref="customTooltipRef">
         {{ customTooltipText }}
       </div>
+    </teleport>
+
+    <teleport to="body">
+        <div v-if="isMissingModalOpen" class="modal-overlay" @click="isMissingModalOpen = false">
+            <div class="modal-content missing-modal" @click.stop>
+                <div class="modal-header">
+                    <h3><i class="fas fa-eye-slash text-warning"></i> مراكز لم يتم التحويل لها</h3>
+                    <button class="close-btn" @click="isMissingModalOpen = false">&times;</button>
+                </div>
+                <div class="modal-body scrollable-list">
+                    <div v-if="missingCenters.length === 0" class="text-center text-success p-4">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>ممتاز! جميع عملاء خط السير تم العمل عليهم.</p>
+                    </div>
+                    <ul v-else class="missing-list">
+                        <li v-for="center in missingCenters" :key="center.shop_code">
+                            <span class="center-name">{{ center.shop_name || 'بدون اسم' }}</span>
+                            <span class="center-code">{{ center.shop_code }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <span class="text-muted text-sm">عدد المراكز: {{ missingCenters.length }}</span>
+                </div>
+            </div>
+        </div>
+    </teleport>
+
+    <teleport to="body">
+        <div v-if="isOverdueModalOpen" class="modal-overlay" @click="isOverdueModalOpen = false">
+            <div class="modal-content overdue-modal" @click.stop>
+                <div class="modal-header">
+                    <h3><i class="fas fa-history text-danger"></i> المديونيات المتأخرة</h3>
+                    <button class="close-btn" @click="isOverdueModalOpen = false">&times;</button>
+                </div>
+                <div class="modal-body scrollable-list">
+                                        <div v-if="overdueStores.length === 0" class="text-center text-success p-4">
+                                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                            <p>لا توجد مديونيات متأخرة من اليوم السابق.</p>
+                                        </div>
+                                        <div v-else class="overdue-table">
+                                            <div class="overdue-header">
+                                                <input type="checkbox" v-model="allOverdueSelected" />
+                                                <span class="header-item">المحل</span>
+                                                <span class="header-item text-center">الكود</span>
+                                                <span class="header-item text-center">المديونية</span>
+                                            </div>
+                                            <div class="overdue-body">
+                                                                            <div v-for="store in overdueStores" :key="store.code" class="overdue-row">
+                                                                                <input type="checkbox" v-model="selectedOverdueStores" :value="store" />
+                                                                                <span class="cell-item">{{ store.shop || 'بدون اسم' }}</span>
+                                                                                <span class="cell-item text-center">{{ store.code }}</span>
+                                                                                <span 
+                                                                                  class="cell-item text-center font-bold"
+                                                                                  :class="store.net > 0 ? 'text-primary' : 'text-danger'"
+                                                                                >
+                                                                                  {{ store.net > 0 ? '+' : '' }}{{ store.net }}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>                                    </div>
+                <div class="modal-footer" v-if="overdueStores.length > 0">
+                    <button class="btn btn-secondary" @click="isOverdueModalOpen = false">إلغاء</button>
+                    <button class="btn btn-primary" @click="applyOverdue" :disabled="selectedOverdueStores.length === 0">
+                        <i class="fas fa-plus"></i> إضافة المحدد ({{ selectedOverdueStores.length }})
+                    </button>
+                </div>
+            </div>
+        </div>
     </teleport>
 
     <div class="summary-container">
@@ -292,9 +395,9 @@
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
-        <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="store.rows.length === 0" @click="archiveToday">
-          <i class="fas fa-folder"></i>
-          <span>أرشفة اليوم</span>
+        <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="isArchiving || store.rows.length === 0" @click="archiveToday">
+          <i :class="isArchiving ? 'fas fa-spinner fa-spin' : 'fas fa-folder'"></i>
+          <span>{{ isArchiving ? 'جاري الأرشفة...' : 'أرشفة اليوم' }}</span>
         </button>
       </div>
     </div>
@@ -306,6 +409,8 @@ import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, 
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
+import { useAuthStore } from '@/stores/auth';
+import { useItineraryStore } from '@/stores/itineraryStore'; // Import
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import localforage from 'localforage';
@@ -315,13 +420,15 @@ import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
 import { handleMoneyInput } from '@/utils/validators.js';
 
-// --- الاستخدامات والتعريفات الأساسية ---
+// --- Definitions ---
 const store = useHarvestStore();
 const archiveStore = useArchiveStore();
+const authStore = useAuthStore();
+const itineraryStore = useItineraryStore();
 const route = useRoute();
 const { confirm, addNotification } = inject('notifications');
 
-// --- إعدادات الأعمدة ---
+// --- Columns ---
 const harvestColumns = [
   { key: 'shop', label: '🏪 المحل' },
   { key: 'code', label: '🔢 الكود' },
@@ -330,31 +437,48 @@ const harvestColumns = [
 ];
 const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(harvestColumns, 'columns.visibility.harvest');
 
-// --- الحالة (State) ---
+// --- State ---
 const searchQueryLocal = ref('');
 const showCustomTooltip = ref(false);
 const customTooltipText = ref('');
 const tooltipTargetElement = ref(null);
 const customTooltipRef = ref(null);
-
 const currentDate = ref(new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' }));
 const currentDay = ref(new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
+const showProfileDropdown = ref(false);
+const isArchiving = ref(false);
 
-// --- الخواص المحسوبة (Computed Properties) ---
+// Modal Missing Centers State
+const isMissingModalOpen = ref(false);
+const missingCenters = ref([]);
 
-// فلترة الصفوف
+// Overdue Modal State
+const isOverdueModalOpen = ref(false);
+const overdueStores = ref([]);
+const selectedOverdueStores = ref([]);
+
+// --- Computed ---
+const allOverdueSelected = computed({
+  get: () => overdueStores.value.length > 0 && selectedOverdueStores.value.length === overdueStores.value.length,
+  set: (value) => {
+    selectedOverdueStores.value = value ? [...overdueStores.value] : [];
+  }
+});
+
 const localFilteredRows = computed(() => {
   const data = store.rows || [];
   const query = searchQueryLocal.value?.toLowerCase().trim();
   if (!query) return data;
-
   return data.filter(row => 
     (row.shop && row.shop.toLowerCase().includes(query)) || 
     (row.code && row.code.toString().toLowerCase().includes(query))
   );
 });
 
-// إجماليات الصفوف
+const savedItineraryProfiles = computed(() => {
+  return itineraryStore.profiles.filter(p => p.shops_order && p.shops_order.length > 0);
+});
+
 const filteredTotals = computed(() => {
   return localFilteredRows.value.reduce((acc, row) => {
     acc.amount += parseFloat(row.amount) || 0;
@@ -364,7 +488,6 @@ const filteredTotals = computed(() => {
   }, { amount: 0, extra: 0, collector: 0 });
 });
 
-// منطق الصافي
 const calculateNet = (row) => {
   const collector = parseFloat(row.collector) || 0;
   const amount = parseFloat(row.amount) || 0;
@@ -382,21 +505,61 @@ const getRowNetIcon = (row) => getNetIcon(calculateNet(row));
 const getFilteredTotalNetClass = computed(() => getNetClass(filteredTotalNetValue.value));
 const getFilteredTotalNetIcon = computed(() => getNetIcon(filteredTotalNetValue.value));
 
-// --- الدوال (Methods) ---
+// --- Logic Methods ---
 
-// 1. التلميح (Tooltip)
+// 1. Overdue Logic
+const showOverdueModal = async () => {
+  overdueStores.value = await store.fetchOverdueStores();
+  selectedOverdueStores.value = [];
+  isOverdueModalOpen.value = true;
+};
+
+const applyOverdue = async () => {
+  if (selectedOverdueStores.value.length === 0) {
+    addNotification('لم يتم تحديد أي متاجر', 'warning');
+    return;
+  }
+  await store.applyOverdueStores(selectedOverdueStores.value);
+  isOverdueModalOpen.value = false;
+  addNotification('تمت إضافة المديونيات بنجاح!', 'success');
+};
+
+
+// 2. Missing Centers Logic
+const showMissingCenters = () => {
+  const currentCodes = new Set(store.rows.map(r => String(r.code).trim()));
+  missingCenters.value = itineraryStore.routes.filter(route => {
+    return !currentCodes.has(String(route.shop_code).trim());
+  });
+  isMissingModalOpen.value = true;
+};
+
+// 2. Sort Logic
+const toggleProfileDropdown = () => {
+  if (savedItineraryProfiles.value.length === 0) {
+    addNotification('لا توجد قوالب خط سير محفوظة للعرض.', 'warning');
+    return;
+  }
+  showProfileDropdown.value = !showProfileDropdown.value;
+};
+
+const applyItineraryProfile = (profile) => {
+  store.sortRowsByItineraryProfile(profile.shops_order);
+  showProfileDropdown.value = false;
+  addNotification(`تم الترتيب حسب قالب "${profile.profile_name}"`, 'success');
+};
+
+
+// 3. Tooltip
 const showTooltip = (element, text) => {
   if (!element || !text) return;
-
   if (showCustomTooltip.value && tooltipTargetElement.value === element) {
     hideTooltip();
     return;
   }
-
   customTooltipText.value = text;
   tooltipTargetElement.value = element;
   showCustomTooltip.value = true;
-
   nextTick(() => {
     if (customTooltipRef.value) {
       const rect = element.getBoundingClientRect();
@@ -407,14 +570,9 @@ const showTooltip = (element, text) => {
     }
   });
 };
+const hideTooltip = () => { showCustomTooltip.value = false; };
 
-const hideTooltip = () => {
-  showCustomTooltip.value = false;
-  customTooltipText.value = '';
-  tooltipTargetElement.value = null;
-};
-
-// 2. البحث والتزامن
+// 4. Update Logic & Smart Add
 const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
 const clearSearch = () => { searchQueryLocal.value = ''; };
 
@@ -428,7 +586,6 @@ const syncWithCounterStore = () => {
   }
 };
 
-// 3. تحديث بيانات الجدول
 const checkAndAddEmptyRow = (index) => {
   if (searchQueryLocal.value) return; 
   if (index === store.rows.length - 1) store.addRow();
@@ -441,42 +598,93 @@ const updateField = (row, index, field, value, syncCounter = false) => {
   if (syncCounter) syncWithCounterStore();
 };
 
-const updateShop = (row, index, e) => {
-  updateField(row, index, 'shop', e.target.value);
-  hideTooltip();
-};
-
+const updateShop = (row, index, e) => { updateField(row, index, 'shop', e.target.value); hideTooltip(); };
 const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
-
-const updateAmount = (row, index, e) => {
-  handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
-};
-
-const updateExtra = (row, index, e) => {
-  handleMoneyInput(e, (val) => {
+const updateAmount = (row, index, e) => handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
+const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
     if (val === '-') row.extra = '-';
     else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
-  hideTooltip();
-};
 
-const updateCollector = (row, index, e) => {
+// ** دالة المحصل الذكية (المعدلة) **
+// ** دالة المحصل الذكية (تم إصلاح مشكلة GPS Timeout) **
+// ** دالة المحصل الذكية (تم إصلاح مشكلة ربط الموقع وتحديث الـ ID) **
+const updateCollector = async (row, index, e) => {
   const amountVal = parseFloat(row.amount) || 0;
   const collectorMaxLimit = amountVal + 2999;
-  handleMoneyInput(e, (val) => updateField(row, index, 'collector', val ? parseFloat(val) : null, true), {
-    fieldName: 'مبلغ المحصل',
-    maxLimit: collectorMaxLimit
-  });
+  
+  handleMoneyInput(e, (val) => {
+    updateField(row, index, 'collector', val ? parseFloat(val) : null, true);
+    
+    // --- منطق تحديث الموقع وإضافة خط السير ---
+    if (val && row.code) {
+        // التغيير هنا: نستخدم .find بدلاً من .some لنحصل على كائن العميل كاملاً (بما فيه الـ ID)
+        const existingRoute = itineraryStore.routes.find(r => String(r.shop_code) === String(row.code));
+        
+        // دالة مساعدة لمعالجة النجاح
+        const handlePositionSuccess = (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            
+            if (existingRoute) {
+                // 1. تحديث الموقع (إصلاح: نرسل ID بدلاً من الكود)
+                if (itineraryStore.updateLocation) {
+                    itineraryStore.updateLocation(existingRoute.id, lat, lng);
+                    // تنبيه بسيط في الكونسول للتأكد
+                    console.log(`Updated Location for ID: ${existingRoute.id}`);
+                }
+            } else {
+                // 2. إضافة جديد (إذا لم يكن موجوداً)
+                itineraryStore.addRoute({
+                    shop_code: row.code.toString(),
+                    shop_name: row.shop,
+                    latitude: lat,
+                    longitude: lng
+                });
+            }
+        };
+
+        // دالة مساعدة لمعالجة الفشل النهائي
+        const handlePositionError = (err) => {
+            console.warn("GPS failed completely:", err.message);
+            if (!existingRoute) {
+                itineraryStore.addRoute({
+                    shop_code: row.code.toString(),
+                    shop_name: row.shop,
+                    latitude: null, longitude: null
+                });
+            }
+        };
+
+        if (navigator.geolocation) {
+            // المحاولة الأولى: دقة عالية (15 ثانية)
+            navigator.geolocation.getCurrentPosition(
+                handlePositionSuccess, 
+                (err) => {
+                    console.warn("High Accuracy GPS timed out, trying Low Accuracy...", err.message);
+                    // المحاولة الثانية: دقة منخفضة
+                    navigator.geolocation.getCurrentPosition(
+                        handlePositionSuccess,
+                        handlePositionError,
+                        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                    );
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            );
+        } else {
+            handlePositionError({ message: "Geolocation not supported" });
+        }
+    }
+
+  }, { fieldName: 'مبلغ المحصل', maxLimit: collectorMaxLimit });
   hideTooltip();
 };
 
-// 4. تحديث قسم الملخص (مُحسن)
-// دالة موحدة لتحديث حقول الملخص بدلاً من 3 دوال منفصلة
+// Summary & Formatting
 const updateSummaryField = (e, storeKey, fieldLabel) => {
   const maxLimit = 499999;
   handleMoneyInput(e, (val) => {
     const numVal = parseFloat(val) || 0;
-    // استدعاء الدالة المناسبة في الـ Store بناءً على المفتاح
     if (storeKey === 'masterLimit') store.setMasterLimit(numVal);
     else if (storeKey === 'extraLimit') store.setExtraLimit(numVal);
     else if (storeKey === 'currentBalance') store.setCurrentBalance(numVal);
@@ -488,58 +696,81 @@ const toggleSign = (row, field) => {
   if (!currentVal || currentVal === '') row[field] = '-';
   else if (currentVal === '-') row[field] = null;
   else row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
-  
   store.saveRowsToStorage();
   if (field === 'collector') syncWithCounterStore();
 };
 
-// 5. العمليات الكبرى
+// Actions
 const confirmClearAll = async () => {
-  const result = await confirm({
-    title: 'تأكيد تفريغ الحقول',
-    text: 'هل أنت متأكد من مسح جميع البيانات الحالية في الجدول؟',
-    icon: 'warning',
-    confirmButtonText: 'نعم، مسح الكل',
-    confirmButtonColor: '#dc3545'
-  });
-
-  if (result.isConfirmed) {
+  if ((await confirm({ title: 'مسح الكل', text: 'تأكيد؟' })).isConfirmed) {
     store.clearAll();
     searchQueryLocal.value = '';
-    addNotification('تم تفريغ الحقول بنجاح', 'info');
+    addNotification('تم المسح', 'info');
   }
 };
 
 const archiveToday = async () => {
-  const todayIso = archiveStore.getTodayLocal();
-  const existingArchive = await localforage.getItem(`${archiveStore.DB_PREFIX}${todayIso}`);
-  
-  const confirmResult = await confirm({
-    title: existingArchive ? 'تأكيد استبدال الأرشيف' : 'تأكيد الأرشفة',
-    text: existingArchive ? `يوجد أرشيف سابق ليوم ${todayIso}. هل تريد استبداله؟` : 'هل أنت متأكد من أرشفة البيانات الحالية؟',
-    icon: 'question',
-    confirmButtonText: 'أرشفة',
-    confirmButtonColor: 'var(--primary)'
-  });
-  
-  if (!confirmResult.isConfirmed) return;
-  
-  store.searchQuery = searchQueryLocal.value; 
-  const result = await store.archiveTodayData();
-  
-  if (result.success) { 
-    addNotification(result.message, 'success'); 
-    store.clearAll(); 
-    searchQueryLocal.value = ''; 
-  } else {
-    addNotification(result.message, 'error');
+  isArchiving.value = true;
+  try {
+    // 1. جلب التواريخ المتاحة للتأكد من أن القائمة محدثة
+    await archiveStore.loadAvailableDates(true);
+    
+    // 2. الحصول على التاريخ الآمن
+    const dateToSave = await store.getSecureCairoDate();
+    
+    // 3. التحقق من وجود أرشيف بنفس التاريخ
+    const exists = archiveStore.dateExists(dateToSave);
+    
+    let confirmationMessage = {
+      title: 'تأكيد الأرشفة',
+      text: 'هل أنت متأكد أنك تريد أرشفة بيانات اليوم؟',
+      confirmButtonText: 'نعم، أرشفة'
+    };
+
+    if (exists) {
+      confirmationMessage = {
+        title: 'تنبيه: الأرشيف موجود',
+        text: `يوجد أرشيف محفوظ بالفعل بتاريخ "${dateToSave}". هل تريد استبداله بالبيانات الحالية؟`,
+        confirmButtonText: 'نعم، استبدال',
+        icon: 'warning'
+      };
+    }
+    
+    // 4. طلب تأكيد المستخدم
+    const { isConfirmed } = await confirm(confirmationMessage);
+    
+    if (!isConfirmed) {
+      addNotification('تم إلغاء الأرشفة.', 'info');
+      return;
+    }
+    
+    // 5. تنفيذ الأرشفة
+    const res = await store.archiveTodayData();
+    if (res.success) {
+      addNotification(res.message, 'success');
+      store.clearAll();
+      searchQueryLocal.value = '';
+    } else {
+      addNotification(res.message, 'error');
+    }
+  } catch (error) {
+    logger.error('Unhandled error during archive process:', error);
+    addNotification('حدث خطأ غير متوقع أثناء محاولة الأرشفة.', 'error');
+  } finally {
+    isArchiving.value = false;
   }
 };
 
 const handleExport = async () => {
-  addNotification('جاري تجهيز البيانات للمشاركة...', 'info');
   const fileName = searchQueryLocal.value ? `تحصيلات_بحث_${searchQueryLocal.value}` : `تحصيلات_${currentDate.value.replace(/\//g, '-')}`;
   const result = await exportAndShareTable('harvest-table-container', fileName);
+  if (result.success) addNotification(result.message, 'success');
+  else addNotification(result.message, 'error');
+};
+
+const handleSummaryExport = async () => {
+  const fileName = `ملخص_بيان_${currentDate.value.replace(/\//g, '-')}`;
+  const result = await exportAndShareTable('summary', fileName, { backgroundColor: 'var(--surface-bg)' });
   if (result.success) addNotification(result.message, 'success');
   else addNotification(result.message, 'error');
 };
@@ -550,7 +781,7 @@ const handleOutsideClick = (e) => {
   if (!isTooltipTrigger) hideTooltip();
 };
 
-// --- دورة الحياة ---
+// Lifecycle
 onMounted(() => {
   store.initialize?.();
   loadColumns();
@@ -558,30 +789,128 @@ onMounted(() => {
   syncWithCounterStore();
   searchQueryLocal.value = store.searchQuery || '';
   
+  itineraryStore.fetchProfiles(); 
+  itineraryStore.fetchRoutes(); 
+
   window.addEventListener('focus', syncWithCounterStore);
   document.addEventListener('click', handleOutsideClick);
 });
 
-onActivated(() => {
-  store.initialize?.();
-  searchQueryLocal.value = store.searchQuery || '';
-});
-
-onBeforeUnmount(() => {
-  store.searchQuery = searchQueryLocal.value;
-  window.removeEventListener('focus', syncWithCounterStore);
-  document.removeEventListener('click', handleOutsideClick);
-});
-
+onActivated(() => { store.initialize?.(); searchQueryLocal.value = store.searchQuery || ''; itineraryStore.fetchProfiles(); });
+onBeforeUnmount(() => { store.searchQuery = searchQueryLocal.value; window.removeEventListener('focus', syncWithCounterStore); document.removeEventListener('click', handleOutsideClick); });
 onDeactivated(() => { store.searchQuery = searchQueryLocal.value; });
 watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initialize?.(); });
 </script>
 
+<script>
+export default {
+  name: 'HarvestView'
+}
+</script>
+
 <style scoped>
-/* نفس التنسيق السابق تماماً مع الحفاظ على الأداء */
+/* Dropdown Styles */
+.relative { position: relative; }
+.profile-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  padding: 8px 0;
+  margin-top: 4px;
+}
+.dropdown-item {
+  display: block;
+  padding: 10px 15px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.dropdown-item:hover {
+  background-color: var(--bg-secondary);
+}
+.dropdown-item.disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Original Styles */
+.action-bar { margin-bottom: 10px; display: flex; justify-content: flex-end; }
+.btn-sm { padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; font-weight: 600; }
+.btn-outline-primary { border: 1px solid var(--primary); background: transparent; color: var(--primary); }
+.btn-outline-primary:hover { background: var(--primary); color: white; }
+.btn-outline-warning { border: 1px solid #f39c12; background: transparent; color: #f39c12; }
+.btn-outline-warning:hover { background: #f39c12; color: white; }
+.btn-outline-danger { border: 1px solid var(--danger); background: transparent; color: var(--danger); }
+.btn-outline-danger:hover { background: var(--danger); color: white; }
+
+
+/* Modal Styles */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
+.missing-modal, .overdue-modal { width: 90%; max-width: 500px; background: var(--surface-bg); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-header { padding: 15px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 10px; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+.scrollable-list { overflow-y: auto; padding: 0; flex: 1; }
+.missing-list { list-style: none; padding: 0; margin: 0; }
+.missing-list li { padding: 12px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+.missing-list li:last-child { border-bottom: none; }
+.center-name { font-weight: bold; color: var(--text-primary); }
+.center-code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9rem; }
+.modal-footer { padding: 10px 15px; background: var(--bg-secondary); text-align: center; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Overdue Modal Table Styles */
+.overdue-table { display: flex; flex-direction: column; }
+.overdue-header, .overdue-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 100px 100px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+.overdue-header {
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.05));
+  color: var(--primary);
+  border-top: 1px solid var(--border-color);
+}
+.overdue-row:hover { background-color: var(--bg-secondary); }
+.overdue-body { overflow-y: auto; }
+.text-center { text-align: center; }
+.font-bold { font-weight: bold; }
+
+/* has-overdue class */
+.has-overdue input, .has-overdue span {
+  color: #e53935 !important;
+  font-weight: 700 !important;
+}
+:deep(body.dark) .has-overdue input, :deep(body.dark) .has-overdue span {
+  color: #ff8a80 !important;
+}
+
+/* has-overpayment class */
+.has-overpayment input, .has-overpayment span {
+  color: var(--primary) !important;
+  font-weight: 700 !important;
+}
+:deep(body.dark) .has-overpayment input, :deep(body.dark) .has-overpayment span {
+  color: #69b4ff !important;
+}
+
+
 .modern-table thead th { font-size: 0.85rem !important; }
 .no-wrap-cell { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 .mx-2 { margin: 0 8px; }
+.ml-2 { margin-left: 8px; }
+.text-xs { font-size: 0.75rem; }
 .small-text { font-size: 0.75rem; font-weight: 500; opacity: 0.8; display: block; pointer-events: none; }
 .small-label { font-size: 0.7rem; font-weight: normal; opacity: 0.7; margin-right: 4px; }
 .master-limit-input { border: 2px solid var(--primary-light) !important; background-color: rgba(var(--primary-rgb), 0.05) !important; }
@@ -602,24 +931,15 @@ watch(() => route.name, (newName) => { if (newName === 'Harvest') store.initiali
 .count-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .count-value { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
 .no-results { text-align: center; padding: 40px; color: var(--text-muted); font-style: italic; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); }
-.export-container { display: flex; justify-content: flex-end; margin-top: 10px; margin-bottom: 15px; padding: 0 5px; }
+.export-container { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 15px; padding: 0 5px; }
 .btn-export-share { background: linear-gradient(135deg, var(--success) 0%, #059669 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); transition: var(--transition); }
 .btn-export-share:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
+.btn-export-summary { background: linear-gradient(135deg, var(--primary) 0%, #2980b9 100%); box-shadow: 0 2px 5px rgba(var(--primary-rgb), 0.3); }
+.btn-export-summary:hover { box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.4); }
 .clear-search-btn { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--gray-500); cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 10; font-size: 1.2rem; }
 .clear-search-btn:hover { color: var(--danger); transform: translateY(-50%) scale(1.1); }
 .relative { position: relative; }
 .w-full { width: 100%; }
 .pr-2 { padding-right: 8px; }
-.custom-tooltip { position: fixed; background: var(--bg-primary); color: var(--text-primary); padding: 10px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; z-index: 9999; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--border-color); pointer-events: none; white-space: nowrap; max-width: none; animation: fadeIn 0.2s ease-in-out; backdrop-filter: blur(10px); }
-.custom-tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: var(--bg-primary) transparent transparent transparent; }
-:deep(body.dark) .custom-tooltip { background: rgba(30, 30, 30, 0.95); color: var(--text-primary); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border-color); }
-:deep(body.dark) .custom-tooltip::after { border-color: rgba(30, 30, 30, 0.95) transparent transparent transparent; }
-@keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -90%); } to { opacity: 1; transform: translate(-50%, -100%); } }
-@media (max-width: 768px) {
-  .search-control { flex-wrap: wrap; gap: 10px; }
-  .customer-count-badge { order: 2; flex: 1; }
-  .search-input-wrapper { order: 1; width: 100%; }
-  .btn-settings-table { order: 3; }
-  .export-container { justify-content: center; }
-}
+.custom-tooltip { position: fixed; background: var(--bg-primary); color: var(--text-primary); padding: 5px 10px; border-radius: 6px; z-index: 9999; border: 1px solid var(--border-color); pointer-events: none; }
 </style>

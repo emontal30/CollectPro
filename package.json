@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
+    "leaflet": "^1.9.4",
     "localforage": "^1.10.0",
     "mitt": "^3.0.1",
     "pinia": "^2.1.7",
