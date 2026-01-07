@@ -15,6 +15,8 @@ export const useArchiveStore = defineStore('archive', () => {
   const selectedDate = ref('');
   const isLoading = ref(false);
   const isLoadingDates = ref(false);
+  // Flag to avoid concurrent cloud fetches
+  const isFetchingCloudDates = ref(false);
   const isGlobalSearching = ref(false);
   const lastDatesFetchTime = ref(0);
 
@@ -134,48 +136,45 @@ export const useArchiveStore = defineStore('archive', () => {
       isLoadingDates.value = false;
     }
 
-    // --- المرحلة 2: التحديث من السحابة في الخلفية (دون تعطيل الواجهة) ---
-    if (shouldFetchCloud && authStore.user && navigator.onLine) {
-      try {
-        const result = await retry(() => api.archive.getAvailableDates(authStore.user.id), {
-          retries: 2,
-          delay: 3000,
-          onRetry: (attempt, err) => {
-             // لوج فقط في حالة الخطأ، المستخدم لا يرى شيئاً
-             logger.warn(`Retrying cloud dates fetch (attempt ${attempt})...`, err);
-          }
-        });
-        
-        if (result && result.dates) {
-            // دمج البيانات السحابية مع البيانات المحلية الموجودة حالياً
+    // --- المرحلة 2: التحديث من السحابة في الخلفية (دون تعطيل الواجهة)
+    // Run cloud fetch as fire-and-forget to avoid blocking callers/UI and
+    // prevent excessive DB usage. Respect `lastDatesFetchTime` and
+    // use `isFetchingCloudDates` to avoid concurrent requests.
+    if (shouldFetchCloud && authStore.user && navigator.onLine && !isFetchingCloudDates.value) {
+      isFetchingCloudDates.value = true;
+      (async () => {
+        try {
+          const result = await retry(() => api.archive.getAvailableDates(authStore.user.id), {
+            retries: 2,
+            delay: 3000,
+            onRetry: (attempt, err) => logger.warn(`Retrying cloud dates fetch (attempt ${attempt})...`, err)
+          });
+
+          if (result && result.dates) {
             const combinedMap = new Map();
-            
-            // 1. إضافة المحلي (الذي جمعناه في الخطوة الأولى)
-            localDatesSet.forEach(d => {
-                combinedMap.set(d, { value: d, source: 'local' });
-            });
-            
-            // 2. دمج السحابي
+            localDatesSet.forEach(d => combinedMap.set(d, { value: d, source: 'local' }));
+
             result.dates.forEach(d => {
-                if (combinedMap.has(d)) {
-                    // إذا كان موجوداً محلياً وجاء من السحابة أيضاً => synced
-                    combinedMap.get(d).source = 'synced';
-                } else {
-                    // إذا كان جديداً من السحابة => cloud
-                    combinedMap.set(d, { value: d, source: 'cloud' });
-                }
+              if (combinedMap.has(d)) combinedMap.get(d).source = 'synced';
+              else combinedMap.set(d, { value: d, source: 'cloud' });
             });
-            
-            // 3. تحديث القائمة النهائية
-            availableDates.value = Array.from(combinedMap.values())
-                .filter(item => !isNaN(new Date(item.value).getTime()))
-                .sort((a, b) => new Date(b.value) - new Date(a.value));
-            
+
+            const merged = Array.from(combinedMap.values())
+              .filter(item => !isNaN(new Date(item.value).getTime()))
+              .sort((a, b) => new Date(b.value) - new Date(a.value));
+
+            // Update list only if it changed (reduce writes)
+            const same = merged.length === availableDates.value.length && merged.every((m, i) => m.value === availableDates.value[i]?.value && m.source === availableDates.value[i]?.source);
+            if (!same) availableDates.value = merged;
+
             lastDatesFetchTime.value = Date.now();
+          }
+        } catch (cloudErr) {
+          logger.error('❌ ArchiveStore: Cloud dates fetch failed (background)', cloudErr);
+        } finally {
+          isFetchingCloudDates.value = false;
         }
-      } catch (cloudErr) {
-        logger.error('❌ ArchiveStore: Cloud dates fetch failed (background)', cloudErr);
-      }
+      })();
     }
   }
 

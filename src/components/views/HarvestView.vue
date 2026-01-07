@@ -754,7 +754,8 @@ const confirmClearAll = async () => {
 const archiveToday = async () => {
   isArchiving.value = true;
   try {
-    await archiveStore.loadAvailableDates(true);
+    // Load local dates quickly (don't force a cloud fetch) to avoid blocking UI
+    await archiveStore.loadAvailableDates(false);
     const dateToSave = await store.getSecureCairoDate();
     const exists = archiveStore.dateExists(dateToSave);
     

@@ -55,6 +55,11 @@
           <i class="fas fa-save"></i>
           <span>حفظ وانتقال لصفحة التحصيل</span>
         </button>
+        
+        <button class="btn btn-dashboard btn-dashboard--update" type="button" @click="handleUpdateBalances">
+          <i class="fas fa-sync-alt"></i>
+          <span>تحديث الأرصدة</span>
+        </button>
       </div>
 
       <div class="buttons-row">
@@ -200,7 +205,9 @@ let statusTimeout = null;
 const showStatusMessage = (type, message, subtext = null, duration = 4000) => {
   if (statusTimeout) clearTimeout(statusTimeout);
   statusMessage.value = { type, message, subtext };
-  statusTimeout = setTimeout(() => { statusMessage.value = null; }, duration);
+  if (duration) {
+    statusTimeout = setTimeout(() => { statusMessage.value = null; }, duration);
+  }
 };
 
 const handlePaste = async () => {
@@ -246,10 +253,10 @@ const handleSaveAndGo = async () => {
       }
     }
 
-    showStatusMessage('saving', '⏳ جاري حفظ البيانات...', 'يرجى الانتظار');
+    showStatusMessage('saving', '⏳ جاري حفظ البيانات والمزامنة...', 'يرجى الانتظار', 0);
     
     // Proceed with processing and saving
-    const result = await store.processAndSave();
+    const result = store.processAndSave();
 
     if (result.status === 'success') {
       // Sync data with Itinerary Store
@@ -267,6 +274,31 @@ const handleSaveAndGo = async () => {
   } catch (error) {
     console.error('Save error:', error);
     showStatusMessage('error', '❌ حدث خطأ أثناء الحفظ');
+  }
+};
+
+const handleUpdateBalances = async () => {
+  try {
+    const raw = store.clientData && store.clientData.trim();
+    if (!raw) {
+      addNotification('لا توجد بيانات في حقل الإدخال لتحديث الأرصدة', 'warning');
+      return;
+    }
+
+    showStatusMessage('saving', '⏳ جاري تحديث الأرصدة...', 'يرجى الانتظار', 0);
+
+    const result = store.processAndSave();
+
+    if (result.status === 'success' && result.routeData && result.routeData.length > 0) {
+      await itineraryStore.syncFromDashboard(result.routeData);
+      showStatusMessage('success', '✅ تم تحديث الأرصدة بنجاح!', 'جاري الانتقال لصفحة خط السير...');
+      setTimeout(() => { router.push('/app/itinerary'); }, 1400);
+    } else {
+      showStatusMessage('error', '❌ لم يتم العثور على بيانات صالحة لتحديث الأرصدة');
+    }
+  } catch (err) {
+    console.error('Update balances error:', err);
+    showStatusMessage('error', '❌ حدث خطأ أثناء تحديث الأرصدة');
   }
 };
 

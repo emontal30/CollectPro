@@ -336,7 +336,8 @@
 </template>
 
 <script setup>
-import { onMounted, watch, ref, nextTick } from 'vue';
+import { onMounted, watch, ref, nextTick, onActivated } from 'vue';
+import { onBeforeRouteUpdate } from 'vue-router';
 import { useItineraryStore } from '@/stores/itineraryStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import "leaflet/dist/leaflet.css";
@@ -356,10 +357,21 @@ const fitMapToBounds = () => {
 };
 
 onMounted(async () => {
-  await store.fetchRoutes();
+  await store.fetchRoutes(true);
   store.initNetworkListener();
   // Initial fit if starting on map tab (or if data loads after)
   fitMapToBounds();
+});
+
+onActivated(async () => {
+  await store.fetchRoutes(true);
+  fitMapToBounds();
+});
+
+onBeforeRouteUpdate(async (to, from, next) => {
+  await store.fetchRoutes(true);
+  fitMapToBounds();
+  next();
 });
 
 watch(() => store.activeTab, (newTab) => {

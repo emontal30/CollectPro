@@ -24,7 +24,7 @@
     <main class="app-main">
       <div class="content-wrapper">
         <router-view v-slot="{ Component }">
-          <KeepAlive include="DashboardView,HarvestView">
+          <KeepAlive include="DashboardView,HarvestView,ArchiveView,AdminView,ItineraryView">
             <component :is="Component" />
           </KeepAlive>
         </router-view>

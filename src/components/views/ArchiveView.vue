@@ -209,7 +209,7 @@ const initData = async (force = false) => {
   if (!authStore.isAuthenticated || (store.isLoading && !force)) return;
   try {
     loadColumns();
-    await store.loadAvailableDates();
+    await store.loadAvailableDates(force);
     if (store.selectedDate) {
       await store.loadArchiveByDate(store.selectedDate);
     }
@@ -218,15 +218,15 @@ const initData = async (force = false) => {
   }
 };
 
-onMounted(() => { initData(); });
-onActivated(() => { initData(); });
+onMounted(() => { initData(true); });
+onActivated(() => { initData(true); });
 onBeforeRouteUpdate((to, from, next) => {
-  initData();
+  initData(true);
   next();
 });
 
 watch(() => authStore.isAuthenticated, (newVal) => {
-  if (newVal) initData();
+  if (newVal) initData(true);
 });
 
 const handleDateChange = async () => {
