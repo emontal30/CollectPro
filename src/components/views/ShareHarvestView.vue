@@ -1,10 +1,390 @@
 <template>
-  <CollaborationView 
-    title="مشاركة التحصيل"
-    itemType="harvest"
-  />
+  <div class="share-harvest-view">
+    <PageHeader 
+      title="مشاركة التحصيل" 
+      subtitle="إدارة الفريق ومتابعة الجداول الحية"
+      icon="users"
+    />
+
+    <div class="collab-controls card">
+      <div class="controls-header">
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'manage' }"
+          @click="activeTab = 'manage'"
+        >
+          <i class="fas fa-tasks"></i> إدارة وعرض
+        </button>
+        <button 
+          class="tab-btn relative" 
+          :class="{ active: activeTab === 'invites' }"
+          @click="activeTab = 'invites'"
+        >
+          <i class="fas fa-envelope"></i> الدعوات الواردة
+          <span v-if="collabStore.incomingRequests.length > 0" class="badge-count">
+            {{ collabStore.incomingRequests.length }}
+          </span>
+        </button>
+      </div>
+
+      <div class="card-body">
+        
+        <div v-show="activeTab === 'manage'" class="manage-tab animate-fade-in">
+          
+          <div class="control-row add-section">
+            <div class="input-group">
+              <input 
+                v-model="newCollabCode" 
+                type="text" 
+                placeholder="كود الزميل (مثال: USER-123)" 
+                class="form-control"
+              />
+              <button class="btn btn-primary" @click="sendInvite" :disabled="!newCollabCode || isLoading">
+                <i class="fas fa-paper-plane" v-if="!isLoading"></i>
+                <i class="fas fa-spinner fa-spin" v-else></i>
+                <span class="d-none-mobile">إرسال دعوة</span>
+              </button>
+            </div>
+          </div>
+
+          <hr class="separator" />
+
+          <div class="control-row select-section">
+            <div v-if="collabStore.collaborators.length === 0" class="text-muted">
+              <i class="fas fa-info-circle"></i> لا يوجد زملاء في قائمتك. أرسل دعوة للبدء.
+            </div>
+
+            <div v-else class="selection-wrapper">
+              <div class="select-box">
+                <label>عرض جدول:</label>
+                <select v-model="selectedCollaboratorId" class="form-control select-input" @change="handleCollaboratorChange">
+                  <option :value="null" disabled>-- اختر زميلاً --</option>
+                  <option v-for="collab in collabStore.collaborators" :key="collab.userId" :value="collab.userId">
+                    {{ collab.displayName }} ({{ collab.role === 'editor' ? 'محرر' : 'مشاهد' }})
+                  </option>
+                </select>
+              </div>
+
+              <div v-if="selectedCollaboratorId" class="rename-box">
+                <div v-if="!isEditingName">
+                  <button class="btn-icon" @click="startEditingName" title="تغيير الاسم المستعار">
+                    <i class="fas fa-pen"></i>
+                  </button>
+                </div>
+                <div v-else class="edit-group">
+                  <input 
+                    v-model="tempName" 
+                    type="text" 
+                    class="form-control sm-input" 
+                    ref="nameInput"
+                    @keyup.enter="saveName"
+                    placeholder="اسم مستعار"
+                  />
+                  <button class="btn-icon text-success" @click="saveName"><i class="fas fa-check"></i></button>
+                  <button class="btn-icon text-secondary" @click="cancelEditName"><i class="fas fa-times"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="activeTab === 'invites'" class="invites-tab animate-fade-in">
+          <div v-if="collabStore.incomingRequests.length === 0" class="empty-state">
+            <i class="fas fa-check-circle text-success mb-2"></i>
+            <p>لا توجد دعوات معلقة حالياً.</p>
+          </div>
+          
+          <div v-else class="invites-list">
+            <div v-for="req in collabStore.incomingRequests" :key="req.id" class="invite-item">
+              <div class="invite-info">
+                <strong>{{ req.sender_profile?.full_name || 'مستخدم' }}</strong>
+                <span class="text-muted text-sm">يدعوك لتكون ({{ req.role === 'editor' ? 'محرر' : 'مشاهد' }})</span>
+              </div>
+              <div class="invite-actions">
+                <button @click="handleRespond(req.id, 'accepted')" class="btn btn-sm btn-success">
+                  <i class="fas fa-check"></i> قبول
+                </button>
+                <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger">
+                  <i class="fas fa-times"></i> رفض
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div v-if="collabStore.activeSessionId" class="shared-harvest-container animate-slide-up">
+      <div class="shared-header">
+        <div class="badge-info">
+          <i class="fas fa-eye pulse"></i>
+          <span>جاري عرض: <strong>{{ activeCollaboratorName }}</strong></span>
+        </div>
+        <button class="btn btn-danger btn-sm" @click="closeSession">
+          <i class="fas fa-times"></i> إغلاق
+        </button>
+      </div>
+
+      <HarvestView :isSharedView="true" />
+    </div>
+
+    <div v-else class="placeholder-container">
+      <div class="placeholder-content">
+        <i class="fas fa-table fa-3x text-muted opacity-50"></i>
+        <p class="mt-3 text-muted">اختر زميلاً من القائمة أعلاه لعرض الجدول الخاص به هنا.</p>
+      </div>
+    </div>
+
+  </div>
 </template>
 
 <script setup>
-import CollaborationView from './CollaborationView.vue';
+import { ref, computed, onMounted, nextTick, inject } from 'vue';
+import { useCollaborationStore } from '@/stores/collaborationStore';
+import { useHarvestStore } from '@/stores/harvest';
+import HarvestView from './HarvestView.vue';
+import PageHeader from '@/components/layout/PageHeader.vue';
+
+const collabStore = useCollaborationStore();
+const harvestStore = useHarvestStore(); // قد نحتاجه لأي عمليات تهيئة
+const { addNotification } = inject('notifications');
+
+// State
+const activeTab = ref('manage'); // manage | invites
+const newCollabCode = ref('');
+const isLoading = ref(false);
+const selectedCollaboratorId = ref(null);
+
+// Rename State
+const isEditingName = ref(false);
+const tempName = ref('');
+const nameInput = ref(null);
+
+const activeCollaboratorName = computed(() => {
+  return collabStore.activeSessionName || 'الزميل';
+});
+
+// Lifecycle
+onMounted(async () => {
+  await collabStore.fetchCollaborators();
+  await collabStore.fetchIncomingRequests();
+  
+  // استعادة الجلسة النشطة إذا وجدت
+  if (collabStore.activeSessionId) {
+    selectedCollaboratorId.value = collabStore.activeSessionId;
+  }
+});
+
+// Methods
+
+// 1. Send Invite
+const sendInvite = async () => {
+  if (!newCollabCode.value) return;
+  isLoading.value = true;
+  try {
+    // التعديل هنا: الدالة قد تعيد ID المستخدم إذا تم الدخول مباشرة (وضع الأدمن)
+    const activeUserId = await collabStore.sendInvite(newCollabCode.value);
+
+    if (activeUserId) {
+      // إذا تم إرجاع ID (حالة الأدمن)، نحدث القائمة ونختاره فوراً
+      selectedCollaboratorId.value = activeUserId;
+      addNotification('تم الدخول للحساب بنجاح (وضع الأدمن)', 'success');
+    } else {
+      // الحالة العادية
+      addNotification('تم إرسال الدعوة بنجاح', 'success');
+    }
+
+    newCollabCode.value = '';
+  } catch (err) {
+    addNotification(err.message || 'فشل العملية', 'error');
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 2. Respond to Invite
+const handleRespond = async (reqId, status) => {
+  try {
+    await collabStore.respondToInvite(reqId, status);
+    const msg = status === 'accepted' ? 'تم قبول الدعوة' : 'تم رفض الدعوة';
+    addNotification(msg, status === 'accepted' ? 'success' : 'info');
+    // تحديث القائمة بعد القبول
+    if (status === 'accepted') {
+      await collabStore.fetchCollaborators();
+    }
+  } catch (err) {
+    addNotification('حدث خطأ أثناء معالجة الطلب', 'error');
+  }
+};
+
+// 3. Select Collaborator
+const handleCollaboratorChange = () => {
+  if (selectedCollaboratorId.value) {
+    const collab = collabStore.collaborators.find(c => c.userId === selectedCollaboratorId.value);
+    if (collab) {
+      collabStore.setActiveSession(collab.userId, collab.displayName);
+    }
+  }
+};
+
+// 4. Close Session
+const closeSession = () => {
+  collabStore.setActiveSession(null, null);
+  selectedCollaboratorId.value = null;
+};
+
+// 5. Rename Logic
+const startEditingName = () => {
+  const collab = collabStore.collaborators.find(c => c.userId === selectedCollaboratorId.value);
+  if (collab) {
+    tempName.value = collab.displayName;
+    isEditingName.value = true;
+    nextTick(() => {
+        if(nameInput.value) nameInput.value.focus();
+    });
+  }
+};
+
+const saveName = () => {
+  if (tempName.value.trim()) {
+    collabStore.setAlias(selectedCollaboratorId.value, tempName.value.trim());
+    collabStore.activeSessionName = tempName.value.trim();
+    addNotification('تم تحديث الاسم', 'success');
+  }
+  isEditingName.value = false;
+};
+
+const cancelEditName = () => {
+  isEditingName.value = false;
+};
 </script>
+
+<style scoped>
+.share-harvest-view { padding-bottom: 50px; }
+
+/* Controls Card */
+.collab-controls {
+  background: var(--surface-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.controls-header {
+  display: flex;
+  padding: 6px;
+  background: var(--surface-bg);
+  border-bottom: 1px solid transparent;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.18s ease-in-out;
+  font-size: 1rem;
+  position: relative;
+  border-bottom: 3px solid transparent;
+  border-radius: 8px;
+}
+
+.tab-btn:not(.active):hover { color: var(--text-main); }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-secondary); box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+
+.badge-count {
+  background: var(--danger);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-right: 5px;
+}
+
+.card-body { padding: 15px; }
+
+/* Inputs & Forms */
+.input-group { display: flex; gap: 8px; width: 100%; }
+.form-control {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  flex: 1;
+}
+.select-input { max-width: 100%; }
+
+.separator { margin: 15px 0; border: 0; border-top: 1px solid var(--border-color); opacity: 0.5; }
+
+/* Selection Section */
+.selection-wrapper { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.select-box { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 250px; }
+.select-box label { font-weight: 600; white-space: nowrap; }
+
+/* Rename Box */
+.rename-box { display: flex; align-items: center; gap: 5px; }
+.edit-group { display: flex; align-items: center; gap: 2px; }
+.sm-input { padding: 6px; font-size: 0.9rem; width: 140px; }
+.btn-icon { background: none; border: none; cursor: pointer; padding: 5px; font-size: 1rem; color: var(--text-muted); transition: 0.2s; }
+.btn-icon:hover { color: var(--primary); background: var(--bg-secondary); border-radius: 4px; }
+.text-success { color: var(--success) !important; }
+.text-secondary { color: var(--text-muted) !important; }
+
+/* Invites List */
+.invites-list { display: flex; flex-direction: column; gap: 10px; }
+.invite-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+.invite-info { display: flex; flex-direction: column; }
+.invite-actions { display: flex; gap: 5px; }
+.empty-state { text-align: center; padding: 20px; color: var(--text-muted); }
+
+/* Shared Header */
+.shared-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  background: #e0f2fe;
+  border-radius: 8px;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.badge-info { display: flex; align-items: center; gap: 8px; }
+.pulse { animation: pulse 2s infinite; }
+
+/* Animations & Responsive */
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+@media (max-width: 600px) {
+  .selection-wrapper { flex-direction: column; align-items: stretch; }
+  .select-box { width: 100%; }
+  .rename-box { width: 100%; justify-content: flex-end; }
+  .d-none-mobile { display: none; }
+}
+</style>

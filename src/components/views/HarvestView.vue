@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="harvest-page">
     
-    <div v-if="collabStore.activeSessionId" class="collab-banner animate-slide-down">
+    <div v-if="collabStore.activeSessionId && !isSharedView" class="collab-banner animate-slide-down">
       <div class="banner-content">
         <i class="fas fa-eye pulse-icon"></i>
         <span>
@@ -15,12 +15,13 @@
     </div>
 
     <PageHeader 
+      v-if="!isSharedView"
       title="التحصيلات" 
       subtitle="إدارة وتتبع جميع تحصيلات العملاء"
       icon="💰"
     />
 
-    <div class="date-display">
+    <div v-if="!isSharedView" class="date-display">
       <i class="fas fa-calendar-alt calendar-icon"></i>
       <span class="label">اليوم:</span>
       <span class="value">{{ currentDay }}</span>
@@ -29,7 +30,7 @@
       <span class="value">{{ currentDate }}</span>
     </div>
 
-    <div class="action-bar mb-3 flex gap-2 justify-center flex-wrap">
+    <div class="action-bar mb-3 flex gap-2 justify-center flex-wrap" v-if="!isSharedView">
        <button class="btn btn-sm btn-outline-warning" @click="showMissingCenters" title="عرض المحلات الموجودة في خط السير ولم يتم العمل عليها اليوم">
           <i class="fas fa-eye-slash"></i> مراكز لم يتم التحويل لها
        </button>
@@ -229,7 +230,7 @@
       </div>
     </teleport>
 
-    <teleport to="body">
+    <teleport to="body" v-if="!isSharedView">
         <div v-if="isMissingModalOpen" class="modal-overlay" @click="isMissingModalOpen = false">
             <div class="modal-content missing-modal" @click.stop>
                 <div class="modal-header">
@@ -255,7 +256,7 @@
         </div>
     </teleport>
 
-    <teleport to="body">
+    <teleport to="body" v-if="!isSharedView">
         <div v-if="isOverdueModalOpen" class="modal-overlay" @click="isOverdueModalOpen = false">
             <div class="modal-content overdue-modal" @click.stop>
                 <div class="modal-header">
@@ -400,7 +401,7 @@
       </section>
     </div>
 
-    <div class="buttons-container">
+    <div class="buttons-container" v-if="!isSharedView">
       <div class="buttons-row">
         <router-link to="/app/dashboard" class="btn btn-dashboard btn-dashboard--home">
           <i class="fas fa-home"></i>
@@ -428,7 +429,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, onDeactivated, nextTick } from 'vue';
+import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, onDeactivated, nextTick, defineProps } from 'vue';
 import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
@@ -443,6 +444,15 @@ import { formatInputNumber, getNetClass, getNetIcon } from '@/utils/formatters.j
 import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
 import { handleMoneyInput } from '@/utils/validators.js';
+
+// --- Props Definition ---
+// تعريف الخاصية لاستقبال ما إذا كنا في وضع المشاركة
+const props = defineProps({
+  isSharedView: {
+    type: Boolean,
+    default: false
+  }
+});
 
 // --- Definitions ---
 const store = useHarvestStore();

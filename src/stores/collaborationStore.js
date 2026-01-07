@@ -6,13 +6,50 @@ export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
     collaborators: [],
     incomingRequests: [],
-    activeSessionId: null,
-    activeSessionName: null,
-    isLoading: false
+    
+    // 1. استعادة الجلسة النشطة مباشرة من التخزين المحلي لضمان بقائها عند التحديث
+    activeSessionId: localStorage.getItem('collab_active_session_id') || null,
+    activeSessionName: localStorage.getItem('collab_active_session_name') || null,
+    
+    isLoading: false,
+    
+    // الأسماء المستعارة
+    aliases: JSON.parse(localStorage.getItem('collab_aliases') || '{}'),
+    
+    // 2. تخزين "المستخدمين الأشباح" (Ghost Users) الذين يضيفهم الأدمن محلياً
+    localGhostUsers: JSON.parse(localStorage.getItem('collab_ghost_users') || '[]')
   }),
 
   actions: {
-    // 1. جلب المتعاونين
+    // دالة مساعدة لدمج مستخدمي السيرفر مع المحليين وتحديث القائمة
+    refreshCollaboratorsList(serverUsers = null) {
+      // نبدأ بالقائمة القادمة من السيرفر، أو نأخذ الموجودين حالياً (غير المحليين) إذا لم نمرر جديد
+      let currentList = serverUsers ? [...serverUsers] : [...this.collaborators.filter(c => !c.isLocal)];
+
+      // استخراج المعرفات الموجودة لتجنب التكرار
+      const serverIds = new Set(currentList.map(u => u.userId));
+      
+      // إضافة المستخدمين المحليين (Ghost Users) إذا لم يكونوا موجودين في قائمة السيرفر
+      this.localGhostUsers.forEach(ghost => {
+        if (!serverIds.has(ghost.userId)) {
+          const displayName = this.aliases[ghost.userId] || ghost.name;
+          currentList.push({ ...ghost, displayName, isLocal: true });
+        }
+      });
+
+      // تحديث الأسماء المستعارة للكل
+      this.collaborators = currentList.map(user => ({
+        ...user,
+        displayName: this.aliases[user.userId] || user.name
+      }));
+    },
+
+    setAlias(userId, newName) {
+      this.aliases[userId] = newName;
+      localStorage.setItem('collab_aliases', JSON.stringify(this.aliases));
+      this.refreshCollaboratorsList(); // تحديث القائمة لتطبيق الاسم الجديد
+    },
+
     async fetchCollaborators() {
       const auth = useAuthStore();
       if (!auth.user) return;
@@ -23,42 +60,88 @@ export const useCollaborationStore = defineStore('collaboration', {
         .eq('sender_id', auth.user.id)
         .eq('status', 'accepted');
 
-      if (reqError || !requests) {
-        this.collaborators = [];
-        return;
+      let serverUsers = [];
+
+      if (!reqError && requests && requests.length > 0) {
+        const receiverIds = requests.map(r => r.receiver_id).filter(id => id);
+        
+        if (receiverIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, user_code')
+            .in('id', receiverIds);
+
+          const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+          serverUsers = requests.map(item => {
+            const profile = profilesMap.get(item.receiver_id);
+            const originalName = profile?.full_name || 'مستخدم غير معروف';
+            
+            return {
+              userId: item.receiver_id,
+              name: originalName,
+              // displayName سيتم ضبطه في refreshCollaboratorsList
+              code: profile?.user_code,
+              role: item.role,
+              isLocal: false
+            };
+          });
+        }
       }
 
-      const receiverIds = requests.map(r => r.receiver_id).filter(id => id);
-      if (receiverIds.length === 0) {
-        this.collaborators = [];
-        return;
-      }
-
-      const { data: profiles, error: profError } = await supabase
-        .from('profiles')
-        .select('id, full_name, user_code')
-        .in('id', receiverIds);
-
-      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
-      this.collaborators = requests.map(item => {
-        const profile = profilesMap.get(item.receiver_id);
-        return {
-          userId: item.receiver_id,
-          name: profile?.full_name || 'Unknown User',
-          code: profile?.user_code,
-          role: item.role
-        };
-      });
+      // دمج القوائم
+      this.refreshCollaboratorsList(serverUsers);
     },
 
-    // 2. إرسال دعوة جديدة
     async sendInvite(receiverCode, role = 'editor') {
       const auth = useAuthStore();
-      if (receiverCode === auth.user.userCode) {
-        throw new Error("لا يمكنك دعوة نفسك.");
+      
+      if (!auth.user) throw new Error("يجب تسجيل الدخول أولاً.");
+      if (receiverCode === auth.user.userCode) throw new Error("لا يمكنك دعوة نفسك.");
+
+      // التحقق في القائمة المدمجة الحالية
+      const existing = this.collaborators.find(c => c.code === receiverCode);
+      if (existing) {
+         this.setActiveSession(existing.userId, existing.displayName);
+         return existing.userId; 
       }
 
+      // --- وضع الأدمن (Ghost Mode) ---
+      if (auth.isAdmin) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, user_code')
+          .eq('user_code', receiverCode)
+          .single();
+
+        if (error || !profile) throw new Error("كود المستخدم غير صحيح أو غير موجود.");
+
+        const originalName = profile.full_name || 'مستخدم';
+        const displayName = this.aliases[profile.id] || originalName;
+
+        const ghostUser = {
+          userId: profile.id,
+          name: originalName,
+          displayName: displayName,
+          code: profile.user_code,
+          role: role,
+          isLocal: true // تمييزه كمستخدم محلي
+        };
+
+        // 1. حفظه في LocalStorage لضمان بقائه في القائمة المنسدلة
+        this.localGhostUsers.push(ghostUser);
+        localStorage.setItem('collab_ghost_users', JSON.stringify(this.localGhostUsers));
+
+        // 2. تحديث القائمة الحالية
+        this.refreshCollaboratorsList();
+
+        // 3. تفعيل الجلسة
+        this.setActiveSession(profile.id, displayName);
+        
+        return profile.id;
+      }
+
+      // --- الوضع العادي ---
       const { error } = await supabase.from('collaboration_requests').insert({
         sender_id: auth.user.id,
         receiver_code: receiverCode,
@@ -66,10 +149,11 @@ export const useCollaborationStore = defineStore('collaboration', {
       });
 
       if (error) throw error;
+      
       await this.fetchCollaborators();
+      return null;
     },
 
-    // 3. جلب الدعوات الواردة
     async fetchIncomingRequests() {
       const auth = useAuthStore();
       if (!auth.user?.userCode) return;
@@ -104,7 +188,6 @@ export const useCollaborationStore = defineStore('collaboration', {
       }));
     },
 
-    // 4. الرد على الدعوة
     async respondToInvite(requestId, status) {
       const auth = useAuthStore();
       const updateData = { status };
@@ -123,10 +206,18 @@ export const useCollaborationStore = defineStore('collaboration', {
       }
     },
 
-    // 5. تعيين جلسة العمل النشطة
     setActiveSession(userId, userName) {
       this.activeSessionId = userId;
       this.activeSessionName = userName;
+      
+      // 3. حفظ الجلسة في التخزين المحلي
+      if (userId) {
+        localStorage.setItem('collab_active_session_id', userId);
+        localStorage.setItem('collab_active_session_name', userName);
+      } else {
+        localStorage.removeItem('collab_active_session_id');
+        localStorage.removeItem('collab_active_session_name');
+      }
     }
   }
 });
