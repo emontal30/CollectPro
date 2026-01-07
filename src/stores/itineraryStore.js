@@ -395,15 +395,26 @@ export const useItineraryStore = defineStore('itinerary', () => {
   async function updateLocation(routeId, lat, lng) {
       const idx = routes.value.findIndex(r => r.id === routeId);
       if(idx !== -1) {
-          routes.value[idx].latitude = lat; routes.value[idx].longitude = lng;
+          const timestamp = new Date().toISOString();
+          routes.value[idx].latitude = lat;
+          routes.value[idx].longitude = lng;
+          routes.value[idx].location_updated_at = timestamp;
+          
           await safeSaveLocal(STORAGE_KEY.value, routes.value);
-          if(navigator.onLine && !String(routeId).startsWith('temp_')) await supabase.from('client_routes').update({ latitude: lat, longitude: lng }).eq('id', routeId);
-          else await addToQueue({ type: 'update_loc', id: routeId, lat, lng });
+          
+          const payload = { latitude: lat, longitude: lng, location_updated_at: timestamp };
+
+          if(navigator.onLine && !String(routeId).startsWith('temp_')) {
+            await supabase.from('client_routes').update(payload).eq('id', routeId);
+          } else {
+             await addToQueue({ type: 'update_loc', id: routeId, ...payload });
+          }
           
           // Update editingRoute if it's the one being changed
           if(editingRoute.value && editingRoute.value.id === routeId) {
             editingRoute.value.latitude = lat;
             editingRoute.value.longitude = lng;
+            editingRoute.value.location_updated_at = timestamp;
           }
       }
   }

@@ -59,7 +59,8 @@ export const adminService = {
    * 2. جلب طلبات الاشتراك المعلقة
    */
   async getPendingSubscriptions() {
-    const { data } = await apiInterceptor(
+    // Step 1: Fetch subscriptions with nested user data
+    const { data: subsData, error: subsError } = await apiInterceptor(
       supabase
         .from('subscriptions')
         .select(`
@@ -70,26 +71,71 @@ export const adminService = {
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
     );
-    return data || [];
+
+    if (subsError || !subsData) return [];
+    
+    // Step 2: Fetch profiles for the found user_ids
+    const userIds = subsData.map(s => s.user_id);
+    if (userIds.length === 0) return [];
+
+    const { data: profilesData, error: profilesError } = await apiInterceptor(
+      supabase
+        .from('profiles')
+        .select('id, user_code')
+        .in('id', userIds)
+    );
+
+    if (profilesError) {
+      logger.warn('Could not fetch profiles for pending subs.');
+    }
+    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
+    
+    // Step 3: Merge the data
+    return subsData.map(sub => ({
+      ...sub,
+      user_code: profilesMap.get(sub.user_id) || null
+    }));
   },
 
   /**
    * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم
    */
   async getUsers() {
-    const { data, error } = await apiInterceptor(
+    // Step 1: Fetch main user data and their subscriptions
+    const { data: usersData, error: usersError } = await apiInterceptor(
       supabase
         .from('users')
         .select('*, subscriptions(id, status, end_date)')
         .order('created_at', { ascending: false })
     );
 
-    if (error) return [];
+    if (usersError) {
+      logger.error('Error fetching users:', usersError);
+      return [];
+    }
+    if (!usersData) return [];
 
-    return (data || []).map(user => {
+    // Step 2: Fetch corresponding profiles with the short user_code
+    const userIds = usersData.map(u => u.id);
+    const { data: profilesData, error: profilesError } = await apiInterceptor(
+      supabase
+        .from('profiles')
+        .select('id, user_code')
+        .in('id', userIds)
+    );
+
+    if (profilesError) {
+      logger.warn('Could not fetch user profiles, short codes will be missing.');
+    }
+
+    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
+
+    // Step 3: Merge the data in JavaScript
+    return usersData.map(user => {
       const activeSub = user.subscriptions?.find(s => s.status === 'active');
       return {
         ...user,
+        user_code: profilesMap.get(user.id) || null, // Add the short code
         hasActiveSub: !!activeSub,
         activeSubId: activeSub?.id,
         expiryDate: activeSub?.end_date || null
@@ -101,13 +147,10 @@ export const adminService = {
    * 4. جلب جميع الاشتراكات مع الفلترة
    */
   async getAllSubscriptions(filters = {}) {
+    // The new implementation uses the pre-built view for efficiency
     let query = supabase
-      .from('subscriptions')
-      .select(`
-        *,
-        users:user_id (full_name, email),
-        subscription_plans:plan_id (name, name_ar, price_egp)
-      `)
+      .from('admin_subscriptions_view')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (filters.status && filters.status !== 'all') {

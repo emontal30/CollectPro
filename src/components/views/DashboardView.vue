@@ -182,11 +182,13 @@ import { inject, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardStore } from '@/stores/dashboard';
 import { useItineraryStore } from '@/stores/itineraryStore'; // إضافة store خط السير
+import { useHarvestStore } from '@/stores/harvest';
 import PageHeader from '@/components/layout/PageHeader.vue';
 
 const router = useRouter();
 const store = useDashboardStore();
 const itineraryStore = useItineraryStore(); // تعريف الـ store
+const harvestStore = useHarvestStore();
 
 const activeTab = ref('manual');
 
@@ -227,13 +229,30 @@ const handleClear = async () => {
 
 const handleSaveAndGo = async () => {
   try {
+    // First, check if there's data in the harvest page
+    if (harvestStore.hasData) {
+      const { isConfirmed } = await confirm({
+        title: 'تحذير: بيانات موجودة',
+        text: 'هناك بيانات فى صفحه التحصيلات تاكد من ارشفتها اولا , لان بهذا الاجراء سيتم فقدها واستبدالها بالبيانات الحاليه',
+        icon: 'warning',
+        confirmButtonText: 'متابعة واستبدال',
+        cancelButtonText: 'إلغاء',
+        showCancelButton: true,
+      });
+
+      if (!isConfirmed) {
+        addNotification('تم إلغاء العملية.', 'info');
+        return; // Abort if user cancels
+      }
+    }
+
     showStatusMessage('saving', '⏳ جاري حفظ البيانات...', 'يرجى الانتظار');
     
-    // تنفيذ المعالجة والحفظ في الـ Dashboard Store
+    // Proceed with processing and saving
     const result = await store.processAndSave();
 
     if (result.status === 'success') {
-      // مزامنة البيانات المستخرجة مع Itinerary Store ليتم تحديث صفحة خط السير
+      // Sync data with Itinerary Store
       if (result.routeData && result.routeData.length > 0) {
         await itineraryStore.syncFromDashboard(result.routeData);
       }

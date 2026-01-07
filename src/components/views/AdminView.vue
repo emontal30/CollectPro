@@ -80,7 +80,7 @@
       <div class="p-3 bg-light border-bottom">
         <div class="search-input-wrapper w-full">
            <i class="fas fa-search control-icon"></i>
-           <input v-model="store.filters.usersSearch" type="text" class="search-input" placeholder="ابحث بالاسم أو البريد" />
+           <input v-model="store.filters.usersSearch" type="text" class="search-input" placeholder="ابحث بالكود، الاسم أو البريد" />
         </div>
       </div>
 
@@ -112,7 +112,7 @@
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ user.email }}</div>
-                    <div class="user-short-id">ID: {{ user.id.slice(0, 8) }}</div>
+                    <div class="user-short-id">{{ user.user_code || user.id.slice(0, 8) }} <i class="fas fa-copy text-xs ml-1 opacity-50"></i></div>
                   </div>
                 </td>
                 <td class="col-status">
@@ -153,14 +153,14 @@
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0 || store.isLoading">
+        <table id="pending-subscriptions-table" class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0 || store.isLoading">
           <thead>
             <tr>
-              <th>المستخدم</th>
-              <th>الخطة</th>
-              <th>رقم العملية</th>
-              <th>تاريخ الطلب</th>
-              <th class="text-center">الإجراءات</th>
+              <th class="col-user">المستخدم</th>
+              <th class="col-plan">الخطة</th>
+              <th class="col-transaction-id">رقم العملية</th>
+              <th class="col-date">تاريخ الطلب</th>
+              <th class="col-actions text-center">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -171,17 +171,17 @@
             </tr>
             <template v-else>
               <tr v-for="sub in store.pendingSubscriptions" :key="sub.id">
-                <td>
+                <td class="col-user">
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ sub.users?.full_name || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
-                    <div class="user-short-id">ID: {{ sub.user_id?.slice(0, 8) }}</div>
+                    <div class="user-short-id">{{ sub.user_code || sub.user_id?.slice(0, 8) }}</div>
                   </div>
                 </td>
-                <td>{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
-                <td class="font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
-                <td>{{ store.formatDate(sub.created_at) }}</td>
-                <td class="text-center">
+                <td class="col-plan">{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
+                <td class="col-transaction-id font-mono text-primary font-bold">{{ sub.transaction_id || '-' }}</td>
+                <td class="col-date">{{ store.formatDate(sub.created_at) }}</td>
+                <td class="col-actions text-center">
                   <div class="d-flex justify-center gap-2">
                     <button class="btn btn--icon text-success" title="تفعيل" @click="store.handleSubscriptionAction(sub.id, 'approve')"><i class="fas fa-check"></i></button>
                     <button class="btn btn--icon text-danger" title="رفض" @click="store.handleSubscriptionAction(sub.id, 'reject')"><i class="fas fa-times"></i></button>
@@ -212,30 +212,34 @@
         </select>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table class="modern-table auto-layout" v-if="store.allSubscriptions.length > 0 || store.isLoading">
+        <table id="all-subscriptions-table" class="modern-table auto-layout" v-if="store.allSubscriptions.length > 0 || store.isLoading">
           <thead>
             <tr>
-              <th>المستخدم</th>
+              <th class="col-user">المستخدم</th>
+              <th class="col-plan">الخطة</th>
+              <th class="col-transaction-id">رقم العملية</th>
               <th class="col-status text-center">الحالة</th>
               <th class="col-days text-center">الأيام</th>
-              <th class="text-center">إجراء</th>
+              <th class="col-actions text-center">إجراء</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="store.isLoading && store.allSubscriptions.length === 0">
-              <td colspan="4" class="text-center p-3">
+              <td colspan="6" class="text-center p-3">
                 <i class="fas fa-spinner fa-spin text-primary"></i> جاري تحميل جميع الاشتراكات...
               </td>
             </tr>
             <template v-else>
               <tr v-for="sub in store.allSubscriptions" :key="sub.id">
-                <td>
+                <td class="col-user">
                   <div class="user-info-cell">
-                    <div class="user-name font-bold">{{ sub.users?.full_name || sub.users?.email }}</div>
-                    <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
-                    <div v-if="sub.user_id" class="user-short-id">ID: {{ sub.user_id.slice(0, 8) }}</div>
+                    <div class="user-name font-bold">{{ sub.user_name || sub.email || 'مستخدم' }}</div>
+                    <div class="user-email text-xs text-muted">{{ sub.email }}</div>
+                    <div class="user-short-id">{{ sub.user_code || sub.user_id?.slice(0, 8) }}</div>
                   </div>
                 </td>
+                <td class="col-plan">{{ sub.plan_name || sub.subscription_plans?.name_ar || '-' }}</td>
+                <td class="col-transaction-id font-mono font-bold">{{ sub.transaction_id || '-' }}</td>
                 <td class="col-status text-center">
                   <span class="status-badge" :class="`status-${sub.status} text-center` ">
                     {{ sub.status === 'active' ? 'نشط' : (sub.status === 'cancelled' ? 'معلق' : (sub.status === 'expired' ? 'منتهي' : sub.status)) }}
@@ -248,7 +252,7 @@
                   </span>
                   <span v-else>-</span>
                 </td>
-                <td class="text-center">
+                <td class="col-actions text-center">
                   <div class="d-flex justify-center gap-1">
                     <button class="btn btn--icon text-info" title="تفاصيل" @click="showSubscriptionDetails(sub)"><i class="fas fa-eye"></i></button>
                     <button v-if="sub.status === 'active'" class="btn btn--icon text-warning" title="تعليق" @click="store.handleSubscriptionAction(sub.id, 'cancel')"><i class="fas fa-pause"></i></button>
@@ -266,30 +270,30 @@
 
     <BaseModal 
       v-model:show="showDetailsModal" 
-      :title="'تفاصيل اشتراك: ' + (selectedSub?.users?.full_name || 'مستخدم')"
+      :title="'تفاصيل اشتراك: ' + (selectedSub?.user_name || 'مستخدم')"
     >
       <div v-if="selectedSub" class="subscription-details">
         <div class="details-grid">
           <div class="detail-item">
             <label>اسم المستخدم:</label>
-            <span>{{ selectedSub.users?.full_name || 'غير متوفر' }}</span>
+            <span>{{ selectedSub.user_name || 'غير متوفر' }}</span>
           </div>
           <div class="detail-item">
             <label>البريد الإلكتروني:</label>
-            <span>{{ selectedSub.users?.email }}</span>
+            <span>{{ selectedSub.email }}</span>
           </div>
           <div class="detail-item">
-            <label>معرف المستخدم (ID):</label>
-            <span class="font-mono text-xs">{{ selectedSub.user_id }}</span>
+            <label>معرف المستخدم (كود):</label>
+            <span class="font-mono text-primary font-bold">{{ selectedSub.user_code || selectedSub.user_id }}</span>
           </div>
           <hr class="full-width" />
           <div class="detail-item">
             <label>الخطة المختارة:</label>
-            <span class="font-bold text-primary">{{ selectedSub.plan_name || selectedSub.subscription_plans?.name_ar || 'غير محدد' }}</span>
+            <span class="font-bold text-primary">{{ selectedSub.plan_name_ar || selectedSub.plan_name || 'غير محدد' }}</span>
           </div>
           <div class="detail-item">
             <label>السعر:</label>
-            <span>{{ selectedSub.price || 0 }} ج.م</span>
+            <span>{{ selectedSub.price_egp || 0 }} ج.م</span>
           </div>
           <div class="detail-item">
             <label>رقم عملية التحويل:</label>
@@ -412,7 +416,9 @@ const filteredUsers = computed(() => {
   if (!store.filters.usersSearch) return store.usersList;
   const q = store.filters.usersSearch.toLowerCase();
   return store.usersList.filter(u =>
-    (u.full_name?.toLowerCase().includes(q)) || (u.email?.toLowerCase().includes(q))
+    (u.user_code?.toLowerCase().includes(q)) || 
+    (u.full_name?.toLowerCase().includes(q)) || 
+    (u.email?.toLowerCase().includes(q))
   );
 });
 
@@ -485,15 +491,67 @@ watch(() => authStore.isAdmin, (newVal) => {
 input:checked + .slider { background-color: var(--primary); }
 input:checked + .slider:before { transform: translateX(26px); }
 .modern-table.auto-layout { table-layout: auto !important; width: 100%; }
-.modern-table th, .modern-table td { white-space: nowrap; }
-.col-status { width: 120px; }
-.col-days { width: 80px; }
+.modern-table th, .modern-table td { white-space: nowrap; } /* Apply to all cells by default */
+
+/* Make all columns adapt to content */
+#logged-in-users-table th,
+#logged-in-users-table td,
+#pending-subscriptions-table th,
+#pending-subscriptions-table td,
+#all-subscriptions-table th,
+#all-subscriptions-table td {
+  width: 1%; /* Forces columns to be as narrow as possible, fitting content */
+}
+
+/* Specific column adjustments */
+.col-user { /* flex-grow for user details */ }
+.col-plan { }
+/* Apply width constraint only to Pending Subscriptions Transaction ID */
+#pending-subscriptions-table th.col-transaction-id,
+#pending-subscriptions-table td.col-transaction-id {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.col-status { }
+.col-days { }
+.col-actions { min-width: 100px; } /* Keep a min-width for action buttons */
+
+/* Apply no-wrap to relevant columns to force them to expand */
+/* These rules are largely redundant now but kept for clarity if needed for other specific styles */
+.admin-dashboard table th.col-plan,
+.admin-dashboard table td.col-plan,
+.admin-dashboard table th.col-transaction-id,
+.admin-dashboard table td.col-transaction-id {
+  white-space: nowrap;
+}
+
 .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
 .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.user-info-cell { text-align: right; }
-.user-short-id { font-size: 10px; color: var(--gray-600); background: var(--gray-100); padding: 1px 4px; border-radius: 4px; margin-top: 4px; font-family: monospace; }
+.user-info-cell { text-align: right; white-space: normal; /* Allow text wrapping for user names */ }
+
+.status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+.status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.status-cancelled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.status-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.user-info-cell { text-align: right; white-space: normal; /* Allow text wrapping for user names */ }
+
+/* التحديث: تكبير الخط وجعله عريضاً */
+.user-short-id { 
+  font-size: 13px;  /* تم التغيير من 10px إلى 13px */
+  font-weight: bold; /* تمت إضافة هذه الخاصية */
+  color: var(--gray-600); 
+  background: var(--gray-100); 
+  padding: 2px 6px; /* زيادة بسيطة في الحشو */
+  border-radius: 4px; 
+  margin-top: 4px; 
+  font-family: monospace;
+  display: inline-block;
+  width: fit-content;
+}
+
 .expiry-date-sub { font-size: 10px; color: var(--gray-600); }
 .spinner-tiny { width: 1rem; height: 1rem; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

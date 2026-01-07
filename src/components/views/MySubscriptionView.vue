@@ -7,7 +7,6 @@
       icon="🛡️"
     />
 
-    <!-- رسالة التنبيه عند محاولة دخول صفحة محمية -->
     <div v-if="route.query.access === 'denied'" class="access-denied-alert animate-fade-in">
        <div class="alert-inner">
          <div class="alert-icon"><i class="fas fa-shield-virus"></i></div>
@@ -19,7 +18,26 @@
     </div>
 
     <div class="content-grid">
-      <!-- Card 1: Current Status -->
+      
+      <section class="card identity-card animate-fade-in">
+        <div class="card-body identity-body">
+          <div class="identity-content">
+            <div class="icon-box">
+              <i class="fas fa-id-card-alt"></i>
+            </div>
+            <div class="text-box">
+              <span class="label">المعرف الخاص بك (للدعم والمشاركة)</span>
+              <div class="code-display">
+                <strong class="user-code">{{ displayUserCode }}</strong>
+              </div>
+            </div>
+          </div>
+          <button @click="copyUserCode" class="btn btn-outline-primary btn-copy" title="نسخ الكود">
+            <i class="fas fa-copy"></i> <span class="d-none-mobile">نسخ</span>
+          </button>
+        </div>
+      </section>
+
       <section class="card status-card animate-fade-in">
         <div class="card-header bg-primary-gradient">
           <div class="header-icon"><i class="fas fa-crown"></i></div>
@@ -82,7 +100,6 @@
         </div>
       </section>
 
-      <!-- Card 2: History -->
       <section class="card history-card animate-fade-in delay-1">
         <div class="card-header bg-primary-gradient">
           <div class="header-icon"><i class="fas fa-history"></i></div>
@@ -129,13 +146,35 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, inject, ref, watch } from 'vue'; // تمت إضافة ref و watch
 import { useRoute } from 'vue-router';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
+import { useAuthStore } from '@/stores/auth';
 import PageHeader from '@/components/layout/PageHeader.vue';
 
 const store = useMySubscriptionStore();
+const authStore = useAuthStore();
 const route = useRoute();
+const { addNotification } = inject('notifications');
+
+// --- منطق حفظ واستدعاء المعرف محلياً ---
+// 1. محاولة قراءة المعرف من الذاكرة المحلية فوراً
+const cachedCode = localStorage.getItem('saved_user_code');
+
+// 2. إنشاء متغير للعرض: الأولوية للستور، ثم الكاش، ثم نص الانتظار
+const displayUserCode = ref(
+  authStore.user?.userCode || 
+  (cachedCode && cachedCode !== 'undefined' ? cachedCode : 'جاري التحميل...')
+);
+
+// 3. مراقبة الستور لتحديث العرض والذاكرة عند وصول البيانات
+watch(() => authStore.user?.userCode, (newCode) => {
+  if (newCode) {
+    displayUserCode.value = newCode;
+    localStorage.setItem('saved_user_code', newCode);
+  }
+}, { immediate: true });
+// ---------------------------------------
 
 const formatDate = (date) => {
   if (!date) return '---';
@@ -145,6 +184,25 @@ const formatDate = (date) => {
 const getArabicStatus = (status) => {
   const map = { active: 'نشط', pending: 'معلق', cancelled: 'ملغي', expired: 'منتهي' };
   return map[status] || status;
+};
+
+const copyUserCode = () => {
+  // النسخ يعتمد على المتغير المعروض حالياً لضمان العمل حتى لو كان من الكاش
+  const code = displayUserCode.value;
+  
+  if (code && code !== 'جاري التحميل...') {
+    navigator.clipboard.writeText(code);
+    addNotification('تم نسخ المعرف بنجاح', 'success');
+  } else {
+    // محاولة أخيرة من الستور
+    const fallbackCode = authStore.user?.userCode;
+    if (fallbackCode) {
+         navigator.clipboard.writeText(fallbackCode);
+         addNotification('تم نسخ المعرف بنجاح', 'success');
+    } else {
+         addNotification('يرجى الانتظار، جاري تحميل المعرف...', 'warning');
+    }
+  }
 };
 
 onMounted(() => {
@@ -227,6 +285,39 @@ onMounted(() => {
 .card-body { padding: 24px; background: var(--white); } 
 .card-body.no-padding { padding: 0; }
 
+/* --- Identity Card Styles (New) --- */
+.identity-card {
+  border-left: 5px solid var(--primary);
+}
+.identity-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+}
+.identity-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.icon-box {
+  width: 50px;
+  height: 50px;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.text-box { display: flex; flex-direction: column; }
+.text-box .label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
+.text-box .user-code { font-size: 1.6rem; color: var(--primary); font-family: monospace; letter-spacing: 1px; font-weight: 800; line-height: 1; }
+.btn-copy { border-radius: 20px; padding: 8px 20px; border: 2px solid var(--primary); font-weight: 700; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+.btn-copy:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.3); }
+
+/* --- Subscription Details --- */
 .subscription-details {
   padding: 5px 10px; 
 }
@@ -288,6 +379,12 @@ onMounted(() => {
 .badge-warning { background: var(--warning, #feca57); }
 .badge-expired, .badge-cancelled { background: var(--gray-500, #95a5a6); }
 
+@media (max-width: 600px) {
+  .d-none-mobile { display: none; }
+  .identity-body { padding: 15px; }
+  .text-box .user-code { font-size: 1.2rem; }
+}
+
 /* --- Strict Dark Mode Overrides (High Accuracy) --- */
 :global(body.dark-mode) .card { 
   background: #1e1e1e !important; 
@@ -297,6 +394,8 @@ onMounted(() => {
 :global(body.dark-mode) .card-body { 
   background: #1e1e1e !important; 
 }
+:global(body.dark-mode) .identity-body { background: #1e1e1e !important; }
+:global(body.dark-mode) .icon-box { background: rgba(255, 255, 255, 0.05); }
 :global(body.dark-mode) .card-footer { 
   background: #252525 !important; 
   border-top-color: #333 !important; 

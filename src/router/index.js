@@ -17,6 +17,7 @@ const MySubscriptionView = () => import('@/components/views/MySubscriptionView.v
 const PaymentView = () => import('@/components/views/PaymentView.vue')
 const AdminView = () => import('@/components/views/AdminView.vue')
 const ItineraryView = () => import('@/components/views/ItineraryView.vue')
+const ShareHarvestView = () => import('@/components/views/ShareHarvestView.vue')
 
 const routes = [
   {
@@ -50,6 +51,12 @@ const routes = [
         path: 'itinerary', 
         name: 'Itinerary', 
         component: ItineraryView,
+        meta: { requiresSubscription: true } 
+      },
+      { 
+        path: 'share', 
+        name: 'ShareHarvest', 
+        component: ShareHarvestView,
         meta: { requiresSubscription: true } 
       },
       { 

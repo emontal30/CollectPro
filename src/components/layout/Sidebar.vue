@@ -8,7 +8,6 @@
   <div id="sidebar" class="sidebar" :class="{ active: store.isOpen }">
 
     <div class="sidebar-header">
-      <!-- App Brand Box -->
       <div class="brand-box">
         <h1 class="brand-name">Collect <span class="brand-highlight">Pro</span></h1>
         <img src="/favicon.svg" alt="Collect Pro Logo" class="brand-logo" />
@@ -23,14 +22,18 @@
             <span id="user-email" class="user-email">
               {{ authStore.user?.email }}
             </span>
+            
             <div class="user-id-row">
-              <span id="user-id" class="user-id" title="معرف المستخدم الخاص بك">
-                ID: {{ authStore.user?.id?.slice(0, 8) || '---' }}
-              </span>
-              <button @click="copyUserId" class="copy-id-btn" title="نسخ المعرف الكامل">
+              <div class="id-content-wrapper">
+                 <span id="user-id" class="user-id" title="كود المشاركة">
+                   UID: {{ authStore.user?.userCode || authStore.user?.id?.slice(0,8) || '---' }}
+                 </span>
+              </div>
+              <button @click="copyUserId" class="copy-id-btn" title="نسخ الكود فقط">
                 <i class="fas fa-copy"></i>
               </button>
             </div>
+            
           </div>
         </div>
       </div>
@@ -54,10 +57,8 @@
       </ul>
     </div>
 
-    <!-- تذييل الشريط الجانبي -->
     <div class="sidebar-footer">
       
-      <!-- أزرار التحكم الجديدة فوق تسجيل الخروج -->
       <div class="footer-actions-row">
         <button 
           class="sidebar-action-btn" 
@@ -83,7 +84,6 @@
         </button>
       </div>
 
-      <!-- فاصل متناسق -->
       <div class="footer-divider"></div>
 
       <div class="logout-container">
@@ -103,15 +103,15 @@
         <h4 class="subscription-title">حالة الاشتراك:</h4>
         <div class="subscription-info-box" :class="subStore.ui.class">
           <div class="subscription-main-row">
-             <i class="fas status-icon" :class="subStore.ui.icon"></i>
-             <span class="status-text">{{ subStore.ui.statusText }}</span>
+              <i class="fas status-icon" :class="subStore.ui.icon"></i>
+              <span class="status-text">{{ subStore.ui.statusText }}</span>
           </div>
           <div class="subscription-details-row">
-             <span class="details-text">
-               {{ subStore.ui.detailsPrefix }}
-               <span v-if="subStore.ui.days !== null" class="days-number">{{ subStore.ui.days }}</span>
-               {{ subStore.ui.detailsSuffix }}
-             </span>
+              <span class="details-text">
+                {{ subStore.ui.detailsPrefix }}
+                <span v-if="subStore.ui.days !== null" class="days-number">{{ subStore.ui.days }}</span>
+                {{ subStore.ui.detailsSuffix }}
+              </span>
           </div>
         </div>
       </div>
@@ -145,10 +145,13 @@ const router = useRouter();
 const { confirm, addNotification } = inject('notifications');
 
 const copyUserId = async () => {
-  if (!authStore.user?.id) return;
+  const codeToCopy = authStore.user?.userCode || authStore.user?.id;
+  
+  if (!codeToCopy) return;
+  
   try {
-    await navigator.clipboard.writeText(authStore.user.id);
-    addNotification('تم نسخ المعرف بنجاح!', 'success');
+    await navigator.clipboard.writeText(codeToCopy);
+    addNotification(`تم نسخ الكود بنجاح: ${codeToCopy}`, 'success');
   } catch (err) {
     logger.error('Failed to copy user ID:', err);
     addNotification('فشل نسخ المعرف', 'error');
@@ -159,11 +162,13 @@ const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
 const isEnforced = ref(false); 
 
+// تم التحديث: إضافة رابط صفحة المشاركة
 const navLinks = [
   { to: '/app/dashboard', label: 'إدخال البيانات', icon: 'fas fa-tachometer-alt', protected: true },
   { to: '/app/harvest', label: 'التحصيلات', icon: 'fas fa-donate', protected: true },
   { to: '/app/archive', label: 'الأرشيف', icon: 'fas fa-archive', protected: true },
   { to: '/app/itinerary', label: 'خط السير', icon: 'fas fa-map-marked-alt', protected: true },
+  { to: '/app/share', label: 'مشاركة التحصيل', icon: 'fas fa-users', protected: true }, // رابط جديد
   { to: '/app/counter', label: 'عداد الأموال', icon: 'fas fa-calculator', protected: true },
   { to: '/app/subscriptions', label: 'الاشتراكات', icon: 'fas fa-credit-card', protected: false },
   { to: '/app/my-subscription', label: 'اشتراكي', icon: 'fas fa-user-shield', protected: false },
@@ -286,8 +291,6 @@ async function processLocationQueue() {
   if (error) {
     addNotification('Failed to sync some locations.', 'error');
     console.error('Supabase sync error:', error);
-    // Decide on error handling: keep failed items or discard?
-    // For now, we clear the queue to avoid repeated failures on same data.
     await localforage.removeItem('pending_locations_queue');
   } else {
     addNotification('Offline locations synced successfully!', 'success');
@@ -299,9 +302,7 @@ onMounted(async () => {
   await checkEnforcementStatus();
   if (authStore.user) { await subStore.init(authStore.user); }
 
-  // Listen for online event to process queue
   window.addEventListener('online', processLocationQueue);
-  // Also try to process on mount in case we are already online
   if (navigator.onLine) {
     processLocationQueue();
   }
@@ -375,25 +376,87 @@ const handleLogout = async () => {
 .brand-logo { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255, 239, 0, 0.5)); transition: transform 0.3s ease; }
 .brand-name { font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.5px; }
 .brand-highlight { color: #2dd4bf; }
-.user-data-container { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 14px; padding: 12px 15px; margin-bottom: 12px; }
-.user-name { font-weight: 700; font-size: 1.1rem; color: #ffffff; margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; }
-.user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; display: block; word-break: break-all; }
-.user-id { font-size: 10px; color: rgba(255,255,255,0.7); font-family: monospace; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
-.user-id-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; }
+
+/* --- تنسيقات بيانات المستخدم الجديدة لضمان عدم الاختفاء --- */
+.user-data-container { 
+    background: rgba(255, 255, 255, 0.12); 
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    border-radius: 14px; 
+    padding: 12px 15px; 
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.user-name { font-weight: 700; font-size: 1.1rem; color: #ffffff; margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-email { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 10px; display: block; word-break: break-all; }
+
+/* شريط المعرف ليكون ظاهراً وقوياً */
+.user-id-row { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 8px; 
+    padding: 6px 0; /* Adjust padding for the row */
+}
+
+.id-content-wrapper {
+    flex: 1; /* يأخذ المساحة المتبقية */
+    min-width: 0; /* ضروري لمنع النص من دفع العنصر للخارج */
+    overflow: hidden;
+}
+
+.user-id { 
+    font-size: 12px; 
+    color: #a7f3d0; 
+    font-family: monospace; 
+    font-weight: bold; 
+    letter-spacing: 0.5px;
+    white-space: nowrap; /* يمنع الالتفاف */
+    display: block;
+    direction: rtl; /* لضمان ظهور UID على اليمين دائماً */
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+    /* NEW: Badge styling moved here */
+    background: rgba(0, 0, 0, 0.25); /* خلفية داكنة للشريط */
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .copy-id-btn {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   padding: 0;
   margin: 0;
-  font-size: 12px;
-  line-height: 1;
-  transition: color 0.2s ease;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* يمنع الزر من الانكماش */
 }
 .copy-id-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
+  transform: scale(1.05);
 }
+.copy-id-btn:active {
+  transform: scale(0.95);
+}
+/* ------------------------------------------------ */
 
 .sidebar-content { flex: 1; }
 .sidebar-footer { margin-top: auto; padding: 15px; background: rgba(0, 0, 0, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.1); }

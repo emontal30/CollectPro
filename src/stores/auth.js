@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { supabase } from '@/supabase'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { supabase } from '@/supabase';
 import { useNotifications } from '@/composables/useNotifications';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
@@ -10,21 +10,50 @@ import { clearCacheOnLogout } from '@/services/cacheManager';
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
-  const user = ref(null)
-  const userProfile = ref(null) 
-  const isLoading = ref(true) 
-  const isInitialized = ref(false)
-  const isSubscriptionEnforced = ref(false)
-  const authListener = ref(null)
+  const user = ref(null);
+  const userProfile = ref(null);
+  const isLoading = ref(true);
+  const isInitialized = ref(false);
+  const isSubscriptionEnforced = ref(false);
+  const authListener = ref(null);
 
-  const { addNotification } = useNotifications()
-  const settingsStore = useSettingsStore()
+  const { addNotification } = useNotifications();
+  const settingsStore = useSettingsStore();
 
   const USER_PROFILE_CACHE_KEY = 'user_profile_cache_v1';
 
   // --- Getters ---
-  const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => userProfile.value?.role === 'admin')
+  const isAuthenticated = computed(() => !!user.value);
+  const isAdmin = computed(() => userProfile.value?.role === 'admin');
+
+  // --- Internal Helpers ---
+
+  /**
+   * دالة لجلب البيانات الإضافية (الكود المختصر) من جدول profiles
+   * ودمجها في كائن المستخدم الحالي لتكون متاحة في التطبيق
+   */
+  async function fetchAndMergeUserProfile(userId) {
+    if (!userId) return;
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('user_code, full_name')
+        .eq('id', userId)
+        .single();
+
+      if (profile && user.value) {
+        // ندمج الكود والاسم في كائن المستخدم مباشرة لسهولة الوصول
+        user.value = {
+          ...user.value,
+          userCode: profile.user_code || '---',
+          fullName: profile.full_name || user.value.user_metadata?.full_name || user.value.email
+        };
+        logger.info('🆔 User code loaded:', profile.user_code);
+      }
+    } catch (err) {
+      logger.warn('Failed to fetch user extended profile:', err.message);
+    }
+  }
 
   // --- Actions ---
 
@@ -45,11 +74,8 @@ export const useAuthStore = defineStore('auth', () => {
     
     const hash = window.location.hash;
     if (hash && (hash.includes('access_token') || hash.includes('error'))) {
-      // استخدام URL API للحفاظ على نظافة الكود
       const url = new URL(window.location.href);
       url.hash = '';
-      
-      // الحفاظ على history.state لتجنب تحذير Vue Router
       window.history.replaceState(window.history.state, '', url.toString());
       logger.info('🧹 URL Hash cleaned while preserving history state');
     }
@@ -73,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     
     try {
-      const result = await api.user.syncUserProfile(userData)
+      const result = await api.user.syncUserProfile(userData);
       if (result && !result.error && result.profile) {
         if (JSON.stringify(userProfile.value) !== JSON.stringify(result.profile)) {
            userProfile.value = result.profile;
@@ -81,7 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } catch (err) {
-      logger.warn('Profile Sync Warning:', err.message)
+      logger.warn('Profile Sync Warning:', err.message);
     }
   }
 
@@ -106,40 +132,21 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     
     try {
-      loadProfileFromCache();
-      await loadSystemConfig();
-
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        user.value = session.user;
-        isLoading.value = false;
-        isInitialized.value = true;
-
-        Promise.all([
-            navigator.onLine ? api.auth.getUser().then(({user: u}) => { if(u) user.value = u }) : Promise.resolve(),
-            syncUserProfile(session.user),
-            settingsStore.applySettings()
-        ]).then(() => {
-            cleanUrlHash();
-            // تقليل الحاجة لإعادة التحميل إلا في حالات الضرورة القصوى
-            // triggerOneTimeLoginReload(); 
-        });
-
-      } else {
-        isLoading.value = false;
-        isInitialized.value = true;
-        cleanUrlHash(); // تنظيف حتى لو لم يكن هناك جلسة (حالات الخطأ)
+        await updateUserState(session);
       }
+      
+      isLoading.value = false;
+      isInitialized.value = true;
+      cleanUrlHash();
 
       if (authListener.value?.subscription) authListener.value.subscription.unsubscribe();
 
       const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (session?.user) {
-            user.value = session.user;
-            syncUserProfile(session.user);
-          }
+          await updateUserState(session);
         } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
           await logoutCleanup();
           if (window.location.pathname !== '/') window.location.href = '/';
@@ -151,6 +158,43 @@ export const useAuthStore = defineStore('auth', () => {
       logger.error('💥 Auth Init Error:', err);
       isLoading.value = false;
       isInitialized.value = true;
+    }
+  }
+
+  // Helper to consolidate user state updates and prevent race conditions
+  async function updateUserState(session) {
+    if (!session?.user) {
+      user.value = null;
+      return;
+    }
+
+    try {
+      const [userResponse, profileResponse] = await Promise.all([
+        api.auth.getUser(),
+        supabase.from('profiles').select('user_code, full_name').eq('id', session.user.id).single()
+      ]);
+
+      let completeUser = { ...session.user };
+
+      if (userResponse?.user) {
+        completeUser = { ...completeUser, ...userResponse.user };
+      }
+
+      if (profileResponse?.data) {
+        completeUser.userCode = profileResponse.data.user_code || null;
+        completeUser.fullName = profileResponse.data.full_name || completeUser.user_metadata?.full_name;
+      }
+      
+      user.value = completeUser;
+      
+      // Post-update side effects
+      syncUserProfile(completeUser);
+      settingsStore.applySettings();
+
+    } catch (error) {
+      logger.error('Failed to update user state:', error);
+      // Fallback to session user if fetches fail
+      if (!user.value) user.value = session.user;
     }
   }
 

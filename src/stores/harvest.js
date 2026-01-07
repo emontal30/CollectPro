@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth';
 import { useArchiveStore } from './archiveStore';
+import { useCollaborationStore } from './collaborationStore'; // استيراد الستور الجديد
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { safeDeepClone } from '@/services/cacheManager';
 import { apiInterceptor } from '@/services/apiInterceptor';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
+import { supabase } from '@/supabase'; // استيراد سوبا بيز
 
 const HARVEST_ROWS_KEY = 'harvest_rows';
 
@@ -21,6 +23,10 @@ export const useHarvestStore = defineStore('harvest', {
     error: null,
     searchQuery: '',
     isModified: false,
+    
+    // --- New State for Collaboration ---
+    realtimeChannel: null, // قناة الاتصال الحية
+    isCloudSyncing: false, // حالة المزامنة السحابية
   }),
 
   getters: {
@@ -37,6 +43,17 @@ export const useHarvestStore = defineStore('harvest', {
     
     customerCount: (state) => {
       return (state.rows || []).filter(row => row.shop && row.shop.trim() !== '').length;
+    },
+
+    hasData: (state) => {
+      if (!state.rows || state.rows.length === 0) {
+        return false;
+      }
+      if (state.rows.length > 1) {
+        return true;
+      }
+      const firstRow = state.rows[0];
+      return !!(firstRow.shop || firstRow.code || firstRow.amount || firstRow.collector || firstRow.extra);
     },
     
     filteredRows: (state) => {
@@ -67,6 +84,12 @@ export const useHarvestStore = defineStore('harvest', {
 
   actions: {
     async initialize() {
+      // إذا كنا في جلسة مشاهدة (Collaborator Mode)، لا نحمل البيانات المحلية
+      const collabStore = useCollaborationStore();
+      if (collabStore.activeSessionId) {
+        return; // البيانات تأتي من switchToUserSession
+      }
+
       this.isLoading = true;
       try {
         this.loadMasterLimit();
@@ -160,15 +183,142 @@ export const useHarvestStore = defineStore('harvest', {
       await this.clearAll();
     },
 
+    // --- Core Logic: Save & Sync ---
     async saveRowsToStorage() {
       try {
+        // 1. الحفظ المحلي دائماً (Backup & Offline Support)
         const cleanedRows = safeDeepClone(this.rows);
         await localforage.setItem(HARVEST_ROWS_KEY, cleanedRows);
         this.isModified = true;
+
+        // 2. المزامنة السحابية (Collaboration Support)
+        const authStore = useAuthStore();
+        const collabStore = useCollaborationStore();
+
+        // الشرط: نقوم بالرفع فقط إذا كان المستخدم متصلاً ولديه حساب
+        // وإما أنه في جلسة مشاركة (Active Session) أو أنه يعمل على بياناته الخاصة
+        if (navigator.onLine && authStore.user) {
+          const targetUserId = collabStore.activeSessionId || authStore.user.id;
+          
+          // نرفع البيانات في الخلفية دون انتظار لعدم تعطيل الواجهة
+          this.syncToCloud(targetUserId).catch(err => {
+             // يمكن تجاهل أخطاء الشبكة العابرة هنا، حيث سيتم الحفظ محلياً
+             logger.warn('Cloud sync skipped:', err.message); 
+          });
+        }
+
       } catch (error) {
-        logger.error('Error saving rows to localforage:', error);
+        logger.error('Error saving rows:', error);
       }
     },
+
+    // --- New Action: Cloud Sync (Upsert to live_harvest) ---
+    async syncToCloud(targetUserId) {
+      if (!targetUserId) return;
+      this.isCloudSyncing = true;
+      
+      try {
+        const payload = {
+          user_id: targetUserId,
+          rows: this.rows, // سيتم تحويلها لـ JSONB تلقائياً
+          master_limit: this.masterLimit,
+          extra_limit: this.extraLimit,
+          current_balance: this.currentBalance,
+          last_updated_by: (await supabase.auth.getUser()).data.user?.id,
+          updated_at: new Date()
+        };
+
+        const { error } = await supabase.from('live_harvest').upsert(payload);
+        if (error) throw error;
+        
+      } catch (error) {
+        // لا نريد إيقاف التطبيق بسبب فشل المزامنة الخلفية
+        console.warn('Sync to cloud failed (minor):', error.message);
+      } finally {
+        this.isCloudSyncing = false;
+      }
+    },
+
+    // --- New Action: Switch Session (Viewer/Editor Mode) ---
+    async switchToUserSession(userId) {
+      // 1. تنظيف الاشتراك السابق
+      if (this.realtimeChannel) {
+        await supabase.removeChannel(this.realtimeChannel);
+        this.realtimeChannel = null;
+      }
+
+      // 2. إذا كان userId فارغ (null)، نعود للوضع المحلي (بياناتي)
+      if (!userId) {
+        await this.initialize(); 
+        return;
+      }
+
+      this.isLoading = true;
+
+      try {
+        // 3. جلب البيانات الأولية من السحابة (Initial Fetch)
+        const { data, error } = await supabase
+          .from('live_harvest')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found (which is fine)
+           throw error;
+        }
+
+        if (data) {
+          this.rows = data.rows || [];
+          this.masterLimit = parseFloat(data.master_limit) || 0;
+          this.extraLimit = parseFloat(data.extra_limit) || 0;
+          this.currentBalance = parseFloat(data.current_balance) || 0;
+        } else {
+          // صفحة فارغة جديدة للمستخدم المراقب
+          this.rows = []; 
+          this.masterLimit = 100000;
+          this.extraLimit = 0;
+          this.currentBalance = 0;
+        }
+
+        // 4. تفعيل الاستماع اللحظي (Realtime Subscription)
+        this.realtimeChannel = supabase
+          .channel(`harvest-${userId}`)
+          .on(
+            'postgres_changes',
+            { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'live_harvest', 
+              filter: `user_id=eq.${userId}` 
+            },
+            (payload) => {
+              // عند وصول تحديث من الطرف الآخر
+              const newData = payload.new;
+              // نتأكد أن التحديث ليس مني لتجنب الارتداد (Loop)
+              // (اختياري، لكن Supabase يرسل للجميع)
+              
+              console.log('⚡ Live update received:', payload);
+              
+              if (newData) {
+                this.rows = newData.rows;
+                this.masterLimit = parseFloat(newData.master_limit) || 0;
+                this.extraLimit = parseFloat(newData.extra_limit) || 0;
+                this.currentBalance = parseFloat(newData.current_balance) || 0;
+              }
+            }
+          )
+          .subscribe();
+
+      } catch (err) {
+        logger.error('Failed to switch session:', err);
+        // في حال الخطأ نعود للبيانات المحلية كإجراء احترازي
+        await this.initialize();
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // --- Existing Helper Methods ---
 
     async getSecureCairoDate() {
       const controller = new AbortController();
@@ -184,9 +334,6 @@ export const useHarvestStore = defineStore('harvest', {
         }
         
         const data = await response.json();
-        logger.info('Time API response:', data); // For debugging
-
-        // Use dateTime and split it, as it's a more standard format (e.g., "2026-01-06T14:30:00")
         const secureDate = data.dateTime ? data.dateTime.split('T')[0] : null;
         
         if (!secureDate || !/^\d{4}-\d{2}-\d{2}$/.test(secureDate)) {
@@ -196,10 +343,7 @@ export const useHarvestStore = defineStore('harvest', {
         return secureDate;
       } catch (error) {
         logger.error('Secure time fetch failed, using fallback:', error.name === 'AbortError' ? 'Timeout' : error.message);
-        
-        const fallbackDate = new Date().toLocaleDateString('en-CA', {
-          timeZone: 'Africa/Cairo'
-        });
+        const fallbackDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
         return fallbackDate;
       } finally {
         clearTimeout(timeout);
@@ -240,13 +384,9 @@ export const useHarvestStore = defineStore('harvest', {
         
         const localKey = `arch_data_${dateToSave}`;
 
-        // 1. الحفظ المحلي الفوري
         await localforage.setItem(localKey, cleanRows);
-        
-        // 2. تحديث قائمة التواريخ محلياً
         await archiveStore.loadAvailableDates();
 
-        // 3. الحفظ السحابي
         const dbPayload = {
           user_id: authStore.user.id,
           archive_date: dateToSave,
@@ -274,7 +414,7 @@ export const useHarvestStore = defineStore('harvest', {
           message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
         }
 
-        // ===== START: Logic to save overdue payments =====
+        // Logic to save overdue payments
         const overdueStores = validRows
           .map(row => {
             const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
@@ -292,7 +432,6 @@ export const useHarvestStore = defineStore('harvest', {
         } else {
           await localforage.removeItem('overdue_stores');
         }
-        // ===== END: Logic to save overdue payments =====
 
         return { success: true, message };
 
@@ -341,7 +480,7 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async loadDataFromStorage() {
-      const newData = localStorage.getItem("harvestData"); // This is temporary, so localStorage is fine.
+      const newData = localStorage.getItem("harvestData");
       if (newData) {
         const newRows = this.parseRawDataToRows(newData);
         if (newRows.length > 0) {
@@ -358,7 +497,6 @@ export const useHarvestStore = defineStore('harvest', {
     addRowWithData(newRowData) {
       if (!newRowData || !newRowData.code) return;
 
-      // If the table is empty or just has the initial blank row, clear it first.
       if (this.rows.length === 0 || (this.rows.length === 1 && !this.rows[0].code && !this.rows[0].shop)) {
         this.rows = [];
       }
@@ -371,7 +509,7 @@ export const useHarvestStore = defineStore('harvest', {
         extra: null,
         collector: null,
         net: 0,
-        isImported: true, // Mark as imported to make it readonly
+        isImported: true,
         hasOverdue: false,
         hasOverpayment: false
       };
@@ -391,6 +529,7 @@ export const useHarvestStore = defineStore('harvest', {
     setMasterLimit(limit) {
       this.masterLimit = parseFloat(limit) || 0;
       localStorage.setItem('masterLimit', this.masterLimit.toString());
+      this.saveRowsToStorage(); // Trigger sync
     },
 
     loadMasterLimit() {
@@ -405,6 +544,7 @@ export const useHarvestStore = defineStore('harvest', {
     setExtraLimit(limit) {
       this.extraLimit = parseFloat(limit) || 0;
       localStorage.setItem('extraLimit', this.extraLimit.toString());
+      this.saveRowsToStorage(); // Trigger sync
     },
 
     loadExtraLimit() {
@@ -415,6 +555,7 @@ export const useHarvestStore = defineStore('harvest', {
     setCurrentBalance(balance) {
       this.currentBalance = parseFloat(balance) || 0;
       localStorage.setItem('currentBalance', this.currentBalance.toString());
+      this.saveRowsToStorage(); // Trigger sync
     },
 
     formatNumber(num) {

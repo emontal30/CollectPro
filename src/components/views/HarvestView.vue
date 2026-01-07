@@ -1,5 +1,19 @@
 ﻿<template>
   <div class="harvest-page">
+    
+    <div v-if="collabStore.activeSessionId" class="collab-banner animate-slide-down">
+      <div class="banner-content">
+        <i class="fas fa-eye pulse-icon"></i>
+        <span>
+          أنت تشاهد تحصيلات: <strong>{{ collabStore.activeSessionName }}</strong>
+          <span v-if="isReadOnly" class="badge-viewer">(وضع المشاهدة فقط)</span>
+        </span>
+      </div>
+      <button @click="exitSession" class="btn-exit">
+        <i class="fas fa-sign-out-alt"></i> خروج
+      </button>
+    </div>
+
     <PageHeader 
       title="التحصيلات" 
       subtitle="إدارة وتتبع جميع تحصيلات العملاء"
@@ -105,6 +119,7 @@
                 type="text" 
                 placeholder="اسم المحل" 
                 class="editable-input" 
+                :disabled="isReadOnly"
                 @input="updateShop(row, index, $event)" 
                 @click="showTooltip($event.target, row.shop)" 
               />
@@ -119,6 +134,7 @@
                 inputmode="decimal"
                 placeholder="الكود" 
                 class="editable-input" 
+                :disabled="isReadOnly"
                 @input="updateCode(row, index, $event)" 
               />
               <span v-else class="readonly-field">{{ row.code }}</span>
@@ -133,6 +149,7 @@
                 :value="formatInputNumber(row.amount)"
                 class="amount-input centered-input"
                 lang="en"
+                :disabled="isReadOnly"
                 @input="updateAmount(row, index, $event)"
               />
               <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
@@ -148,10 +165,11 @@
                   class="centered-input text-center-important"
                   :class="{ 'negative-extra': (parseFloat(row.extra) || 0) < 0 }"
                   lang="en"
+                  :disabled="isReadOnly"
                   @focus="showTooltip($event.target, row.shop)"
                   @input="updateExtra(row, index, $event)"
                 />
-                <button class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
+                <button v-if="!isReadOnly" class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
               </div>
             </td>
 
@@ -163,6 +181,7 @@
                 :value="formatInputNumber(row.collector)"
                 class="centered-input"
                 lang="en"
+                :disabled="isReadOnly"
                 @focus="showTooltip($event.target, row.shop)"
                 @input="updateCollector(row, index, $event)"
               />
@@ -244,31 +263,32 @@
                     <button class="close-btn" @click="isOverdueModalOpen = false">&times;</button>
                 </div>
                 <div class="modal-body scrollable-list">
-                                        <div v-if="overdueStores.length === 0" class="text-center text-success p-4">
-                                            <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                            <p>لا توجد مديونيات متأخرة من اليوم السابق.</p>
-                                        </div>
-                                        <div v-else class="overdue-table">
-                                            <div class="overdue-header">
-                                                <input type="checkbox" v-model="allOverdueSelected" />
-                                                <span class="header-item">المحل</span>
-                                                <span class="header-item text-center">الكود</span>
-                                                <span class="header-item text-center">المديونية</span>
-                                            </div>
-                                            <div class="overdue-body">
-                                                                            <div v-for="store in overdueStores" :key="store.code" class="overdue-row">
-                                                                                <input type="checkbox" v-model="selectedOverdueStores" :value="store" />
-                                                                                <span class="cell-item">{{ store.shop || 'بدون اسم' }}</span>
-                                                                                <span class="cell-item text-center">{{ store.code }}</span>
-                                                                                <span 
-                                                                                  class="cell-item text-center font-bold"
-                                                                                  :class="store.net > 0 ? 'text-primary' : 'text-danger'"
-                                                                                >
-                                                                                  {{ store.net > 0 ? '+' : '' }}{{ store.net }}
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>                                    </div>
+                    <div v-if="overdueStores.length === 0" class="text-center text-success p-4">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>لا توجد مديونيات متأخرة من اليوم السابق.</p>
+                    </div>
+                    <div v-else class="overdue-table">
+                        <div class="overdue-header">
+                            <input type="checkbox" v-model="allOverdueSelected" />
+                            <span class="header-item">المحل</span>
+                            <span class="header-item text-center">الكود</span>
+                            <span class="header-item text-center">المديونية</span>
+                        </div>
+                        <div class="overdue-body">
+                            <div v-for="store in overdueStores" :key="store.code" class="overdue-row">
+                                <input type="checkbox" v-model="selectedOverdueStores" :value="store" />
+                                <span class="cell-item">{{ store.shop || 'بدون اسم' }}</span>
+                                <span class="cell-item text-center">{{ store.code }}</span>
+                                <span 
+                                    class="cell-item text-center font-bold"
+                                    :class="store.net > 0 ? 'text-primary' : 'text-danger'"
+                                >
+                                    {{ store.net > 0 ? '+' : '' }}{{ store.net }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="modal-footer" v-if="overdueStores.length > 0">
                     <button class="btn btn-secondary" @click="isOverdueModalOpen = false">إلغاء</button>
                     <button class="btn btn-primary" @click="applyOverdue" :disabled="selectedOverdueStores.length === 0">
@@ -299,6 +319,7 @@
                 class="bold-input text-center font-bold master-limit-input"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
+                :disabled="isReadOnly"
                 @input="updateSummaryField($event, 'masterLimit', 'ليمت الماستر')"
               />
             </div>
@@ -316,6 +337,7 @@
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل الليمت الإضافي"
+                :disabled="isReadOnly"
                 @input="updateSummaryField($event, 'extraLimit', 'الليمت الإضافي')"
               />
             </div>
@@ -335,6 +357,7 @@
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل رصيد الماستر الحالي"
+                :disabled="isReadOnly"
                 @input="updateSummaryField($event, 'currentBalance', 'رصيد الماستر الحالي')"
               />
             </div>
@@ -390,7 +413,7 @@
         </router-link>
       </div>
 
-      <div class="buttons-row">
+      <div class="buttons-row" v-if="!collabStore.activeSessionId">
         <button class="btn btn-dashboard btn-dashboard--clear" @click="confirmClearAll">
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
@@ -410,7 +433,8 @@ import { useRoute } from 'vue-router';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
 import { useAuthStore } from '@/stores/auth';
-import { useItineraryStore } from '@/stores/itineraryStore'; // Import
+import { useItineraryStore } from '@/stores/itineraryStore';
+import { useCollaborationStore } from '@/stores/collaborationStore'; // Store الجديد
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
 import localforage from 'localforage';
@@ -425,6 +449,7 @@ const store = useHarvestStore();
 const archiveStore = useArchiveStore();
 const authStore = useAuthStore();
 const itineraryStore = useItineraryStore();
+const collabStore = useCollaborationStore();
 const route = useRoute();
 const { confirm, addNotification } = inject('notifications');
 
@@ -458,6 +483,16 @@ const overdueStores = ref([]);
 const selectedOverdueStores = ref([]);
 
 // --- Computed ---
+// حساب صلاحيات المستخدم في وضع المشاركة
+const isReadOnly = computed(() => {
+  if (!collabStore.activeSessionId) return false; // بياناتي أنا (تعديل مسموح)
+  
+  // البحث عن دوري في هذا التحصيل
+  // إذا كنت أنا المشرف (Sender)، فغالباً لدي صلاحية، ولكن نتحقق من الدور
+  const collabSession = collabStore.collaborators.find(c => c.userId === collabStore.activeSessionId);
+  return collabSession && collabSession.role === 'viewer';
+});
+
 const allOverdueSelected = computed({
   get: () => overdueStores.value.length > 0 && selectedOverdueStores.value.length === overdueStores.value.length,
   set: (value) => {
@@ -507,6 +542,13 @@ const getFilteredTotalNetIcon = computed(() => getNetIcon(filteredTotalNetValue.
 
 // --- Logic Methods ---
 
+// 0. Collaboration Exit
+const exitSession = () => {
+  collabStore.setActiveSession(null, null);
+  store.switchToUserSession(null); // العودة للمحلي
+  addNotification('تمت العودة إلى تحصيلاتك الخاصة', 'success');
+};
+
 // 1. Overdue Logic
 const showOverdueModal = async () => {
   overdueStores.value = await store.fetchOverdueStores();
@@ -534,7 +576,7 @@ const showMissingCenters = () => {
   isMissingModalOpen.value = true;
 };
 
-// 2. Sort Logic
+// 3. Sort Logic
 const toggleProfileDropdown = () => {
   if (savedItineraryProfiles.value.length === 0) {
     addNotification('لا توجد قوالب خط سير محفوظة للعرض.', 'warning');
@@ -550,7 +592,7 @@ const applyItineraryProfile = (profile) => {
 };
 
 
-// 3. Tooltip
+// 4. Tooltip
 const showTooltip = (element, text) => {
   if (!element || !text) return;
   if (showCustomTooltip.value && tooltipTargetElement.value === element) {
@@ -572,7 +614,7 @@ const showTooltip = (element, text) => {
 };
 const hideTooltip = () => { showCustomTooltip.value = false; };
 
-// 4. Update Logic & Smart Add
+// 5. Update Logic & Smart Add
 const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
 const clearSearch = () => { searchQueryLocal.value = ''; };
 
@@ -606,9 +648,7 @@ const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
     else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
 
-// ** دالة المحصل الذكية (المعدلة) **
-// ** دالة المحصل الذكية (تم إصلاح مشكلة GPS Timeout) **
-// ** دالة المحصل الذكية (تم إصلاح مشكلة ربط الموقع وتحديث الـ ID) **
+// ** دالة المحصل الذكية (مجمعة ومنظفة) **
 const updateCollector = async (row, index, e) => {
   const amountVal = parseFloat(row.amount) || 0;
   const collectorMaxLimit = amountVal + 2999;
@@ -616,25 +656,19 @@ const updateCollector = async (row, index, e) => {
   handleMoneyInput(e, (val) => {
     updateField(row, index, 'collector', val ? parseFloat(val) : null, true);
     
-    // --- منطق تحديث الموقع وإضافة خط السير ---
+    // --- منطق تحديث الموقع وإضافة خط السير (فقط إذا كان هناك قيمة) ---
     if (val && row.code) {
-        // التغيير هنا: نستخدم .find بدلاً من .some لنحصل على كائن العميل كاملاً (بما فيه الـ ID)
         const existingRoute = itineraryStore.routes.find(r => String(r.shop_code) === String(row.code));
         
-        // دالة مساعدة لمعالجة النجاح
         const handlePositionSuccess = (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
             
             if (existingRoute) {
-                // 1. تحديث الموقع (إصلاح: نرسل ID بدلاً من الكود)
                 if (itineraryStore.updateLocation) {
                     itineraryStore.updateLocation(existingRoute.id, lat, lng);
-                    // تنبيه بسيط في الكونسول للتأكد
-                    console.log(`Updated Location for ID: ${existingRoute.id}`);
                 }
             } else {
-                // 2. إضافة جديد (إذا لم يكن موجوداً)
                 itineraryStore.addRoute({
                     shop_code: row.code.toString(),
                     shop_name: row.shop,
@@ -644,9 +678,9 @@ const updateCollector = async (row, index, e) => {
             }
         };
 
-        // دالة مساعدة لمعالجة الفشل النهائي
         const handlePositionError = (err) => {
-            console.warn("GPS failed completely:", err.message);
+            console.warn("GPS failed:", err.message);
+            // إذا فشل الـ GPS ولم يكن المسار موجوداً، نضيفه بدون إحداثيات
             if (!existingRoute) {
                 itineraryStore.addRoute({
                     shop_code: row.code.toString(),
@@ -657,12 +691,10 @@ const updateCollector = async (row, index, e) => {
         };
 
         if (navigator.geolocation) {
-            // المحاولة الأولى: دقة عالية (15 ثانية)
             navigator.geolocation.getCurrentPosition(
                 handlePositionSuccess, 
                 (err) => {
-                    console.warn("High Accuracy GPS timed out, trying Low Accuracy...", err.message);
-                    // المحاولة الثانية: دقة منخفضة
+                    console.warn("High Accuracy GPS failed, trying Low Accuracy...");
                     navigator.geolocation.getCurrentPosition(
                         handlePositionSuccess,
                         handlePositionError,
@@ -712,13 +744,8 @@ const confirmClearAll = async () => {
 const archiveToday = async () => {
   isArchiving.value = true;
   try {
-    // 1. جلب التواريخ المتاحة للتأكد من أن القائمة محدثة
     await archiveStore.loadAvailableDates(true);
-    
-    // 2. الحصول على التاريخ الآمن
     const dateToSave = await store.getSecureCairoDate();
-    
-    // 3. التحقق من وجود أرشيف بنفس التاريخ
     const exists = archiveStore.dateExists(dateToSave);
     
     let confirmationMessage = {
@@ -736,7 +763,6 @@ const archiveToday = async () => {
       };
     }
     
-    // 4. طلب تأكيد المستخدم
     const { isConfirmed } = await confirm(confirmationMessage);
     
     if (!isConfirmed) {
@@ -744,7 +770,6 @@ const archiveToday = async () => {
       return;
     }
     
-    // 5. تنفيذ الأرشفة
     const res = await store.archiveTodayData();
     if (res.success) {
       addNotification(res.message, 'success');
@@ -809,6 +834,28 @@ export default {
 </script>
 
 <style scoped>
+/* Collab Banner */
+.collab-banner {
+  background: linear-gradient(to right, #fff7ed, #ffedd5);
+  border-bottom: 2px solid #fdba74;
+  color: #9a3412;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.banner-content { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
+.pulse-icon { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; color: #ea580c; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.badge-viewer { background: #fee2e2; color: #ef4444; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #fca5a5; margin-right: 5px; }
+.btn-exit { background: white; border: 1px solid #fdba74; color: #c2410c; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.btn-exit:hover { background: #fff7ed; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.animate-slide-down { animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 /* Dropdown Styles */
 .relative { position: relative; }
 .profile-dropdown {

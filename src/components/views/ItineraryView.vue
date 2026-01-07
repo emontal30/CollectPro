@@ -323,6 +323,10 @@
 
           <div v-if="store.editingRoute?.latitude" class="coords-display">
             <span class="mono">المخزن حالياً: {{ store.editingRoute.latitude }}, {{ store.editingRoute.longitude }}</span>
+            <div v-if="store.editingRoute.location_updated_at" class="update-timestamp">
+              <i class="fas fa-clock"></i>
+              آخر تحديث: {{ formatTimestamp(store.editingRoute.location_updated_at) }}
+            </div>
           </div>
         </div>
       </div>
@@ -362,11 +366,19 @@ watch(() => store.activeTab, (newTab) => {
   if (newTab === 'map') {
     // Needs a slight delay for the map container to be visible and initialized
     setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
-      fitMapToBounds();
+    window.dispatchEvent(new Event('resize'));
     }, 100);
   }
 });
+
+const formatTimestamp = (isoString) => {
+  if (!isoString) return '';
+  const options = {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  };
+  return new Date(isoString).toLocaleString('ar-EG', options);
+};
 
 // Watch for coordinate changes to refit the map
 watch(() => store.polylineCoords, () => {
@@ -375,3 +387,201 @@ watch(() => store.polylineCoords, () => {
   }
 }, { deep: true });
 </script>
+
+<style scoped>
+/* General Page & Tab Styles */
+.page-container {
+  padding: 1rem;
+}
+.tabs-container {
+  margin-bottom: 1.5rem;
+  background-color: var(--surface-bg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem;
+}
+.tabs-wrapper {
+  display: flex;
+  justify-content: center;
+}
+.tab-btn {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease-in-out;
+  font-size: 1rem;
+  position: relative;
+  border-bottom: 3px solid transparent;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.tab-btn:not(.active):hover {
+  color: var(--text-main);
+}
+.tab-content-area {
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Map Styles */
+.map-wrapper {
+  height: 70vh;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+:deep(.custom-div-icon) {
+  background: none;
+  border: none;
+}
+.custom-marker {
+  background-color: var(--primary);
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.marker-popup-content {
+  text-align: center;
+  font-family: var(--font-family);
+}
+.marker-popup-content strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+.marker-popup-content span {
+  font-size: 0.9rem;
+}
+
+/* Location Modal Styles */
+.coords-display {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.update-timestamp {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+.update-timestamp i {
+  margin-left: 4px;
+}
+
+/* Ignored Modal ("Trash") Professional Styles */
+.ignored-modal .modal-header {
+  align-items: center;
+}
+.ignored-modal .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.btn-empty-trash {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-empty-trash:hover {
+  background: var(--danger);
+  color: white;
+}
+.empty-state-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state-modal i {
+  font-size: 3rem;
+  color: var(--success);
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+.empty-state-modal p {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.ignored-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ignored-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+.ignored-list li:last-child {
+  border-bottom: none;
+}
+.ignored-list li:hover {
+  background-color: var(--bg-secondary);
+}
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+.item-name {
+  font-weight: 700;
+  color: var(--text-main);
+}
+.item-code {
+  font-size: 0.8rem;
+  font-family: monospace;
+  background-color: var(--bg-secondary);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-muted);
+}
+.btn-restore {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-restore:hover {
+  background: var(--primary-dark);
+}
+.btn-restore i {
+  margin-left: 0.5rem;
+}
+</style>

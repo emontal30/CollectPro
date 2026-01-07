@@ -28,6 +28,7 @@ CREATE TABLE public.client_routes (
     shop_name TEXT,
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
+    location_updated_at TIMESTAMP WITH TIME ZONE DEFAULT NULL, -- NEW COLUMN
     sort_order INTEGER DEFAULT 9999,
     current_balance NUMERIC DEFAULT 0, -- (اختياري) يمكن إضافته للتوثيق فقط
     is_ignored BOOLEAN DEFAULT FALSE,
