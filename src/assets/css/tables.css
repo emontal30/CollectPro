@@ -33,7 +33,7 @@ table {
 thead th, .modern-table th, .collections-table th {
   background: var(--table-header-bg);
   color: white;
-  padding: 18px 12px;
+  padding: 24px 12px; /* Increased padding for more height */
   font-weight: 700;
   font-size: 0.95rem;
   position: sticky;
@@ -88,6 +88,9 @@ tr:last-child td { border-bottom: none !important; }
   direction: rtl !important;
   font-weight: 700 !important;
   padding-right: 12px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Code Column - Fixed width to accommodate large numbers */
@@ -258,8 +261,7 @@ td.net.zero { color: var(--success); font-weight: bold; white-space: nowrap !imp
 
 /* Fix for table cells content overflow and alignment */
 .modern-table td {
-  overflow: visible !important; /* Allow controls like notch-sign to be visible */
-  white-space: normal !important; /* Allow wrapping if needed, but we keep it centered */
+  /* overflow: visible !important; -- This was causing the overlap issue */
 }
 
 /* 11. Dark Mode Specific Overrides for Total Row */

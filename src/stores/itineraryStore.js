@@ -179,21 +179,14 @@ export const useItineraryStore = defineStore('itinerary', () => {
       await safeSaveLocal(STORAGE_KEY.value, routes.value);
 
       if (newRoutesToSync.length > 0) {
-        if (navigator.onLine) {
-          const { error } = await supabase
-            .from('client_routes')
-            .upsert(newRoutesToSync, { onConflict: 'user_id, shop_code' });
-            
-          if(error) throw error;
-          await refreshIdsKeepingBalances();
-        } else {
-          await addToQueue({ type: 'batch_add', data: newRoutesToSync });
-        }
+        await addToQueue({ type: 'batch_add', data: newRoutesToSync });
+        // Trigger queue processing in the background without waiting for it
+        setTimeout(() => processQueue(), 100);
       }
-      addNotification({ message: 'تم تحديث البيانات والأرصدة ✅', type: 'success' });
+      addNotification({ message: 'تم تحديث البيانات محلياً، وجاري المزامنة في الخلفية ✅', type: 'success' });
     } catch (err) {
       logger.error('Sync Error:', err);
-      addNotification({ message: 'حدث خطأ أثناء المزامنة', type: 'error' });
+      addNotification({ message: 'حدث خطأ أثناء المزامنة المحلية', type: 'error' });
     }
   }
 
@@ -600,13 +593,29 @@ export const useItineraryStore = defineStore('itinerary', () => {
       const rem = [];
       for (const item of pendingQueue.value) {
           try {
-              if (item.type === 'batch_add' || item.type === 'batch_order') await supabase.from('client_routes').upsert(item.data, { onConflict: 'user_id, shop_code' });
-              else if (item.type === 'add') await supabase.from('client_routes').insert(item.data);
-              else if (item.type === 'ignore') await supabase.from('client_routes').update({ is_ignored: true }).in('id', item.ids);
-              else if (item.type === 'delete') await supabase.from('client_routes').delete().in('id', item.ids);
-            else if (item.type === 'update_loc') if(!String(item.id).startsWith('temp_')) await supabase.from('client_routes').update({ latitude: item.lat, longitude: item.lng }).eq('id', item.id);
-              else if (item.type === 'profile_upsert') await supabase.from('route_profiles').upsert(item.data, { onConflict: 'user_id, slot_number' });
-              else if (item.type === 'profile_delete') if(item.data && item.data.user_id) await supabase.from('route_profiles').delete().eq('user_id', item.data.user_id).eq('slot_number', item.data.slot_number);
+              if (item.type === 'batch_add') {
+                const { error } = await supabase.from('client_routes').upsert(item.data, { onConflict: 'user_id, shop_code' });
+                if (error) throw error;
+                await refreshIdsKeepingBalances();
+              } else if (item.type === 'batch_order') {
+                await supabase.from('client_routes').upsert(item.data, { onConflict: 'user_id, shop_code' });
+              } else if (item.type === 'add') {
+                await supabase.from('client_routes').insert(item.data);
+              } else if (item.type === 'ignore') {
+                await supabase.from('client_routes').update({ is_ignored: true }).in('id', item.ids);
+              } else if (item.type === 'delete') {
+                await supabase.from('client_routes').delete().in('id', item.ids);
+              } else if (item.type === 'update_loc') {
+                if(!String(item.id).startsWith('temp_')) {
+                  await supabase.from('client_routes').update({ latitude: item.lat, longitude: item.lng }).eq('id', item.id);
+                }
+              } else if (item.type === 'profile_upsert') {
+                await supabase.from('route_profiles').upsert(item.data, { onConflict: 'user_id, slot_number' });
+              } else if (item.type === 'profile_delete') {
+                if(item.data && item.data.user_id) {
+                  await supabase.from('route_profiles').delete().eq('user_id', item.data.user_id).eq('slot_number', item.data.slot_number);
+                }
+              }
           } catch(e) { rem.push(item); }
       }
       pendingQueue.value = rem; 

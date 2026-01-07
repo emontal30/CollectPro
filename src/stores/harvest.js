@@ -312,132 +312,174 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     // --- Existing Helper Methods ---
-
-    async getSecureCairoDate() {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-
+    async getAccurateDate() {
       try {
-        const response = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=Africa/Cairo', {
-          signal: controller.signal
-        });
+        // Use Supabase server time for reliability
+        const { data, error } = await apiInterceptor(supabase.rpc('get_server_time'));
         
-        if (!response.ok) {
-          throw new Error(`API response not OK: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const secureDate = data.dateTime ? data.dateTime.split('T')[0] : null;
-        
-        if (!secureDate || !/^\d{4}-\d{2}-\d{2}$/.test(secureDate)) {
-           throw new Error(`Invalid date format from API. Received: ${secureDate}`);
+        if (error) {
+          throw new Error('Supabase RPC get_server_time failed');
         }
 
-        return secureDate;
+        // The RPC returns a full ISO string (in UTC).
+        // We create a Date object from it, and then format that date
+        // specifying Cairo as the timezone for the output string.
+        const serverDate = new Date(data);
+        return serverDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
+
       } catch (error) {
-        logger.error('Secure time fetch failed, using fallback:', error.name === 'AbortError' ? 'Timeout' : error.message);
+        logger.error('Accurate time fetch failed, using local fallback:', error.message);
+        // Fallback to local time in the correct timezone format if Supabase fails.
         const fallbackDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
         return fallbackDate;
-      } finally {
-        clearTimeout(timeout);
       }
     },
 
-    async archiveTodayData() {
+    async archiveTodayData(dateToSave) {
+
       const collabStore = useCollaborationStore();
+
       if (collabStore.activeSessionId) {
+
         throw new Error("لا يمكنك أرشفة بيانات زميل، يجب إنهاء الجلسة أولاً.");
+
+      }
+
+      if (!dateToSave) {
+
+        throw new Error("Date is required for archiving.");
+
       }
 
       try {
+
         this.isLoading = true;
         
-        const dateToSave = await this.getSecureCairoDate();
-
         const authStore = useAuthStore();
+
         const archiveStore = useArchiveStore();
 
         if (!authStore.isAuthenticated) throw new Error('يجب تسجيل الدخول أولاً');
 
-        const validRows = this.rows.filter(r => 
-          r.shop || r.code || (parseFloat(r.amount) > 0) || (parseFloat(r.collector) > 0)
-        );
 
-        if (validRows.length === 0) return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
+    
 
-        const cleanRows = safeDeepClone(validRows).map(row => {
-          const amount = parseFloat(row.amount) || 0;
-          const extra = parseFloat(row.extra) || 0;
-          const collector = parseFloat(row.collector) || 0;
-          const net = collector - (amount + extra);
-          return {
-            shop: row.shop || '',
-            code: row.code || '',
-            amount,
-            extra,
-            collector,
-            net
-          };
-        });
-        
-        const localKey = `arch_data_${dateToSave}`;
+            const validRows = this.rows.filter(r => 
 
-        await localforage.setItem(localKey, cleanRows);
-        await archiveStore.loadAvailableDates();
+              r.shop || r.code || (parseFloat(r.amount) > 0) || (parseFloat(r.collector) > 0)
 
-        const dbPayload = {
-          user_id: authStore.user.id,
-          archive_date: dateToSave,
-          data: cleanRows,
-          total_amount: (this.totals.collector || 0) - ((this.totals.amount || 0) + (this.totals.extra || 0)),
-          updated_at: new Date()
-        };
+            );
 
-        let message = '';
+    
 
-        if (navigator.onLine) {
-          const { error } = await apiInterceptor(
-            api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data)
-          );
+            if (validRows.length === 0) return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
 
-          if (!error) {
-            message = 'تم أرشفة اليوم بنجاح على الهاتف وسحابياً ✅';
-            await archiveStore.loadAvailableDates();
-          } else {
-            await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-            message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
+    
+
+            const cleanRows = safeDeepClone(validRows).map(row => {
+
+              const amount = parseFloat(row.amount) || 0;
+
+              const extra = parseFloat(row.extra) || 0;
+
+              const collector = parseFloat(row.collector) || 0;
+
+              const net = collector - (amount + extra);
+
+              return { shop: row.shop || '', code: row.code || '', amount, extra, collector, net };
+
+            });
+
+            
+
+            const localKey = `${archiveStore.DB_PREFIX}${dateToSave}`;
+
+            const dbPayload = {
+
+              user_id: authStore.user.id,
+
+              archive_date: dateToSave,
+
+              data: cleanRows,
+
+            };
+
+    
+
+            const overdueStores = validRows
+
+              .map(row => ({ ...row, net: (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) }))
+
+              .filter(row => row.net !== 0)
+
+              .map(row => ({ shop: row.shop, code: row.code, net: row.net }));
+
+    
+
+            // Step 1: Perform all local writes in parallel for speed
+
+            await Promise.all([
+
+              localforage.setItem(localKey, cleanRows),
+
+              overdueStores.length > 0
+
+                ? localforage.setItem('overdue_stores', overdueStores)
+
+                : localforage.removeItem('overdue_stores')
+
+            ]);
+
+            
+
+            // Data is now safe locally. Refresh local date list.
+
+            await archiveStore.loadAvailableDates(false);
+
+    
+
+            // Step 2: Start cloud sync in the background (fire and forget from UI perspective)
+
+            this._performCloudSync(dbPayload);
+
+    
+
+            // Step 3: Return immediate success to the user
+
+            return { success: true, message: 'تم الحفظ على الهاتف بنجاح، وتتم المزامنة سحابياً 💾' };
+
+    
+
+          } catch (error) {
+
+            logger.error('💥 Archive Error:', error);
+
+            return { success: false, message: error.message || 'فشل في الأرشفة' };
+
+          } finally {
+
+            this.isLoading = false;
+
           }
-        } else {
-          await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-          message = 'تم الحفظ على الهاتف وسيتم الحفظ على السحابة بمجرد توافر إنترنت 💾';
-        }
 
-        // Logic to save overdue payments
-        const overdueStores = validRows
-          .map(row => {
-            const net = (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0));
-            return { ...row, net };
-          })
-          .filter(row => row.net !== 0)
-          .map(row => ({
-            shop: row.shop,
-            code: row.code,
-            net: row.net 
-          }));
+        },
 
-        if (overdueStores.length > 0) {
-          await localforage.setItem('overdue_stores', overdueStores);
-        } else {
-          await localforage.removeItem('overdue_stores');
-        }
+    async _performCloudSync(dbPayload) {
+      const archiveStore = useArchiveStore();
+      if (!navigator.onLine) {
+        await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+        return 'queued';
+      }
+      const { error } = await apiInterceptor(
+        api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data)
+      );
 
-        return { success: true, message };
-
-      } catch (error) {
-        logger.error('💥 Archive Error:', error);
-        return { success: false, message: error.message || 'فشل في الأرشفة' };
-      } finally {
-        this.isLoading = false;
+      if (error) {
+        await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+        return 'queued';
+      } else {
+        await archiveStore.loadAvailableDates(); // Refresh dates after successful sync
+        return 'synced';
       }
     },
 
