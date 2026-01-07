@@ -59,6 +59,14 @@
 
     <div class="sidebar-footer">
       
+        <!-- WhatsApp join block: opens group link in new tab -->
+        <div class="whatsapp-join" aria-hidden="false">
+          <a :href="whatsappLink" target="_blank" rel="noopener" class="whatsapp-link" @click="store.closeSidebar" aria-label="انضم ليصلك كل جديد عبر واتساب">
+            <span class="whatsapp-badge"><i class="fab fa-whatsapp"></i></span>
+            <span class="whatsapp-text">انضم ليصلك كل جديد</span>
+          </a>
+        </div>
+
       <div class="footer-actions-row">
         <button 
           class="sidebar-action-btn" 
@@ -161,6 +169,8 @@ const copyUserId = async () => {
 const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
 const isEnforced = ref(false); 
+// رابط مجموعة واتساب للانضمام
+const whatsappLink = 'https://chat.whatsapp.com/GuITuDz0xmJKHqKJ5QstDu';
 
 // تم التحديث: إضافة رابط صفحة المشاركة
 const navLinks = [
@@ -515,4 +525,31 @@ const handleLogout = async () => {
 
 .overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); opacity: 0; visibility: hidden; z-index: 1008; transition: opacity 0.3s ease, visibility 0.3s; }
 .overlay.active { opacity: 1; visibility: visible; backdrop-filter: blur(2px); }
+
+/* WhatsApp join block styles */
+.whatsapp-join {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border-radius:14px;
+  margin-bottom:12px;
+  width:100%;
+  background: linear-gradient(180deg, rgba(37,211,102,0.06), rgba(0,0,0,0.06));
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 4px solid #25D366; /* accent green */
+  box-shadow: 0 8px 24px rgba(37,211,102,0.08);
+  backdrop-filter: blur(6px);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.whatsapp-join:hover { transform: translateY(-3px); box-shadow: 0 14px 36px rgba(37,211,102,0.12); }
+.whatsapp-link { display:flex; align-items:center; gap:12px; text-decoration:none; color: #fff; width:100%; padding-right:6px; }
+.whatsapp-badge { background:#25D366; color:#fff; padding:8px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; font-size:1.05rem; min-width:40px; min-height:40px; box-shadow: 0 6px 18px rgba(37,211,102,0.12); }
+.whatsapp-text { font-weight:800; color:#fff; font-size:0.98rem; margin-right:6px; letter-spacing:0.2px; }
+.whatsapp-link:hover .whatsapp-badge { transform: scale(1.04); }
+
+@media (max-width: 640px) {
+  .whatsapp-text { display: none; }
+  .whatsapp-join { padding: 8px; }
+}
 </style>

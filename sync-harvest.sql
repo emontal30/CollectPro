@@ -1,6 +1,8 @@
 -- ================================================================
 -- ملحق نظام المشاركة (Collaboration System Extension)
--- متوافق مع schema.sql و itinerary_schema.sql
+-- اسم الملف: sync-harvest.sql
+-- الوصف: يضيف جداول المشاركة، البروفايل، والبيانات الحية + صلاحيات المدير الشامل
+-- الإصدار: v4.9 (مع تحسينات إعادة التشغيل)
 -- ================================================================
 
 -- 1. جدول البروفايل (للمعرفات الجديدة فقط - منفصل عن جدول users للحماية)
@@ -34,7 +36,6 @@ AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
 
 -- خطوة هامة: إنشاء معرفات للمستخدمين الحاليين (Backfill)
--- لن يؤثر على بياناتهم، فقط سينشئ لهم سجلات في الجدول الجديد
 INSERT INTO public.profiles (id, user_code, full_name)
 SELECT 
     id, 
@@ -69,7 +70,6 @@ CREATE TABLE IF NOT EXISTS public.live_harvest (
 
 
 -- 4. تحديث عرض المدير (Admin View) فقط
--- نقوم بحذفه وإعادة إنشائه لربط الجدول الجديد (profiles)
 DROP VIEW IF EXISTS public.admin_subscriptions_view;
 
 CREATE OR REPLACE VIEW public.admin_subscriptions_view 
@@ -78,9 +78,7 @@ AS
 SELECT
     s.id, 
     s.user_id,
-    -- الأولوية للكود الجديد، وإذا لم يوجد نضع علامة
     COALESCE(p.user_code, '---') AS user_code,
-    -- البيانات القديمة كما هي
     COALESCE(u.full_name, u.email) AS user_name,
     u.email, 
     s.plan_id, 
@@ -95,27 +93,31 @@ SELECT
 FROM public.subscriptions s
 LEFT JOIN public.users u ON s.user_id = u.id
 LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id
-LEFT JOIN public.profiles p ON s.user_id = p.id; -- الربط الجديد الآمن
+LEFT JOIN public.profiles p ON s.user_id = p.id;
 
 
--- 5. سياسات الأمان (RLS) للجداول الجديدة فقط
+-- 5. سياسات الأمان (RLS) - تم إضافة DROP لمنع الأخطاء عند التكرار
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collaboration_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.live_harvest ENABLE ROW LEVEL SECURITY;
 
 -- سياسات profiles
+DROP POLICY IF EXISTS "Public profiles view" ON public.profiles;
 CREATE POLICY "Public profiles view" ON public.profiles FOR SELECT USING (true);
 
 -- سياسات collaboration_requests
+DROP POLICY IF EXISTS "Sender Manage Requests" ON public.collaboration_requests;
 CREATE POLICY "Sender Manage Requests" ON public.collaboration_requests 
 FOR ALL USING (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Receiver View Requests" ON public.collaboration_requests;
 CREATE POLICY "Receiver View Requests" ON public.collaboration_requests 
 FOR SELECT USING (
     receiver_code IN (SELECT user_code FROM public.profiles WHERE id = auth.uid())
     OR receiver_id = auth.uid()
 );
 
+DROP POLICY IF EXISTS "Receiver Respond Requests" ON public.collaboration_requests;
 CREATE POLICY "Receiver Respond Requests" ON public.collaboration_requests 
 FOR UPDATE USING (
     receiver_code IN (SELECT user_code FROM public.profiles WHERE id = auth.uid())
@@ -123,9 +125,11 @@ FOR UPDATE USING (
 );
 
 -- سياسات live_harvest
+DROP POLICY IF EXISTS "Owner Full Control" ON public.live_harvest;
 CREATE POLICY "Owner Full Control" ON public.live_harvest 
 FOR ALL USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Collaborator Read" ON public.live_harvest;
 CREATE POLICY "Collaborator Read" ON public.live_harvest 
 FOR SELECT USING (
     EXISTS (
@@ -136,6 +140,7 @@ FOR SELECT USING (
     )
 );
 
+DROP POLICY IF EXISTS "Collaborator Write" ON public.live_harvest;
 CREATE POLICY "Collaborator Write" ON public.live_harvest 
 FOR UPDATE USING (
     EXISTS (
@@ -147,5 +152,32 @@ FOR UPDATE USING (
     )
 );
 
+DROP POLICY IF EXISTS "Owner Initial Insert" ON public.live_harvest;
 CREATE POLICY "Owner Initial Insert" ON public.live_harvest 
 FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+
+-- ================================================================
+-- 6. سياسات المدير الشامل (Super Admin Policies) - تم إضافة DROP
+-- ================================================================
+
+-- أ) صلاحية كاملة على البيانات الحية
+DROP POLICY IF EXISTS "Super Admin Full Access Live Harvest" ON public.live_harvest;
+CREATE POLICY "Super Admin Full Access Live Harvest" ON public.live_harvest
+FOR ALL
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- ب) صلاحية كاملة على طلبات المشاركة
+DROP POLICY IF EXISTS "Super Admin Manage Requests" ON public.collaboration_requests;
+CREATE POLICY "Super Admin Manage Requests" ON public.collaboration_requests
+FOR ALL
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- ج) صلاحية تعديل البروفايلات
+DROP POLICY IF EXISTS "Super Admin Manage Profiles" ON public.profiles;
+CREATE POLICY "Super Admin Manage Profiles" ON public.profiles
+FOR ALL
+USING (public.is_admin())
+WITH CHECK (public.is_admin());

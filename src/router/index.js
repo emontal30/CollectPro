@@ -55,7 +55,7 @@ const routes = [
       },
       { 
         path: 'share', 
-        name: 'ShareHarvest', 
+        name: 'Collaboration', 
         component: ShareHarvestView,
         meta: { requiresSubscription: true } 
       },

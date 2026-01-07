@@ -186,27 +186,28 @@ export const useHarvestStore = defineStore('harvest', {
     // --- Core Logic: Save & Sync ---
     async saveRowsToStorage() {
       try {
-        // 1. الحفظ المحلي دائماً (Backup & Offline Support)
         const cleanedRows = safeDeepClone(this.rows);
         await localforage.setItem(HARVEST_ROWS_KEY, cleanedRows);
         this.isModified = true;
 
-        // 2. المزامنة السحابية (Collaboration Support)
         const authStore = useAuthStore();
         const collabStore = useCollaborationStore();
 
-        // الشرط: نقوم بالرفع فقط إذا كان المستخدم متصلاً ولديه حساب
-        // وإما أنه في جلسة مشاركة (Active Session) أو أنه يعمل على بياناته الخاصة
         if (navigator.onLine && authStore.user) {
           const targetUserId = collabStore.activeSessionId || authStore.user.id;
           
-          // نرفع البيانات في الخلفية دون انتظار لعدم تعطيل الواجهة
-          this.syncToCloud(targetUserId).catch(err => {
-             // يمكن تجاهل أخطاء الشبكة العابرة هنا، حيث سيتم الحفظ محلياً
-             logger.warn('Cloud sync skipped:', err.message); 
-          });
-        }
+          let canEdit = true; // Assume true if it's the user's own data
+          if (collabStore.activeSessionId) {
+            const collaborator = collabStore.collaborators.find(c => c.userId === collabStore.activeSessionId);
+            canEdit = collaborator?.role === 'editor';
+          }
 
+          if (canEdit) {
+            this.syncToCloud(targetUserId).catch(err => {
+              logger.warn('Cloud sync skipped:', err.message); 
+            });
+          }
+        }
       } catch (error) {
         logger.error('Error saving rows:', error);
       }
@@ -220,7 +221,7 @@ export const useHarvestStore = defineStore('harvest', {
       try {
         const payload = {
           user_id: targetUserId,
-          rows: this.rows, // سيتم تحويلها لـ JSONB تلقائياً
+          rows: this.rows,
           master_limit: this.masterLimit,
           extra_limit: this.extraLimit,
           current_balance: this.currentBalance,
@@ -232,7 +233,6 @@ export const useHarvestStore = defineStore('harvest', {
         if (error) throw error;
         
       } catch (error) {
-        // لا نريد إيقاف التطبيق بسبب فشل المزامنة الخلفية
         console.warn('Sync to cloud failed (minor):', error.message);
       } finally {
         this.isCloudSyncing = false;
@@ -241,14 +241,14 @@ export const useHarvestStore = defineStore('harvest', {
 
     // --- New Action: Switch Session (Viewer/Editor Mode) ---
     async switchToUserSession(userId) {
-      // 1. تنظيف الاشتراك السابق
       if (this.realtimeChannel) {
         await supabase.removeChannel(this.realtimeChannel);
         this.realtimeChannel = null;
       }
 
-      // 2. إذا كان userId فارغ (null)، نعود للوضع المحلي (بياناتي)
       if (!userId) {
+        const collabStore = useCollaborationStore();
+        collabStore.setActiveSession(null, null);
         await this.initialize(); 
         return;
       }
@@ -256,14 +256,13 @@ export const useHarvestStore = defineStore('harvest', {
       this.isLoading = true;
 
       try {
-        // 3. جلب البيانات الأولية من السحابة (Initial Fetch)
         const { data, error } = await supabase
           .from('live_harvest')
           .select('*')
           .eq('user_id', userId)
           .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found (which is fine)
+        if (error && error.code !== 'PGRST116') {
            throw error;
         }
 
@@ -273,14 +272,12 @@ export const useHarvestStore = defineStore('harvest', {
           this.extraLimit = parseFloat(data.extra_limit) || 0;
           this.currentBalance = parseFloat(data.current_balance) || 0;
         } else {
-          // صفحة فارغة جديدة للمستخدم المراقب
           this.rows = []; 
           this.masterLimit = 100000;
           this.extraLimit = 0;
           this.currentBalance = 0;
         }
 
-        // 4. تفعيل الاستماع اللحظي (Realtime Subscription)
         this.realtimeChannel = supabase
           .channel(`harvest-${userId}`)
           .on(
@@ -292,13 +289,8 @@ export const useHarvestStore = defineStore('harvest', {
               filter: `user_id=eq.${userId}` 
             },
             (payload) => {
-              // عند وصول تحديث من الطرف الآخر
               const newData = payload.new;
-              // نتأكد أن التحديث ليس مني لتجنب الارتداد (Loop)
-              // (اختياري، لكن Supabase يرسل للجميع)
-              
               console.log('⚡ Live update received:', payload);
-              
               if (newData) {
                 this.rows = newData.rows;
                 this.masterLimit = parseFloat(newData.master_limit) || 0;
@@ -311,7 +303,8 @@ export const useHarvestStore = defineStore('harvest', {
 
       } catch (err) {
         logger.error('Failed to switch session:', err);
-        // في حال الخطأ نعود للبيانات المحلية كإجراء احترازي
+        const collabStore = useCollaborationStore();
+        collabStore.setActiveSession(null, null);
         await this.initialize();
       } finally {
         this.isLoading = false;
@@ -351,6 +344,11 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async archiveTodayData() {
+      const collabStore = useCollaborationStore();
+      if (collabStore.activeSessionId) {
+        throw new Error("لا يمكنك أرشفة بيانات زميل، يجب إنهاء الجلسة أولاً.");
+      }
+
       try {
         this.isLoading = true;
         
