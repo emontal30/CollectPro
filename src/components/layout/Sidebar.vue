@@ -417,29 +417,32 @@ const handleLogout = async () => {
 }
 
 .id-content-wrapper {
-    flex: 1; /* يأخذ المساحة المتبقية */
-    min-width: 0; /* ضروري لمنع النص من دفع العنصر للخارج */
-    overflow: hidden;
+  /* Allow the UID badge to size to its content instead of stretching */
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
 }
 
 .user-id { 
-    font-size: 12px; 
-    color: #a7f3d0; 
-    font-family: monospace; 
-    font-weight: bold; 
-    letter-spacing: 0.5px;
-    white-space: nowrap; /* يمنع الالتفاف */
-    display: block;
-    direction: rtl; /* لضمان ظهور UID على اليمين دائماً */
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 12px; 
+  color: #a7f3d0; 
+  font-family: monospace; 
+  font-weight: bold; 
+  letter-spacing: 0.5px;
+  white-space: nowrap; /* يمنع الالتفاف */
+  display: inline-block; /* يحجم العرض تبعاً للنص */
+  direction: rtl; /* لضمان ظهور UID على اليمين دائماً */
+  text-align: right;
+  overflow: visible; /* السماح للعنصر بالتوسع */
+  text-overflow: clip;
     
-    /* NEW: Badge styling moved here */
-    background: rgba(0, 0, 0, 0.25); /* خلفية داكنة للشريط */
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+  /* Badge styling */
+  background: rgba(0, 0, 0, 0.25); /* خلفية داكنة للشريط */
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .copy-id-btn {
