@@ -1,4 +1,3 @@
-import { retry } from '@/utils/retryWrapper'; // تمت الاضافة من الملف الثاني
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
@@ -7,9 +6,10 @@ import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
+import { retry } from '@/utils/retryWrapper';
 
 export const useArchiveStore = defineStore('archive', () => {
-  // --- State (من الملف الأول) ---
+  // --- State ---
   const rows = ref([]);
   const availableDates = ref([]);
   const selectedDate = ref('');
@@ -22,10 +22,9 @@ export const useArchiveStore = defineStore('archive', () => {
   const authStore = useAuthStore();
 
   /**
-   * بريفكس معزول لكل مستخدم لمنع تسريب البيانات بين الحسابات على نفس الجهاز.
-   * يستخدم 'u_[userId]_arch_data_' كمفتاح أساسي.
+   * بريفكس معزول لكل مستخدم لمنع تسريب البيانات بين الحسابات
    */
-  const BASE_PREFIX = 'arch_data_'; 
+  const BASE_PREFIX = 'arch_data_';
   const DB_PREFIX = computed(() => {
     const userId = authStore.user?.id;
     return userId ? `u_${userId}_${BASE_PREFIX}` : BASE_PREFIX;
@@ -41,7 +40,6 @@ export const useArchiveStore = defineStore('archive', () => {
     }, { amount: 0, extra: 0, collector: 0, net: 0 });
   });
 
-  // --- تمت الاضافة من الملف الثاني (Computed Property) ---
   const dateExists = computed(() => {
     return (date) => availableDates.value.some(d => d.value === date);
   });
@@ -55,8 +53,7 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   /**
-   * تنظيف الأرشيفات المحلية القديمة (أقدم من 31 يوم) للحفاظ على مساحة الجهاز
-   * يتم ذلك للمستخدم الحالي فقط بناءً على الـ Scoped DB_PREFIX
+   * تنظيف الأرشيفات المحلية القديمة
    */
   async function cleanupOldArchives() {
     try {
@@ -82,7 +79,7 @@ export const useArchiveStore = defineStore('archive', () => {
       }
 
       if (deletedCount > 0) {
-        logger.info(`🧹 Archive Cleanup: Removed ${deletedCount} old local archives (older than 31 days).`);
+        logger.info(`🧹 Archive Cleanup: Removed ${deletedCount} old local archives.`);
       }
     } catch (err) {
       logger.error('❌ ArchiveStore: cleanupOldArchives Error:', err);
@@ -90,79 +87,95 @@ export const useArchiveStore = defineStore('archive', () => {
   }
 
   /**
-   * جلب التواريخ المتاحة للمستخدم الحالي فقط
-   * (تم دمج منطق الملف الثاني لدعم retry والبحث عن legacyKeys)
+   * جلب التواريخ المتاحة
+   * تم تعديل المنطق لضمان ظهور البيانات المحلية فوراً وعدم انتظار السحابة
    */
   async function loadAvailableDates(force = false) {
-    // تنظيف الأرشيفات القديمة أولاً
     await cleanupOldArchives();
 
     const now = Date.now();
     const shouldFetchCloud = force || (now - lastDatesFetchTime.value > 2 * 60 * 1000);
+    const currentPrefix = DB_PREFIX.value;
+    
+    // متغير لتخزين التواريخ المحلية لاستخدامها لاحقاً في الدمج
+    let localDatesSet = new Set();
 
+    // --- المرحلة 1: جلب وعرض البيانات المحلية فوراً ---
     try {
       isLoadingDates.value = true;
-      const currentPrefix = DB_PREFIX.value;
-
-      // 1. جلب التواريخ المحلية للمستخدم الحالي أولاً (الفلترة بناءً على البريفكس المعزول)
       const allKeys = await localforage.keys();
-      let localDates = allKeys
-        .filter(k => k.startsWith(currentPrefix))
-        .map(k => k.replace(currentPrefix, ''));
 
-      // --- منطق إضافي من الملف الثاني (FALLBACK) ---
-      // في حالة عدم وجود بيانات بالبريفكس الجديد، نبحث عن البريفكس القديم وندمجه
-      if ((localDates.length === 0 || !currentPrefix || currentPrefix === BASE_PREFIX) && currentPrefix !== BASE_PREFIX) {
-        const legacyKeys = allKeys
-          .filter(k => k.startsWith(BASE_PREFIX))
-          .map(k => k.replace(BASE_PREFIX, ''));
-        if (legacyKeys.length > 0) {
-          localDates = [...new Set([...localDates, ...legacyKeys])];
-        }
+      // جلب المفاتيح مع دعم المفاتيح القديمة (Legacy Fallback)
+      let keys = allKeys.filter(k => k.startsWith(currentPrefix));
+      
+      // إذا لم نجد بيانات بالبريفكس الجديد، نبحث عن القديم لضمان عدم اختفاء البيانات
+      if (keys.length === 0 && currentPrefix !== BASE_PREFIX) {
+         const legacy = allKeys.filter(k => k.startsWith(BASE_PREFIX));
+         keys = [...keys, ...legacy];
       }
+      
+      // استخراج التواريخ
+      keys.forEach(k => {
+          // نحذف أي بريفكس محتمل لنحصل على التاريخ الصافي
+          const d = k.replace(currentPrefix, '').replace(BASE_PREFIX, '');
+          if(d && d.length >= 10) localDatesSet.add(d);
+      });
 
-      const updateList = (cDates = []) => {
-        const dateMap = new Map();
-        localDates.forEach(d => { 
-          if (d && d.length >= 10) dateMap.set(d, { value: d, source: 'local' }); 
-        });
-        cDates.forEach(d => {
-          if (d) {
-            if (dateMap.has(d)) dateMap.get(d).source = 'synced'; 
-            else dateMap.set(d, { value: d, source: 'cloud' });
-          }
-        });
-        availableDates.value = Array.from(dateMap.values())
-          .filter(item => !isNaN(new Date(item.value).getTime()))
-          .sort((a, b) => new Date(b.value) - new Date(a.value));
-      };
-
-      updateList();
-
-      // 2. جلب التواريخ من السحابة في الخلفية (تم استخدام retry من الملف الثاني)
-      if (shouldFetchCloud && authStore.user && navigator.onLine) {
-        try {
-          const result = await retry(() => api.archive.getAvailableDates(authStore.user.id), {
-            retries: 2,
-            delay: 3000,
-            onRetry: (attempt, err) => {
-              logger.warn(`Retrying cloud dates fetch (attempt ${attempt})...`, err);
-            }
-          });
-          
-          if (result && !result.error && result.dates) {
-            updateList(result.dates);
-            lastDatesFetchTime.value = Date.now();
-          }
-        } catch (cloudErr) {
-          logger.error('❌ ArchiveStore: Cloud dates fetch failed after multiple retries', cloudErr);
-        }
-      }
+      // تحديث الحالة فوراً بالبيانات المحلية
+      availableDates.value = Array.from(localDatesSet).map(d => ({
+          value: d,
+          source: 'local'
+      })).sort((a, b) => new Date(b.value) - new Date(a.value));
 
     } catch (err) {
-      logger.error('❌ ArchiveStore: loadAvailableDates Error:', err);
+      logger.error('❌ ArchiveStore: Local dates fetch error:', err);
     } finally {
+      // إيقاف التحميل فور انتهاء الجلب المحلي ليظهر المحتوى للمستخدم
       isLoadingDates.value = false;
+    }
+
+    // --- المرحلة 2: التحديث من السحابة في الخلفية (دون تعطيل الواجهة) ---
+    if (shouldFetchCloud && authStore.user && navigator.onLine) {
+      try {
+        const result = await retry(() => api.archive.getAvailableDates(authStore.user.id), {
+          retries: 2,
+          delay: 3000,
+          onRetry: (attempt, err) => {
+             // لوج فقط في حالة الخطأ، المستخدم لا يرى شيئاً
+             logger.warn(`Retrying cloud dates fetch (attempt ${attempt})...`, err);
+          }
+        });
+        
+        if (result && result.dates) {
+            // دمج البيانات السحابية مع البيانات المحلية الموجودة حالياً
+            const combinedMap = new Map();
+            
+            // 1. إضافة المحلي (الذي جمعناه في الخطوة الأولى)
+            localDatesSet.forEach(d => {
+                combinedMap.set(d, { value: d, source: 'local' });
+            });
+            
+            // 2. دمج السحابي
+            result.dates.forEach(d => {
+                if (combinedMap.has(d)) {
+                    // إذا كان موجوداً محلياً وجاء من السحابة أيضاً => synced
+                    combinedMap.get(d).source = 'synced';
+                } else {
+                    // إذا كان جديداً من السحابة => cloud
+                    combinedMap.set(d, { value: d, source: 'cloud' });
+                }
+            });
+            
+            // 3. تحديث القائمة النهائية
+            availableDates.value = Array.from(combinedMap.values())
+                .filter(item => !isNaN(new Date(item.value).getTime()))
+                .sort((a, b) => new Date(b.value) - new Date(a.value));
+            
+            lastDatesFetchTime.value = Date.now();
+        }
+      } catch (cloudErr) {
+        logger.error('❌ ArchiveStore: Cloud dates fetch failed (background)', cloudErr);
+      }
     }
   }
 
@@ -185,14 +198,11 @@ export const useArchiveStore = defineStore('archive', () => {
           return;
         }
         
-        // استخدام retry من الملف الثاني لضمان جلب البيانات
         try {
           const { data, error } = await retry(() => api.archive.getArchiveByDate(user.id, dateStr), {
             retries: 2,
             delay: 3000,
-            onRetry: (attempt, err) => {
-              logger.warn(`Retrying cloud archive fetch for ${dateStr} (attempt ${attempt})...`, err);
-            }
+            onRetry: (attempt, err) => logger.warn(`Retrying archive fetch (attempt ${attempt})...`)
           });
 
           if (!error && data) {
@@ -202,7 +212,7 @@ export const useArchiveStore = defineStore('archive', () => {
             rows.value = [];
           }
         } catch (fetchErr) {
-          logger.error(`❌ ArchiveStore: Failed to fetch archive for ${dateStr} after multiple retries`, fetchErr);
+          logger.error(`❌ ArchiveStore: Cloud fetch failed for ${dateStr}`, fetchErr);
           addNotification('فشل تحميل الأرشيف من السحابة', 'error');
           rows.value = [];
         }
@@ -215,9 +225,6 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /**
-   * البحث في أرشيفات المستخدم الحالي فقط
-   */
   async function searchInAllArchives(query) {
     if (!query) return;
     
@@ -266,34 +273,31 @@ export const useArchiveStore = defineStore('archive', () => {
 
       const user = authStore.user;
       
-      // دمج منطق الملف الثاني (Retry) مع الحفاظ على منطق الـ Offline
       if (user && navigator.onLine) {
         try {
           const { error } = await retry(() => api.archive.deleteArchiveByDate(user.id, dateStr), {
             retries: 2,
             delay: 3000,
             onRetry: (attempt, err) => {
-              // لا نعيد المحاولة إذا كان الخطأ انقطاع انترنت لأنه سيذهب للـ Queue
               if (err.status !== 'offline' && err.status !== 'network_error') {
-                logger.warn(`Retrying cloud archive delete for ${dateStr} (attempt ${attempt})...`, err);
+                 logger.warn(`Retrying delete for ${dateStr}...`, err);
               } else {
-                throw err; 
+                 throw err;
               }
             }
           });
 
-          if (error) throw error; 
+          if (error) throw error;
 
         } catch (err) {
           if (err.status === 'offline' || err.status === 'network_error') {
             await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
           } else {
-            logger.error(`❌ ArchiveStore: Failed to delete archive for ${dateStr} after multiple retries`, err);
+            logger.error(`❌ ArchiveStore: Delete failed for ${dateStr}`, err);
             addNotification('فشل حذف الأرشيف من السحابة', 'error');
           }
         }
       } else if (user) {
-        // Offline from the start
         await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
       }
 
@@ -322,6 +326,6 @@ export const useArchiveStore = defineStore('archive', () => {
     deleteArchive,
     DB_PREFIX,
     cleanupOldArchives,
-    dateExists // تمت الاضافة من الملف الثاني
+    dateExists
   };
 });
