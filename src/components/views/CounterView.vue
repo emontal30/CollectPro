@@ -214,7 +214,7 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed } from 'vue';
+import { inject, onMounted, onUnmounted, ref, computed } from 'vue';
 import { useCounterStore } from '@/stores/counterStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
@@ -249,9 +249,15 @@ const sortedCategoriesSummary = computed(() => {
 
 const { confirm, addNotification } = inject('notifications');
 
+const handleFocus = () => store.updateTotalCollected();
+
 onMounted(() => {
   store.updateTotalCollected();
-  window.addEventListener('focus', () => store.updateTotalCollected());
+  window.addEventListener('focus', handleFocus);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('focus', handleFocus);
 });
 
 const exportData = async () => {

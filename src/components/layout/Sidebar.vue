@@ -129,7 +129,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref } from 'vue';
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import logger from '@/utils/logger.js';
 import { useSidebarStore } from '@/stores/sidebarStore';
@@ -316,6 +316,10 @@ onMounted(async () => {
   if (navigator.onLine) {
     processLocationQueue();
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('online', processLocationQueue);
 });
 
 const handleLogout = async () => {

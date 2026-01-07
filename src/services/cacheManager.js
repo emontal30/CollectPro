@@ -55,189 +55,479 @@ export function calculateSize(data) {
 }
 
 /**
+
  * Safe deep clone
+
  */
+
 export function safeDeepClone(data) {
+
   try {
+
     if (typeof structuredClone === 'function') return structuredClone(data);
+
   } catch (e) {}
+
   try {
+
     return JSON.parse(JSON.stringify(data));
+
   } catch (err) {
+
     return data;
+
   }
+
 }
+
+
+
+// 3.5. وظائف التشفير البسيط (Obfuscation)
+
+const SECRET_KEY = "M0mknCollectPro-@2024-StrongKey!";
+
+
+
+function obfuscateData(data) {
+
+  if (data === null || data === undefined) return data;
+
+  try {
+
+    const jsonString = JSON.stringify(data);
+
+    const keyLen = SECRET_KEY.length;
+
+    let obfuscated = '';
+
+    for (let i = 0; i < jsonString.length; i++) {
+
+      obfuscated += String.fromCharCode(jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % keyLen));
+
+    }
+
+    return btoa(obfuscated); // استخدام btoa لضمان عدم وجود محارف خاصة
+
+  } catch (err) {
+
+    logger.error('❌ Obfuscation failed:', err);
+
+    return data; // في حالة الفشل، أرجع البيانات الأصلية
+
+  }
+
+}
+
+
+
+function deobfuscateData(obfuscatedData) {
+
+  if (typeof obfuscatedData !== 'string' || !obfuscatedData) return obfuscatedData;
+
+  try {
+
+    const byteString = atob(obfuscatedData);
+
+    const keyLen = SECRET_KEY.length;
+
+    let jsonString = '';
+
+    for (let i = 0; i < byteString.length; i++) {
+
+      jsonString += String.fromCharCode(byteString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % keyLen));
+
+    }
+
+    return JSON.parse(jsonString);
+
+  } catch (err) {
+
+    // قد تفشل العملية إذا كانت البيانات غير مشفرة (بيانات قديمة)، لذا نعيدها كما هي
+
+    return obfuscatedData;
+
+  }
+
+}
+
+
+
+
 
 // 4. وظائف الصيانة والتنظيف (Maintenance)
 
+
+
 /**
+
  * تنظيف البيانات المنتهية الصلاحية
+
  */
+
 export async function cleanExpiredCache() {
+
   const now = Date.now();
+
   
+
   // تنظيف localStorage
+
   try {
+
     for (const [key, metadata] of cacheMetadata.localStorage) {
+
       if (now - metadata.timestamp > CACHE_CONFIG.localStorage.ttl) {
+
         localStorage.removeItem(key);
+
         cacheMetadata.localStorage.delete(key);
+
       }
+
     }
+
   } catch (err) {
+
     logger.error('❌ Error cleaning localStorage expiry:', err);
+
   }
+
+
 
   // تنظيف IndexedDB
+
   try {
+
     for (const [key, metadata] of cacheMetadata.indexedDB) {
+
       if (now - metadata.timestamp > CACHE_CONFIG.indexedDB.ttl) {
+
         await localforage.removeItem(key);
+
         cacheMetadata.indexedDB.delete(key);
+
       }
+
     }
+
   } catch (err) {
+
     logger.error('❌ Error cleaning IndexedDB expiry:', err);
+
   }
+
+
 
   // تنظيف Memory Cache
+
   for (const [key, metadata] of memoryCache) {
+
     if (now - metadata.timestamp > CACHE_CONFIG.memory.ttl) {
+
       memoryCache.delete(key);
+
     }
+
   }
+
 }
 
+
+
 /**
+
  * تنظيف البيانات الزائدة (LRU - Least Recently Used)
+
  */
+
 export async function evictLRU(storage) {
+
   const config = CACHE_CONFIG[storage];
+
   const metadataMap = cacheMetadata[storage];
+
+
 
   if (metadataMap.size < config.maxItems) return;
 
+
+
   const sorted = Array.from(metadataMap.entries())
+
     .sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
 
+
+
   const toDeleteCount = Math.ceil(sorted.length * 0.2); // حذف 20%
+
   for (let i = 0; i < toDeleteCount; i++) {
+
     const [key] = sorted[i];
+
     if (storage === 'localStorage') {
+
       localStorage.removeItem(key);
+
     } else {
+
       await localforage.removeItem(key);
+
     }
+
     metadataMap.delete(key);
+
     logger.info(`♻️ LRU Eviction (${storage}): ${key}`);
+
   }
+
 }
+
+
 
 // 5. وظائف التخزين والقراءة (Storage Operations)
 
+
+
 export async function setLocalStorageCache(key, data, options = {}) {
+
   try {
+
     const { userId, metadata: customMetadata = {} } = options;
+
     const finalKey = getScopedKey(key, userId);
+
+
 
     if (cacheMetadata.localStorage.size >= CACHE_CONFIG.localStorage.maxItems) {
+
       await evictLRU('localStorage');
+
     }
+
+
 
     const size = calculateSize(data);
+
     const now = Date.now();
+
+    const obfuscatedPayload = obfuscateData(data);
+
+
 
     localStorage.setItem(finalKey, JSON.stringify({
-      data,
+
+      isEncrypted: true,
+
+      data: obfuscatedPayload,
+
       timestamp: now,
+
       metadata: customMetadata
+
     }));
 
+
+
     cacheMetadata.localStorage.set(finalKey, {
+
       size,
+
       timestamp: now,
+
       lastAccessed: now
+
     });
 
+
+
     return true;
+
   } catch (err) {
+
     logger.error(`❌ Error setting localStorage cache: ${key}`, err);
+
     return false;
+
   }
+
 }
+
+
 
 export function getLocalStorageCache(key, userId = null) {
+
   try {
+
     const finalKey = getScopedKey(key, userId);
+
     const item = localStorage.getItem(finalKey);
+
     if (!item) return null;
+
+
 
     const parsed = JSON.parse(item);
+
     const metadata = cacheMetadata.localStorage.get(finalKey);
+
     
+
     const now = Date.now();
+
     if (metadata) {
+
       metadata.lastAccessed = now;
+
     } else {
+
       cacheMetadata.localStorage.set(finalKey, {
+
         timestamp: parsed.timestamp || now,
+
         lastAccessed: now
+
       });
+
     }
+
+
+
+    // فك التشفير إذا كانت البيانات مشفرة
+
+    if (parsed.isEncrypted) {
+
+      return deobfuscateData(parsed.data);
+
+    }
+
+
+
+    // للتعامل مع البيانات القديمة غير المشفرة
 
     return parsed.data;
+
   } catch (err) {
+
     return null;
+
   }
+
 }
+
+
 
 export async function setIndexedDBCache(key, data, options = {}) {
+
   try {
+
     const { userId, metadata: customMetadata = {} } = options;
+
     const finalKey = getScopedKey(key, userId);
+
     const cleanData = safeDeepClone(data);
 
+
+
     if (cacheMetadata.indexedDB.size >= CACHE_CONFIG.indexedDB.maxItems) {
+
       await evictLRU('indexedDB');
+
     }
 
+    
+
+    const obfuscatedPayload = obfuscateData(cleanData);
+
     const now = Date.now();
+
+
+
     await localforage.setItem(finalKey, {
-      data: cleanData,
+
+      isEncrypted: true,
+
+      data: obfuscatedPayload,
+
       timestamp: now,
+
       metadata: customMetadata
+
     });
+
+
 
     cacheMetadata.indexedDB.set(finalKey, {
+
       timestamp: now,
+
       lastAccessed: now
+
     });
 
+
+
     return true;
+
   } catch (err) {
+
     logger.error(`❌ Error setting IndexedDB cache: ${key}`, err);
+
     return false;
+
   }
+
 }
 
+
+
 export async function getIndexedDBCache(key, userId = null) {
+
   try {
+
     const finalKey = getScopedKey(key, userId);
+
     const item = await localforage.getItem(finalKey);
+
     if (!item) return null;
 
+
+
     const now = Date.now();
+
     const metadata = cacheMetadata.indexedDB.get(finalKey);
+
     if (metadata) {
+
       metadata.lastAccessed = now;
+
     } else {
+
       cacheMetadata.indexedDB.set(finalKey, {
+
         timestamp: item.timestamp || now,
+
         lastAccessed: now
+
       });
+
     }
 
+
+
+    // فك التشفير إذا كانت البيانات مشفرة
+
+    if (item.isEncrypted) {
+
+      return deobfuscateData(item.data);
+
+    }
+
+    
+
+    // للتعامل مع البيانات القديمة غير المشفرة
+
     return item.data;
+
   } catch (err) {
     return null;
   }

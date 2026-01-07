@@ -9,49 +9,28 @@ export const adminService = {
    */
   async getStats(activeDays = 30) {
     try {
-      // 1. جلب الإحصائيات الأساسية من جدول statistics
-      const { data: statsData } = await apiInterceptor(
-        supabase
-          .from('statistics')
-          .select('*')
-          .eq('id', '00000000-0000-0000-0000-000000000001')
-          .maybeSingle()
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_admin_stats', { active_days_period: activeDays })
       );
 
-      // 2. حساب المستخدمين النشطين (الذين قاموا بعمليات إدخال بيانات خلال الفترة)
-      const dateLimit = new Date();
-      dateLimit.setDate(dateLimit.getDate() - activeDays);
+      if (error) {
+        throw error;
+      }
       
-      const { data: activeUsersData } = await apiInterceptor(
-        supabase
-          .from('daily_archives')
-          .select('user_id')
-          .gte('updated_at', dateLimit.toISOString())
-      );
-
-      const uniqueActiveUsers = activeUsersData ? new Set(activeUsersData.map(u => u.user_id)).size : 0;
-
-      // 3. جلب العدادات الأخرى بشكل مباشر لضمان الدقة 100%
-      const [cancelledRes, expiredRes, pendingRes] = await Promise.all([
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'))
-      ]);
-
-      const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
-
-      return {
-        totalUsers: stats.total_users || 0,
-        pendingRequests: pendingRes.count || 0, // جلب العدد الحقيقي المباشر
-        activeSubscriptions: stats.active_subscriptions || 0,
-        totalRevenue: stats.total_revenue || 0,
-        cancelled: cancelledRes.count || 0,
-        expired: expiredRes.count || 0,
-        activeUsers: uniqueActiveUsers 
-      };
+      // The RPC function returns the data in the exact format needed by the frontend.
+      return data;
     } catch (err) {
-      logger.error('Error fetching admin stats:', err);
-      return {};
+      logger.error('Error fetching admin stats via RPC:', err);
+      // Return a default structure on error to prevent frontend crashes
+      return {
+        totalUsers: 0,
+        pendingRequests: 0,
+        activeSubscriptions: 0,
+        totalRevenue: 0,
+        cancelled: 0,
+        expired: 0,
+        activeUsers: 0
+      };
     }
   },
 
@@ -101,46 +80,18 @@ export const adminService = {
    * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم
    */
   async getUsers() {
-    // Step 1: Fetch main user data and their subscriptions
-    const { data: usersData, error: usersError } = await apiInterceptor(
-      supabase
-        .from('users')
-        .select('*, subscriptions(id, status, end_date)')
-        .order('created_at', { ascending: false })
-    );
-
-    if (usersError) {
-      logger.error('Error fetching users:', usersError);
+    try {
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_users_with_details')
+      );
+      if (error) {
+        throw error;
+      }
+      return data || [];
+    } catch (err) {
+      logger.error('Error fetching users via RPC:', err);
       return [];
     }
-    if (!usersData) return [];
-
-    // Step 2: Fetch corresponding profiles with the short user_code
-    const userIds = usersData.map(u => u.id);
-    const { data: profilesData, error: profilesError } = await apiInterceptor(
-      supabase
-        .from('profiles')
-        .select('id, user_code')
-        .in('id', userIds)
-    );
-
-    if (profilesError) {
-      logger.warn('Could not fetch user profiles, short codes will be missing.');
-    }
-
-    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
-
-    // Step 3: Merge the data in JavaScript
-    return usersData.map(user => {
-      const activeSub = user.subscriptions?.find(s => s.status === 'active');
-      return {
-        ...user,
-        user_code: profilesMap.get(user.id) || null, // Add the short code
-        hasActiveSub: !!activeSub,
-        activeSubId: activeSub?.id,
-        expiryDate: activeSub?.end_date || null
-      };
-    });
   },
 
   /**
@@ -171,63 +122,12 @@ export const adminService = {
    * 5. معالجة تفعيل/إلغاء الاشتراك
    */
   async handleSubscriptionAction(id, action) {
-    const now = new Date();
-
-    if (action === 'approve') {
-      const { data: sub } = await apiInterceptor(
-        supabase
-          .from('subscriptions')
-          .select('user_id, plan_id, subscription_plans(duration_months)')
-          .eq('id', id)
-          .single()
-      );
-
-      if (!sub) return { error: 'الطلب غير موجود' };
-
-      await supabase
-        .from('subscriptions')
-        .update({ status: 'cancelled', updated_at: now.toISOString() })
-        .eq('user_id', sub.user_id)
-        .eq('status', 'active');
-
-      const months = sub?.subscription_plans?.duration_months || 1;
-      const end = new Date(now);
-      end.setMonth(now.getMonth() + months);
-
-      return await apiInterceptor(
-        supabase
-          .from('subscriptions')
-          .update({ 
-            status: 'active', 
-            start_date: now.toISOString(), 
-            end_date: end.toISOString(),
-            updated_at: now.toISOString()
-          })
-          .eq('id', id)
-      );
-    } 
-    
-    if (action === 'reject' || action === 'delete') {
-      return await apiInterceptor(supabase.from('subscriptions').delete().eq('id', id));
-    } 
-    
-    if (action === 'cancel') {
-      return await apiInterceptor(
-        supabase
-          .from('subscriptions')
-          .update({ status: 'cancelled', updated_at: now.toISOString() })
-          .eq('id', id)
-      );
-    }
-
-    if (action === 'reactivate') {
-        return await apiInterceptor(
-          supabase
-            .from('subscriptions')
-            .update({ status: 'active', updated_at: now.toISOString() })
-            .eq('id', id)
-        );
-    }
+    return await apiInterceptor(
+      supabase.rpc('handle_subscription_action', {
+        p_subscription_id: id,
+        p_action: action
+      })
+    );
   },
 
   /**
