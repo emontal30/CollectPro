@@ -1,6 +1,11 @@
 ﻿<template>
   <div class="harvest-page">
     
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loader"></div>
+      <p>جاري تحميل البيانات...</p>
+    </div>
+
     <div v-if="collabStore.activeSessionId && !isSharedView" class="collab-banner animate-slide-down">
       <div class="banner-content">
         <i class="fas fa-eye pulse-icon"></i>
@@ -70,7 +75,7 @@
     <div class="search-control">
       <div class="customer-count-badge" v-show="isVisible('shop')">
         <div class="count-label">عدد العملاء</div>
-        <div class="count-value">{{ store.customerCount }}</div>
+        <div class="count-value">{{ displayFilteredRows ? displayFilteredRows.filter(r => r.shop).length : 0 }}</div>
       </div>
       
       <div class="search-input-wrapper relative">
@@ -111,7 +116,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, index) in localFilteredRows" :key="row.id">
+          <tr v-for="(row, index) in displayFilteredRows" :key="row.id">
             <td v-show="isVisible('shop')" class="shop no-wrap-cell" :class="{ 'negative-net-border': getRowNetStatus(row) === 'negative', 'has-overdue': row.hasOverdue, 'has-overpayment': row.hasOverpayment }">
               <input 
                 v-if="!row.isImported" 
@@ -194,7 +199,7 @@
             </td>
           </tr>
 
-          <tr class="total-row" v-if="localFilteredRows.length > 0">
+          <tr class="total-row" v-if="displayFilteredRows.length > 0">
             <td v-show="isVisible('shop')" class="shop">الإجمالي </td>
             <td v-show="isVisible('code')" class="code"></td>
             <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(filteredTotals.amount) }}</td>
@@ -208,12 +213,12 @@
         </tbody>
       </table>
       
-      <div v-if="localFilteredRows.length === 0" class="no-results">
+      <div v-if="!isLoading && displayFilteredRows.length === 0" class="no-results">
         لا توجد نتائج تطابق بحثك...
       </div>
     </div>
 
-    <div class="export-container" v-if="localFilteredRows.length > 0">
+    <div class="export-container" v-if="!isSharedView && displayFilteredRows.length > 0">
       <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
         <i class="fas fa-share-alt"></i>
         <span>مشاركة الجدول</span>
@@ -319,7 +324,7 @@
                 id="master-limit"
                 type="text"
                 inputmode="decimal"
-                :value="store.masterLimit !== 100000 ? formatInputNumber(store.masterLimit) : ''"
+                :value="displayMasterLimit !== 100000 ? formatInputNumber(displayMasterLimit) : ''"
                 class="bold-input text-center font-bold master-limit-input"
                 lang="en"
                 placeholder="ادخل ليمت الماستر"
@@ -337,7 +342,7 @@
                 id="extra-limit"
                 type="text"
                 inputmode="decimal"
-                :value="store.extraLimit ? formatInputNumber(store.extraLimit) : ''"
+                :value="displayExtraLimit ? formatInputNumber(displayExtraLimit) : ''"
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل الليمت الإضافي"
@@ -357,7 +362,7 @@
                 id="current-balance"
                 type="text"
                 inputmode="decimal"
-                :value="store.currentBalance ? formatInputNumber(store.currentBalance) : ''"
+                :value="displayCurrentBalance ? formatInputNumber(displayCurrentBalance) : ''"
                 class="bold-input text-center font-bold"
                 lang="en"
                 placeholder="ادخل رصيد الماستر الحالي"
@@ -373,8 +378,8 @@
                 <i class="fas fa-undo-alt text-warning"></i>
                 <strong class="mx-2">مبلغ التصفيرة</strong>
               </div>
-              <div class="calc-field" :class="{ 'text-success': store.resetAmount > 0, 'text-danger': store.resetAmount < 0 }">
-                {{ store.formatNumber(store.resetAmount) }}
+              <div class="calc-field" :class="{ 'text-success': displayResetAmount > 0, 'text-danger': displayResetAmount < 0 }">
+                 {{ store.formatNumber(displayResetAmount) }}
               </div>
             </div>
 
@@ -383,7 +388,7 @@
                 <i class="fas fa-coins text-warning"></i>
                 <strong class="mx-2">إجمالي المحصل</strong>
               </div>
-              <div class="calc-field text-primary">{{ store.formatNumber(store.totals.collector) }}</div>
+              <div class="calc-field text-primary">{{ store.formatNumber(displayTotals.collector) }}</div>
             </div>
           </div>
 
@@ -393,9 +398,9 @@
                 <i class="fas fa-check-circle text-success"></i>
                 <strong class="mx-2">حالة التصفيرة</strong>
               </div>
-              <div class="calc-field" :style="{ color: store.resetStatus.color, fontSize: '1.3rem', fontWeight: '800' }">
-                {{ store.resetStatus.val !== 0 ? store.formatNumber(store.resetStatus.val) : '' }}
-                &nbsp;{{ store.resetStatus.text }}
+              <div class="calc-field" :style="{ color: displayResetStatus.color, fontSize: '1.3rem', fontWeight: '800' }">
+                {{ displayResetStatus.val !== 0 ? store.formatNumber(displayResetStatus.val) : '' }}
+                &nbsp;{{ displayResetStatus.text }}
               </div>
             </div>
           </div>
@@ -417,12 +422,12 @@
         </router-link>
       </div>
 
-      <div class="buttons-row" v-if="!collabStore.activeSessionId">
+      <div class="buttons-row">
         <button class="btn btn-dashboard btn-dashboard--clear" @click="confirmClearAll">
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
-        <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="isArchiving || store.rows.length === 0" @click="archiveToday">
+        <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="isArchiving || displayRows.length === 0" @click="archiveToday">
           <i :class="isArchiving ? 'fas fa-spinner fa-spin' : 'fas fa-folder'"></i>
           <span>{{ isArchiving ? 'جاري الأرشفة...' : 'أرشفة اليوم' }}</span>
         </button>
@@ -468,10 +473,18 @@ const {
   isOverdueModalOpen,
   overdueStores,
   selectedOverdueStores,
-  // Computed
-  isReadOnly,
-  allOverdueSelected,
-  localFilteredRows,
+  allOverdueSelected, // Included from Code 2
+  // Bridge computeds (From Code 2 - Crucial for Shared View)
+  isLoading, 
+  isReadOnly, 
+  displayRows, 
+  displayFilteredRows, 
+  displayTotals, 
+  displayMasterLimit, 
+  displayExtraLimit, 
+  displayCurrentBalance, 
+  displayResetStatus, displayResetAmount,
+  // Computed (Legacy/Shared)
   savedItineraryProfiles,
   filteredTotals,
   filteredTotalNetValue,
@@ -507,11 +520,11 @@ const {
 // Toggle select/deselect all overdue stores
 const toggleSelectAllOverdue = () => {
   try {
-    // `allOverdueSelected` is a computed ref from useHarvest; set its value
     if (typeof allOverdueSelected === 'object' && 'value' in allOverdueSelected) {
       allOverdueSelected.value = !allOverdueSelected.value;
     } else {
-      // fallback: assign directly (should work in template reactivity)
+      // Fallback if it's not a ref (though useHarvest should return a ref)
+      // This part ensures compatibility with how Code 1 handled it locally
       allOverdueSelected = !allOverdueSelected;
     }
   } catch (e) {
@@ -525,3 +538,32 @@ export default {
   name: 'HarvestView'
 }
 </script>
+
+<style scoped>
+/* Code 2 Styles */
+.loading-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Original Styles (Implied to be global or inherited, but preserving scoped if any existed in Code 1 context) */
+/* Assuming Code 1 relied on global styles mostly, but keeping the structure intact */
+</style>

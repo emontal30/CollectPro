@@ -1,5 +1,4 @@
-import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, onDeactivated, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted, onActivated, watch, inject, onBeforeUnmount, nextTick } from 'vue';
 import { useHarvestStore } from '@/stores/harvest';
 import { useArchiveStore } from '@/stores/archiveStore';
 import { useItineraryStore } from '@/stores/itineraryStore';
@@ -11,15 +10,14 @@ import { handleMoneyInput } from '@/utils/validators.js';
 import logger from '@/utils/logger.js';
 
 export function useHarvest(props) {
-  // --- Definitions ---
+  // --- Stores & Injections ---
   const store = useHarvestStore();
   const archiveStore = useArchiveStore();
   const itineraryStore = useItineraryStore();
   const collabStore = useCollaborationStore();
-  const route = useRoute();
   const { confirm, addNotification } = inject('notifications');
 
-  // --- Columns ---
+  // --- Column Visibility ---
   const harvestColumns = [
     { key: 'shop', label: '🏪 المحل' },
     { key: 'code', label: '🔢 الكود' },
@@ -28,7 +26,7 @@ export function useHarvest(props) {
   ];
   const { showSettings, isVisible, apply, load: loadColumns } = useColumnVisibility(harvestColumns, 'columns.visibility.harvest');
 
-  // --- State ---
+  // --- Local State ---
   const searchQueryLocal = ref('');
   const showCustomTooltip = ref(false);
   const customTooltipText = ref('');
@@ -38,33 +36,71 @@ export function useHarvest(props) {
   const currentDay = ref(new Date().toLocaleDateString("ar-EG", { weekday: 'long' }));
   const showProfileDropdown = ref(false);
   const isArchiving = ref(false);
-
-  // Modal Missing Centers State
   const isMissingModalOpen = ref(false);
   const missingCenters = ref([]);
-
-  // Overdue Modal State
   const isOverdueModalOpen = ref(false);
   const overdueStores = ref([]);
   const selectedOverdueStores = ref([]);
 
-  // --- Computed ---
+  // --- Context-Aware Computed Properties (The Bridge) ---
+
+  const isLoading = computed(() => 
+    props.isSharedView
+      ? (store.isSharedLoading && (!store.sharedRows || store.sharedRows.length === 0))
+      : store.isLoading
+  );
+
   const isReadOnly = computed(() => {
-    if (!props.isSharedView && !collabStore.activeSessionId) return false;
-    if (props.isSharedView) return true; // Public share is always read-only
-    const collabSession = collabStore.collaborators.find(c => c.userId === collabStore.activeSessionId);
-    return collabSession && collabSession.role === 'viewer';
+    if (props.isSharedView) {
+      const collabSession = collabStore.collaborators.find(c => c.userId === collabStore.activeSessionId);
+      return !collabSession || collabSession.role === 'viewer';
+    }
+    return false; // Local view is never read-only
   });
 
-  const allOverdueSelected = computed({
-    get: () => overdueStores.value.length > 0 && selectedOverdueStores.value.length === overdueStores.value.length,
-    set: (value) => {
-      selectedOverdueStores.value = value ? [...overdueStores.value] : [];
+  const displayRows = computed({
+    get() {
+      return props.isSharedView ? store.sharedRows : store.rows;
+    },
+    set(value) {
+      if (props.isSharedView) {
+        store.sharedRows = value;
+      } else {
+        store.rows = value;
+      }
     }
   });
 
-  const localFilteredRows = computed(() => {
-    const data = store.rows || [];
+  const displayTotals = computed(() => 
+    props.isSharedView ? store.sharedTotals : store.totals
+  );
+
+  const displayMasterLimit = computed({
+    get: () => props.isSharedView ? store.sharedMasterLimit : store.masterLimit,
+    set: (val) => {
+        if(props.isSharedView) store.sharedMasterLimit = val;
+        else store.setMasterLimit(val)
+    }
+  });
+
+  const displayExtraLimit = computed({
+      get: () => props.isSharedView ? store.sharedExtraLimit : store.extraLimit,
+      set: (val) => {
+          if(props.isSharedView) store.sharedExtraLimit = val;
+          else store.setExtraLimit(val)
+      }
+  });
+
+  const displayCurrentBalance = computed({
+    get: () => props.isSharedView ? store.sharedCurrentBalance : store.currentBalance,
+    set: (val) => {
+        if(props.isSharedView) store.sharedCurrentBalance = val;
+        else store.setCurrentBalance(val)
+    }
+  });
+  
+  const displayFilteredRows = computed(() => {
+    const data = displayRows.value || [];
     const query = searchQueryLocal.value?.toLowerCase().trim();
     if (!query) return data;
     return data.filter(row =>
@@ -72,19 +108,19 @@ export function useHarvest(props) {
       (row.code && row.code.toString().toLowerCase().includes(query))
     );
   });
-
-  const savedItineraryProfiles = computed(() => {
-    return itineraryStore.profiles.filter(p => p.shops_order && p.shops_order.length > 0);
-  });
-
+  
   const filteredTotals = computed(() => {
-    return localFilteredRows.value.reduce((acc, row) => {
-      acc.amount += parseFloat(row.amount) || 0;
-      acc.extra += parseFloat(row.extra) || 0;
-      acc.collector += parseFloat(row.collector) || 0;
-      return acc;
-    }, { amount: 0, extra: 0, collector: 0 });
+      return displayFilteredRows.value.reduce((acc, row) => {
+        acc.amount += parseFloat(row.amount) || 0;
+        acc.extra += parseFloat(row.extra) || 0;
+        acc.collector += parseFloat(row.collector) || 0;
+        return acc;
+      }, { amount: 0, extra: 0, collector: 0 });
   });
+
+  const savedItineraryProfiles = computed(() => 
+    itineraryStore.profiles.filter(p => p.shops_order && p.shops_order.length > 0)
+  );
 
   const calculateNet = (row) => {
     const collector = parseFloat(row.collector) || 0;
@@ -92,21 +128,51 @@ export function useHarvest(props) {
     const extra = parseFloat(row.extra) || 0;
     return collector - (amount + extra);
   };
-
+  
   const filteredTotalNetValue = computed(() => {
     const totals = filteredTotals.value;
     return totals.collector - (totals.amount + totals.extra);
   });
-
+  
   const getRowNetStatus = (row) => getNetClass(calculateNet(row));
   const getRowNetIcon = (row) => getNetIcon(calculateNet(row));
   const getFilteredTotalNetClass = computed(() => getNetClass(filteredTotalNetValue.value));
   const getFilteredTotalNetIcon = computed(() => getNetIcon(filteredTotalNetValue.value));
+  const allOverdueSelected = computed({
+    get: () => overdueStores.value.length > 0 && selectedOverdueStores.value.length === overdueStores.value.length,
+    set: (value) => { selectedOverdueStores.value = value ? [...overdueStores.value] : []; }
+  });
 
-  // --- Logic Methods ---
+  const displayResetStatus = computed(() => {
+    const totalCollected = displayTotals.value.collector || 0;
+    const resetVal = (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0));
+    const combinedValue = totalCollected + resetVal;
+    
+    if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
+    if (combinedValue < 0) return { val: combinedValue, text: 'عجز 🔴', color: '#ef4444' };
+    return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
+  });
+
+  const displayResetAmount = computed(() => 
+    (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0))
+  );
+
+
+  // --- Methods ---
+
+  const saveData = () => {
+    if (props.isSharedView) {
+      if (collabStore.activeSessionId) {
+        store.updateSharedData(collabStore.activeSessionId);
+      }
+    } else {
+      store.saveRowsToStorage();
+    }
+  };
+
   const exitSession = () => {
     collabStore.setActiveSession(null, null);
-    store.switchToUserSession(null);
+    store.switchToUserSession(null); // Clears shared data
     addNotification('تمت العودة إلى تحصيلاتك الخاصة', 'success');
   };
 
@@ -117,42 +183,146 @@ export function useHarvest(props) {
   };
 
   const applyOverdue = async () => {
-    if (selectedOverdueStores.value.length === 0) {
-      addNotification('لم يتم تحديد أي متاجر', 'warning');
-      return;
-    }
+    if (selectedOverdueStores.value.length === 0) return addNotification('لم يتم تحديد أي متاجر', 'warning');
     await store.applyOverdueStores(selectedOverdueStores.value);
     isOverdueModalOpen.value = false;
     addNotification('تمت إضافة المديونيات بنجاح!', 'success');
   };
 
   const showMissingCenters = () => {
-    const currentCodes = new Set(store.rows.map(r => String(r.code).trim()));
-    missingCenters.value = itineraryStore.routes.filter(route => {
-      return !currentCodes.has(String(route.shop_code).trim());
-    });
+    const currentCodes = new Set(displayRows.value.map(r => String(r.code).trim()));
+    missingCenters.value = itineraryStore.routes.filter(route => !currentCodes.has(String(route.shop_code).trim()));
     isMissingModalOpen.value = true;
   };
 
   const toggleProfileDropdown = () => {
-    if (savedItineraryProfiles.value.length === 0) {
-      addNotification('لا توجد قوالب خط سير محفوظة للعرض.', 'warning');
-      return;
-    }
+    if (savedItineraryProfiles.value.length === 0) return addNotification('لا توجد قوالب خط سير محفوظة للعرض.', 'warning');
     showProfileDropdown.value = !showProfileDropdown.value;
   };
 
   const applyItineraryProfile = (profile) => {
-    store.sortRowsByItineraryProfile(profile.shops_order);
+    store.sortRowsByItineraryProfile(profile.shops_order); // This only sorts local `rows`
     showProfileDropdown.value = false;
     addNotification(`تم الترتيب حسب قالب "${profile.profile_name}"`, 'success');
   };
+  
+  const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
+  const clearSearch = () => { searchQueryLocal.value = ''; };
 
+  const syncWithCounterStore = () => {
+    try {
+      const totalCollected = displayTotals.value?.collector || 0;
+      localStorage.setItem('totalCollected', totalCollected.toString());
+      window.dispatchEvent(new CustomEvent('harvestDataUpdated', { detail: { totalCollected } }));
+    } catch (error) {
+      logger.error('Sync error:', error);
+    }
+  };
+
+  const checkAndAddEmptyRow = (index) => {
+    if (searchQueryLocal.value || props.isSharedView) return;
+    if (index === displayRows.value.length - 1) store.addRow();
+  };
+
+  const updateField = (row, index, field, value, syncCounter = false) => {
+    row[field] = value;
+    saveData();
+    if (!props.isSharedView) checkAndAddEmptyRow(index);
+    if (syncCounter) syncWithCounterStore();
+  };
+
+  const updateShop = (row, index, e) => { updateField(row, index, 'shop', e.target.value); hideTooltip(); };
+  const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
+  const updateAmount = (row, index, e) => handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
+  const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
+    if (val === '-') row.extra = '-';
+    else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
+  }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
+  
+  const updateCollector = (row, index, e) => {
+    const amountVal = parseFloat(row.amount) || 0;
+    const extraVal = parseFloat(row.extra) || 0;
+    const collectorMaxLimit = amountVal + extraVal + 2999;
+    handleMoneyInput(e, (val) => {
+      updateField(row, index, 'collector', val ? parseFloat(val) : null, true);
+    }, { fieldName: 'مبلغ المحصل', maxLimit: collectorMaxLimit });
+    hideTooltip();
+  };
+  
+  const updateSummaryField = (e, storeKey, fieldLabel) => {
+    const maxLimit = 499999;
+    handleMoneyInput(e, (val) => {
+      const numVal = parseFloat(val) || 0;
+      if (storeKey === 'masterLimit') displayMasterLimit.value = numVal;
+      else if (storeKey === 'extraLimit') displayExtraLimit.value = numVal;
+      else if (storeKey === 'currentBalance') displayCurrentBalance.value = numVal;
+      saveData();
+    }, { fieldName: fieldLabel, maxLimit: storeKey !== 'currentBalance' ? maxLimit : undefined });
+  };
+  
+  const toggleSign = (row, field) => {
+    const currentVal = row[field];
+    row[field] = (!currentVal || currentVal === '') ? '-' : (currentVal === '-') ? null : parseFloat(String(currentVal).replace(/,/g, '')) * -1;
+    saveData();
+    if (field === 'collector') syncWithCounterStore();
+  };
+  
+  const confirmClearAll = async () => {
+    if ((await confirm({ title: 'مسح الكل', text: 'تأكيد؟' })).isConfirmed) {
+      store.clearAll();
+      searchQueryLocal.value = '';
+      addNotification('تم المسح', 'info');
+    }
+  };
+  
+  const archiveToday = async () => {
+    if (props.isSharedView) return;
+    isArchiving.value = true;
+    try {
+      await archiveStore.loadAvailableDates(false);
+      const dateToSave = await store.getAccurateDate();
+      const exists = archiveStore.dateExists(dateToSave);
+      const { isConfirmed } = await confirm({
+        title: exists ? 'تنبيه: الأرشيف موجود' : 'تأكيد الأرشفة',
+        text: exists ? `يوجد أرشيف محفوظ بالفعل بتاريخ "${dateToSave}". هل تريد استبداله؟` : 'هل أنت متأكد أنك تريد أرشفة بيانات اليوم؟',
+        confirmButtonText: exists ? 'نعم، استبدال' : 'نعم، أرشفة',
+        icon: exists ? 'warning' : 'question'
+      });
+      
+      if (!isConfirmed) return addNotification('تم إلغاء الأرشفة.', 'info');
+      
+      const res = await store.archiveTodayData(dateToSave);
+      if (res.success) {
+        addNotification(res.message, 'success');
+        store.clearAll();
+        searchQueryLocal.value = '';
+      } else {
+        addNotification(res.message, 'error');
+      }
+    } catch (error) {
+      logger.error('Unhandled error during archive process:', error);
+      addNotification('حدث خطأ غير متوقع.', 'error');
+    } finally {
+      isArchiving.value = false;
+    }
+  };
+
+  const handleExport = async () => {
+    const fileName = `تحصيلات_${currentDate.value.replace(/\//g, '-')}`;
+    const result = await exportAndShareTable('harvest-table-container', fileName);
+    addNotification(result.message, result.success ? 'success' : 'error');
+  };
+
+  const handleSummaryExport = async () => {
+    const fileName = `ملخص_بيان_${currentDate.value.replace(/\//g, '-')}`;
+    const result = await exportAndShareTable('summary', fileName, { backgroundColor: 'var(--surface-bg)' });
+    addNotification(result.message, result.success ? 'success' : 'error');
+  };
+  
   const showTooltip = (element, text) => {
     if (!element || !text) return;
     if (showCustomTooltip.value && tooltipTargetElement.value === element) {
-      hideTooltip();
-      return;
+      return hideTooltip();
     }
     customTooltipText.value = text;
     tooltipTargetElement.value = element;
@@ -168,212 +338,33 @@ export function useHarvest(props) {
     });
   };
   const hideTooltip = () => { showCustomTooltip.value = false; };
-
-  const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
-  const clearSearch = () => { searchQueryLocal.value = ''; };
-
-  const syncWithCounterStore = () => {
-    try {
-      const totalCollected = store.totals?.collector || 0;
-      localStorage.setItem('totalCollected', totalCollected.toString());
-      window.dispatchEvent(new CustomEvent('harvestDataUpdated', { detail: { totalCollected } }));
-    } catch (error) {
-      logger.error('Sync error:', error);
-    }
-  };
-
-  const checkAndAddEmptyRow = (index) => {
-    if (searchQueryLocal.value) return;
-    if (index === store.rows.length - 1) store.addRow();
-  };
-
-  const updateField = (row, index, field, value, syncCounter = false) => {
-    row[field] = value;
-    store.saveRowsToStorage();
-    checkAndAddEmptyRow(index);
-    if (syncCounter) syncWithCounterStore();
-  };
-
-  const updateShop = (row, index, e) => { updateField(row, index, 'shop', e.target.value); hideTooltip(); };
-  const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
-  const updateAmount = (row, index, e) => handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
-  const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
-    if (val === '-') row.extra = '-';
-    else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
-  }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
-
-  const updateCollector = async (row, index, e) => {
-    const amountVal = parseFloat(row.amount) || 0;
-    const extraVal = parseFloat(row.extra) || 0;
-    const collectorMaxLimit = amountVal + extraVal + 2999;
-
-    handleMoneyInput(e, (val) => {
-      updateField(row, index, 'collector', val ? parseFloat(val) : null, true);
-      if (val && row.code) {
-        const existingRoute = itineraryStore.routes.find(r => String(r.shop_code) === String(row.code));
-        const handlePositionSuccess = (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          if (existingRoute) {
-            if (itineraryStore.updateLocation) {
-              itineraryStore.updateLocation(existingRoute.id, lat, lng);
-            }
-          } else {
-            itineraryStore.addRoute({
-              shop_code: row.code.toString(),
-              shop_name: row.shop,
-              latitude: lat,
-              longitude: lng
-            });
-          }
-        };
-        const handlePositionError = (err) => {
-          console.warn("GPS failed:", err.message);
-          if (!existingRoute) {
-            itineraryStore.addRoute({
-              shop_code: row.code.toString(),
-              shop_name: row.shop,
-              latitude: null, longitude: null
-            });
-          }
-        };
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            handlePositionSuccess,
-            (err) => {
-              console.warn("High Accuracy GPS failed, trying Low Accuracy...");
-              navigator.geolocation.getCurrentPosition(
-                handlePositionSuccess,
-                handlePositionError,
-                { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-              );
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-          );
-        } else {
-          handlePositionError({ message: "Geolocation not supported" });
-        }
-      }
-    }, { fieldName: 'مبلغ المحصل', maxLimit: collectorMaxLimit });
-    hideTooltip();
-  };
-
-  const updateSummaryField = (e, storeKey, fieldLabel) => {
-    const maxLimit = 499999;
-    handleMoneyInput(e, (val) => {
-      const numVal = parseFloat(val) || 0;
-      if (storeKey === 'masterLimit') store.setMasterLimit(numVal);
-      else if (storeKey === 'extraLimit') store.setExtraLimit(numVal);
-      else if (storeKey === 'currentBalance') store.setCurrentBalance(numVal);
-    }, { fieldName: fieldLabel, maxLimit: storeKey !== 'currentBalance' ? maxLimit : undefined });
-  };
-
-  const toggleSign = (row, field) => {
-    const currentVal = row[field];
-    if (!currentVal || currentVal === '') row[field] = '-';
-    else if (currentVal === '-') row[field] = null;
-    else row[field] = parseFloat(String(currentVal).replace(/,/g, '')) * -1;
-    store.saveRowsToStorage();
-    if (field === 'collector') syncWithCounterStore();
-  };
-
-  const confirmClearAll = async () => {
-    if ((await confirm({ title: 'مسح الكل', text: 'تأكيد؟' })).isConfirmed) {
-      store.clearAll();
-      searchQueryLocal.value = '';
-      addNotification('تم المسح', 'info');
-    }
-  };
-
-  const archiveToday = async () => {
-    isArchiving.value = true;
-    try {
-      // Load local dates quickly to check for existence without blocking UI
-      await archiveStore.loadAvailableDates(false);
-      
-      // Fetch date once from the store
-      const dateToSave = await store.getAccurateDate();
-      const exists = archiveStore.dateExists(dateToSave);
-      
-      let confirmationMessage = {
-        title: 'تأكيد الأرشفة',
-        text: 'هل أنت متأكد أنك تريد أرشفة بيانات اليوم؟',
-        confirmButtonText: 'نعم، أرشفة'
-      };
-
-      if (exists) {
-        confirmationMessage = {
-          title: 'تنبيه: الأرشيف موجود',
-          text: `يوجد أرشيف محفوظ بالفعل بتاريخ "${dateToSave}". هل تريد استبداله بالبيانات الحالية؟`,
-          confirmButtonText: 'نعم، استبدال',
-          icon: 'warning'
-        };
-      }
-      
-      const { isConfirmed } = await confirm(confirmationMessage);
-      
-      if (!isConfirmed) {
-        addNotification('تم إلغاء الأرشفة.', 'info');
-        return;
-      }
-      
-      // Pass the fetched date to the store action
-      const res = await store.archiveTodayData(dateToSave);
-      
-      if (res.success) {
-        addNotification(res.message, 'success');
-        store.clearAll();
-        searchQueryLocal.value = '';
-      } else {
-        addNotification(res.message, 'error');
-      }
-    } catch (error) {
-      logger.error('Unhandled error during archive process:', error);
-      addNotification('حدث خطأ غير متوقع أثناء محاولة الأرشفة.', 'error');
-    } finally {
-      isArchiving.value = false;
-    }
-  };
-
-  const handleExport = async () => {
-    const fileName = searchQueryLocal.value ? `تحصيلات_بحث_${searchQueryLocal.value}` : `تحصيلات_${currentDate.value.replace(/\//g, '-')}`;
-    const result = await exportAndShareTable('harvest-table-container', fileName);
-    if (result.success) addNotification(result.message, 'success');
-    else addNotification(result.message, 'error');
-  };
-
-  const handleSummaryExport = async () => {
-    const fileName = `ملخص_بيان_${currentDate.value.replace(/\//g, '-')}`;
-    const result = await exportAndShareTable('summary', fileName, { backgroundColor: 'var(--surface-bg)' });
-    if (result.success) addNotification(result.message, 'success');
-    else addNotification(result.message, 'error');
-  };
-
+  
   const handleOutsideClick = (e) => {
-    const target = e.target;
-    // This logic is a bit brittle. A better way would be to check if the click was inside the dropdown.
-    // For now, this is what was in the original component.
-    const isTooltipTrigger = target.matches('input[id^="shop-"], input[id^="extra-"], input[id^="collector-"]') || target.classList.contains('readonly-field');
+    const isTooltipTrigger = e.target.closest('input[id^="shop-"], input[id^="extra-"], input[id^="collector-"], .readonly-field');
     if (!isTooltipTrigger) hideTooltip();
   };
 
-  // Lifecycle
+  // Lifecycle Hooks
   onMounted(() => {
-    store.initialize?.();
+    if (!props.isSharedView) {
+      store.initialize();
+      store.loadDataFromStorage();
+      itineraryStore.fetchProfiles();
+      itineraryStore.fetchRoutes();
+    }
     loadColumns();
-    store.loadDataFromStorage();
     syncWithCounterStore();
     searchQueryLocal.value = store.searchQuery || '';
-    itineraryStore.fetchProfiles();
-    itineraryStore.fetchRoutes();
     window.addEventListener('focus', syncWithCounterStore);
     document.addEventListener('click', handleOutsideClick);
   });
 
   onActivated(() => {
-    store.initialize?.();
+    if (!props.isSharedView) {
+      store.initialize();
+      itineraryStore.fetchProfiles();
+    }
     searchQueryLocal.value = store.searchQuery || '';
-    itineraryStore.fetchProfiles();
   });
 
   onBeforeUnmount(() => {
@@ -382,72 +373,41 @@ export function useHarvest(props) {
     document.removeEventListener('click', handleOutsideClick);
   });
 
-  onDeactivated(() => {
-    store.searchQuery = searchQueryLocal.value;
-  });
+  watch(() => collabStore.activeSessionId, (newId, oldId) => {
+    if (props.isSharedView && newId !== oldId) {
+        store.switchToUserSession(newId);
+    }
+  }, { immediate: true });
 
-  watch(() => route.name, (newName) => {
-    if (newName === 'Harvest') store.initialize?.();
-  });
 
   return {
-    // Props
-    isSharedView: props.isSharedView,
-    // Stores
-    store,
-    collabStore,
-    // Column Visibility
-    showSettings,
-    isVisible,
-    apply,
-    harvestColumns,
-    // State
-    searchQueryLocal,
-    showCustomTooltip,
-    customTooltipText,
-    customTooltipRef,
-    currentDay,
-    currentDate,
-    showProfileDropdown,
-    isArchiving,
-    isMissingModalOpen,
-    missingCenters,
-    isOverdueModalOpen,
-    overdueStores,
-    selectedOverdueStores,
-    // Computed
+    store, collabStore,
+    showSettings, isVisible, apply, harvestColumns,
+    searchQueryLocal, showCustomTooltip, customTooltipText, customTooltipRef, currentDay, currentDate,
+    showProfileDropdown, isArchiving, isMissingModalOpen, missingCenters, isOverdueModalOpen, overdueStores,
+    selectedOverdueStores, allOverdueSelected,
+    
+    // Bridge computed properties
+    isLoading,
     isReadOnly,
-    allOverdueSelected,
-    localFilteredRows,
+    displayRows,
+    displayTotals,
+    displayMasterLimit,
+    displayExtraLimit,
+    displayCurrentBalance,
+    displayFilteredRows,
+    displayResetStatus,
+    displayResetAmount,
+    
     savedItineraryProfiles,
-    filteredTotals,
+    filteredTotals, // for summary display
     filteredTotalNetValue,
     getFilteredTotalNetClass,
     getFilteredTotalNetIcon,
-    // Methods
-    calculateNet,
-    getRowNetStatus,
-    getRowNetIcon,
-    exitSession,
-    showMissingCenters,
-    showOverdueModal,
-    applyOverdue,
-    toggleProfileDropdown,
-    applyItineraryProfile,
-    handleSearchInput,
-    clearSearch,
-    updateShop,
-    updateCode,
-    updateAmount,
-    updateExtra,
-    updateCollector,
-    updateSummaryField,
-    toggleSign,
-    confirmClearAll,
-    archiveToday,
-    handleExport,
-    handleSummaryExport,
-    showTooltip,
-    formatInputNumber,
+    calculateNet, getRowNetStatus, getRowNetIcon,
+    exitSession, showMissingCenters, showOverdueModal, applyOverdue, toggleProfileDropdown,
+    applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
+    updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
+    confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber,
   };
 }
