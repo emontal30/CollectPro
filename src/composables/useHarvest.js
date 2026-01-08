@@ -204,7 +204,8 @@ export function useHarvest(props) {
 
   const updateCollector = async (row, index, e) => {
     const amountVal = parseFloat(row.amount) || 0;
-    const collectorMaxLimit = amountVal + 2999;
+    const extraVal = parseFloat(row.extra) || 0;
+    const collectorMaxLimit = amountVal + extraVal + 2999;
 
     handleMoneyInput(e, (val) => {
       updateField(row, index, 'collector', val ? parseFloat(val) : null, true);

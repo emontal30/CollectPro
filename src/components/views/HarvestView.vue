@@ -259,8 +259,11 @@
     <teleport to="body" v-if="!isSharedView">
         <div v-if="isOverdueModalOpen" class="modal-overlay" @click="isOverdueModalOpen = false">
             <div class="modal-content overdue-modal" @click.stop>
-                <div class="modal-header">
-                    <h3><i class="fas fa-history text-danger"></i> المديونيات المتأخرة</h3>
+                <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-history text-danger"></i> المديونيات المتأخرة</h3>
+                      <button class="btn btn-sm btn-outline-primary" type="button" @click="toggleSelectAllOverdue" title="تحديد الكل">تحديد الكل</button>
+                    </div>
                     <button class="close-btn" @click="isOverdueModalOpen = false">&times;</button>
                 </div>
                 <div class="modal-body scrollable-list">
@@ -500,6 +503,21 @@ const {
   showTooltip,
   formatInputNumber,
 } = useHarvest(props);
+
+// Toggle select/deselect all overdue stores
+const toggleSelectAllOverdue = () => {
+  try {
+    // `allOverdueSelected` is a computed ref from useHarvest; set its value
+    if (typeof allOverdueSelected === 'object' && 'value' in allOverdueSelected) {
+      allOverdueSelected.value = !allOverdueSelected.value;
+    } else {
+      // fallback: assign directly (should work in template reactivity)
+      allOverdueSelected = !allOverdueSelected;
+    }
+  } catch (e) {
+    console.warn('Failed to toggle select all overdue', e);
+  }
+};
 </script>
 
 <script>
