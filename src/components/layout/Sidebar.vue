@@ -259,15 +259,50 @@ const handleRefreshData = async () => {
       });
       const idbKeys = await localforage.keys();
       for (const key of idbKeys) {
-        if (key.startsWith('arch_data_') || key === 'harvest_rows') {
+        // Include archives, harvest rows, overdue stores, and itinerary data/profiles
+        if (
+          key.startsWith('arch_data_') ||
+          key === 'harvest_rows' ||
+          key === 'overdue_stores' ||
+          key === 'itinerary_profiles' ||
+          key.startsWith('itinerary_data_')
+        ) {
           backup.indexedDB[key] = await localforage.getItem(key);
         }
       }
       localStorage.clear();
       await localforage.clear();
-      Object.entries(backup.localStorage).forEach(([key, val]) => localStorage.setItem(key, val));
+      // Restore localStorage: don't overwrite if a value already exists
+      for (const [key, val] of Object.entries(backup.localStorage)) {
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, val);
+      }
+
+      // Helper to merge arrays of objects using a best-effort key (id, shop_code, slot_number)
+      const mergeArrays = (arrA, arrB) => {
+        const keyFor = (it) => (it && (it.id ?? it.shop_code ?? it.slot_number)) ?? null;
+        const map = new Map();
+        if (Array.isArray(arrA)) arrA.forEach(item => { const k = keyFor(item) ?? JSON.stringify(item); map.set(k, item); });
+        if (Array.isArray(arrB)) arrB.forEach(item => { const k = keyFor(item) ?? JSON.stringify(item); if (!map.has(k)) map.set(k, item); else map.set(k, { ...map.get(k), ...item }); });
+        return Array.from(map.values());
+      };
+
+      // Restore indexedDB entries: merge with any existing values when possible
       for (const [key, val] of Object.entries(backup.indexedDB)) {
-        await localforage.setItem(key, val);
+        try {
+          const existing = await localforage.getItem(key);
+          let toSave = val;
+          if (existing) {
+            if (Array.isArray(existing) && Array.isArray(val)) {
+              toSave = mergeArrays(existing, val);
+            } else if (existing && typeof existing === 'object' && val && typeof val === 'object') {
+              toSave = { ...existing, ...val };
+            }
+          }
+          await localforage.setItem(key, toSave);
+        } catch (err) {
+          console.error('Restore merge error for', key, err);
+          await localforage.setItem(key, val);
+        }
       }
       localStorage.setItem('app_version', currentVersion);
       await subStore.forceRefresh(authStore.user);

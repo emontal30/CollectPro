@@ -189,6 +189,7 @@ import { useDashboardStore } from '@/stores/dashboard';
 import { useItineraryStore } from '@/stores/itineraryStore'; // إضافة store خط السير
 import { useHarvestStore } from '@/stores/harvest';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import api from '@/services/api'; // Import the api object
 
 const router = useRouter();
 const store = useDashboardStore();
@@ -259,6 +260,8 @@ const handleSaveAndGo = async () => {
     const result = store.processAndSave();
 
     if (result.status === 'success') {
+      // Track the user action
+      api.user.trackUserAction('save_and_go_to_harvest');
       // Sync data with Itinerary Store
       if (result.routeData && result.routeData.length > 0) {
         await itineraryStore.syncFromDashboard(result.routeData);
@@ -290,6 +293,8 @@ const handleUpdateBalances = async () => {
     const result = store.processAndSave();
 
     if (result.status === 'success' && result.routeData && result.routeData.length > 0) {
+      // Track the user action
+      api.user.trackUserAction('update_balances');
       await itineraryStore.syncFromDashboard(result.routeData);
       showStatusMessage('success', '✅ تم تحديث الأرصدة بنجاح!', 'جاري الانتقال لصفحة خط السير...');
       setTimeout(() => { router.push('/app/itinerary'); }, 1400);

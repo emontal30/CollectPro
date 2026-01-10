@@ -300,9 +300,12 @@
                 </div>
                 <div class="modal-footer" v-if="overdueStores.length > 0">
                     <button class="btn btn-secondary" @click="isOverdueModalOpen = false">إلغاء</button>
-                    <button class="btn btn-primary" @click="applyOverdue" :disabled="selectedOverdueStores.length === 0">
-                        <i class="fas fa-plus"></i> إضافة المحدد ({{ selectedOverdueStores.length }})
-                    </button>
+                  <button class="btn btn-danger" @click="deleteSelectedOverdue" :disabled="selectedOverdueStores.length === 0">
+                    <i class="fas fa-trash"></i> حذف المحدد ({{ selectedOverdueStores.length }})
+                  </button>
+                  <button class="btn btn-primary" @click="applyOverdue" :disabled="selectedOverdueStores.length === 0">
+                    <i class="fas fa-plus"></i> إضافة المحدد ({{ selectedOverdueStores.length }})
+                  </button>
                 </div>
             </div>
         </div>
@@ -498,6 +501,7 @@ const {
   showMissingCenters,
   showOverdueModal,
   applyOverdue,
+  deleteSelectedOverdue,
   toggleProfileDropdown,
   applyItineraryProfile,
   handleSearchInput,

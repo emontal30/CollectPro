@@ -9,28 +9,64 @@ export const adminService = {
    */
   async getStats(activeDays = 30) {
     try {
-      const { data, error } = await apiInterceptor(
-        supabase.rpc('get_admin_stats', { active_days_period: activeDays })
+      // 1. جلب الإحصائيات الأساسية من جدول statistics
+      const { data: statsData } = await apiInterceptor(
+        supabase
+          .from('statistics')
+          .select('*')
+          .eq('id', '00000000-0000-0000-0000-000000000001')
+          .maybeSingle()
       );
 
-      if (error) {
-        throw error;
-      }
-      
-      // The RPC function returns the data in the exact format needed by the frontend.
-      return data;
-    } catch (err) {
-      logger.error('Error fetching admin stats via RPC:', err);
-      // Return a default structure on error to prevent frontend crashes
+      // 2. حساب المستخدمين النشطين (الذين قاموا بعمليات إدخال بيانات أو أرشفة خلال الفترة)
+      const dateLimit = new Date();
+      dateLimit.setDate(dateLimit.getDate() - activeDays);
+      const dateLimitISO = dateLimit.toISOString();
+
+      // جلب المستخدمين من كلا المصدرين بالتوازي
+      const [archiveUsersRes, actionUsersRes] = await Promise.all([
+        apiInterceptor(
+          supabase
+            .from('daily_archives')
+            .select('user_id')
+            .gte('updated_at', dateLimitISO)
+        ),
+        apiInterceptor(
+          supabase
+            .from('user_actions')
+            .select('user_id')
+            .gte('created_at', dateLimitISO)
+        )
+      ]);
+
+      const archiveUserIds = archiveUsersRes.data?.map(u => u.user_id) || [];
+      const actionUserIds = actionUsersRes.data?.map(u => u.user_id) || [];
+
+      // دمج وتصفية المعرفات الفريدة
+      const allUserIds = [...archiveUserIds, ...actionUserIds];
+      const uniqueActiveUsers = new Set(allUserIds).size;
+
+      // 3. جلب العدادات الأخرى بشكل مباشر لضمان الدقة 100%
+      const [cancelledRes, expiredRes, pendingRes] = await Promise.all([
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
+        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'))
+      ]);
+
+      const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
+
       return {
-        totalUsers: 0,
-        pendingRequests: 0,
-        activeSubscriptions: 0,
-        totalRevenue: 0,
-        cancelled: 0,
-        expired: 0,
-        activeUsers: 0
+        totalUsers: stats.total_users || 0,
+        pendingRequests: pendingRes.count || 0, // جلب العدد الحقيقي المباشر
+        activeSubscriptions: stats.active_subscriptions || 0,
+        totalRevenue: stats.total_revenue || 0,
+        cancelled: cancelledRes.count || 0,
+        expired: expiredRes.count || 0,
+        activeUsers: uniqueActiveUsers
       };
+    } catch (err) {
+      logger.error('Error fetching admin stats:', err);
+      return {};
     }
   },
 
@@ -42,78 +78,67 @@ export const adminService = {
     const { data: subsData, error: subsError } = await apiInterceptor(
       supabase
         .from('subscriptions')
-        .select(`
-          *,
-          users:user_id (full_name, email),
-          subscription_plans:plan_id (name, name_ar, price_egp, duration_months)
-        `)
+        .select('*, users:user_id (full_name, email), subscription_plans:plan_id (name, name_ar, price_egp, duration_months)')
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
     );
 
     if (subsError || !subsData) return [];
     
-    // Step 2: Fetch profiles for the found user_ids
     const userIds = subsData.map(s => s.user_id);
     if (userIds.length === 0) return [];
 
     const { data: profilesData, error: profilesError } = await apiInterceptor(
-      supabase
-        .from('profiles')
-        .select('id, user_code')
-        .in('id', userIds)
+      supabase.from('profiles').select('id, user_code').in('id', userIds)
     );
 
-    if (profilesError) {
-      logger.warn('Could not fetch profiles for pending subs.');
-    }
+    if (profilesError) logger.warn('Could not fetch profiles for pending subs.');
+    
     const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
     
-    // Step 3: Merge the data
-    return subsData.map(sub => ({
-      ...sub,
-      user_code: profilesMap.get(sub.user_id) || null
-    }));
+    return subsData.map(sub => ({ ...sub, user_code: profilesMap.get(sub.user_id) || null }));
   },
 
   /**
    * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم
    */
   async getUsers() {
-    try {
-      const { data, error } = await apiInterceptor(
-        supabase.rpc('get_users_with_details')
-      );
-      if (error) {
-        throw error;
-      }
-      return data || [];
-    } catch (err) {
-      logger.error('Error fetching users via RPC:', err);
+    const { data: usersData, error: usersError } = await apiInterceptor(
+      supabase.from('users').select('*, subscriptions(id, status, end_date)').order('created_at', { ascending: false })
+    );
+
+    if (usersError) {
+      logger.error('Error fetching users:', usersError);
       return [];
     }
+    if (!usersData) return [];
+
+    const userIds = usersData.map(u => u.id);
+    const { data: profilesData, error: profilesError } = await apiInterceptor(
+      supabase.from('profiles').select('id, user_code').in('id', userIds)
+    );
+
+    if (profilesError) logger.warn('Could not fetch user profiles, short codes will be missing.');
+
+    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
+
+    return usersData.map(user => {
+      const activeSub = user.subscriptions?.find(s => s.status === 'active');
+      return { ...user, user_code: profilesMap.get(user.id) || null, hasActiveSub: !!activeSub, activeSubId: activeSub?.id, expiryDate: activeSub?.end_date || null };
+    });
   },
 
   /**
    * 4. جلب جميع الاشتراكات مع الفلترة
    */
   async getAllSubscriptions(filters = {}) {
-    // The new implementation uses the pre-built view for efficiency
-    let query = supabase
-      .from('admin_subscriptions_view')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    
+    let query = supabase.from('admin_subscriptions_view').select('*').order('created_at', { ascending: false });
+    if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status);
     if (filters.expiry === 'expiring_soon') {
       const today = new Date().toISOString();
       const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       query = query.gte('end_date', today).lte('end_date', sevenDaysFromNow);
     }
-
     const { data } = await apiInterceptor(query);
     return data || [];
   },
@@ -122,12 +147,30 @@ export const adminService = {
    * 5. معالجة تفعيل/إلغاء الاشتراك
    */
   async handleSubscriptionAction(id, action) {
-    return await apiInterceptor(
-      supabase.rpc('handle_subscription_action', {
-        p_subscription_id: id,
-        p_action: action
-      })
-    );
+    const now = new Date();
+    const updates = { updated_at: now.toISOString() };
+
+    if (action === 'approve') {
+      const { data: sub } = await apiInterceptor(supabase.from('subscriptions').select('user_id, plan_id, subscription_plans(duration_months)').eq('id', id).single());
+      if (!sub) return { error: 'Request not found' };
+
+      await supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('user_id', sub.user_id).eq('status', 'active');
+      
+      const months = sub?.subscription_plans?.duration_months || 1;
+      const end = new Date(now);
+      end.setMonth(now.getMonth() + months);
+
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), ...updates }).eq('id', id));
+    } 
+    if (action === 'reject' || action === 'delete') {
+      return apiInterceptor(supabase.from('subscriptions').delete().eq('id', id));
+    } 
+    if (action === 'cancel') {
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('id', id));
+    }
+    if (action === 'reactivate') {
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', ...updates }).eq('id', id));
+    }
   },
 
   /**
@@ -135,68 +178,31 @@ export const adminService = {
    */
   async activateManualSubscription(userId, days) {
     const now = new Date();
-    
-    const { data: activeSub } = await apiInterceptor(
-      supabase
-        .from('subscriptions')
-        .select('id, end_date')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .maybeSingle()
-    );
+    const { data: activeSub } = await apiInterceptor(supabase.from('subscriptions').select('id, end_date').eq('user_id', userId).eq('status', 'active').maybeSingle());
 
     if (activeSub) {
       let newEnd = new Date(activeSub.end_date);
       if (newEnd < now) newEnd = now;
       newEnd.setDate(newEnd.getDate() + Number(days));
-
-      return await apiInterceptor(
-        supabase
-          .from('subscriptions')
-          .update({ 
-            end_date: newEnd.toISOString(), 
-            updated_at: now.toISOString() 
-          })
-          .eq('id', activeSub.id)
-      );
+      return apiInterceptor(supabase.from('subscriptions').update({ end_date: newEnd.toISOString(), updated_at: now.toISOString() }).eq('id', activeSub.id));
     } else {
       const end = new Date(now);
       end.setDate(now.getDate() + Number(days));
-
-      const { data: plan } = await apiInterceptor(
-        supabase.from('subscription_plans').select('id').limit(1).maybeSingle()
-      );
-      
-      if (!plan) return { error: { message: "لا توجد خطط معرفة" } };
-
+      const { data: plan } = await apiInterceptor(supabase.from('subscription_plans').select('id').limit(1).maybeSingle());
+      if (!plan) return { error: { message: 'No plans defined' } };
       await supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
-
-      return await apiInterceptor(
-        supabase.from('subscriptions').insert({
-          user_id: userId,
-          plan_id: plan.id,
-          plan_name: 'اشتراك يدوي',
-          price: 0,
-          status: 'active',
-          start_date: now.toISOString(),
-          end_date: end.toISOString(),
-          transaction_id: `MANUAL-${Date.now()}`
-        })
-      );
+      return apiInterceptor(supabase.from('subscriptions').insert({ user_id: userId, plan_id: plan.id, plan_name: 'Manual Subscription', price: 0, status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), transaction_id: `MANUAL-${Date.now()}` }));
     }
   },
 
+  /**
+   * 7. جلب بيانات الرسم البياني الشهري
+   */
   async getMonthlyChartData() {
-    const { data } = await apiInterceptor(
-      supabase
-        .from('subscriptions')
-        .select('created_at')
-        .order('created_at', { ascending: true })
-    );
-
+    const { data } = await apiInterceptor(supabase.from('subscriptions').select('created_at').order('created_at', { ascending: true }));
     if (!data) return { labels: [], values: [] };
 
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthsCount = {};
     const last5Months = [];
     const today = new Date();

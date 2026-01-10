@@ -17,8 +17,8 @@
           </div>
 
           <div class="btn-container">
-            <button 
-              class="google-login-btn" 
+            <button
+              class="google-login-btn"
               :class="{ 'is-loading': store.isLoading }"
               :disabled="store.isLoading"
               @click="store.loginWithGoogle"
@@ -457,18 +457,15 @@ const installApp = async () => {
 .google-login-btn {
   /* تقليل العرض درجتين (85%) وتوسيطه */
   width: 85%;
-  margin: 0 auto; 
+  margin: 0 auto;
   /* زيادة الارتفاع درجة (22px padding) */
   padding: 22px 20px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  color: white;
   border: none;
   border-radius: 16px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -477,7 +474,6 @@ const installApp = async () => {
 
 .google-login-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(var(--primary-rgb), 0.3);
 }
 
 .google-login-btn i {
@@ -488,8 +484,6 @@ const installApp = async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: white;
-  color: #ea4335;
   flex-shrink: 0;
 }
 

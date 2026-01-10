@@ -14,6 +14,27 @@ export const userService = {
   },
 
   /**
+   * Tracks a specific user action for analytics.
+   * @param {string} actionType - The type of action (e.g., 'save_and_go_to_harvest').
+   */
+  async trackUserAction(actionType) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return; // No user logged in
+
+      await apiInterceptor(
+        supabase.from('user_actions').insert({
+          user_id: user.id,
+          action_type: actionType,
+        })
+      );
+    } catch (err) {
+      logger.warn('Could not track user action:', err.message);
+    }
+  },
+
+
+  /**
    * مزامنة بيانات المستخدم مع جدول public.users
    * وإرجاع بيانات الملف الشخصي (بما في ذلك الدور)
    */

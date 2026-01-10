@@ -218,8 +218,8 @@ body.dark .alert-warning, body.dark .status-message.warning, body.dark .status-b
 
 /* Login Page Corrections */
 body.dark .login-card {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(21, 28, 41, 0.185);
+  border-color: rgba(51, 252, 175, 0.5);
 }
 
 body.dark .app-name {
@@ -242,3 +242,19 @@ body.dark .install-app-btn {
 body.dark .install-btn-title { color: #f1f5f9; }
 body.dark .install-btn-subtitle { color: #94a3b8; }
 body.dark .install-app-icon { background: #0f172a; }
+
+/* Override: Login button color in dark mode (centralized override) */
+body.dark .google-login-btn {
+  /* فاتح في الأعلى -> داكن في المنتصف -> فاتح في الأسفل */
+  background: linear-gradient(
+      to bottom, 
+      rgba(91, 240, 183, 0.815) 0%,   /* فاتح */
+      rgba(57, 153, 116, 0.432) 50%,  /* داكن (المركز) */
+      rgba(91, 240, 183, 0.815) 100%  /* فاتح */
+  ) !important;
+}
+
+body.dark .google-login-btn:hover:not(:disabled) {
+  box-shadow: 0 15px 30px rgba(51,252,175,0.18) !important;
+  transform: translateY(-3px);
+}

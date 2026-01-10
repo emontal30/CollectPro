@@ -57,15 +57,14 @@ export default {
   padding: 14px 20px;
   border: none;
   border-radius: 16px;
-  background: linear-gradient(135deg, #007965 0%, #00a080 100%);
-  color: white;
+  /* color/background moved to centralized _unified-components.css */
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 121, 101, 0.3);
+  gap: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: 'Cairo', sans-serif;
-  gap: 12px;
+  
 }
 
 /* Shine Effect */
@@ -91,9 +90,7 @@ export default {
 
 /* Hover State */
 .google-login-btn:not(:disabled):hover {
-  background: linear-gradient(135deg, #006d56 0%, #007965 100%);
   transform: translateY(-3px);
-  box-shadow: 0 12px 25px rgba(0, 121, 101, 0.4);
 }
 
 /* Disabled State */
@@ -106,7 +103,6 @@ export default {
 .icon-container {
   width: 32px;
   height: 32px;
-  background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -116,7 +112,6 @@ export default {
 }
 
 .icon-container i {
-  color: #ea4335;
   font-size: 18px;
 }
 
@@ -127,7 +122,6 @@ export default {
 }
 
 .icon-container.is-loading i {
-  color: white !important;
   font-size: 22px;
 }
 

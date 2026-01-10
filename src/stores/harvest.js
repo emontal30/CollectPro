@@ -299,6 +299,18 @@ export const useHarvestStore = defineStore('harvest', {
     async clearOverdueStores() {
       await localforage.removeItem('overdue_stores');
     },
+
+    async deleteOverdueStores(codes = []) {
+      if (!Array.isArray(codes) || codes.length === 0) return;
+      try {
+        const current = (await localforage.getItem('overdue_stores')) || [];
+        const filtered = current.filter(s => !codes.includes(String(s.code)));
+        if (filtered.length > 0) await localforage.setItem('overdue_stores', filtered);
+        else await localforage.removeItem('overdue_stores');
+      } catch (err) {
+        logger.error('Error deleting overdue stores:', err);
+      }
+    },
     
     async clearAll() {
       await this.resetTable();

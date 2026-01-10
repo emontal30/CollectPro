@@ -189,6 +189,31 @@ export function useHarvest(props) {
     addNotification('تمت إضافة المديونيات بنجاح!', 'success');
   };
 
+  const deleteSelectedOverdue = async () => {
+    if (selectedOverdueStores.value.length === 0) return addNotification('لم يتم تحديد أي عناصر للحذف', 'warning');
+    const { isConfirmed } = await confirm({
+      title: 'حذف المديونيات المحددة',
+      text: `هل تريد حذف ${selectedOverdueStores.value.length} عنصر/عناصر من المديونيات المتأخرة نهائياً؟ لا يمكن التراجع.`,
+      icon: 'warning',
+      confirmButtonText: 'نعم، احذف',
+      confirmButtonColor: '#e74c3c'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const codes = selectedOverdueStores.value.map(s => String(s.code));
+      await store.deleteOverdueStores(codes);
+      // refresh list in modal
+      overdueStores.value = await store.fetchOverdueStores();
+      selectedOverdueStores.value = [];
+      addNotification('تم حذف العناصر المحددة من المتأخرات', 'success');
+    } catch (err) {
+      logger.error('Failed to delete selected overdue items', err);
+      addNotification('فشل حذف بعض العناصر', 'error');
+    }
+  };
+
   const showMissingCenters = () => {
     const currentCodes = new Set(displayRows.value.map(r => String(r.code).trim()));
     missingCenters.value = itineraryStore.routes.filter(route => !currentCodes.has(String(route.shop_code).trim()));
@@ -405,7 +430,7 @@ export function useHarvest(props) {
     getFilteredTotalNetClass,
     getFilteredTotalNetIcon,
     calculateNet, getRowNetStatus, getRowNetIcon,
-    exitSession, showMissingCenters, showOverdueModal, applyOverdue, toggleProfileDropdown,
+    exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, toggleProfileDropdown,
     applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
     confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber,

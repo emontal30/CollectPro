@@ -355,6 +355,43 @@
    .user-name { font-weight: 700; color: var(--gray-900); }
    .user-email { font-size: 0.8rem; color: var(--gray-600); }
 
+  /* =========================================
+     Login Button (centralized styling)
+     - Centralize color, background and shadow so changes
+       happen in one place and follow CSS variables.
+     ========================================= */
+ .google-login-btn {
+    /* التدرج: فاتح في الأعلى -> غامق في المنتصف -> فاتح في الأسفل */
+    background: linear-gradient(
+        to bottom, 
+        rgb(65, 158, 143) 0%,   /* فاتح */
+        rgb(5, 90, 69) 50%,  /* غامق (المركز) */
+        rgb(65, 158, 143) 100%  /* فاتح */
+    );
+    
+    color: white;
+    border: none;
+    
+    /* جعلت لون الظل متناسقاً مع اللون الأخضر */
+    box-shadow: 0 10px 20px rgba(51, 252, 175, 0.15); 
+    transition: all 0.3s ease;
+
+    /* تكبير النص درجة واحدة */
+    font-size: 1.1em;
+}
+
+  .google-login-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(var(--primary-rgb), 0.3);
+  }
+
+  .google-login-btn i,
+  .google-login-btn .icon-container {
+    background: white;
+  }
+
+  .google-login-btn i { color: #ea4335; }
+
 
 /* =========================================
    8. HARVEST VIEW SPECIFIC STYLES
