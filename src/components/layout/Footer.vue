@@ -5,7 +5,7 @@
       <p class="developer-info">
         تم التصميم والتطوير بواسطة | <strong class="developer-name">أيمن حافظ</strong> 💻
         <span class="footer-separator">|</span>
-        <span class="version-badge">v2.3.3</span>
+        <span class="version-badge">v{{ appVersion }}</span>
       </p>
     </div>
   </div>
@@ -15,6 +15,7 @@
 import { ref, onMounted } from 'vue'
 
 const currentYear = ref(new Date().getFullYear())
+const appVersion = __APP_VERSION__ || '0.0.0'
 
 onMounted(() => {
   currentYear.value = new Date().getFullYear()

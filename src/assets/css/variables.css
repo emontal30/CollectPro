@@ -119,6 +119,7 @@
   --icon-archive: #6366f1;
   --icon-clear: #ef4444;
   --icon-home: #0ea5e9;
+  --icon-share: var(--info);
 }
 
 /* ====== DARK MODE OVERRIDES ====== */
@@ -189,4 +190,5 @@ body.dark {
   --icon-archive: #818cf8;
   --icon-clear: #f87171;
   --icon-home: #38bdf8;
+  --icon-share: #7dd3fc;
 }

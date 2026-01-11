@@ -3,7 +3,24 @@ import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+import fs from 'fs';
 import pkg from './package.json';
+
+// Ensure public/manifest.json version stays in sync with package.json
+try {
+  const publicManifestPath = resolve(process.cwd(), 'public', 'manifest.json');
+  if (fs.existsSync(publicManifestPath)) {
+    const raw = fs.readFileSync(publicManifestPath, 'utf8');
+    const manifest = JSON.parse(raw);
+    if (manifest.version !== pkg.version) {
+      manifest.version = pkg.version;
+      fs.writeFileSync(publicManifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+    }
+  }
+} catch (err) {
+  // do not block Vite if manifest update fails
+  // console.warn('Could not update public/manifest.json version:', err)
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');

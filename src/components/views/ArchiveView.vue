@@ -132,15 +132,14 @@
 
     <div class="buttons-container footer-sticky">
       <div class="buttons-row">
-        <router-link to="/app/harvest" class="btn btn-secondary btn-full">
+        <router-link to="/app/harvest" class="btn btn-dashboard btn-dashboard--home">
           <i class="fas fa-arrow-left"></i>
           <span>العودة للتحصيلات</span>
         </router-link>
-      </div>
 
-      <div class="buttons-row" v-if="store.selectedDate && !store.isLoading && !store.isGlobalSearching">
         <button 
-          class="btn btn-danger btn-full" 
+          v-if="store.selectedDate && !store.isLoading && !store.isGlobalSearching"
+          class="btn btn-dashboard btn-dashboard--clear"
           @click="deleteCurrentArchive"
         >
           <i class="fas fa-trash-alt"></i>
@@ -309,4 +308,16 @@ const deleteCurrentArchive = async () => {
 .btn-export-share:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
 .btn-export-share i { font-size: 1rem; }
 @media (max-width: 768px) { .archive-specific-table .shop, .archive-specific-table td.shop, .archive-specific-table th.shop { width: 115px !important; min-width: 115px !important; } .date-header, .date-cell { width: 70px !important; min-width: 70px !important; } .export-container { justify-content: center; } }
+
+/* Use global dashboard button styles; keep simple layout spacing */
+.buttons-container { margin-top: 30px; padding: 12px; }
+.buttons-container .buttons-row { display:flex; gap:12px; justify-content:center; width:100%; flex-wrap:nowrap; }
+.buttons-container .buttons-row > * { flex: 0 1 48%; min-width: 0; margin: 0; }
+
+/* keep them side-by-side on all viewports (smaller gap on very small screens) */
+@media (max-width: 420px) {
+  .buttons-container { padding: 10px; }
+  .buttons-container .buttons-row { gap:8px; }
+  .buttons-container .buttons-row > * { flex: 0 1 46%; }
+}
 </style>

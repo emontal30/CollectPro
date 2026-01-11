@@ -136,6 +136,16 @@
       </div>
     </div>
 
+    <!-- Footer container with Return to Harvests button (separate container) -->
+    <div class="share-footer-container footer-sticky">
+      <div class="buttons-row">
+        <router-link to="/app/harvest" class="btn btn-dashboard btn-dashboard--home">
+          <i class="fas fa-arrow-left"></i>
+          <span>العودة للتحصيلات</span>
+        </router-link>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -386,5 +396,14 @@ const cancelEditName = () => {
   .select-box { width: 100%; }
   .rename-box { width: 100%; justify-content: flex-end; }
   .d-none-mobile { display: none; }
+}
+
+/* Footer button container to match dashboard/archive style */
+.share-footer-container { margin-top: 18px; padding: 12px; }
+.share-footer-container .buttons-row { display:flex; gap:12px; justify-content:center; width:100%; flex-wrap:nowrap; }
+.share-footer-container .buttons-row > * { flex: 0 1 48%; min-width: 0; margin: 0; }
+
+@media (max-width: 420px) {
+  .share-footer-container .buttons-row > * { flex: 0 1 46%; }
 }
 </style>

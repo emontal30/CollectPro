@@ -430,6 +430,12 @@
           <i class="fas fa-broom"></i>
           <span>تفريغ الحقول</span>
         </button>
+        <router-link to="/app/share" class="btn btn-dashboard btn-dashboard--share">
+            <i class="fas fa-users"></i>
+            <span>مشاركة التحصيل</span>
+        </router-link>
+      </div>
+      <div class="buttons-row">
         <button class="btn btn-dashboard btn-dashboard--archive btn--archive-today" :disabled="isArchiving || displayRows.length === 0" @click="archiveToday">
           <i :class="isArchiving ? 'fas fa-spinner fa-spin' : 'fas fa-folder'"></i>
           <span>{{ isArchiving ? 'جاري الأرشفة...' : 'أرشفة اليوم' }}</span>

@@ -1,13 +1,14 @@
 {
   "name": "collectpro",
-  "version": "2.3.3",
+  "version": "3.4.1",
   "description": "تطبيق تحصيل شامل واحترافى",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "check:hardcoded-version": "node -e \"const fs=require('fs'),path=require('path');const root=process.cwd();const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));const version=pkg.version;const targets=['\"'+version+'\"','v'+version];const allowed=new Set([path.join(root,'package.json'),path.join(root,'package-lock.json'),path.join(root,'public','manifest.json')]);let hits=[];(function walk(dir){fs.readdirSync(dir,{withFileTypes:true}).forEach(it=>{const p=path.join(dir,it.name);if(it.isDirectory()){if(['node_modules','.git','dist','dev-dist'].includes(it.name))return;walk(p);}else{if(allowed.has(p))return;const ext=path.extname(it.name).toLowerCase();if(!['.js','.ts','.vue','.json','.html','.css','.scss','.md'].includes(ext))return;let txt='';try{txt=fs.readFileSync(p,'utf8');}catch(e){return;}if(targets.some(t=>txt.includes(t))){hits.push(p);}}});})(root);if(hits.length){console.log('Hardcoded version occurrences for',version);hits.forEach(f=>console.log(' -',f));process.exitCode=1;}else{console.log('No hardcoded version occurrences found.');}\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",

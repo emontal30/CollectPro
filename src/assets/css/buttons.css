@@ -107,6 +107,7 @@
 .btn-dashboard--archive i { color: var(--icon-archive); }
 .btn-dashboard--clear i   { color: var(--icon-clear); }
 .btn-dashboard--home i    { color: var(--icon-home); }
+.btn-dashboard--share i   { color: var(--icon-share); }
 
 /* Highlight 'Archive Today' button specially */
 .btn--archive-today {
