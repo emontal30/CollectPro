@@ -64,6 +64,8 @@ const props = defineProps({
 
 // Mapping zoom level (0-10) to display labels (-5 to +5)
 const zoomLevels = [
+  { value: 12, label: '+7' },
+  { value: 11, label: '+6' },
   { value: 10, label: '+5' },
   { value: 9, label: '+4' },
   { value: 8, label: '+3' },
@@ -72,9 +74,7 @@ const zoomLevels = [
   { value: 5, label: '0' },
   { value: 4, label: '-1' },
   { value: 3, label: '-2' },
-  { value: 2, label: '-3' },
-  { value: 1, label: '-4' },
-  { value: 0, label: '-5' }
+  { value: 2, label: '-3' }
 ];
 
 const currentZoomLabel = computed(() => {

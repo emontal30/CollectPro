@@ -7,7 +7,7 @@ const SETTINGS_VERSION = '1.1'
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     darkMode: false,
-    zoomLevel: 5, // 0 to 10 scale, 5 is the default (14px)
+    zoomLevel: 5, // 2 to 12 scale, 5 is the default (18px)
     version: SETTINGS_VERSION,
     // يمكن إضافة مصفوفة للألوان المخصصة هنا مستقبلاً
     themeConfig: {
@@ -33,7 +33,7 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     setZoomLevel(level) {
-      this.zoomLevel = Math.max(0, Math.min(10, level))
+      this.zoomLevel = Math.max(2, Math.min(12, level))
       this.applySettings()
     },
 
@@ -114,7 +114,7 @@ export const useSettingsStore = defineStore('settings', {
           }
 
           this.darkMode = typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false
-          this.zoomLevel = (typeof parsed.zoomLevel === 'number' && parsed.zoomLevel >= 0 && parsed.zoomLevel <= 10) ? parsed.zoomLevel : 5
+          this.zoomLevel = (typeof parsed.zoomLevel === 'number' && parsed.zoomLevel >= 2 && parsed.zoomLevel <= 12) ? parsed.zoomLevel : 5
           this.themeConfig = parsed.themeConfig || { primaryColor: null, sidebarColor: null }
           
           this.applySettings()
