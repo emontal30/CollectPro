@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
-              handler: 'NetworkOnly', 
+              handler: 'NetworkFirst',
               options: {
                 cacheName: 'supabase-api-cache',
                 networkTimeoutSeconds: 5,
@@ -120,10 +120,13 @@ export default defineConfig(({ mode }) => {
       target: 'es2020',
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-vue': ['vue', 'vue-router', 'pinia'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-utils': ['sweetalert2', 'localforage']
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              const parts = id.split('node_modules/')[1].split('/');
+              // handle scoped packages like @supabase/supabase-js
+              const pkgName = parts[0].startsWith('@') ? parts.slice(0,2).join('/') : parts[0];
+              return `vendor-${pkgName.replace('@', '')}`;
+            }
           }
         }
       }
