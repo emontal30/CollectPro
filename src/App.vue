@@ -11,12 +11,18 @@
 </template>
 
 <script setup>
-import { onMounted, provide } from 'vue';
+import { onMounted, provide, onBeforeUnmount } from 'vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { useSettingsStore } from '@/stores/settings';
 import { initializeSyncListener } from '@/services/archiveSyncQueue';
 import { useNotifications } from '@/composables/useNotifications';
 import logger from '@/utils/logger';
+import { useItineraryStore } from '@/stores/itineraryStore';
+import { useArchiveStore } from '@/stores/archiveStore';
+import { useCollaborationStore } from '@/stores/collaborationStore';
+import { useAdminStore } from '@/stores/adminStore';
+import { useHarvestStore } from '@/stores/harvest';
+import { useAuthStore } from '@/stores/auth';
 
 // استيراد المكونات العالمية
 import InstallPrompt from '@/components/ui/InstallPrompt.vue';
@@ -49,6 +55,48 @@ onMounted(() => {
   
   // تشغيل مستمع المزامنة التلقائية
   initializeSyncListener();
+
+  // Refresh key stores when app returns from background or window regains focus
+  const itineraryStore = useItineraryStore();
+  const archiveStore = useArchiveStore();
+  const collabStore = useCollaborationStore();
+  const adminStore = useAdminStore();
+  const harvestStore = useHarvestStore();
+  const authStore = useAuthStore();
+
+  const handleResume = async () => {
+    try {
+      if (!navigator.onLine) return;
+      
+      // Proactively refresh the session to handle expired tokens
+      await authStore.proactivelyRefreshSession();
+
+      if (!authStore.isAuthenticated) return;
+
+      // Trigger background refreshes (force = true)
+      // Use Promise.allSettled to avoid blocking on any single failure
+      await Promise.allSettled([
+        itineraryStore.fetchRoutes(true),
+        archiveStore.loadAvailableDates(true),
+        collabStore.fetchCollaborators(),
+        adminStore.loadDashboardData(true),
+        harvestStore.initialize()
+      ]);
+      logger.info('App resumed: stores refreshed');
+    } catch (err) {
+      logger.error('Error refreshing stores on resume:', err);
+    }
+  };
+
+  const visibilityHandler = () => { if (!document.hidden) handleResume(); };
+  window.addEventListener('visibilitychange', visibilityHandler);
+  window.addEventListener('focus', handleResume);
+
+  // Cleanup on unmount
+  onBeforeUnmount(() => {
+    window.removeEventListener('visibilitychange', visibilityHandler);
+    window.removeEventListener('focus', handleResume);
+  });
 });
 </script>
 

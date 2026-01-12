@@ -205,6 +205,18 @@ const isSearching = computed(() => searchQuery.value.trim().length > 0);
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
 const initData = async (force = false) => {
+  // Wait for auth to be initialized to prevent race conditions on resume
+  if (!authStore.isInitialized) {
+    await new Promise(resolve => {
+        const unwatch = watch(() => authStore.isInitialized, (isReady) => {
+            if (isReady) {
+                unwatch();
+                resolve();
+            }
+        });
+    });
+  }
+
   if (!authStore.isAuthenticated || (store.isLoading && !force)) return;
   try {
     loadColumns();

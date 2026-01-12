@@ -257,7 +257,30 @@ export function useHarvest(props) {
   };
 
   const updateShop = (row, index, e) => { updateField(row, index, 'shop', e.target.value); hideTooltip(); };
-  const updateCode = (row, index, e) => updateField(row, index, 'code', e.target.value);
+  const findRouteByCode = (code) => {
+    if (!code) return null;
+    const codeStr = String(code).trim();
+    return itineraryStore.routes.find(r => String(r.shop_code).trim() === codeStr) || null;
+  };
+
+  const updateCode = (row, index, e) => {
+    const newCode = e.target.value;
+    updateField(row, index, 'code', newCode);
+
+    // Attempt to auto-fill shop name from itinerary routes when a code is entered
+    try {
+      const route = findRouteByCode(newCode);
+      if (route && route.shop_name) {
+        // Only overwrite empty shop or if the user didn't manually type a different shop
+        if (!row.shop || row.shop.trim() === '') {
+          row.shop = route.shop_name;
+        }
+      }
+    } catch (err) {
+      // Non-fatal: log and continue
+      logger.error('Auto-fill from itinerary failed:', err);
+    }
+  };
   const updateAmount = (row, index, e) => handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
   const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
     if (val === '-') row.extra = '-';
@@ -265,12 +288,33 @@ export function useHarvest(props) {
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
   
   const updateCollector = (row, index, e) => {
+    const prevCollector = parseFloat(row.collector) || 0;
     const amountVal = parseFloat(row.amount) || 0;
     const extraVal = parseFloat(row.extra) || 0;
     const collectorMaxLimit = amountVal + extraVal + 2999;
-    handleMoneyInput(e, (val) => {
-      updateField(row, index, 'collector', val ? parseFloat(val) : null, true);
+
+    handleMoneyInput(e, async (val) => {
+      const newCollector = val ? parseFloat(val) : null;
+      updateField(row, index, 'collector', newCollector, true);
+
+      // If collector was empty/zero and now has a positive value, attempt to capture the shop location
+      try {
+        if ((!prevCollector || prevCollector === 0) && newCollector && newCollector > 0) {
+          const code = row.code;
+          if (code) {
+            const codeStr = String(code).trim();
+            const route = itineraryStore.routes.find(r => String(r.shop_code).trim() === codeStr);
+            if (route && route.id && (!route.latitude || !route.longitude)) {
+              // Capture current device location and update the route entry
+              await itineraryStore.captureClientLocation(route.id);
+            }
+          }
+        }
+      } catch (err) {
+        logger.error('Failed to auto-capture location after collector input:', err);
+      }
     }, { fieldName: 'مبلغ المحصل', maxLimit: collectorMaxLimit });
+
     hideTooltip();
   };
   

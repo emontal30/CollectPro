@@ -261,6 +261,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function proactivelyRefreshSession() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await updateUserState(session);
+      } else {
+        await logoutCleanup();
+      }
+    } catch (error) {
+      logger.error('Failed to proactively refresh session:', error);
+      await logoutCleanup();
+    }
+  }
+
   return {
     user, 
     userProfile, 
@@ -272,6 +286,7 @@ export const useAuthStore = defineStore('auth', () => {
     initializeAuth, 
     loginWithGoogle, 
     logout, 
-    logoutCleanup
+    logoutCleanup,
+    proactivelyRefreshSession
   };
 });
