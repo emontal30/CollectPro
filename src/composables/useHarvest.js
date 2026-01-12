@@ -7,6 +7,7 @@ import { useColumnVisibility } from '@/composables/useColumnVisibility.js';
 import { formatInputNumber, getNetClass, getNetIcon } from '@/utils/formatters.js';
 import { exportAndShareTable } from '@/utils/exportUtils.js';
 import { handleMoneyInput } from '@/utils/validators.js';
+import api from '@/services/api';
 import logger from '@/utils/logger.js';
 
 export function useHarvest(props) {
@@ -44,7 +45,7 @@ export function useHarvest(props) {
 
   // --- Context-Aware Computed Properties (The Bridge) ---
 
-  const isLoading = computed(() => 
+  const isLoading = computed(() =>
     props.isSharedView
       ? (store.isSharedLoading && (!store.sharedRows || store.sharedRows.length === 0))
       : store.isLoading
@@ -71,34 +72,34 @@ export function useHarvest(props) {
     }
   });
 
-  const displayTotals = computed(() => 
+  const displayTotals = computed(() =>
     props.isSharedView ? store.sharedTotals : store.totals
   );
 
   const displayMasterLimit = computed({
     get: () => props.isSharedView ? store.sharedMasterLimit : store.masterLimit,
     set: (val) => {
-        if(props.isSharedView) store.sharedMasterLimit = val;
-        else store.setMasterLimit(val)
+      if (props.isSharedView) store.sharedMasterLimit = val;
+      else store.setMasterLimit(val)
     }
   });
 
   const displayExtraLimit = computed({
-      get: () => props.isSharedView ? store.sharedExtraLimit : store.extraLimit,
-      set: (val) => {
-          if(props.isSharedView) store.sharedExtraLimit = val;
-          else store.setExtraLimit(val)
-      }
+    get: () => props.isSharedView ? store.sharedExtraLimit : store.extraLimit,
+    set: (val) => {
+      if (props.isSharedView) store.sharedExtraLimit = val;
+      else store.setExtraLimit(val)
+    }
   });
 
   const displayCurrentBalance = computed({
     get: () => props.isSharedView ? store.sharedCurrentBalance : store.currentBalance,
     set: (val) => {
-        if(props.isSharedView) store.sharedCurrentBalance = val;
-        else store.setCurrentBalance(val)
+      if (props.isSharedView) store.sharedCurrentBalance = val;
+      else store.setCurrentBalance(val)
     }
   });
-  
+
   const displayFilteredRows = computed(() => {
     const data = displayRows.value || [];
     const query = searchQueryLocal.value?.toLowerCase().trim();
@@ -108,17 +109,17 @@ export function useHarvest(props) {
       (row.code && row.code.toString().toLowerCase().includes(query))
     );
   });
-  
+
   const filteredTotals = computed(() => {
-      return displayFilteredRows.value.reduce((acc, row) => {
-        acc.amount += parseFloat(row.amount) || 0;
-        acc.extra += parseFloat(row.extra) || 0;
-        acc.collector += parseFloat(row.collector) || 0;
-        return acc;
-      }, { amount: 0, extra: 0, collector: 0 });
+    return displayFilteredRows.value.reduce((acc, row) => {
+      acc.amount += parseFloat(row.amount) || 0;
+      acc.extra += parseFloat(row.extra) || 0;
+      acc.collector += parseFloat(row.collector) || 0;
+      return acc;
+    }, { amount: 0, extra: 0, collector: 0 });
   });
 
-  const savedItineraryProfiles = computed(() => 
+  const savedItineraryProfiles = computed(() =>
     itineraryStore.profiles.filter(p => p.shops_order && p.shops_order.length > 0)
   );
 
@@ -128,12 +129,12 @@ export function useHarvest(props) {
     const extra = parseFloat(row.extra) || 0;
     return collector - (amount + extra);
   };
-  
+
   const filteredTotalNetValue = computed(() => {
     const totals = filteredTotals.value;
     return totals.collector - (totals.amount + totals.extra);
   });
-  
+
   const getRowNetStatus = (row) => getNetClass(calculateNet(row));
   const getRowNetIcon = (row) => getNetIcon(calculateNet(row));
   const getFilteredTotalNetClass = computed(() => getNetClass(filteredTotalNetValue.value));
@@ -147,13 +148,13 @@ export function useHarvest(props) {
     const totalCollected = displayTotals.value.collector || 0;
     const resetVal = (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0));
     const combinedValue = totalCollected + resetVal;
-    
+
     if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
     if (combinedValue < 0) return { val: combinedValue, text: 'عجز 🔴', color: '#ef4444' };
     return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
   });
 
-  const displayResetAmount = computed(() => 
+  const displayResetAmount = computed(() =>
     (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0))
   );
 
@@ -230,7 +231,7 @@ export function useHarvest(props) {
     showProfileDropdown.value = false;
     addNotification(`تم الترتيب حسب قالب "${profile.profile_name}"`, 'success');
   };
-  
+
   const handleSearchInput = (e) => { searchQueryLocal.value = e.target.value; };
   const clearSearch = () => { searchQueryLocal.value = ''; };
 
@@ -286,7 +287,7 @@ export function useHarvest(props) {
     if (val === '-') row.extra = '-';
     else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
-  
+
   const updateCollector = (row, index, e) => {
     const prevCollector = parseFloat(row.collector) || 0;
     const amountVal = parseFloat(row.amount) || 0;
@@ -317,7 +318,7 @@ export function useHarvest(props) {
 
     hideTooltip();
   };
-  
+
   const updateSummaryField = (e, storeKey, fieldLabel) => {
     const maxLimit = 499999;
     handleMoneyInput(e, (val) => {
@@ -328,14 +329,14 @@ export function useHarvest(props) {
       saveData();
     }, { fieldName: fieldLabel, maxLimit: storeKey !== 'currentBalance' ? maxLimit : undefined });
   };
-  
+
   const toggleSign = (row, field) => {
     const currentVal = row[field];
     row[field] = (!currentVal || currentVal === '') ? '-' : (currentVal === '-') ? null : parseFloat(String(currentVal).replace(/,/g, '')) * -1;
     saveData();
     if (field === 'collector') syncWithCounterStore();
   };
-  
+
   const confirmClearAll = async () => {
     if ((await confirm({ title: 'مسح الكل', text: 'تأكيد؟' })).isConfirmed) {
       store.clearAll();
@@ -343,7 +344,7 @@ export function useHarvest(props) {
       addNotification('تم المسح', 'info');
     }
   };
-  
+
   const archiveToday = async () => {
     if (props.isSharedView) return;
     isArchiving.value = true;
@@ -357,12 +358,13 @@ export function useHarvest(props) {
         confirmButtonText: exists ? 'نعم، استبدال' : 'نعم، أرشفة',
         icon: exists ? 'warning' : 'question'
       });
-      
+
       if (!isConfirmed) return addNotification('تم إلغاء الأرشفة.', 'info');
-      
+
       const res = await store.archiveTodayData(dateToSave);
       if (res.success) {
         addNotification(res.message, 'success');
+        api.user.trackUserAction('archive_today');
         store.clearAll();
         searchQueryLocal.value = '';
       } else {
@@ -387,7 +389,7 @@ export function useHarvest(props) {
     const result = await exportAndShareTable('summary', fileName, { backgroundColor: 'var(--surface-bg)' });
     addNotification(result.message, result.success ? 'success' : 'error');
   };
-  
+
   const showTooltip = (element, text) => {
     if (!element || !text) return;
     if (showCustomTooltip.value && tooltipTargetElement.value === element) {
@@ -407,33 +409,48 @@ export function useHarvest(props) {
     });
   };
   const hideTooltip = () => { showCustomTooltip.value = false; };
-  
+
   const handleOutsideClick = (e) => {
     const isTooltipTrigger = e.target.closest('input[id^="shop-"], input[id^="extra-"], input[id^="collector-"], .readonly-field');
     if (!isTooltipTrigger) hideTooltip();
   };
 
+  // Guard لمنع التنفيذ المتزامن
+  let isInitializing = false;
+
+  const initializeHarvestData = async () => {
+    if (isInitializing) {
+      logger.debug('⏳ Harvest: Already initializing, skipping duplicate call');
+      return;
+    }
+
+    isInitializing = true;
+    try {
+      if (!props.isSharedView) {
+        store.initialize();
+        store.loadDataFromStorage();
+        itineraryStore.fetchProfiles();
+        itineraryStore.fetchRoutes();
+      }
+      loadColumns();
+      syncWithCounterStore();
+      searchQueryLocal.value = store.searchQuery || '';
+    } catch (err) {
+      logger.error('HarvestView: Failed to initialize', err);
+    } finally {
+      isInitializing = false;
+    }
+  };
+
   // Lifecycle Hooks
   onMounted(() => {
-    if (!props.isSharedView) {
-      store.initialize();
-      store.loadDataFromStorage();
-      itineraryStore.fetchProfiles();
-      itineraryStore.fetchRoutes();
-    }
-    loadColumns();
-    syncWithCounterStore();
-    searchQueryLocal.value = store.searchQuery || '';
+    initializeHarvestData();
     window.addEventListener('focus', syncWithCounterStore);
     document.addEventListener('click', handleOutsideClick);
   });
 
   onActivated(() => {
-    if (!props.isSharedView) {
-      store.initialize();
-      itineraryStore.fetchProfiles();
-    }
-    searchQueryLocal.value = store.searchQuery || '';
+    initializeHarvestData();
   });
 
   onBeforeUnmount(() => {
@@ -444,7 +461,7 @@ export function useHarvest(props) {
 
   watch(() => collabStore.activeSessionId, (newId, oldId) => {
     if (props.isSharedView && newId !== oldId) {
-        store.switchToUserSession(newId);
+      store.switchToUserSession(newId);
     }
   }, { immediate: true });
 
@@ -455,7 +472,7 @@ export function useHarvest(props) {
     searchQueryLocal, showCustomTooltip, customTooltipText, customTooltipRef, currentDay, currentDate,
     showProfileDropdown, isArchiving, isMissingModalOpen, missingCenters, isOverdueModalOpen, overdueStores,
     selectedOverdueStores, allOverdueSelected,
-    
+
     // Bridge computed properties
     isLoading,
     isReadOnly,
@@ -467,7 +484,7 @@ export function useHarvest(props) {
     displayFilteredRows,
     displayResetStatus,
     displayResetAmount,
-    
+
     savedItineraryProfiles,
     filteredTotals, // for summary display
     filteredTotalNetValue,

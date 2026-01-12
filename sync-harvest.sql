@@ -72,6 +72,20 @@ CREATE TABLE IF NOT EXISTS public.live_harvest (
 -- 4. تحديث عرض المدير (Admin View) فقط
 DROP VIEW IF EXISTS public.admin_subscriptions_view;
 
+-- دالة للتحقق من صلاحية المدير (مطلوبة لسياسات RLS)
+-- تأكد من وجودها قبل استخدامها في السياسات
+-- دالة للتحقق من صلاحية المدير (مطلوبة لسياسات RLS)
+-- تأكد من وجودها قبل استخدامها في السياسات
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$;
+
 CREATE OR REPLACE VIEW public.admin_subscriptions_view 
 WITH (security_invoker = true) 
 AS

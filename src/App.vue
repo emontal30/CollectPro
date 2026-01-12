@@ -23,6 +23,7 @@ import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useAdminStore } from '@/stores/adminStore';
 import { useHarvestStore } from '@/stores/harvest';
 import { useAuthStore } from '@/stores/auth';
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 
 // استيراد المكونات العالمية
 import InstallPrompt from '@/components/ui/InstallPrompt.vue';
@@ -63,6 +64,12 @@ onMounted(() => {
   const adminStore = useAdminStore();
   const harvestStore = useHarvestStore();
   const authStore = useAuthStore();
+  const mySubStore = useMySubscriptionStore(); // متجر اشتراك المستخدم الحالي
+
+  // تهيئة اشتراك المستخدم الحالي والاستماع للتحديثات الحية
+  if (authStore.isAuthenticated) {
+     mySubStore.init(authStore.user);
+  }
 
   const handleResume = async () => {
     try {
@@ -80,7 +87,8 @@ onMounted(() => {
         archiveStore.loadAvailableDates(true),
         collabStore.fetchCollaborators(),
         adminStore.loadDashboardData(true),
-        harvestStore.initialize()
+        harvestStore.initialize(),
+        mySubStore.forceRefresh(authStore.user) // تحديث حالة الاشتراك عند العودة للتطبيق
       ]);
       logger.info('App resumed: stores refreshed');
     } catch (err) {

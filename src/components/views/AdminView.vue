@@ -91,7 +91,7 @@
               <th class="th-checkbox">
                 <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll">
               </th>
-              <th>المستخدم</th>
+              <th class="col-user">المستخدم</th>
               <th class="col-status text-center">حالة الاشتراك</th>
               <th class="col-subscription-days">إضافة أيام</th>
               <th class="text-center">إجراء</th>
@@ -108,7 +108,7 @@
                 <td class="td-checkbox">
                   <input type="checkbox" v-model="selectedUsers" :value="user.id">
                 </td>
-                <td>
+                <td class="col-user">
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ user.email }}</div>
@@ -503,26 +503,79 @@ input:checked + .slider:before { transform: translateX(26px); }
   width: 1%; /* Forces columns to be as narrow as possible, fitting content */
 }
 
+/* Checkbox column - minimal width to fit checkbox only */
+#logged-in-users-table th.th-checkbox,
+#logged-in-users-table td.td-checkbox {
+  width: 1% !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+}
+
+/* User column in logged-in users table - fixed width 150px */
+#logged-in-users-table th.col-user,
+#logged-in-users-table td.col-user {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+}
+
+/* User column in other tables - fixed width 200px for consistency */
+#pending-subscriptions-table th.col-user,
+#pending-subscriptions-table td.col-user,
+#all-subscriptions-table th.col-user,
+#all-subscriptions-table td.col-user {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+}
+
+/* Status column in all tables - fixed width 100px for consistency */
+#logged-in-users-table th.col-status,
+#logged-in-users-table td.col-status,
+#all-subscriptions-table th.col-status,
+#all-subscriptions-table td.col-status {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+}
+
 /* Specific column adjustments */
 .col-user { /* flex-grow for user details */ }
 .col-plan { }
-/* Apply width constraint only to Pending Subscriptions Transaction ID */
+/* Apply width constraint to Transaction ID with text wrapping */
 #pending-subscriptions-table th.col-transaction-id,
-#pending-subscriptions-table td.col-transaction-id {
+#pending-subscriptions-table td.col-transaction-id,
+#all-subscriptions-table th.col-transaction-id,
+#all-subscriptions-table td.col-transaction-id {
   max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: break-all !important;
 }
-.col-status { }
-.col-days { }
+
+/* Subscription days column - fixed width 50px */
+#logged-in-users-table th.col-subscription-days,
+#logged-in-users-table td.col-subscription-days {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+}
+
+/* Action column - fixed width to prevent auto-resizing */
+#logged-in-users-table th:last-child,
+#logged-in-users-table td:last-child {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+}
+
 .col-actions { min-width: 100px; } /* Keep a min-width for action buttons */
 
-/* Apply no-wrap to relevant columns to force them to expand */
-/* These rules are largely redundant now but kept for clarity if needed for other specific styles */
+/* Apply no-wrap to plan column */
 .admin-dashboard table th.col-plan,
-.admin-dashboard table td.col-plan,
-.admin-dashboard table th.col-transaction-id,
-.admin-dashboard table td.col-transaction-id {
+.admin-dashboard table td.col-plan {
   white-space: nowrap;
 }
 

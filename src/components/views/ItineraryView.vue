@@ -335,16 +335,42 @@
   </div>
 </template>
 
+
 <script setup>
 import { onMounted, watch, ref, nextTick, onActivated } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 import { useItineraryStore } from '@/stores/itineraryStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
+import logger from '@/utils/logger.js';
 import "leaflet/dist/leaflet.css";
 import { LMap, LTileLayer, LMarker, LPolyline, LIcon, LPopup } from "@vue-leaflet/vue-leaflet";
 
 const store = useItineraryStore();
 const mapRef = ref(null);
+
+let isInitializing = false; // Guard لمنع التنفيذ المتز امن
+
+/**
+ * دالة مركزية لتهيئة بيانات خط السير
+ * @param {boolean} force - هل يجب فرض التحديث
+ */
+const initItineraryData = async (force = false) => {
+  // منع التنفيذ المتزامن
+  if (isInitializing) {
+    logger.debug('⏳ Itinerary: Already initializing, skipping duplicate call');
+    return;
+  }
+  
+  isInitializing = true;
+  try {
+    await store.fetchRoutes(force);
+    fitMapToBounds();
+  } catch (err) {
+    logger.error('ItineraryView: Failed to load data', err);
+  } finally {
+    isInitializing = false;
+  }
+};
 
 const fitMapToBounds = () => {
   nextTick(() => {
@@ -357,20 +383,16 @@ const fitMapToBounds = () => {
 };
 
 onMounted(async () => {
-  await store.fetchRoutes(true);
+  await initItineraryData(true);
   store.initNetworkListener();
-  // Initial fit if starting on map tab (or if data loads after)
-  fitMapToBounds();
 });
 
-onActivated(async () => {
-  await store.fetchRoutes(true);
-  fitMapToBounds();
+onActivated(() => {
+  initItineraryData(true);
 });
 
-onBeforeRouteUpdate(async (to, from, next) => {
-  await store.fetchRoutes(true);
-  fitMapToBounds();
+onBeforeRouteUpdate((to, from, next) => {
+  initItineraryData(true);
   next();
 });
 

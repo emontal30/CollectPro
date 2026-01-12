@@ -16,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isInitialized = ref(false);
   const isSubscriptionEnforced = ref(false);
   const authListener = ref(null);
+  let isInitializing = false; // Guard لمنع التنفيذ المتزامن
 
   const { addNotification } = useNotifications();
   const settingsStore = useSettingsStore();
@@ -71,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function cleanUrlHash() {
     if (typeof window === 'undefined') return;
-    
+
     const hash = window.location.hash;
     if (hash && (hash.includes('access_token') || hash.includes('error'))) {
       const url = new URL(window.location.href);
@@ -84,8 +85,8 @@ export const useAuthStore = defineStore('auth', () => {
   function loadProfileFromCache() {
     const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
     if (cachedProfile) {
-      try { 
-        userProfile.value = JSON.parse(cachedProfile); 
+      try {
+        userProfile.value = JSON.parse(cachedProfile);
         logger.info('📦 Profile loaded from cache');
       } catch (e) {
         logger.warn('Failed to parse cached profile');
@@ -97,13 +98,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (!userData) return;
     if (!userProfile.value) loadProfileFromCache();
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-    
+
     try {
       const result = await api.user.syncUserProfile(userData);
       if (result && !result.error && result.profile) {
         if (JSON.stringify(userProfile.value) !== JSON.stringify(result.profile)) {
-           userProfile.value = result.profile;
-           localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+          userProfile.value = result.profile;
+          localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
         }
       }
     } catch (err) {
@@ -115,7 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const cached = localStorage.getItem('sys_config_enforce');
       if (cached !== null) isSubscriptionEnforced.value = cached === 'true';
-      
+
       if (navigator.onLine) {
         const { data: config } = await apiInterceptor(supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle());
         if (config) {
@@ -124,20 +125,26 @@ export const useAuthStore = defineStore('auth', () => {
           localStorage.setItem('sys_config_enforce', String(value));
         }
       }
-    } catch (err) {}
+    } catch (err) { }
   }
 
   async function initializeAuth() {
-    if (isInitialized.value) return;
+    // منع التنفيذ المتزامن
+    if (isInitialized.value || isInitializing) {
+      logger.debug('⏳ Auth: Already initialized or initializing, skipping');
+      return;
+    }
+
+    isInitializing = true;
     isLoading.value = true;
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.user) {
         await updateUserState(session);
       }
-      
+
       isLoading.value = false;
       isInitialized.value = true;
       cleanUrlHash();
@@ -158,6 +165,8 @@ export const useAuthStore = defineStore('auth', () => {
       logger.error('💥 Auth Init Error:', err);
       isLoading.value = false;
       isInitialized.value = true;
+    } finally {
+      isInitializing = false;
     }
   }
 
@@ -184,9 +193,9 @@ export const useAuthStore = defineStore('auth', () => {
         completeUser.userCode = profileResponse.data.user_code || null;
         completeUser.fullName = profileResponse.data.full_name || completeUser.user_metadata?.full_name;
       }
-      
+
       user.value = completeUser;
-      
+
       // Post-update side effects
       syncUserProfile(completeUser);
       settingsStore.applySettings();
@@ -203,16 +212,16 @@ export const useAuthStore = defineStore('auth', () => {
       const userId = user.value?.id;
       user.value = null;
       userProfile.value = null;
-      
+
       const subStore = useMySubscriptionStore();
       subStore.clearSubscription();
-      
+
       if (userId) clearCacheOnLogout(userId).catch(e => logger.warn('Cache clear error', e));
-      
+
       Object.keys(localStorage).forEach(key => {
         if (
-          key.startsWith('sb-') || 
-          key.includes('auth-token') || 
+          key.startsWith('sb-') ||
+          key.includes('auth-token') ||
           key.includes('supabase.auth.token') ||
           key === USER_PROFILE_CACHE_KEY ||
           key === 'sys_config_enforce' ||
@@ -246,13 +255,13 @@ export const useAuthStore = defineStore('auth', () => {
         authListener.value.subscription.unsubscribe();
         authListener.value = null;
       }
-      
+
       const signOutPromise = api.auth.signOut();
       const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: 'TIMEOUT' }), 2000));
-      
+
       await Promise.race([signOutPromise, timeoutPromise]);
       await logoutCleanup();
-      
+
       window.location.replace('/');
     } catch (err) {
       logger.error('Logout error:', err);
@@ -276,16 +285,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, 
-    userProfile, 
-    isLoading, 
-    isInitialized, 
-    isAuthenticated, 
+    user,
+    userProfile,
+    isLoading,
+    isInitialized,
+    isAuthenticated,
     isAdmin,
-    isSubscriptionEnforced, 
-    initializeAuth, 
-    loginWithGoogle, 
-    logout, 
+    isSubscriptionEnforced,
+    initializeAuth,
+    loginWithGoogle,
+    logout,
     logoutCleanup,
     proactivelyRefreshSession
   };

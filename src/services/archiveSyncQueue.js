@@ -15,7 +15,7 @@ export const QUEUE_KEY = 'archive_sync_queue'; // Exported for store usage
 async function addToSyncQueue(item) {
   try {
     let queue = (await localforage.getItem(QUEUE_KEY)) || [];
-    
+
     const type = item.type || 'daily_archive';
     const source = item.payload || item;
     const date = source.archive_date || source.date;
@@ -44,10 +44,15 @@ async function addToSyncQueue(item) {
         logger.info(`🔄 Updated sync queue: [${type}] for ${date}`);
       }
     }
-    
+
     // Update Sync Status UI
     const syncStore = useSyncStore();
     syncStore.checkQueue();
+
+    // Trigger processing immediately if online
+    if (navigator.onLine) {
+      processQueue();
+    }
 
   } catch (err) {
     logger.error('❌ SyncQueue Add Error:', err);
@@ -70,7 +75,7 @@ async function processQueue() {
   }
 
   let queue = (await localforage.getItem(QUEUE_KEY)) || [];
-  
+
   if (queue.length === 0) {
     syncStore.checkQueue();
     return;
@@ -94,7 +99,7 @@ async function processQueue() {
           .delete()
           .eq('user_id', authStore.user.id)
           .eq('archive_date', date);
-        
+
         if (error) throw error;
         deletedArchives.push(date);
       } else {
@@ -111,7 +116,7 @@ async function processQueue() {
 
   // 2. تحديث الطابور بما تبقى فقط
   await localforage.setItem(QUEUE_KEY, failedItems);
-  
+
   // Update Sync Status UI immediately
   syncStore.checkQueue();
 
@@ -125,7 +130,7 @@ async function processQueue() {
   }
 
   if (syncedArchives.length > 0 || deletedArchives.length > 0) {
-    await archiveStore.loadAvailableDates(); 
+    await archiveStore.loadAvailableDates();
   }
 }
 
@@ -134,10 +139,10 @@ async function processQueue() {
  */
 function initializeSyncListener() {
   const syncStore = useSyncStore();
-  
+
   window.removeEventListener('online', processQueue);
   window.addEventListener('online', processQueue);
-  
+
   // Initial check
   syncStore.checkQueue();
 

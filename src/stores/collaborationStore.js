@@ -6,16 +6,18 @@ export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
     collaborators: [],
     incomingRequests: [],
-    
+
     // 1. استعادة الجلسة النشطة مباشرة من التخزين المحلي لضمان بقائها عند التحديث
     activeSessionId: localStorage.getItem('collab_active_session_id') || null,
     activeSessionName: localStorage.getItem('collab_active_session_name') || null,
-    
+
+    realtimeChannel: null,
+
     isLoading: false,
-    
+
     // الأسماء المستعارة
     aliases: JSON.parse(localStorage.getItem('collab_aliases') || '{}'),
-    
+
     // 2. تخزين "المستخدمين الأشباح" (Ghost Users) الذين يضيفهم الأدمن محلياً
     localGhostUsers: JSON.parse(localStorage.getItem('collab_ghost_users') || '[]')
   }),
@@ -28,7 +30,7 @@ export const useCollaborationStore = defineStore('collaboration', {
 
       // استخراج المعرفات الموجودة لتجنب التكرار
       const serverIds = new Set(currentList.map(u => u.userId));
-      
+
       // إضافة المستخدمين المحليين (Ghost Users) إذا لم يكونوا موجودين في قائمة السيرفر
       this.localGhostUsers.forEach(ghost => {
         if (!serverIds.has(ghost.userId)) {
@@ -64,7 +66,7 @@ export const useCollaborationStore = defineStore('collaboration', {
 
       if (!reqError && requests && requests.length > 0) {
         const receiverIds = requests.map(r => r.receiver_id).filter(id => id);
-        
+
         if (receiverIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
@@ -76,7 +78,7 @@ export const useCollaborationStore = defineStore('collaboration', {
           serverUsers = requests.map(item => {
             const profile = profilesMap.get(item.receiver_id);
             const originalName = profile?.full_name || 'مستخدم غير معروف';
-            
+
             return {
               userId: item.receiver_id,
               name: originalName,
@@ -95,15 +97,15 @@ export const useCollaborationStore = defineStore('collaboration', {
 
     async sendInvite(receiverCode, role = 'editor') {
       const auth = useAuthStore();
-      
+
       if (!auth.user) throw new Error("يجب تسجيل الدخول أولاً.");
       if (receiverCode === auth.user.userCode) throw new Error("لا يمكنك دعوة نفسك.");
 
       // التحقق في القائمة المدمجة الحالية
       const existing = this.collaborators.find(c => c.code === receiverCode);
       if (existing) {
-         this.setActiveSession(existing.userId, existing.displayName);
-         return existing.userId; 
+        this.setActiveSession(existing.userId, existing.displayName);
+        return existing.userId;
       }
 
       // --- وضع الأدمن (Ghost Mode) ---
@@ -137,7 +139,7 @@ export const useCollaborationStore = defineStore('collaboration', {
 
         // 3. تفعيل الجلسة
         this.setActiveSession(profile.id, displayName);
-        
+
         return profile.id;
       }
 
@@ -149,7 +151,7 @@ export const useCollaborationStore = defineStore('collaboration', {
       });
 
       if (error) throw error;
-      
+
       await this.fetchCollaborators();
       return null;
     },
@@ -203,13 +205,18 @@ export const useCollaborationStore = defineStore('collaboration', {
 
       if (!error) {
         this.incomingRequests = this.incomingRequests.filter(req => req.id !== requestId);
+        // If accepted, we might want to refresh to ensure everything is synced, 
+        // though the realtime listener should handle the sender side.
+        if (status === 'accepted') {
+          await this.fetchCollaborators(); // Refresh my list (unlikely to change here but for safety)
+        }
       }
     },
 
     setActiveSession(userId, userName) {
       this.activeSessionId = userId;
       this.activeSessionName = userName;
-      
+
       // 3. حفظ الجلسة في التخزين المحلي
       if (userId) {
         localStorage.setItem('collab_active_session_id', userId);
@@ -217,6 +224,86 @@ export const useCollaborationStore = defineStore('collaboration', {
       } else {
         localStorage.removeItem('collab_active_session_id');
         localStorage.removeItem('collab_active_session_name');
+      }
+    },
+
+    // --- Real-time Subscription ---
+    subscribeToRequests() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      if (this.realtimeChannel) {
+        supabase.removeChannel(this.realtimeChannel);
+      }
+
+      this.realtimeChannel = supabase
+        .channel('collab-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'collaboration_requests',
+            filter: `receiver_code=eq.${auth.user.userCode}`
+          },
+          async (payload) => {
+            // New invite for me
+            if (payload.new && payload.new.status === 'pending') {
+              // Fetch details to get name
+              const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', payload.new.sender_id).single();
+              const newReq = {
+                ...payload.new,
+                sender_profile: { full_name: profile?.full_name || 'مستخدم' }
+              };
+              this.incomingRequests.push(newReq);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'collaboration_requests',
+            filter: `sender_id=eq.${auth.user.id}`
+          },
+          (payload) => {
+            // My invite was accepted/rejected
+            if (payload.new && payload.new.status === 'accepted') {
+              this.fetchCollaborators(); // Reload list to show the new person
+            }
+          }
+        )
+        .subscribe();
+    },
+
+    unsubscribeFromRequests() {
+      if (this.realtimeChannel) {
+        supabase.removeChannel(this.realtimeChannel);
+        this.realtimeChannel = null;
+      }
+    },
+
+    async revokeInvite(userId) {
+      if (!userId) return;
+      const auth = useAuthStore();
+
+      // We need to find the request associated with this user
+      // Since our collaborations list is derived, we might need to query first or update assuming we know the structure.
+      // Optimally, we update based on sender_id (me) and receiver_id (them).
+
+      const { error } = await supabase
+        .from('collaboration_requests')
+        .delete() // Deleting is cleaner than just marking revoked for this simple use case, allows re-invite easily
+        .match({ sender_id: auth.user.id, receiver_id: userId });
+
+      if (error) throw error;
+
+      await this.fetchCollaborators();
+
+      // If we were viewing this user, close the session
+      if (this.activeSessionId === userId) {
+        this.setActiveSession(null, null);
       }
     }
   }

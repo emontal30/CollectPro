@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { useAuthStore } from './auth';
 import { useArchiveStore } from './archiveStore';
 import { useCollaborationStore } from './collaborationStore';
+import { useItineraryStore } from './itineraryStore';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
 import { safeDeepClone } from '@/services/cacheManager';
 import { apiInterceptor } from '@/services/apiInterceptor';
@@ -9,6 +10,7 @@ import api from '@/services/api';
 import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 import { supabase } from '@/supabase';
+import { TimeService } from '@/utils/time';
 
 const HARVEST_ROWS_KEY = 'harvest_rows';
 
@@ -21,7 +23,7 @@ export const useHarvestStore = defineStore('harvest', {
     currentBalance: 0,
     isLoading: false,
     isModified: false,
-    
+
     // Shared State
     sharedRows: [],
     sharedMasterLimit: 0,
@@ -33,7 +35,9 @@ export const useHarvestStore = defineStore('harvest', {
     currentDate: new Date().toISOString().split('T')[0],
     error: null,
     searchQuery: '',
-    realtimeChannel: null,
+    searchQuery: '',
+    realtimeChannel: null, // For shared session
+    ownRealtimeChannel: null, // For my own session (Admin sync)
     isCloudSyncing: false,
   }),
 
@@ -49,7 +53,7 @@ export const useHarvestStore = defineStore('harvest', {
         return acc;
       }, { amount: 0, extra: 0, collector: 0, net: 0 });
     },
-    
+
     customerCount: (state) => {
       return (state.rows || []).filter(row => row.shop && row.shop.trim() !== '').length;
     },
@@ -60,19 +64,19 @@ export const useHarvestStore = defineStore('harvest', {
       const firstRow = state.rows[0];
       return !!(firstRow.shop || firstRow.code || firstRow.amount || firstRow.collector || firstRow.extra);
     },
-    
+
     resetStatus: (state) => {
       const totalCollected = state.totals.collector || 0;
       const resetVal = (state.currentBalance || 0) - ((state.masterLimit || 0) + (state.extraLimit || 0));
       const combinedValue = totalCollected + resetVal;
-      
+
       if (combinedValue === 0) return { val: combinedValue, text: 'تم التحصيل بنجاح ✅', color: '#10b981' };
       if (combinedValue < 0) return { val: combinedValue, text: 'عجز 🔴', color: '#ef4444' };
       return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
     },
-    
+
     resetAmount: (state) => (parseFloat(state.currentBalance) || 0) - ((parseFloat(state.masterLimit) || 0) + (parseFloat(state.extraLimit) || 0)),
-    
+
     totalNet: (state) => state.totals.collector - (state.totals.amount + state.totals.extra),
 
     // --- Shared Getters ---
@@ -107,6 +111,10 @@ export const useHarvestStore = defineStore('harvest', {
             await this.resetTable();
           }
         }
+
+        // Start listening for Admin overrides or other sync events
+        this.initOwnRealtimeSubscription();
+
       } catch (err) {
         logger.error('Harvest initialization failed:', err);
         await this.resetTable();
@@ -130,7 +138,7 @@ export const useHarvestStore = defineStore('harvest', {
         const authStore = useAuthStore();
         if (navigator.onLine && authStore.user) {
           this.syncToCloud(authStore.user.id).catch(err => {
-            logger.warn('Cloud sync for local data skipped:', err.message); 
+            logger.warn('Cloud sync for local data skipped:', err.message);
           });
         }
       } catch (error) {
@@ -167,7 +175,7 @@ export const useHarvestStore = defineStore('harvest', {
       this.isCloudSyncing = true; // Consider a separate flag if needed e.g., isSharedSyncing
       try {
         const payload = {
-          user_id: targetUserId,
+          // No user_id in payload for update, or just for reference, but RLS relies on the match
           rows: this.sharedRows,
           master_limit: this.sharedMasterLimit,
           extra_limit: this.sharedExtraLimit,
@@ -175,7 +183,15 @@ export const useHarvestStore = defineStore('harvest', {
           last_updated_by: (await supabase.auth.getUser()).data.user?.id,
           updated_at: new Date()
         };
-        const { error } = await supabase.from('live_harvest').upsert(payload);
+
+        // Use UPDATE instead of UPSERT
+        // Collaborators have specific UPDATE policies, but rarely INSERT policies for other users' data.
+        // The row should already exist (created by owner on account creation/login).
+        const { error } = await supabase
+          .from('live_harvest')
+          .update(payload)
+          .eq('user_id', targetUserId);
+
         if (error) throw error;
       } catch (error) {
         console.error('Failed to update shared data:', error.message);
@@ -252,8 +268,48 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    // --- Bidirectional Sync for Owner ---
+    async initOwnRealtimeSubscription() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      const userId = auth.user.id;
+
+      if (this.ownRealtimeChannel) {
+        supabase.removeChannel(this.ownRealtimeChannel);
+      }
+
+      this.ownRealtimeChannel = supabase
+        .channel(`my-harvest-sync-${userId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'live_harvest', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const newData = payload.new;
+            if (!newData) return;
+
+            // CRITICAL: Check who updated it.
+            // If I updated it (last_updated_by == my_id), ignore it to avoid loops/jitter.
+            if (newData.last_updated_by === userId) return;
+
+            // If someone else (e.g. Admin) updated it, apply changes to LOCAL state.
+            this.rows = newData.rows || [];
+            this.masterLimit = parseFloat(newData.master_limit) || 0;
+            this.extraLimit = parseFloat(newData.extra_limit) || 0;
+            this.currentBalance = parseFloat(newData.current_balance) || 0;
+
+            // We should also persist to local storage to keep offline capability in sync
+            this.saveRowsToStorage();
+
+            // Notify UI or show a toast if needed (optional)
+            // logger.info('Received update from Admin/Collaborator');
+          }
+        )
+        .subscribe();
+    },
+
     // --- All other actions remain largely the same, operating on LOCAL state ---
-    
+
     async fetchOverdueStores() {
       return await localforage.getItem('overdue_stores') || [];
     },
@@ -311,7 +367,7 @@ export const useHarvestStore = defineStore('harvest', {
         logger.error('Error deleting overdue stores:', err);
       }
     },
-    
+
     async clearAll() {
       await this.resetTable();
       this.searchQuery = '';
@@ -328,15 +384,7 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async getAccurateDate() {
-      try {
-        const { data, error } = await apiInterceptor(supabase.rpc('get_server_time'));
-        if (error) throw new Error('Supabase RPC get_server_time failed');
-        const serverDate = new Date(data);
-        return serverDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
-      } catch (error) {
-        logger.error('Accurate time fetch failed, using local fallback:', error.message);
-        return new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
-      }
+      return await TimeService.getCairoDate();
     },
 
     async archiveTodayData(dateToSave) {
@@ -351,10 +399,10 @@ export const useHarvestStore = defineStore('harvest', {
         const authStore = useAuthStore();
         const archiveStore = useArchiveStore();
         if (!authStore.isAuthenticated) throw new Error('يجب تسجيل الدخول أولاً');
-        
+
         const validRows = this.rows.filter(r => r.shop || r.code || (parseFloat(r.amount) > 0) || (parseFloat(r.collector) > 0));
         if (validRows.length === 0) return { success: false, message: 'لا توجد بيانات صالحة للأرشفة' };
-        
+
         const cleanRows = safeDeepClone(validRows).map(row => {
           const amount = parseFloat(row.amount) || 0;
           const extra = parseFloat(row.extra) || 0;
@@ -362,29 +410,37 @@ export const useHarvestStore = defineStore('harvest', {
           const net = collector - (amount + extra);
           return { shop: row.shop || '', code: row.code || '', amount, extra, collector, net };
         });
-        
+
         const localKey = `${archiveStore.DB_PREFIX}${dateToSave}`;
         const dbPayload = {
           user_id: authStore.user.id,
           archive_date: dateToSave,
           data: cleanRows,
         };
-        
+
         const overdueStores = validRows
           .map(row => ({ ...row, net: (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0)) }))
           .filter(row => row.net !== 0)
           .map(row => ({ shop: row.shop, code: row.code, net: row.net }));
-          
+
         await Promise.all([
           localforage.setItem(localKey, cleanRows),
           overdueStores.length > 0
             ? localforage.setItem('overdue_stores', overdueStores)
             : localforage.removeItem('overdue_stores')
         ]);
-        
+
         await archiveStore.loadAvailableDates(false);
         this._performCloudSync(dbPayload);
-        
+
+        try {
+          const itineraryStore = useItineraryStore();
+          await itineraryStore.syncFromDashboard(cleanRows);
+        } catch (syncError) {
+          logger.error('Failed to sync with itinerary after archiving:', syncError);
+          // Do not block the main operation, just log the error
+        }
+
         return { success: true, message: 'تم الحفظ على الهاتف بنجاح، وتتم المزامنة سحابياً 💾' };
       } catch (error) {
         logger.error('💥 Archive Error:', error);
@@ -395,22 +451,10 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async _performCloudSync(dbPayload) {
-      const archiveStore = useArchiveStore();
-      if (!navigator.onLine) {
-        await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-        return 'queued';
-      }
-      const { error } = await apiInterceptor(
-        api.archive.saveDailyArchive(dbPayload.user_id, dbPayload.archive_date, dbPayload.data)
-      );
-
-      if (error) {
-        await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
-        return 'queued';
-      } else {
-        await archiveStore.loadAvailableDates();
-        return 'synced';
-      }
+      // دائماً نستخدم الطابور لضمان عدم تعليق الواجهة وحفظ البيانات
+      // سيقوم الطابور بمعالجة الطلب في الخلفية فوراً إذا كان هناك إنترنت
+      await addToSyncQueue({ type: 'daily_archive', payload: dbPayload });
+      return 'queued';
     },
 
     parseRawDataToRows(rawData) {

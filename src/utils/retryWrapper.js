@@ -22,7 +22,18 @@ export async function retry(fn, options = {}) {
 
   while (attempt <= retries) {
     try {
-      return await fn();
+      let result;
+      if (options.timeout) {
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Operation timed out')), options.timeout);
+        });
+        // Race the function against the timeout
+        result = await Promise.race([fn(), timeoutPromise]);
+      } else {
+        result = await fn();
+      }
+      return result;
     } catch (err) {
       attempt += 1;
 

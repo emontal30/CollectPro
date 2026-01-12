@@ -22,15 +22,15 @@ export const useAdminStore = defineStore('admin', () => {
   const usersList = ref([]);
   const pendingSubscriptions = ref([]);
   const allSubscriptions = ref([]);
-  
+
   const savedPeriod = localStorage.getItem('admin_active_users_period');
-  const filters = ref({ 
-    status: 'all', 
-    expiry: 'all', 
+  const filters = ref({
+    status: 'all',
+    expiry: 'all',
     usersSearch: '',
     activeUsersPeriod: savedPeriod ? parseInt(savedPeriod) : 30
   });
-  
+
   const isLoading = ref(false);
   const isSubscriptionEnforced = ref(false);
   const lastFetchTime = ref(0);
@@ -43,7 +43,7 @@ export const useAdminStore = defineStore('admin', () => {
   watch(() => filters.value.activeUsersPeriod, (newVal) => {
     localStorage.setItem('admin_active_users_period', newVal);
     // اقتراح: إعادة جلب الإحصائيات تلقائياً عند تغيير الفترة الزمنية
-    fetchStats(true); 
+    fetchStats(true);
   });
 
   /**
@@ -51,9 +51,8 @@ export const useAdminStore = defineStore('admin', () => {
    * @param {boolean} force - إجبار التحديث وتجاهل الكاش (يجب إرسال true عند فتح الصفحة mounted)
    */
   async function loadDashboardData(force = false, retryCount = 0) {
-    // 1. إصلاح الكاش: تقليل المدة أو الاعتماد على force
-    // تم تقليل مدة الكاش الافتراضية إلى 30 ثانية فقط بدلاً من 3 دقائق
-    const CACHE_DURATION = 30 * 1000; 
+    // 1. إدارة الكاش
+    const CACHE_DURATION = 30 * 1000;
     const now = Date.now();
 
     if (!force && lastFetchTime.value && (now - lastFetchTime.value < CACHE_DURATION)) {
@@ -61,16 +60,21 @@ export const useAdminStore = defineStore('admin', () => {
       return;
     }
 
-    // السماح بإعادة المحاولة حتى لو كان isLoading true في حالة Retry
-    if (isLoading.value && retryCount === 0) return;
+    // السماح بإعادة المحاولة أو إذا كان force=true حتى لو كان هناك تحميل جاري
+    if (isLoading.value && !force && retryCount === 0) return;
 
     isLoading.value = true;
     fetchError.value = null;
 
     try {
+      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 15000);
+      });
+
       // فصل استدعاء الـ Charts عن الـ Stats لتسريع الـ Promise.all
       // واستخدام allSettled لضمان عرض ما تم جلبه حتى لو فشل جزء بسيط
-      const results = await Promise.allSettled([
+      const fetchPromise = Promise.allSettled([
         fetchStats(false), // لا نحدث الشارت هنا، سنحدثه بالأسفل بشكل منفصل
         fetchChartsData(), // نحدث الشارت بشكل متوازي
         fetchPendingSubscriptions(),
@@ -79,30 +83,29 @@ export const useAdminStore = defineStore('admin', () => {
         fetchSystemConfig()
       ]);
 
+      // استخدام Race لضمان عدم الانتظار للأبد
+      const results = await Promise.race([fetchPromise, timeoutPromise]);
+
       // التحقق مما إذا كان هناك أخطاء حرجة (مثلاً الـ Stats فشلت)
       const statsRejected = results[0].status === 'rejected';
-      if (statsRejected) throw new Error('Failed to load critical stats');
+      // لا نرمي خطأ كامل إذا فشل جزء، سنكتفي بما وصلنا
+      if (statsRejected) logger.warn('Failed to load some admin stats, but continuing...');
 
       lastFetchTime.value = Date.now();
-      logger.info('✅ Admin dashboard data loaded successfully.');
 
     } catch (err) {
       logger.error(`❌ Error loading admin data (Attempt ${retryCount + 1}):`, err);
 
       // إعادة المحاولة مرتين فقط
       if (retryCount < 2) {
-        // لا نقوم بإيقاف الـ loading هنا، بل ننتظر ونحاول مجدداً
         await new Promise(resolve => setTimeout(resolve, 1500));
-        return loadDashboardData(true, retryCount + 1);
+        return loadDashboardData(force, retryCount + 1);
       }
 
       fetchError.value = 'فشل تحميل البيانات، يرجى التحقق من الاتصال.';
-      addNotification('حدث خطأ أثناء جلب البيانات', 'error');
     } finally {
-      // التأكد من إيقاف التحميل فقط عند انتهاء آخر محاولة
-      if (retryCount >= 2 || !fetchError.value) {
-        isLoading.value = false;
-      }
+      // التأكد من إيقاف التحميل دائماً
+      isLoading.value = false;
     }
   }
 
@@ -126,17 +129,17 @@ export const useAdminStore = defineStore('admin', () => {
       // سأفترض هنا أنه يقبل القيمة كما هي
       const { error } = await supabase
         .from('system_config')
-        .update({ 
-            value: status, 
-            updated_at: new Date().toISOString() 
+        .update({
+          value: status,
+          updated_at: new Date().toISOString()
         })
         .eq('key', 'enforce_subscription');
-      
+
       if (error) throw error;
-      
+
       isSubscriptionEnforced.value = status;
       localStorage.setItem('sys_config_enforce', String(status));
-      
+
       closeLoading();
       addNotification(`تم ${status ? 'تفعيل' : 'إيقاف'} وضع الاشتراك الإجباري بنجاح`, 'success');
     } catch (e) {
@@ -153,9 +156,9 @@ export const useAdminStore = defineStore('admin', () => {
       const result = await api.admin.getStats(filters.value.activeUsersPeriod);
       if (result) {
         stats.value = result;
-        
+
         const totalSubs = (stats.value.activeSubscriptions || 0) + (stats.value.pendingRequests || 0) + (stats.value.cancelled || 0) + (stats.value.expired || 0);
-        
+
         // حساب النسب المئوية مع حماية من القسمة على صفر
         if (totalSubs > 0) {
           chartsData.value.piePercentages = [
@@ -165,15 +168,15 @@ export const useAdminStore = defineStore('admin', () => {
             Math.round((stats.value.expired / totalSubs) * 100)
           ];
         } else {
-            chartsData.value.piePercentages = [0, 0, 0, 0];
+          chartsData.value.piePercentages = [0, 0, 0, 0];
         }
       }
-      
+
       if (updateCharts) {
         await fetchChartsData();
       }
-    } catch (e) { 
-      logger.warn('Error fetching stats:', e); 
+    } catch (e) {
+      logger.warn('Error fetching stats:', e);
       throw e; // إعادة رمي الخطأ ليعالجه loadDashboardData
     }
   }
@@ -191,8 +194,8 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function fetchPendingSubscriptions() {
     try {
-        const data = await api.admin.getPendingSubscriptions();
-        if (data) pendingSubscriptions.value = data;
+      const data = await api.admin.getPendingSubscriptions();
+      if (data) pendingSubscriptions.value = data;
     } catch (e) { logger.error('Error pending subs', e); }
   }
 
@@ -218,6 +221,24 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function syncUsers() {
+    showLoading('جاري مزامنة بيانات المستخدمين...');
+    try {
+      const { error } = await supabase.rpc('fix_missing_profiles');
+      if (error) throw error;
+
+      await fetchUsers(false);
+      await loadDashboardData(true); // تحديث شامل
+
+      closeLoading();
+      addNotification('تمت مزامنة المستخدمين بنجاح', 'success');
+    } catch (err) {
+      closeLoading();
+      logger.error('Error syncing users:', err);
+      addNotification('فشل مزامنة المستخدمين: ' + err.message, 'error');
+    }
+  }
+
   async function handleSubscriptionAction(id, action) {
     const confirmMessages = {
       approve: 'هل أنت متأكد من تفعيل هذا الاشتراك؟',
@@ -240,16 +261,46 @@ export const useAdminStore = defineStore('admin', () => {
       const subBefore = allSubscriptions.value.find(s => s.id === id);
       const targetUserId = subBefore?.user_id;
 
-      const { error } = await api.admin.handleSubscriptionAction(id, action);
+      const { data: updatedSub, error } = await api.admin.handleSubscriptionAction(id, action);
       if (error) throw error;
 
-      // تحديث البيانات فوراً مع إجبار التحديث
-      await loadDashboardData(true); 
+      // === تحديث البيانات محلياً لتجنب إعادة التحميل ===
 
+      // 1. حذف من المعلقة إذا كانت موجودة
+      pendingSubscriptions.value = pendingSubscriptions.value.filter(s => s.id !== id);
+
+      // 2. تحديث القائمة العامة
+      if (action === 'delete') {
+        allSubscriptions.value = allSubscriptions.value.filter(s => s.id !== id);
+      } else if (updatedSub && updatedSub.data) {
+        // إذا عادت البيانات الجديدة، نحدثها في القائمة
+        const index = allSubscriptions.value.findIndex(s => s.id === id);
+        if (index !== -1) {
+          // دمج الخصائص الجديدة مع الموجودة
+          allSubscriptions.value[index] = { ...allSubscriptions.value[index], ...updatedSub.data };
+        } else {
+          // حالة نادرة: غير موجودة في القائمة، نضيفها
+          allSubscriptions.value.unshift(updatedSub.data);
+        }
+      }
+
+      // 3. تحديث حالة المستخدم في قائمة المستخدمين
       if (targetUserId) {
+        const userIndex = usersList.value.findIndex(u => u.id === targetUserId);
+        if (userIndex !== -1) {
+          const isActive = action === 'approve' || action === 'reactivate';
+          usersList.value[userIndex].hasActiveSub = isActive;
+
+          if (updatedSub?.data?.end_date) {
+            usersList.value[userIndex].expiryDate = updatedSub.data.end_date;
+          }
+        }
         eventBus.emit('subscription-updated', { userId: targetUserId });
       }
-      
+
+      // تحديث أرقام الإحصائيات سريعاً في الخلفية
+      fetchStats(true).catch(e => logger.warn('Background stats refresh failed', e));
+
       closeLoading();
       await showSuccess('تم بنجاح');
 
@@ -268,49 +319,56 @@ export const useAdminStore = defineStore('admin', () => {
     // ...
     const numDays = Number(days);
     if (!numDays || isNaN(numDays) || numDays === 0) {
-        if (!skipConfirm) addNotification('يرجى إدخال عدد أيام صحيح', 'warning');
-        return;
+      if (!skipConfirm) addNotification('يرجى إدخال عدد أيام صحيح', 'warning');
+      return;
     }
 
     if (!skipConfirm) {
-        let actionText = hasActiveSub 
+      let actionText = hasActiveSub
         ? (numDays > 0 ? `إضافة ${numDays} يوم` : `خصم ${Math.abs(numDays)} يوم`)
         : `تفعيل اشتراك جديد لمدة ${numDays} يوم`;
-        
-        const result = await confirm({
-            title: 'تأكيد التعديل اليدوي',
-            text: `هل تريد بالفعل ${actionText} لهذا المستخدم؟`,
-            icon: 'question'
-        });
 
-        if (!result.isConfirmed) return;
+      const result = await confirm({
+        title: 'تأكيد التعديل اليدوي',
+        text: `هل تريد بالفعل ${actionText} لهذا المستخدم؟`,
+        icon: 'question'
+      });
+
+      if (!result.isConfirmed) return;
     }
 
     if (shouldRefresh) showLoading('جاري تحديث الاشتراك...');
-    
+
     try {
-        const { error } = await api.admin.activateManualSubscription(userId, numDays);
-        
-        if (error) throw error;
+      const { error } = await api.admin.activateManualSubscription(userId, numDays);
 
-        if (shouldRefresh) {
-            // هنا التعديل المهم: force = true
-            await loadDashboardData(true);
-        }
-        
-        logger.info(`Emitting subscription-updated for user: ${userId}`);
-        eventBus.emit('subscription-updated', { userId });
+      if (error) throw error;
 
-        if (shouldRefresh) {
-            closeLoading();
-            await showSuccess('تم تحديث الاشتراك بنجاح');
+      if (shouldRefresh) {
+        // تحديث محلي: نفترض أن التفعيل اليدوي يعني أن المستخدم أصبح نشطاً
+        const userIndex = usersList.value.findIndex(u => u.id === userId);
+        if (userIndex !== -1 && Number(days) > 0) {
+          usersList.value[userIndex].hasActiveSub = true;
         }
+
+        // تحديث الخلفية
+        fetchAllSubscriptions().catch(() => { });
+        fetchStats().catch(() => { });
+      }
+
+      logger.info(`Emitting subscription-updated for user: ${userId}`);
+      eventBus.emit('subscription-updated', { userId });
+
+      if (shouldRefresh) {
+        closeLoading();
+        await showSuccess('تم تحديث الاشتراك بنجاح');
+      }
 
     } catch (err) {
-        if (shouldRefresh) closeLoading();
-        logger.error('Error activating manual subscription:', err);
-        if (shouldRefresh) showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
-        throw err;
+      if (shouldRefresh) closeLoading();
+      logger.error('Error activating manual subscription:', err);
+      if (shouldRefresh) showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
+      throw err;
     }
   }
 
@@ -321,7 +379,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
-    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers,
+    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig
   };
 });

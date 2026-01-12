@@ -82,7 +82,7 @@
         <tbody>
           <tr v-if="store.isLoading">
             <td colspan="7" class="text-center p-3">
-              <i class="fas fa-spinner fa-spin text-primary"></i> جاري استعادة البيانات...
+              <i class="fas fa-spinner fa-spin text-primary"></i> جاري المعالجة...
             </td>
           </tr>
 
@@ -204,7 +204,15 @@ const filteredTotals = computed(() => {
 const isSearching = computed(() => searchQuery.value.trim().length > 0);
 const formatNum = (val) => Number(val || 0).toLocaleString();
 
+let isInitializing = false; // Guard لمنع التنفيذ المتزامن
+
 const initData = async (force = false) => {
+  // منع التنفيذ المتزامن
+  if (isInitializing) {
+    logger.info('⏳ ArchiveView: Already initializing, skipping duplicate call');
+    return;
+  }
+
   // Wait for auth to be initialized to prevent race conditions on resume
   if (!authStore.isInitialized) {
     await new Promise(resolve => {
@@ -218,7 +226,9 @@ const initData = async (force = false) => {
   }
 
   if (!authStore.isAuthenticated || (store.isLoading && !force)) return;
+  
   try {
+    isInitializing = true; // بدء التحميل
     loadColumns();
     await store.loadAvailableDates(force);
     if (store.selectedDate) {
@@ -226,6 +236,8 @@ const initData = async (force = false) => {
     }
   } catch (err) {
     logger.error('ArchiveView: Error initializing data', err);
+  } finally {
+    isInitializing = false; // انتهاء التحميل
   }
 };
 

@@ -21,9 +21,9 @@ export const archiveService = {
         throw error;
       }
 
-      return { 
-        dates: data?.map(item => item.archive_date) || [], 
-        error: null 
+      return {
+        dates: data?.map(item => item.archive_date) || [],
+        error: null
       };
     } catch (err) {
       logger.error('❌ فشل جلب تواريخ الأرشيف من السحابة:', err);
@@ -46,15 +46,23 @@ export const archiveService = {
       );
 
       if (error) {
+        // Handle "No rows found" explicitly as "null data", not an error
+        if (error.code === 'PGRST116' || error.details?.includes('0 rows') || error.status === 406) {
+          return { data: null, error: null };
+        }
         if (error.silent) return { data: null, error: null };
         throw error;
       }
 
-      return { 
-        data: data?.data || [], 
-        error: null 
+      return {
+        data: data?.data || [],
+        error: null
       };
     } catch (err) {
+      // Catch specific errors that slipped through
+      if (err.code === 'PGRST116' || err.status === 406) {
+        return { data: null, error: null };
+      }
       logger.error(`❌ فشل جلب بيانات الأرشيف للتاريخ ${dateStr}:`, err);
       return { data: null, error: err };
     }
@@ -102,7 +110,7 @@ export const archiveService = {
       );
 
       if (error) throw error;
-      
+
       return { success: true, error: null };
     } catch (err) {
       logger.error('❌ خطأ أثناء حذف الأرشيف:', err);

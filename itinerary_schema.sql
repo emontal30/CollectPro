@@ -19,8 +19,11 @@ END;
 $$ language 'plpgsql';
 
 -- ==========================================
--- 4. الجدول الأول: client_routes (العملاء وخط السير)
+-- 4. [DISABLED] الجدول الأول: client_routes
+-- تم تعطيل هذا الجدول لأن خط السير أصبح محلياً بالكامل (Local-First) ولا يتم حفظه في قاعدة البيانات.
+-- تم الإبقاء على الكود كمرجع فقط.
 -- ==========================================
+/*
 CREATE TABLE public.client_routes (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -48,6 +51,7 @@ CREATE INDEX idx_client_routes_ignored ON public.client_routes(user_id, is_ignor
 CREATE TRIGGER update_client_routes_modtime
     BEFORE UPDATE ON public.client_routes
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+*/
 
 -- ==========================================
 -- 5. الجدول الثاني: route_profiles (قوالب الحفظ 1,2,3)
@@ -74,19 +78,21 @@ CREATE TRIGGER update_route_profiles_modtime
 -- ==========================================
 
 -- تفعيل الحماية
-ALTER TABLE public.client_routes ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.client_routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.route_profiles ENABLE ROW LEVEL SECURITY;
 
 -- تنظيف السياسات القديمة إن وجدت
-DROP POLICY IF EXISTS "Users can manage their own routes" ON public.client_routes;
+-- DROP POLICY IF EXISTS "Users can manage their own routes" ON public.client_routes;
 DROP POLICY IF EXISTS "Users can manage their own profiles" ON public.route_profiles;
 
 -- سياسة جدول العملاء (شاملة: قراءة، كتابة، تعديل، حذف)
+/*
 CREATE POLICY "Users can manage their own routes"
 ON public.client_routes
 FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
+*/
 
 -- سياسة جدول القوالب
 CREATE POLICY "Users can manage their own profiles"

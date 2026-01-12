@@ -33,11 +33,15 @@
           
           <div class="control-row add-section">
             <div class="input-group">
+              <select v-model="selectedRole" class="form-control role-select">
+                <option value="editor">محرر (تعديل)</option>
+                <option value="viewer">مشاهد (قراءة فقط)</option>
+              </select>
               <input 
                 v-model="newCollabCode" 
                 type="text" 
                 placeholder="كود الزميل (مثال: USER-123)" 
-                class="form-control"
+                class="form-control code-input"
               />
               <button class="btn btn-primary" @click="sendInvite" :disabled="!newCollabCode || isLoading">
                 <i class="fas fa-paper-plane" v-if="!isLoading"></i>
@@ -63,6 +67,15 @@
                     {{ collab.displayName }} ({{ collab.role === 'editor' ? 'محرر' : 'مشاهد' }})
                   </option>
                 </select>
+                
+                <button 
+                  v-if="selectedCollaboratorId && !currentResultIsGhost" 
+                  class="btn btn-danger btn-sm ml-2" 
+                  @click="handleRevoke" 
+                  title="إلغاء الصلاحية (حذف)"
+                >
+                  <i class="fas fa-trash-alt"></i>
+                </button>
               </div>
 
               <div v-if="selectedCollaboratorId" class="rename-box">
@@ -150,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, inject } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue';
 import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useHarvestStore } from '@/stores/harvest';
 import HarvestView from './HarvestView.vue';
@@ -163,6 +176,7 @@ const { addNotification } = inject('notifications');
 // State
 const activeTab = ref('manage'); // manage | invites
 const newCollabCode = ref('');
+const selectedRole = ref('editor'); // Default role
 const isLoading = ref(false);
 const selectedCollaboratorId = ref(null);
 
@@ -180,10 +194,17 @@ onMounted(async () => {
   await collabStore.fetchCollaborators();
   await collabStore.fetchIncomingRequests();
   
+  // تفعيل الاستماع اللحظي للدعوات والقبول
+  collabStore.subscribeToRequests();
+  
   // استعادة الجلسة النشطة إذا وجدت
   if (collabStore.activeSessionId) {
     selectedCollaboratorId.value = collabStore.activeSessionId;
   }
+});
+
+onBeforeUnmount(() => {
+  collabStore.unsubscribeFromRequests();
 });
 
 // Methods
@@ -194,7 +215,7 @@ const sendInvite = async () => {
   isLoading.value = true;
   try {
     // التعديل هنا: الدالة قد تعيد ID المستخدم إذا تم الدخول مباشرة (وضع الأدمن)
-    const activeUserId = await collabStore.sendInvite(newCollabCode.value);
+    const activeUserId = await collabStore.sendInvite(newCollabCode.value, selectedRole.value);
 
     if (activeUserId) {
       // إذا تم إرجاع ID (حالة الأدمن)، نحدث القائمة ونختاره فوراً
@@ -206,6 +227,7 @@ const sendInvite = async () => {
     }
 
     newCollabCode.value = '';
+    selectedRole.value = 'editor'; // Reset to default
   } catch (err) {
     addNotification(err.message || 'فشل العملية', 'error');
   } finally {
@@ -268,6 +290,31 @@ const saveName = () => {
 const cancelEditName = () => {
   isEditingName.value = false;
 };
+
+// 6. Revoke Logic
+const currentResultIsGhost = computed(() => {
+    if (!selectedCollaboratorId.value) return false;
+    const collab = collabStore.collaborators.find(c => c.userId === selectedCollaboratorId.value);
+    return collab ? collab.isLocal : false;
+});
+
+const handleRevoke = async () => {
+  if (!selectedCollaboratorId.value) return;
+  
+  if(!confirm('هل أنت متأكد من إلغاء صلاحية هذا الزميل؟ سيتم منعه من الدخول لمشاركتك إلا بدعوة جديدة.')) return;
+
+  isLoading.value = true;
+  try {
+    await collabStore.revokeInvite(selectedCollaboratorId.value);
+    selectedCollaboratorId.value = null;
+    addNotification('تم إلغاء الصلاحية بنجاح', 'success');
+  } catch (err) {
+    addNotification('حدث خطأ أثناء الحذف', 'error');
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 </script>
 
 <style scoped>
@@ -335,6 +382,8 @@ const cancelEditName = () => {
   color: var(--text-primary);
   flex: 1;
 }
+.role-select { flex: 0 0 140px; } /* Fixed width for role select */
+.code-input { flex: 2; }
 .select-input { max-width: 100%; }
 
 .separator { margin: 15px 0; border: 0; border-top: 1px solid var(--border-color); opacity: 0.5; }
