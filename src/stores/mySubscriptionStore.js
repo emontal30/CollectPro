@@ -33,8 +33,11 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
 
   const planName = computed(() => {
     if (!subscription.value) return 'مجاني';
+    if (subscription.value.status === 'pending') {
+      return `${subscription.value.plan_name || 'باقة'} (قيد المراجعة)`;
+    }
     if (subscription.value.status === 'expired' || subscription.value.status === 'cancelled') {
-        return `منتهية (${subscription.value.plan_name || 'باقة'})`;
+      return `منتهية (${subscription.value.plan_name || 'باقة'})`;
     }
     return subscription.value.subscription_plans?.name_ar || subscription.value.plan_name || 'باقة نشطة';
   });
@@ -47,8 +50,12 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       const days = daysRemaining.value;
       return { class: days <= 7 ? 'warning' : 'active', icon: days <= 7 ? 'fa-exclamation-circle' : 'fa-check-circle', statusText: 'نشط', detailsPrefix: 'متبقي ', days: days, detailsSuffix: ' يوم' };
     }
-    if (subscription.value?.status === 'expired' || subscription.value?.status === 'cancelled') {
-        return { class: 'expired', icon: 'fa-times-circle', statusText: 'غير نشط', detailsPrefix: 'انتهى اشتراكك', days: null, detailsSuffix: '' };
+    if (subscription.value?.status === 'cancelled') {
+      const days = daysRemaining.value;
+      return { class: 'cancelled', icon: 'fa-pause-circle', statusText: 'معلق مؤقتاً', detailsPrefix: 'متبقي ', days: days, detailsSuffix: ' يوم (مجمد)' };
+    }
+    if (subscription.value?.status === 'expired') {
+      return { class: 'expired', icon: 'fa-times-circle', statusText: 'غير نشط', detailsPrefix: 'انتهى اشتراكك', days: null, detailsSuffix: '' };
     }
     return { class: 'expired', icon: 'fa-user', statusText: 'مجاني', detailsPrefix: 'حسابك مجاني حالياً', days: null, detailsSuffix: '' };
   });
@@ -57,7 +64,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (isInitialized.value && user.value?.id === currentUser?.id) {
       return;
     }
-    
+
     // 1. تحميل الكاش فوراً للسرعة
     const cachedData = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
     if (cachedData) {
@@ -78,13 +85,13 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     } else {
       isInitialized.value = true;
     }
-    
+
     setupEventListeners();
   }
 
   async function forceRefresh(currentUser = null) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-    
+
     isLoading.value = true;
     try {
       const userToRefresh = currentUser || user.value;
@@ -121,10 +128,10 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       } else {
         history.value = histRes.history || [];
       }
-      
-      localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({ 
-        sub: subscription.value, 
-        hist: history.value 
+
+      localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({
+        sub: subscription.value,
+        hist: history.value
       }));
 
       isInitialized.value = true;
@@ -138,7 +145,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
   }
 
   function setupEventListeners() {
-    eventBus.off('subscription-updated'); 
+    eventBus.off('subscription-updated');
     eventBus.on('subscription-updated', () => forceRefresh());
   }
 
@@ -146,11 +153,11 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (realtimeChannel || !user.value || !navigator.onLine) return;
     const channelId = `sub_realtime:${user.value.id}`;
     realtimeChannel = supabase.channel(channelId)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'subscriptions',
-        filter: `user_id=eq.${user.value.id}` 
+        filter: `user_id=eq.${user.value.id}`
       }, () => forceRefresh())
       .subscribe();
   }
@@ -161,7 +168,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     user.value = null;
     isInitialized.value = false;
     localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
-    if (realtimeChannel) { 
+    if (realtimeChannel) {
       supabase.removeChannel(realtimeChannel);
       realtimeChannel = null;
     }

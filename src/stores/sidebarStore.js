@@ -3,8 +3,8 @@ import { ref, computed, onUnmounted } from 'vue';
 import api from '@/services/api';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import eventBus from '@/utils/eventBus';
-import { calculateDaysRemaining } from '@/utils/formatters';
 import logger from '@/utils/logger.js'
 
 export const useSidebarStore = defineStore('sidebar', () => {
@@ -14,13 +14,13 @@ export const useSidebarStore = defineStore('sidebar', () => {
   const subscription = ref(null);
   const isAdmin = ref(false);
   const router = useRouter();
+  const mySubStore = useMySubscriptionStore(); // استخدام mySubscriptionStore
 
   // --- الحسابات (Getters/Computed) ---
 
-  // 1. حساب الأيام المتبقية باستخدام الدالة المشتركة
+  // 1. حساب الأيام المتبقية من mySubscriptionStore (يأخذ serverTimeOffset في الاعتبار)
   const daysLeft = computed(() => {
-    if (!subscription.value?.end_date) return 0;
-    return calculateDaysRemaining(subscription.value.end_date);
+    return mySubStore.daysRemaining || 0;
   });
 
   // 2. تحديد حالة ولون نص الأيام
@@ -29,7 +29,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     if (subscription.value.status === 'pending') return 'pending';
     if (subscription.value.status === 'cancelled') return 'expired';
     if (subscription.value.status === 'expired') return 'expired';
-    
+
     const days = daysLeft.value;
     if (days <= 0) return 'expired';
     if (days <= 7) return 'warning';
@@ -42,7 +42,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     if (subscription.value.status === 'pending') return 'قيد المراجعة';
     if (subscription.value.status === 'cancelled') return 'ملغي';
     if (subscription.value.status === 'expired') return 'منتهي';
-    
+
     const days = daysLeft.value;
     if (days <= 0) return 'اشتراك منتهي';
     return days.toString();
@@ -54,7 +54,7 @@ export const useSidebarStore = defineStore('sidebar', () => {
     if (subscription.value.status === 'pending') return false;
     if (subscription.value.status === 'cancelled') return false;
     if (subscription.value.status === 'expired') return false;
-    
+
     const days = daysLeft.value;
     return days > 0;
   });

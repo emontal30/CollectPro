@@ -122,8 +122,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary btn-block btn-lg" :disabled="store.isLoading || !store.transactionId">
-                <template v-if="!store.isLoading">
+              <button type="submit" class="btn btn-primary btn-block btn-lg" :disabled="store.isLoading || store.isSubmitting || !store.transactionId">
+                <template v-if="!store.isSubmitting">
                   <span>إرسال طلب الدفع</span>
                   <i class="fas fa-paper-plane mr-2"></i>
                 </template>

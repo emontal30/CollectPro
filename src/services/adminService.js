@@ -9,61 +9,17 @@ export const adminService = {
    */
   async getStats(activeDays = 30) {
     try {
-      // 1. جلب الإحصائيات الأساسية من جدول statistics
-      const { data: statsData } = await apiInterceptor(
-        supabase
-          .from('statistics')
-          .select('*')
-          .eq('id', '00000000-0000-0000-0000-000000000001')
-          .maybeSingle()
+      // استخدام الدالة المحسّنة التي تتجاوز RLS
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_admin_stats_fixed', { active_days_period: activeDays })
       );
 
-      // 2. حساب المستخدمين النشطين (الذين قاموا بعمليات إدخال بيانات أو أرشفة خلال الفترة)
-      const dateLimit = new Date();
-      dateLimit.setDate(dateLimit.getDate() - activeDays);
-      const dateLimitISO = dateLimit.toISOString();
+      if (error) {
+        logger.error('Error fetching admin stats:', error);
+        return {};
+      }
 
-      // جلب المستخدمين من كلا المصدرين بالتوازي
-      const [archiveUsersRes, actionUsersRes] = await Promise.all([
-        apiInterceptor(
-          supabase
-            .from('daily_archives')
-            .select('user_id')
-            .gte('updated_at', dateLimitISO)
-        ),
-        apiInterceptor(
-          supabase
-            .from('user_actions')
-            .select('user_id')
-            .gte('created_at', dateLimitISO)
-        )
-      ]);
-
-      const archiveUserIds = archiveUsersRes.data?.map(u => u.user_id) || [];
-      const actionUserIds = actionUsersRes.data?.map(u => u.user_id) || [];
-
-      // دمج وتصفية المعرفات الفريدة
-      const allUserIds = [...archiveUserIds, ...actionUserIds];
-      const uniqueActiveUsers = new Set(allUserIds).size;
-
-      // 3. جلب العدادات الأخرى بشكل مباشر لضمان الدقة 100%
-      const [cancelledRes, expiredRes, pendingRes] = await Promise.all([
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled')),
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'expired')),
-        apiInterceptor(supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'pending'))
-      ]);
-
-      const stats = statsData || { total_users: 0, active_subscriptions: 0, pending_requests: 0, total_revenue: 0 };
-
-      return {
-        totalUsers: stats.total_users || 0,
-        pendingRequests: pendingRes.count || 0, // جلب العدد الحقيقي المباشر
-        activeSubscriptions: stats.active_subscriptions || 0,
-        totalRevenue: stats.total_revenue || 0,
-        cancelled: cancelledRes.count || 0,
-        expired: expiredRes.count || 0,
-        activeUsers: uniqueActiveUsers
-      };
+      return data || {};
     } catch (err) {
       logger.error('Error fetching admin stats:', err);
       return {};
@@ -84,7 +40,7 @@ export const adminService = {
     );
 
     if (subsError || !subsData) return [];
-    
+
     const userIds = subsData.map(s => s.user_id);
     if (userIds.length === 0) return [];
 
@@ -93,9 +49,9 @@ export const adminService = {
     );
 
     if (profilesError) logger.warn('Could not fetch profiles for pending subs.');
-    
+
     const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
-    
+
     return subsData.map(sub => ({ ...sub, user_code: profilesMap.get(sub.user_id) || null }));
   },
 
@@ -155,21 +111,21 @@ export const adminService = {
       if (!sub) return { error: 'Request not found' };
 
       await supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('user_id', sub.user_id).eq('status', 'active');
-      
+
       const months = sub?.subscription_plans?.duration_months || 1;
       const end = new Date(now);
       end.setMonth(now.getMonth() + months);
 
-      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), ...updates }).eq('id', id));
-    } 
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), ...updates }).eq('id', id).select().single());
+    }
     if (action === 'reject' || action === 'delete') {
-      return apiInterceptor(supabase.from('subscriptions').delete().eq('id', id));
-    } 
+      return apiInterceptor(supabase.from('subscriptions').delete().eq('id', id).select().single());
+    }
     if (action === 'cancel') {
-      return apiInterceptor(supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('id', id));
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('id', id).select().single());
     }
     if (action === 'reactivate') {
-      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', ...updates }).eq('id', id));
+      return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', ...updates }).eq('id', id).select().single());
     }
   },
 
@@ -184,14 +140,14 @@ export const adminService = {
       let newEnd = new Date(activeSub.end_date);
       if (newEnd < now) newEnd = now;
       newEnd.setDate(newEnd.getDate() + Number(days));
-      return apiInterceptor(supabase.from('subscriptions').update({ end_date: newEnd.toISOString(), updated_at: now.toISOString() }).eq('id', activeSub.id));
+      return apiInterceptor(supabase.from('subscriptions').update({ end_date: newEnd.toISOString(), updated_at: now.toISOString() }).eq('id', activeSub.id).select().single());
     } else {
       const end = new Date(now);
       end.setDate(now.getDate() + Number(days));
       const { data: plan } = await apiInterceptor(supabase.from('subscription_plans').select('id').limit(1).maybeSingle());
       if (!plan) return { error: { message: 'No plans defined' } };
       await supabase.from('subscriptions').delete().eq('user_id', userId).eq('status', 'pending');
-      return apiInterceptor(supabase.from('subscriptions').insert({ user_id: userId, plan_id: plan.id, plan_name: 'Manual Subscription', price: 0, status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), transaction_id: `MANUAL-${Date.now()}` }));
+      return apiInterceptor(supabase.from('subscriptions').insert({ user_id: userId, plan_id: plan.id, plan_name: 'Manual Subscription', price: 0, status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), transaction_id: `MANUAL-${Date.now()}` }).select().single());
     }
   },
 

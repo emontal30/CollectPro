@@ -29,6 +29,7 @@ export const useHarvestStore = defineStore('harvest', {
     sharedMasterLimit: 0,
     sharedExtraLimit: 0,
     sharedCurrentBalance: 0,
+    sharedLastUpdated: null,
     isSharedLoading: false,
 
     // General
@@ -221,7 +222,7 @@ export const useHarvestStore = defineStore('harvest', {
           .from('live_harvest')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') throw error;
 
@@ -230,12 +231,14 @@ export const useHarvestStore = defineStore('harvest', {
           this.sharedMasterLimit = parseFloat(data.master_limit) || 0;
           this.sharedExtraLimit = parseFloat(data.extra_limit) || 0;
           this.sharedCurrentBalance = parseFloat(data.current_balance) || 0;
+          this.sharedLastUpdated = data.updated_at || null;
         } else {
           // If no data exists for the user, reset the shared state.
           this.sharedRows = [];
           this.sharedMasterLimit = 0;
           this.sharedExtraLimit = 0;
           this.sharedCurrentBalance = 0;
+          this.sharedLastUpdated = null;
         }
 
         this.realtimeChannel = supabase
@@ -250,7 +253,9 @@ export const useHarvestStore = defineStore('harvest', {
                 this.sharedRows = newData.rows;
                 this.sharedMasterLimit = parseFloat(newData.master_limit) || 0;
                 this.sharedExtraLimit = parseFloat(newData.extra_limit) || 0;
+                this.sharedExtraLimit = parseFloat(newData.extra_limit) || 0;
                 this.sharedCurrentBalance = parseFloat(newData.current_balance) || 0;
+                this.sharedLastUpdated = newData.updated_at || new Date().toISOString();
               }
             }
           )
@@ -262,7 +267,9 @@ export const useHarvestStore = defineStore('harvest', {
         this.sharedRows = [];
         this.sharedMasterLimit = 0;
         this.sharedExtraLimit = 0;
+        this.sharedExtraLimit = 0;
         this.sharedCurrentBalance = 0;
+        this.sharedLastUpdated = null;
       } finally {
         this.isSharedLoading = false;
       }
@@ -301,17 +308,109 @@ export const useHarvestStore = defineStore('harvest', {
             // We should also persist to local storage to keep offline capability in sync
             this.saveRowsToStorage();
 
-            // Notify UI or show a toast if needed (optional)
-            // logger.info('Received update from Admin/Collaborator');
+            logger.info('Received update from Admin/Collaborator - synced automatically');
           }
         )
         .subscribe();
     },
 
+
+
+    // دالة جديدة: مزامنة إجبارية فورية مع السحابة
+    async forceSyncToCloud(targetUserId) {
+      if (!targetUserId) return;
+
+      logger.info('Force syncing local data to cloud...');
+
+      try {
+        const payload = {
+          user_id: targetUserId,
+          rows: this.rows,
+          master_limit: this.masterLimit,
+          extra_limit: this.extraLimit,
+          current_balance: this.currentBalance,
+          last_updated_by: (await supabase.auth.getUser()).data.user?.id,
+          updated_at: new Date()
+        };
+
+        const { error } = await supabase.from('live_harvest').upsert(payload);
+        if (error) throw error;
+
+        logger.info('Force sync completed successfully');
+      } catch (error) {
+        logger.error('Force sync to cloud failed:', error.message);
+      }
+    },
+
+    // دالة خاصة لمزامنة المتأخرات سحابياً (حذف القديم وإضافة الجديد)
+    async syncOverdueStoresToCloud(overdueItems) {
+      const authStore = useAuthStore();
+      if (!authStore.user || !navigator.onLine) return;
+
+      try {
+        const userId = authStore.user.id;
+
+        // 1. Delete all existing pending overdue stores for this user
+        const { error: deleteError } = await supabase
+          .from('pending_overdue_stores')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) throw deleteError;
+
+        // 2. If we have new items, insert them
+        if (overdueItems && overdueItems.length > 0) {
+          const records = overdueItems.map(item => ({
+            user_id: userId,
+            shop: item.shop,
+            code: item.code,
+            net: item.net
+          }));
+
+          const { error: insertError } = await supabase
+            .from('pending_overdue_stores')
+            .insert(records);
+
+          if (insertError) throw insertError;
+        }
+
+        logger.info('☁️ Overdue stores synced to cloud successfully');
+      } catch (err) {
+        logger.error('❌ Failed to sync overdue stores to cloud:', err);
+        throw err; // Re-throw to be caught by caller if needed
+      }
+    },
+
     // --- All other actions remain largely the same, operating on LOCAL state ---
 
     async fetchOverdueStores() {
-      return await localforage.getItem('overdue_stores') || [];
+      let localOverdue = await localforage.getItem('overdue_stores');
+
+      // If found locally and not empty, return it.
+      if (localOverdue && Array.isArray(localOverdue) && localOverdue.length > 0) {
+        return localOverdue;
+      }
+
+      // If not found locally, try to fetch from cloud (fallback)
+      const authStore = useAuthStore();
+      if (authStore.user && navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from('pending_overdue_stores')
+            .select('shop, code, net')
+            .eq('user_id', authStore.user.id);
+
+          if (!error && data && data.length > 0) {
+            // Found in cloud! Save locally for next time and return.
+            await localforage.setItem('overdue_stores', data);
+            return data;
+          }
+        } catch (err) {
+          logger.warn('Failed to fetch overdue stores from cloud:', err);
+        }
+      }
+
+      return [];
     },
 
     async applyOverdueStores(storesToApply) {
@@ -354,6 +453,18 @@ export const useHarvestStore = defineStore('harvest', {
 
     async clearOverdueStores() {
       await localforage.removeItem('overdue_stores');
+
+      const authStore = useAuthStore();
+      if (authStore.user && navigator.onLine) {
+        try {
+          await supabase
+            .from('pending_overdue_stores')
+            .delete()
+            .eq('user_id', authStore.user.id);
+        } catch (err) {
+          logger.error('Error clearing cloud overdue stores:', err);
+        }
+      }
     },
 
     async deleteOverdueStores(codes = []) {
@@ -363,6 +474,17 @@ export const useHarvestStore = defineStore('harvest', {
         const filtered = current.filter(s => !codes.includes(String(s.code)));
         if (filtered.length > 0) await localforage.setItem('overdue_stores', filtered);
         else await localforage.removeItem('overdue_stores');
+
+        // Cloud Delete
+        const authStore = useAuthStore();
+        if (authStore.user && navigator.onLine) {
+          await supabase
+            .from('pending_overdue_stores')
+            .delete()
+            .eq('user_id', authStore.user.id)
+            .in('code', codes.map(String));
+        }
+
       } catch (err) {
         logger.error('Error deleting overdue stores:', err);
       }
@@ -429,6 +551,11 @@ export const useHarvestStore = defineStore('harvest', {
             ? localforage.setItem('overdue_stores', overdueStores)
             : localforage.removeItem('overdue_stores')
         ]);
+
+        // Background Sync for Overdue Stores (Fire and Forget)
+        this.syncOverdueStoresToCloud(overdueStores).catch(err => {
+          logger.error('Background overdue sync failed:', err);
+        });
 
         await archiveStore.loadAvailableDates(false);
         this._performCloudSync(dbPayload);

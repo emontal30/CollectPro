@@ -1,5 +1,5 @@
 -- ====================================================================
--- COLLECTPRO - MASTER SCHEMA (v4.7 - Security Patch Fix)
+-- COLLECTPRO - MASTER SCHEMA (v4.8 - Final Security & Profile Fix)
 -- ====================================================================
 
 -- #####################################################
@@ -228,6 +228,7 @@ BEGIN
 END;
 $$;
 
+-- مُحسّن ليتوافق مع بيانات الواجهة الأمامية (v4.8)
 CREATE OR REPLACE FUNCTION public.create_user_profile()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 DECLARE
@@ -240,15 +241,28 @@ BEGIN
         split_part(NEW.email, '@', 1)
     );
 
-    INSERT INTO public.users (id, email, full_name, role)
-    VALUES (NEW.id, NEW.email, extracted_name, 'user')
+    IF extracted_name IS NULL OR extracted_name = '' THEN
+        extracted_name := 'مستخدم';
+    END IF;
+
+    INSERT INTO public.users (id, email, full_name, role, provider)
+    VALUES (
+        NEW.id, 
+        NEW.email, 
+        extracted_name, 
+        'user',
+        COALESCE(NEW.raw_app_meta_data->'providers', '["google"]'::jsonb)
+    )
     ON CONFLICT (id) DO UPDATE
     SET 
         email = EXCLUDED.email,
         full_name = CASE 
-            WHEN public.users.full_name IS NULL OR public.users.full_name = '' THEN EXCLUDED.full_name 
+            WHEN public.users.full_name IS NULL OR public.users.full_name = '' OR public.users.full_name = 'مستخدم' 
+            THEN EXCLUDED.full_name 
             ELSE public.users.full_name 
-        END;
+        END,
+        provider = EXCLUDED.provider,
+        updated_at = NOW();
         
     RETURN NEW;
 END;
@@ -362,8 +376,8 @@ CREATE POLICY "Admins can view statistics" ON public.statistics FOR SELECT USING
 CREATE POLICY "Authenticated users can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "Admins can manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
 
--- سياسات إعدادات النظام
-CREATE POLICY "Everyone can read system config" ON public.system_config FOR SELECT USING (true);
+-- سياسات إعدادات النظام (محدثة للأمان)
+CREATE POLICY "Authenticated users can read system config" ON public.system_config FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Admins can manage system config" ON public.system_config FOR ALL USING (public.is_admin());
 
 
@@ -431,9 +445,6 @@ END $$;
 -- #####################################################
 
 -- <<< CORRECTED SECURITY FIX >>>
--- هذا العرض مصمم للمدراء فقط. 
--- استخدام `security_invoker` يجعله يطبق سياسات الأمان (RLS) الخاصة بالجداول الأساسية (users, subscriptions)
--- مما يضمن أن المدراء فقط يمكنهم رؤية جميع البيانات، بينما يرى المستخدمون العاديون بياناتهم فقط (إن وجدت).
 CREATE OR REPLACE VIEW public.admin_subscriptions_view
 WITH (security_invoker = true) 
 AS
@@ -449,23 +460,11 @@ LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id;
 -- 8. الصلاحيات (Permissions) - HARDENED
 -- #####################################################
 
--- -- منح صلاحيات عامة محددة جداً --
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
-
--- منح صلاحيات القراءة (SELECT) على الجداول والعروض للمستخدمين المسجلين. سياسات RLS ستقوم بالفلترة النهائية.
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
-
--- السماح للمستخدمين بتعديل البيانات في جداول معينة فقط. سياسات RLS ستتحقق من الملكية.
 GRANT INSERT, UPDATE, DELETE ON public.users, public.subscriptions, public.daily_archives TO authenticated;
-
--- -- صلاحيات الأدوار الخاصة --
--- دور الخدمة (service_role) يمتلك صلاحيات كاملة (يتجاوز RLS)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
-
--- المستخدم المجهول (anon) يمكنه فقط استدعاء دوال محددة وآمنة
 GRANT EXECUTE ON FUNCTION public.get_server_time() TO anon, authenticated;
-
--- المستخدم المسجل (authenticated) يمكنه استدعاء دوال محددة وآمنة
 GRANT EXECUTE ON FUNCTION public.can_write_data() TO authenticated;

@@ -57,5 +57,56 @@ export const TimeService = {
      */
     getCairoTimeISO() {
         return new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' });
+    },
+
+    /**
+     * حساب الأيام المتبقية حتى تاريخ محدد مع الأخذ في الاعتبار فارق التوقيت
+     * @param {string|Date} endDate - تاريخ الانتهاء
+     * @param {number} serverTimeOffset - فارق التوقيت بين السيرفر والعميل (بالميلي ثانية)
+     * @returns {number} عدد الأيام المتبقية (عدد صحيح)
+     */
+    calculateDaysRemaining(endDate, serverTimeOffset = 0) {
+        if (!endDate) return 0;
+
+        // استخدام التوقيت الحالي مع إضافة فارق التوقيت
+        const now = new Date(Date.now() + serverTimeOffset);
+        const end = new Date(endDate);
+
+        // تعيين الوقت إلى بداية اليوم (منتصف الليل)
+        now.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+
+        // حساب الفرق بالأيام
+        const diffTime = end - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return Math.max(0, diffDays);
+    },
+
+    /**
+     * احصل على فارق التوقيت بين السيرفر والعميل
+     * @returns {Promise<number>} فارق التوقيت بالميلي ثانية
+     */
+    async getServerTimeOffset() {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine) {
+                const timeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Server time fetch timed out')), 2000);
+                });
+
+                const { data, error } = await Promise.race([
+                    apiInterceptor(supabase.rpc('get_server_time')),
+                    timeout
+                ]);
+
+                if (!error && data) {
+                    return new Date(data).getTime() - Date.now();
+                }
+            }
+        } catch (error) {
+            logger.info('TimeService: Could not fetch server time offset, using 0.');
+        }
+
+        return 0; // Default: no offset
     }
 };

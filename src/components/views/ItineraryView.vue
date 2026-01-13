@@ -618,4 +618,41 @@ watch(() => store.polylineCoords, () => {
 .btn-restore i {
   margin-left: 0.5rem;
 }
+
+/* Modal Improvements */
+.ignored-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh; /* Prevent going off-screen */
+  overflow: hidden;
+  max-width: 500px;
+  width: 90%;
+}
+
+.ignored-modal .modal-body {
+  flex: 1;
+  overflow-y: auto; /* Enable scrolling for the list */
+  padding: 0; 
+  background-color: #f8fafc;
+}
+
+.scrollable-list {
+  max-height: 60vh; /* Extra safety */
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for the list */
+.ignored-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.ignored-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+.ignored-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #ccc; 
+  border-radius: 3px;
+}
+.ignored-modal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #aaa; 
+}
 </style>

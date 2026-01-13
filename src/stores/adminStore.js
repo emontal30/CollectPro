@@ -6,6 +6,7 @@ import eventBus from '@/utils/eventBus';
 import logger from '@/utils/logger.js'
 import { supabase } from '@/supabase';
 import { useAuthStore } from './auth';
+import { TimeService } from '@/utils/time';
 
 export const useAdminStore = defineStore('admin', () => {
   // --- State ---
@@ -35,6 +36,7 @@ export const useAdminStore = defineStore('admin', () => {
   const isSubscriptionEnforced = ref(false);
   const lastFetchTime = ref(0);
   const fetchError = ref(null);
+  const serverTimeOffset = ref(0); // فارق التوقيت بين السيرفر والعميل
 
   const { addNotification, confirm, success: showSuccess, error: showError, loading: showLoading, closeLoading } = useNotifications();
   const authStore = useAuthStore();
@@ -67,10 +69,13 @@ export const useAdminStore = defineStore('admin', () => {
     fetchError.value = null;
 
     try {
-      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي
+      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي - زيادة إلى 30 ثانية
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 15000);
+        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 30000);
       });
+
+      // جلب فارق التوقيت من السيرفر أولاً
+      serverTimeOffset.value = await TimeService.getServerTimeOffset();
 
       // فصل استدعاء الـ Charts عن الـ Stats لتسريع الـ Promise.all
       // واستخدام allSettled لضمان عرض ما تم جلبه حتى لو فشل جزء بسيط
@@ -87,7 +92,7 @@ export const useAdminStore = defineStore('admin', () => {
       const results = await Promise.race([fetchPromise, timeoutPromise]);
 
       // التحقق مما إذا كان هناك أخطاء حرجة (مثلاً الـ Stats فشلت)
-      const statsRejected = results[0].status === 'rejected';
+      const statsRejected = results[0]?.status === 'rejected';
       // لا نرمي خطأ كامل إذا فشل جزء، سنكتفي بما وصلنا
       if (statsRejected) logger.warn('Failed to load some admin stats, but continuing...');
 
@@ -98,11 +103,13 @@ export const useAdminStore = defineStore('admin', () => {
 
       // إعادة المحاولة مرتين فقط
       if (retryCount < 2) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        logger.info(`🔄 Retrying admin data load (Attempt ${retryCount + 2}/3)...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         return loadDashboardData(force, retryCount + 1);
       }
 
       fetchError.value = 'فشل تحميل البيانات، يرجى التحقق من الاتصال.';
+      // لا نرمي الخطأ، نترك البيانات الحالية كما هي
     } finally {
       // التأكد من إيقاف التحميل دائماً
       isLoading.value = false;
@@ -272,15 +279,15 @@ export const useAdminStore = defineStore('admin', () => {
       // 2. تحديث القائمة العامة
       if (action === 'delete') {
         allSubscriptions.value = allSubscriptions.value.filter(s => s.id !== id);
-      } else if (updatedSub && updatedSub.data) {
+      } else if (updatedSub) {
         // إذا عادت البيانات الجديدة، نحدثها في القائمة
         const index = allSubscriptions.value.findIndex(s => s.id === id);
         if (index !== -1) {
           // دمج الخصائص الجديدة مع الموجودة
-          allSubscriptions.value[index] = { ...allSubscriptions.value[index], ...updatedSub.data };
+          allSubscriptions.value[index] = { ...allSubscriptions.value[index], ...updatedSub };
         } else {
           // حالة نادرة: غير موجودة في القائمة، نضيفها
-          allSubscriptions.value.unshift(updatedSub.data);
+          allSubscriptions.value.unshift(updatedSub);
         }
       }
 
@@ -379,6 +386,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
+    serverTimeOffset, // إضافة serverTimeOffset
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig
   };

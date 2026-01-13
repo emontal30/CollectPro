@@ -351,10 +351,28 @@ onMounted(async () => {
   if (navigator.onLine) {
     processLocationQueue();
   }
+
+  // Realtime listener for enforcement status
+  supabase.channel('public:system_config')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_config', filter: "key=eq.enforce_subscription" }, (payload) => {
+      if (payload.new && payload.new.value !== undefined) {
+         isEnforced.value = String(payload.new.value) === 'true';
+         localStorage.setItem('sys_config_enforce', String(isEnforced.value));
+         // If enforcement is turned ON and user is not subscribed, redirect immediately if on protected route
+         if (isEnforced.value && !subStore.isSubscribed && !authStore.isAdmin) {
+             const currentRoute = router.currentRoute.value;
+             if (currentRoute.meta.requiresSubscription) {
+                 router.push('/app/my-subscription?access=denied');
+             }
+         }
+      }
+    })
+    .subscribe();
 });
 
 onUnmounted(() => {
   window.removeEventListener('online', processLocationQueue);
+  supabase.channel('public:system_config').unsubscribe();
 });
 
 const handleLogout = async () => {
@@ -558,7 +576,8 @@ const handleLogout = async () => {
 .subscription-info-box.active .status-text, .subscription-info-box.active .days-number { color: #2ecc71; }
 .subscription-info-box.warning .status-text, .subscription-info-box.warning .days-number { color: #feca57; }
 .subscription-info-box.expired .status-text, .subscription-info-box.expired .days-number { color: #ff6b6b; }
-.subscription-info-box.pending .status-text, .subscription-info-box.pending .days-number { color: #3498db; }
+.subscription-info-box.pending .status-text, .subscription-info-box.pending .days-number { color: #f39c12; }
+.subscription-info-box.cancelled .status-text, .subscription-info-box.cancelled .days-number { color: #e74c3c; }
 
 .logout-btn { background: rgba(220, 53, 69, 0.9); border: none; border-radius: 12px; padding: 12px; color: white; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-links { list-style: none; padding: 0; }

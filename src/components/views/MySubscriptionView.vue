@@ -344,7 +344,8 @@ onMounted(() => {
 .days-counter.active { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); }
 .days-counter.warning { background: rgba(254, 202, 87, 0.1); color: #feca57; border: 1px solid rgba(254, 202, 87, 0.2); animation: pulse 2s infinite; }
 .days-counter.expired { background: rgba(255, 107, 107, 0.1); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.2); }
-.days-counter.pending { background: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.2); }
+.days-counter.pending { background: rgba(243, 156, 18, 0.1); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.2); }
+.days-counter.cancelled { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.2); }
 
 .card-footer { padding: 24px; background: var(--gray-100); border-top: 1px solid var(--border-color); }
 .subscription-active-msg { text-align: center; color: var(--primary); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -375,9 +376,10 @@ onMounted(() => {
 /* --- Badges --- */
 .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .badge-active { background: var(--success, #2ecc71); }
-.badge-pending { background: #3498db; }
+.badge-pending { background: #f39c12; }
 .badge-warning { background: var(--warning, #feca57); }
-.badge-expired, .badge-cancelled { background: var(--gray-500, #95a5a6); }
+.badge-expired { background: var(--gray-500, #95a5a6); }
+.badge-cancelled { background: #e74c3c; }
 
 @media (max-width: 600px) {
   .d-none-mobile { display: none; }
@@ -415,7 +417,8 @@ onMounted(() => {
 :global(body.dark-mode) .text-muted { color: #aaa !important; }
 :global(body.dark-mode) .divider { background: #333 !important; opacity: 1; }
 :global(body.dark-mode) .days-counter.expired { background: rgba(255, 107, 107, 0.05); }
-:global(body.dark-mode) .days-counter.pending { background: rgba(52, 152, 219, 0.05); color: #3498db; }
+:global(body.dark-mode) .days-counter.pending { background: rgba(243, 156, 18, 0.05); color: #f39c12; }
+:global(body.dark-mode) .days-counter.cancelled { background: rgba(231, 76, 60, 0.05); color: #e74c3c; }
 :global(body.dark-mode) .empty-state { color: #777 !important; }
 
 @keyframes pulse {

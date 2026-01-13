@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <div class="harvest-page">
     
     <div v-if="isLoading" class="loading-overlay">

@@ -14,6 +14,7 @@ export const usePaymentStore = defineStore('payment', () => {
   const transactionId = ref('');
   const paymentMethod = ref('vodafone-cash');
   const isLoading = ref(false);
+  const isSubmitting = ref(false);
   const router = useRouter();
 
   const { error, success, confirm } = useNotifications();
@@ -59,7 +60,7 @@ export const usePaymentStore = defineStore('payment', () => {
       return;
     }
 
-    isLoading.value = true;
+    isSubmitting.value = true;
     try {
       const { user } = await api.auth.getUser();
       if (!user) throw new Error("المستخدم غير مسجل دخوله.");
@@ -103,7 +104,7 @@ export const usePaymentStore = defineStore('payment', () => {
       logger.error(err);
       error(`حدث خطأ: ${err.message || 'فشل الاتصال بالخادم'}`);
     } finally {
-      isLoading.value = false;
+      isSubmitting.value = false;
     }
   }
 
@@ -113,6 +114,7 @@ export const usePaymentStore = defineStore('payment', () => {
     transactionId,
     paymentMethod,
     isLoading,
+    isSubmitting,
     init,
     setPaymentMethod,
     submitPayment

@@ -329,6 +329,7 @@ import PageHeader from '@/components/layout/PageHeader.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import logger from '@/utils/logger';
 import { onBeforeRouteUpdate } from 'vue-router';
+import { TimeService } from '@/utils/time';
 
 const store = useAdminStore();
 const authStore = useAuthStore();
@@ -422,10 +423,11 @@ const filteredUsers = computed(() => {
   );
 });
 
+/**
+ * حساب الأيام المتبقية مع الأخذ في الاعتبار فارق التوقيت
+ */
 const calculateRemainingDays = (endDate) => {
-  if (!endDate) return 0;
-  const diffTime = new Date(endDate) - new Date();
-  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  return TimeService.calculateDaysRemaining(endDate, store.serverTimeOffset);
 };
 
 const getRemainingDaysColor = (endDate) => {

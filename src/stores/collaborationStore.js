@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { supabase } from '../supabase';
 import { useAuthStore } from './auth';
+import logger from '@/utils/logger.js';
 
 export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
@@ -12,6 +13,7 @@ export const useCollaborationStore = defineStore('collaboration', {
     activeSessionName: localStorage.getItem('collab_active_session_name') || null,
 
     realtimeChannel: null,
+    pgNotifyChannel: null, // قناة للإشعارات الفورية من PostgreSQL
 
     isLoading: false,
 
@@ -19,7 +21,11 @@ export const useCollaborationStore = defineStore('collaboration', {
     aliases: JSON.parse(localStorage.getItem('collab_aliases') || '{}'),
 
     // 2. تخزين "المستخدمين الأشباح" (Ghost Users) الذين يضيفهم الأدمن محلياً
-    localGhostUsers: JSON.parse(localStorage.getItem('collab_ghost_users') || '[]')
+    localGhostUsers: JSON.parse(localStorage.getItem('collab_ghost_users') || '[]'),
+
+    // 3. معرف جلسة الأدمن النشطة ومؤقت الـ ping
+    activeAdminSessionId: null,
+    adminSessionPingInterval: null
   }),
 
   actions: {
@@ -137,7 +143,7 @@ export const useCollaborationStore = defineStore('collaboration', {
         // 2. تحديث القائمة الحالية
         this.refreshCollaboratorsList();
 
-        // 3. تفعيل الجلسة
+        // 3. تفعيل الجلسة (بدون تسجيل في قاعدة البيانات)
         this.setActiveSession(profile.id, displayName);
 
         return profile.id;
@@ -275,12 +281,54 @@ export const useCollaborationStore = defineStore('collaboration', {
           }
         )
         .subscribe();
+
+      // الاستماع لإشعارات PostgreSQL الفورية
+      this.subscribeToPgNotifications();
+    },
+
+    // دالة جديدة: الاستماع لإشعارات PostgreSQL
+    subscribeToPgNotifications() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      if (this.pgNotifyChannel) {
+        supabase.removeChannel(this.pgNotifyChannel);
+      }
+
+      this.pgNotifyChannel = supabase
+        .channel('pg-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'collaboration_requests'
+          },
+          async (payload) => {
+            // معالجة الإشعارات الفورية للدعوات
+            if (payload.eventType === 'INSERT' && payload.new?.receiver_code === auth.user.userCode) {
+              // دعوة جديدة - تحديث القائمة فوراً
+              await this.fetchIncomingRequests();
+              logger.info('New invitation received instantly via trigger');
+            } else if (payload.eventType === 'UPDATE' && payload.new?.sender_id === auth.user.id) {
+              // استجابة على دعوتي - تحديث المتعاونين فوراً
+              await this.fetchCollaborators();
+              logger.info('Invitation response received instantly via trigger');
+            }
+          }
+        )
+        .subscribe();
     },
 
     unsubscribeFromRequests() {
       if (this.realtimeChannel) {
         supabase.removeChannel(this.realtimeChannel);
         this.realtimeChannel = null;
+      }
+
+      if (this.pgNotifyChannel) {
+        supabase.removeChannel(this.pgNotifyChannel);
+        this.pgNotifyChannel = null;
       }
     },
 
@@ -305,6 +353,9 @@ export const useCollaborationStore = defineStore('collaboration', {
       if (this.activeSessionId === userId) {
         this.setActiveSession(null, null);
       }
+
+      // إيقاف جلسة الأدمن إذا كانت نشطة
+      await this.stopAdminGhostSession();
     }
   }
 });

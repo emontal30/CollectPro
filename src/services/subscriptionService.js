@@ -9,18 +9,18 @@ export const subscriptionService = {
       logger.warn('getUserSubscription: userId is missing.');
       return { subscription: null, error: { message: 'User ID is required' } };
     }
-    
+
     const { data, error } = await apiInterceptor(
       supabase
         .from('subscriptions')
         .select('*, subscription_plans(*)')
         .eq('user_id', userId)
-        .eq('status', 'active')
+        // .eq('status', 'active') // Removed to fetch pending as well
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
     );
-    
+
     return { subscription: data, error };
   },
 
@@ -29,7 +29,7 @@ export const subscriptionService = {
       logger.warn('getSubscriptionHistory: userId is missing.');
       return { history: [], error: { message: 'User ID is required' } };
     }
-    
+
     const { data, error } = await apiInterceptor(
       supabase
         .from('subscriptions')
@@ -63,7 +63,7 @@ export const subscriptionService = {
     if (error) {
       logger.error("Error fetching plan from DB, using fallback.", error);
     }
-    
+
     if (data) {
       return { ...data, period: planInfo.period };
     } else {

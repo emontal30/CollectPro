@@ -130,9 +130,21 @@
 
     <div v-if="collabStore.activeSessionId" class="shared-harvest-container animate-slide-up">
       <div class="shared-header">
-        <div class="badge-info">
-          <i class="fas fa-eye pulse"></i>
-          <span>جاري عرض: <strong>{{ activeCollaboratorName }}</strong></span>
+        <div class="header-info-group">
+          <div class="badge-info">
+            <i class="fas fa-eye pulse"></i>
+            <span>جاري عرض: <strong>{{ activeCollaboratorName }}</strong></span>
+          </div>
+          <button 
+            class="last-sync-badge clickable" 
+            v-if="lastUpdatedText" 
+            @click="refreshSharedSession" 
+            title="اضغط للتحديث يدوياً"
+            :disabled="harvestStore.isSharedLoading"
+          >
+            <i class="fas fa-sync-alt" :class="{ 'fa-spin': harvestStore.isSharedLoading }"></i>
+            <span>{{ lastUpdatedText }}</span>
+          </button>
         </div>
         <button class="btn btn-danger btn-sm" @click="closeSession">
           <i class="fas fa-times"></i> إغلاق
@@ -166,12 +178,17 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue';
 import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useHarvestStore } from '@/stores/harvest';
+import { useAuthStore } from '@/stores/auth';
 import HarvestView from './HarvestView.vue';
 import PageHeader from '@/components/layout/PageHeader.vue';
 
 const collabStore = useCollaborationStore();
 const harvestStore = useHarvestStore(); // قد نحتاجه لأي عمليات تهيئة
+const authStore = useAuthStore();
 const { addNotification } = inject('notifications');
+
+// Computed
+const isAdmin = computed(() => authStore.isAdmin);
 
 // State
 const activeTab = ref('manage'); // manage | invites
@@ -187,6 +204,24 @@ const nameInput = ref(null);
 
 const activeCollaboratorName = computed(() => {
   return collabStore.activeSessionName || 'الزميل';
+});
+
+const lastUpdatedText = computed(() => {
+  if (!harvestStore.sharedLastUpdated) return '';
+  const date = new Date(harvestStore.sharedLastUpdated);
+  
+  // تنسيق اليوم والشهر (13/01)
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  
+  // تنسيق الوقت بالإنجليزية (10:30 PM)
+  const time = date.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  });
+
+  return `${day}/${month} | ${time}`;
 });
 
 // Lifecycle
@@ -220,10 +255,10 @@ const sendInvite = async () => {
     if (activeUserId) {
       // إذا تم إرجاع ID (حالة الأدمن)، نحدث القائمة ونختاره فوراً
       selectedCollaboratorId.value = activeUserId;
-      addNotification('تم الدخول للحساب بنجاح (وضع الأدمن)', 'success');
+      addNotification('تم الدخول للحساب بنجاح (وضع الأدمن - مزامنة إجبارية نشطة) ⚡', 'success');
     } else {
       // الحالة العادية
-      addNotification('تم إرسال الدعوة بنجاح', 'success');
+      addNotification('تم إرسال الدعوة بنجاح. في انتظار قبول الطرف الآخر...', 'success');
     }
 
     newCollabCode.value = '';
@@ -264,6 +299,15 @@ const handleCollaboratorChange = () => {
 const closeSession = () => {
   collabStore.setActiveSession(null, null);
   selectedCollaboratorId.value = null;
+};
+
+// 5. Refresh Session
+const refreshSharedSession = async () => {
+    if (collabStore.activeSessionId) {
+        addNotification('جاري تحديث البيانات...', 'info');
+        await harvestStore.switchToUserSession(collabStore.activeSessionId);
+        addNotification('تم تحديث البيانات', 'success');
+    }
 };
 
 // 5. Rename Logic
@@ -429,6 +473,37 @@ const handleRevoke = async () => {
   color: #0369a1;
   border: 1px solid #bae6fd;
 }
+.header-info-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.last-sync-badge {
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0c4a6e;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+.last-sync-badge.clickable:hover {
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.last-sync-badge.clickable:active {
+  transform: translateY(0);
+}
+.last-sync-badge:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 .badge-info { display: flex; align-items: center; gap: 8px; }
 .pulse { animation: pulse 2s infinite; }
 
@@ -439,6 +514,25 @@ const handleRevoke = async () => {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+/* Admin Mode Indicator */
+.admin-indicator {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+.admin-indicator i {
+  font-size: 1rem;
+  animation: pulse 2s infinite;
+}
 
 @media (max-width: 600px) {
   .selection-wrapper { flex-direction: column; align-items: stretch; }
