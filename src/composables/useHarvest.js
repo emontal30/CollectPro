@@ -550,7 +550,7 @@ export function useHarvest(props) {
     exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, toggleProfileDropdown,
     applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
-    handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,
+    confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,
     // Extra Details Modal
     isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails
   };
