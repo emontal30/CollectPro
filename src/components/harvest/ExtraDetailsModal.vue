@@ -522,7 +522,7 @@ const formatWithCommas = (val) => {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   color: var(--text-main);
-  font-size: 1rem;
+  font-size: max(16px, 1rem); /* Ensures at least 16px to prevent zoom, allows scaling up */
   font-weight: 700;
   font-family: var(--font-family-mono);
   outline: none;
