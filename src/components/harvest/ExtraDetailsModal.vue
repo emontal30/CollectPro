@@ -250,15 +250,15 @@ watch(() => props.isOpen, (newVal) => {
       addEmptyRow();
     }
     
-    // Focus first empty input
+    // Focus logic removed to prevent mobile zoom/keyboard issues
+    /*
     nextTick(() => {
         const inputs = document.querySelectorAll('.detail-input');
         if(inputs.length > 0) {
-             // Focus the last one (empty) or specific logic? 
-             // Logic: Focus the last empty one is usually best for "adding more"
              inputs[inputs.length - 1].focus();
         }
     });
+    */
   }
 }, { immediate: true });
 

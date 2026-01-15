@@ -351,6 +351,7 @@ export function useHarvest(props) {
   };
 
   const openExtraDetailsModal = (row, index) => {
+    hideTooltip();
     activeExtraRowIndex.value = index;
     // Ensure we pass a clean copy of the row data
     activeExtraRowData.value = {
