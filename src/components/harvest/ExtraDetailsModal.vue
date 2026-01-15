@@ -46,7 +46,7 @@
           >
             <span class="row-number">{{ index + 1 }}</span>
             
-            <div class="input-wrapper">
+            <div class="input-wrapper input-with-action">
               <input
                 ref="amountInputs"
                 :value="formatWithCommas(item.amount)"
@@ -58,6 +58,7 @@
                 @input="(e) => handleInput(e, index)"
                 @keydown.enter.prevent="focusNext(index)"
               />
+              <button class="btn-toggle-sign modal-toggle-btn" @click="toggleRowSign(index)" tabindex="-1">-</button>
             </div>
 
             <div class="timestamp-display">
@@ -167,6 +168,13 @@ const handleInput = (e, index) => {
         if(list) list.scrollTop = list.scrollHeight;
     });
   }
+};
+
+const toggleRowSign = (index) => {
+    let val = localDetails.value[index].amount;
+    // Toggle logic: if empty/null -> '-', if '-' -> null, else * -1
+    const newVal = (!val || val === '') ? '-' : (val === '-') ? '' : parseFloat(String(val).replace(/,/g, '')) * -1;
+    localDetails.value[index].amount = newVal;
 };
 
 const removeRow = (index) => {
@@ -512,10 +520,44 @@ const formatWithCommas = (val) => {
   flex: 1;
   padding-right: var(--spacing-sm);
   border-right: 2px solid var(--gray-300);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-with-action {
+  gap: 4px;
+}
+
+.modal-toggle-btn {
+  background: var(--gray-200);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.modal-toggle-btn:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
 }
 
 .detail-input {
-  width: 85%;
+  /* Width adjusted to accommodate toggle button */
+  width: calc(100% - 35px) !important; 
   display: block;
   margin: 0 auto;
   background: var(--gray-100);
@@ -535,6 +577,12 @@ const formatWithCommas = (val) => {
   background: var(--white);
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+@media (max-width: 768px) {
+  .detail-input {
+    font-size: 16px !important;
+  }
 }
 
 .detail-input::placeholder {
