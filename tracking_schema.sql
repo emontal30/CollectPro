@@ -37,6 +37,9 @@ FOR SELECT USING (auth.uid() = user_id);
 -- 5. تنظيف البيانات القديمة تلقائياً (اختياري - لتوفير المساحة)
 -- يمكن تشغيل هذا يدوياً أو عبر cron job إذا توفر
 CREATE OR REPLACE FUNCTION clean_old_user_actions()
-RETURNS void LANGUAGE sql AS $$
+RETURNS void 
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE sql AS $$
     DELETE FROM public.user_actions WHERE created_at < NOW() - INTERVAL '30 days';
 $$;

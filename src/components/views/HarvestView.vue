@@ -172,7 +172,7 @@
                   :class="{ 'negative-extra': (parseFloat(row.extra) || 0) < 0 }"
                   lang="en"
                   :disabled="isReadOnly"
-                  @focus="showTooltip($event.target, row.shop)"
+                  @focus="showTooltip($event.target, row.shop, { showDetailsBtn: !isReadOnly, row, index })"
                   @input="updateExtra(row, index, $event)"
                 />
                 <button v-if="!isReadOnly" class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
@@ -231,7 +231,24 @@
 
     <teleport to="body">
       <div v-if="showCustomTooltip" class="custom-tooltip" ref="customTooltipRef">
-        {{ customTooltipText }}
+        <span 
+          v-if="customTooltipContext?.showDetailsBtn" 
+          class="tooltip-text-action"
+          @mousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
+          title="اضغط لفتح التفاصيل"
+        >
+          {{ customTooltipText }}
+        </span>
+        <span v-else>{{ customTooltipText }}</span>
+
+        <button 
+          v-if="customTooltipContext?.showDetailsBtn" 
+          class="btn-icon-trigger-tooltip animate-scale-in" 
+          @mousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
+          title="التفاصيل"
+        >
+          <i class="fas fa-file-medical"></i>
+        </button>
       </div>
     </teleport>
 
@@ -442,6 +459,17 @@
         </button>
       </div>
     </div>
+    <ExtraDetailsModal
+      v-if="isExtraDetailsModalOpen"
+      :is-open="isExtraDetailsModalOpen"
+      :shop-name="activeExtraRowData?.shop"
+      :shop-code="activeExtraRowData?.code"
+      :base-amount="activeExtraRowData?.amount"
+      :initial-details="activeExtraRowData?.extraDetails"
+      :initial-total="activeExtraRowData?.extra"
+      @close="closeExtraDetailsModal"
+      @save="saveExtraDetails"
+    />
   </div>
 </template>
 
@@ -450,6 +478,8 @@ import { defineProps } from 'vue';
 import { useHarvest } from '@/composables/useHarvest';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import ColumnVisibility from '@/components/ui/ColumnVisibility.vue';
+
+import ExtraDetailsModal from '@/components/harvest/ExtraDetailsModal.vue';
 
 // --- Props Definition ---
 const props = defineProps({
@@ -482,8 +512,8 @@ const {
   isOverdueModalOpen,
   overdueStores,
   selectedOverdueStores,
-  allOverdueSelected, // Included from Code 2
-  // Bridge computeds (From Code 2 - Crucial for Shared View)
+  allOverdueSelected,
+  // Bridge computeds
   isLoading, 
   isReadOnly, 
   displayRows, 
@@ -493,7 +523,7 @@ const {
   displayExtraLimit, 
   displayCurrentBalance, 
   displayResetStatus, displayResetAmount,
-  // Computed (Legacy/Shared)
+  // Computed
   savedItineraryProfiles,
   filteredTotals,
   filteredTotalNetValue,
@@ -525,20 +555,15 @@ const {
   handleSummaryExport,
   showTooltip,
   formatInputNumber,
+  customTooltipContext,
+  // Extra Details Modal
+  isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails
 } = useHarvest(props);
 
 // Toggle select/deselect all overdue stores
 const toggleSelectAllOverdue = () => {
-  try {
-    if (typeof allOverdueSelected === 'object' && 'value' in allOverdueSelected) {
-      allOverdueSelected.value = !allOverdueSelected.value;
-    } else {
-      // Fallback if it's not a ref (though useHarvest should return a ref)
-      // This part ensures compatibility with how Code 1 handled it locally
-      allOverdueSelected = !allOverdueSelected;
-    }
-  } catch (e) {
-    console.warn('Failed to toggle select all overdue', e);
+  if (allOverdueSelected && typeof allOverdueSelected === 'object' && 'value' in allOverdueSelected) {
+    allOverdueSelected.value = !allOverdueSelected.value;
   }
 };
 </script>
@@ -551,6 +576,61 @@ export default {
 
 <style scoped>
 /* Code 2 Styles */
+.btn-icon-trigger {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    margin-right: -25px; /* Pull it slightly over the input or adjust spacing */
+    z-index: 2;
+    font-size: 0.9rem;
+    padding: 4px;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+.btn-icon-trigger:hover {
+    opacity: 1;
+    color: var(--primary-hover);
+    transform: scale(1.1);
+}
+
+.custom-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 99999 !important; /* Ensure it's on top of everything */
+  pointer-events: auto;
+}
+
+.tooltip-text-action {
+  cursor: pointer;
+  border-bottom: 1px dotted rgba(255,255,255,0.6);
+  transition: color 0.2s;
+}
+
+.tooltip-text-action:hover {
+  color: var(--primary-light);
+  border-bottom-style: solid;
+}
+
+.btn-icon-trigger-tooltip {
+    background: var(--surface-bg);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-icon-trigger-tooltip:hover {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.05);
+}
+
 .loading-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;

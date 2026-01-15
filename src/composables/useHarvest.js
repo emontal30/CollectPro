@@ -43,6 +43,11 @@ export function useHarvest(props) {
   const overdueStores = ref([]);
   const selectedOverdueStores = ref([]);
 
+  // --- Extra Details Modal State ---
+  const isExtraDetailsModalOpen = ref(false);
+  const activeExtraRowIndex = ref(null);
+  const activeExtraRowData = ref(null);
+
   // --- Context-Aware Computed Properties (The Bridge) ---
 
   const isLoading = computed(() =>
@@ -284,8 +289,16 @@ export function useHarvest(props) {
   };
   const updateAmount = (row, index, e) => handleMoneyInput(e, (val) => updateField(row, index, 'amount', val ? parseFloat(val) : null), { fieldName: 'مبلغ التحويل', maxLimit: 9999 });
   const updateExtra = (row, index, e) => handleMoneyInput(e, (val) => {
-    if (val === '-') row.extra = '-';
-    else updateField(row, index, 'extra', (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null);
+    if (val === '-') {
+      row.extra = '-';
+    } else {
+      const newValue = (val !== '' && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val) : null;
+      // Clear details if the main value is cleared
+      if (newValue === null) {
+        row.extraDetails = [];
+      }
+      updateField(row, index, 'extra', newValue);
+    }
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
 
   const updateCollector = (row, index, e) => {
@@ -335,6 +348,40 @@ export function useHarvest(props) {
     row[field] = (!currentVal || currentVal === '') ? '-' : (currentVal === '-') ? null : parseFloat(String(currentVal).replace(/,/g, '')) * -1;
     saveData();
     if (field === 'collector') syncWithCounterStore();
+  };
+
+  const openExtraDetailsModal = (row, index) => {
+    activeExtraRowIndex.value = index;
+    // Ensure we pass a clean copy of the row data
+    activeExtraRowData.value = {
+      id: row.id,
+      shop: row.shop,
+      code: row.code,
+      amount: row.amount,
+      extra: row.extra,
+      // If extraDetails exists, pass it. If not, but there is an 'extra' value, create a virtual detail for migration
+      extraDetails: row.extraDetails ? JSON.parse(JSON.stringify(row.extraDetails)) : []
+    };
+    isExtraDetailsModalOpen.value = true;
+  };
+
+  const closeExtraDetailsModal = () => {
+    isExtraDetailsModalOpen.value = false;
+    activeExtraRowIndex.value = null;
+    activeExtraRowData.value = null;
+  };
+
+  const saveExtraDetails = ({ total, details }) => {
+    if (activeExtraRowIndex.value === null) return;
+
+    // Update the actual row in the store
+    const row = displayRows.value[activeExtraRowIndex.value];
+    if (row) {
+      row.extra = total; // Update the main cell value
+      row.extraDetails = details; // Save the detailed breakdown
+      saveData(); // Persist
+    }
+    closeExtraDetailsModal();
   };
 
   const confirmClearAll = async () => {
@@ -390,12 +437,17 @@ export function useHarvest(props) {
     addNotification(result.message, result.success ? 'success' : 'error');
   };
 
-  const showTooltip = (element, text) => {
+  const customTooltipContext = ref(null);
+
+  const showTooltip = (element, text, context = null) => {
     if (!element || !text) return;
     if (showCustomTooltip.value && tooltipTargetElement.value === element) {
-      return hideTooltip();
+      if (JSON.stringify(customTooltipContext.value) === JSON.stringify(context)) {
+        return hideTooltip();
+      }
     }
     customTooltipText.value = text;
+    customTooltipContext.value = context;
     tooltipTargetElement.value = element;
     showCustomTooltip.value = true;
     nextTick(() => {
@@ -408,11 +460,15 @@ export function useHarvest(props) {
       }
     });
   };
-  const hideTooltip = () => { showCustomTooltip.value = false; };
+  const hideTooltip = () => {
+    showCustomTooltip.value = false;
+    customTooltipContext.value = null;
+  };
 
   const handleOutsideClick = (e) => {
     const isTooltipTrigger = e.target.closest('input[id^="shop-"], input[id^="extra-"], input[id^="collector-"], .readonly-field');
-    if (!isTooltipTrigger) hideTooltip();
+    const isTooltipSelf = e.target.closest('.custom-tooltip');
+    if (!isTooltipTrigger && !isTooltipSelf) hideTooltip();
   };
 
   // Guard لمنع التنفيذ المتزامن
@@ -494,6 +550,8 @@ export function useHarvest(props) {
     exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, toggleProfileDropdown,
     applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
-    confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber,
+    handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,
+    // Extra Details Modal
+    isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails
   };
 }

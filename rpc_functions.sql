@@ -19,6 +19,11 @@ declare
   active_subscriptions_count int;
   total_revenue_val numeric;
 begin
+  -- Security Check
+  IF NOT public.is_admin() THEN
+      RAISE EXCEPTION 'Access Denied: Admin privileges required';
+  END IF;
+
   -- Use the statistics table as a base, but verify with live counts
   select
     total_users, active_subscriptions, total_revenue
@@ -62,36 +67,45 @@ $$;
 -- It fetches user data, profile data (user_code), and active subscription status in one go.
 create or replace function get_users_with_details()
 returns json
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select
-    json_agg(
-      json_build_object(
-        'id', u.id,
-        'full_name', p.full_name,
-        'email', u.email,
-        'user_code', p.user_code,
-        'created_at', u.created_at,
-        'hasActiveSub', (case when s.status = 'active' then true else false end),
-        'activeSubId', s.id,
-        'expiryDate', s.end_date,
-        -- The original JS function expected a "subscriptions" array, let's provide a compatible one
-        'subscriptions', (
-            select json_agg(sub_details)
-            from (
-                select id, status, end_date
-                from public.subscriptions
-                where user_id = u.id
-            ) as sub_details
+begin
+  -- Security Check
+  IF NOT public.is_admin() THEN
+      RAISE EXCEPTION 'Access Denied: Admin privileges required';
+  END IF;
+
+  return (
+      select
+        json_agg(
+          json_build_object(
+            'id', u.id,
+            'full_name', p.full_name,
+            'email', u.email,
+            'user_code', p.user_code,
+            'created_at', u.created_at,
+            'hasActiveSub', (case when s.status = 'active' then true else false end),
+            'activeSubId', s.id,
+            'expiryDate', s.end_date,
+            -- The original JS function expected a "subscriptions" array, let's provide a compatible one
+            'subscriptions', (
+                select json_agg(sub_details)
+                from (
+                    select id, status, end_date
+                    from public.subscriptions
+                    where user_id = u.id
+                ) as sub_details
+            )
+          )
+          order by u.created_at desc
         )
-      )
-      order by u.created_at desc
-    )
-  from auth.users as u
-  left join public.profiles as p on u.id = p.id
-  left join public.subscriptions as s on u.id = s.user_id and s.status = 'active';
+      from auth.users as u
+      left join public.profiles as p on u.id = p.id
+      left join public.subscriptions as s on u.id = s.user_id and s.status = 'active'
+  );
+end;
 $$;
 
 -- 3. Handle Subscription Actions Transactionally
@@ -112,6 +126,11 @@ declare
   v_end_date timestamptz;
   v_now timestamptz := now();
 begin
+  -- Security Check
+  IF NOT public.is_admin() THEN
+      RAISE EXCEPTION 'Access Denied: Admin privileges required';
+  END IF;
+
   -- Fetch the target subscription to ensure it exists
   select * into v_sub from subscriptions where id = p_subscription_id;
   if v_sub is null then

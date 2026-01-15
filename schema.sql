@@ -101,12 +101,15 @@ CREATE TABLE IF NOT EXISTS public.system_config (
 -- #####################################################
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- دالة للتحقق من صلاحية المدير
 CREATE OR REPLACE FUNCTION public.is_admin()
