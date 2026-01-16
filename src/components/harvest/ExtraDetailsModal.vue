@@ -581,7 +581,8 @@ const formatWithCommas = (val) => {
 
 @media (max-width: 768px) {
   .detail-input {
-    font-size: 18px !important;
+    font-size: 32px !important;
+    height: 50px; /* Adjust height to fit the larger font */
   }
 }
 
