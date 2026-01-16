@@ -8,7 +8,7 @@
           <div class="header-info">
             <h3 class="shop-title">
               <i class="fas fa-store text-primary"></i>
-              {{ shopName || 'بدون اسم' }}
+              <span class="shop-name-text">{{ shopName || 'بدون اسم' }}</span>
               <span class="code-badge">{{ shopCode || '---' }}</span>
             </h3>
           </div>
@@ -309,8 +309,8 @@ const formatWithCommas = (val) => {
   background: var(--surface-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-xl);
-  width: 90%;
-  max-width: 480px;
+  width: 95%; /* Increased width percentage */
+  max-width: 650px; /* Increased max-width */
   display: flex;
   flex-direction: column;
   max-height: 85vh;
@@ -345,7 +345,8 @@ const formatWithCommas = (val) => {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  flex-wrap: wrap;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-wrap: nowrap; /* Keep elements on same line */
 }
 
 .shop-title .fa-store {
@@ -362,6 +363,13 @@ const formatWithCommas = (val) => {
   color: var(--text-muted);
   border: 1px solid var(--border-color);
   letter-spacing: 0.5px;
+  flex-shrink: 0; /* Prevent code from being cut off */
+}
+
+.shop-name-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .close-btn {
@@ -680,6 +688,13 @@ const formatWithCommas = (val) => {
 .actions {
   display: flex;
   gap: var(--spacing-sm);
+  flex-wrap: nowrap; /* Prevent buttons from stacking */
+  flex: 1; /* Allow taking available space */
+  justify-content: flex-end;
+}
+
+.actions .btn {
+  white-space: nowrap;
 }
 
 /* =========================================
