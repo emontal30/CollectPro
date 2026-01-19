@@ -243,12 +243,12 @@ td.net.zero {
     min-width: 70px;
   }
 
-  /* When code column is hidden on mobile, expand shop column by half of code's width */
+  /* When code column is hidden on mobile, expand shop column by full code width for better visibility */
   .modern-table:has(th.code[style*="display: none"]) .shop,
   .modern-table:has(th.code[style*="display: none"]) td.shop,
   .modern-table:has(th.code[style*="display: none"]) th.shop {
-    width: 155px !important;
-    min-width: 155px;
+    width: 190px !important;
+    min-width: 190px;
   }
 
   /* تقليل الحد الأدنى للجدول في الموبايل ليسمح بالتمرير بشكل سليم */
