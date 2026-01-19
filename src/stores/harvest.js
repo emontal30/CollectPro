@@ -39,6 +39,7 @@ export const useHarvestStore = defineStore('harvest', {
     searchQuery: '',
     realtimeChannel: null, // For shared session
     ownRealtimeChannel: null, // For my own session (Admin sync)
+    autoSyncInterval: null, // For periodic auto-sync of shared sessions
     isCloudSyncing: false,
   }),
 
@@ -203,9 +204,17 @@ export const useHarvestStore = defineStore('harvest', {
 
     async switchToUserSession(userId) {
       // CRITICAL: This function now only affects the SHARED part of the state.
+
+      // Clear existing realtime channel
       if (this.realtimeChannel) {
         await supabase.removeChannel(this.realtimeChannel);
         this.realtimeChannel = null;
+      }
+
+      // Clear existing auto-sync interval
+      if (this.autoSyncInterval) {
+        clearInterval(this.autoSyncInterval);
+        this.autoSyncInterval = null;
       }
 
       if (!userId) {
@@ -216,31 +225,42 @@ export const useHarvestStore = defineStore('harvest', {
         return;
       }
 
+      // Function to fetch shared data
+      const fetchSharedData = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('live_harvest')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (error && error.code !== 'PGRST116') throw error;
+
+          if (data) {
+            this.sharedRows = data.rows || [];
+            this.sharedMasterLimit = parseFloat(data.master_limit) || 0;
+            this.sharedExtraLimit = parseFloat(data.extra_limit) || 0;
+            this.sharedCurrentBalance = parseFloat(data.current_balance) || 0;
+            this.sharedLastUpdated = data.updated_at || null;
+          } else {
+            // If no data exists for the user, reset the shared state.
+            this.sharedRows = [];
+            this.sharedMasterLimit = 0;
+            this.sharedExtraLimit = 0;
+            this.sharedCurrentBalance = 0;
+            this.sharedLastUpdated = null;
+          }
+        } catch (err) {
+          logger.error('Failed to fetch shared data:', err);
+        }
+      };
+
       this.isSharedLoading = true;
       try {
-        const { data, error } = await supabase
-          .from('live_harvest')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
+        // Initial fetch
+        await fetchSharedData();
 
-        if (error && error.code !== 'PGRST116') throw error;
-
-        if (data) {
-          this.sharedRows = data.rows || [];
-          this.sharedMasterLimit = parseFloat(data.master_limit) || 0;
-          this.sharedExtraLimit = parseFloat(data.extra_limit) || 0;
-          this.sharedCurrentBalance = parseFloat(data.current_balance) || 0;
-          this.sharedLastUpdated = data.updated_at || null;
-        } else {
-          // If no data exists for the user, reset the shared state.
-          this.sharedRows = [];
-          this.sharedMasterLimit = 0;
-          this.sharedExtraLimit = 0;
-          this.sharedCurrentBalance = 0;
-          this.sharedLastUpdated = null;
-        }
-
+        // Setup realtime subscription
         this.realtimeChannel = supabase
           .channel(`harvest-${userId}`)
           .on(
@@ -253,20 +273,27 @@ export const useHarvestStore = defineStore('harvest', {
                 this.sharedRows = newData.rows;
                 this.sharedMasterLimit = parseFloat(newData.master_limit) || 0;
                 this.sharedExtraLimit = parseFloat(newData.extra_limit) || 0;
-                this.sharedExtraLimit = parseFloat(newData.extra_limit) || 0;
                 this.sharedCurrentBalance = parseFloat(newData.current_balance) || 0;
                 this.sharedLastUpdated = newData.updated_at || new Date().toISOString();
+                logger.info('📡 Realtime update received for shared session');
               }
             }
           )
           .subscribe();
+
+        // Setup periodic auto-sync every 30 seconds
+        this.autoSyncInterval = setInterval(async () => {
+          logger.info('🔄 Auto-syncing shared session data...');
+          await fetchSharedData();
+        }, 30000); // 30 seconds
+
+        logger.info('✅ Shared session initialized with realtime + auto-sync');
 
       } catch (err) {
         logger.error('Failed to switch to user session:', err);
         // On failure, clear the shared state, don't touch local data.
         this.sharedRows = [];
         this.sharedMasterLimit = 0;
-        this.sharedExtraLimit = 0;
         this.sharedExtraLimit = 0;
         this.sharedCurrentBalance = 0;
         this.sharedLastUpdated = null;
