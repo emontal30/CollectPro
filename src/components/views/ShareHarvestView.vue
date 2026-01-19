@@ -208,20 +208,41 @@ const activeCollaboratorName = computed(() => {
 
 const lastUpdatedText = computed(() => {
   if (!harvestStore.sharedLastUpdated) return '';
+  
+  // Convert UTC to Cairo time
   const date = new Date(harvestStore.sharedLastUpdated);
+  const now = new Date();
   
-  // تنسيق اليوم والشهر (13/01)
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  // Calculate time difference in minutes
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
   
-  // تنسيق الوقت بالإنجليزية (10:30 PM)
-  const time = date.toLocaleTimeString('en-US', { 
+  // Format relative time
+  let relativeTime = '';
+  if (diffMins < 1) {
+    relativeTime = 'الآن';
+  } else if (diffMins < 60) {
+    relativeTime = `منذ ${diffMins} دقيقة`;
+  } else if (diffHours < 24) {
+    relativeTime = `منذ ${diffHours} ساعة`;
+  } else {
+    const diffDays = Math.floor(diffHours / 24);
+    relativeTime = `منذ ${diffDays} يوم`;
+  }
+  
+  // Format absolute time in Cairo timezone
+  const cairoTime = date.toLocaleTimeString('en-US', { 
     hour: '2-digit', 
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: 'Africa/Cairo'
   });
+  
+  const day = date.toLocaleDateString('en-US', { day: '2-digit', timeZone: 'Africa/Cairo' });
+  const month = date.toLocaleDateString('en-US', { month: '2-digit', timeZone: 'Africa/Cairo' });
 
-  return `${day}/${month} | ${time}`;
+  return `${relativeTime} | ${day}/${month} ${cairoTime}`;
 });
 
 // Lifecycle
