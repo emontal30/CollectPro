@@ -1,6 +1,8 @@
 <template>
   <div id="app-container">
-    <router-view />
+    <ErrorBoundary>
+      <router-view />
+    </ErrorBoundary>
 
     <!-- مكونات النظام العالمية -->
     <InstallPrompt />
@@ -12,6 +14,8 @@
 
 <script setup>
 import { onMounted, provide, onBeforeUnmount } from 'vue';
+import { RouterView } from 'vue-router';
+import ErrorBoundary from '@/components/ErrorBoundary.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { useSettingsStore } from '@/stores/settings';
 import { initializeSyncListener } from '@/services/archiveSyncQueue';

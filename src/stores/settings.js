@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
+
 import logger from '@/utils/logger.js'
+import { setLocalStorageCache, getLocalStorageCache } from '@/services/cacheManager';
 
 // إصدار الإعدادات - يتم تغييره عند حدوث تغييرات جذرية في التنسيقات لضمان تحديث كاش المستخدم
 const SETTINGS_VERSION = '1.1'
@@ -77,12 +79,12 @@ export const useSettingsStore = defineStore('settings', {
           // اللون #0f172a للوضع الليلي، و #007965 للوضع النهاري
           themeColorMeta.setAttribute('content', this.darkMode ? '#0f172a' : '#007965')
         }
-        
+
         // تحديث لون شريط الحالة لأجهزة iOS (apple-mobile-web-app-status-bar-style)
         // في الوضع الليلي نستخدم black-translucent أو black، وفي النهاري default
         const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
         if (appleMeta) {
-             appleMeta.setAttribute('content', this.darkMode ? 'black-translucent' : 'default')
+          appleMeta.setAttribute('content', this.darkMode ? 'black-translucent' : 'default')
         }
 
         this.saveSettings()
@@ -91,22 +93,23 @@ export const useSettingsStore = defineStore('settings', {
       }
     },
 
-    saveSettings() {
+    async saveSettings() {
       const dataToSave = {
         darkMode: this.darkMode,
         zoomLevel: this.zoomLevel,
         version: this.version,
         themeConfig: this.themeConfig
       }
-      localStorage.setItem('app_settings_v1', JSON.stringify(dataToSave))
+      await setLocalStorageCache('app_settings_v1', dataToSave);
     },
 
-    loadSettings() {
-      const saved = localStorage.getItem('app_settings_v1')
+    async loadSettings() {
+      const saved = await getLocalStorageCache('app_settings_v1');
       if (saved) {
         try {
-          const parsed = JSON.parse(saved)
-          
+          // cacheManager parses JSON automatically if needed, but if encryption returns object, we use it directly
+          const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+
           // التحقق من الإصدار - إذا كان هناك تحديث جوهري يمكننا إعادة تعيين بعض القيم
           if (parsed.version !== SETTINGS_VERSION) {
             logger.info('New settings version detected, migrating...')
@@ -116,7 +119,7 @@ export const useSettingsStore = defineStore('settings', {
           this.darkMode = typeof parsed.darkMode === 'boolean' ? parsed.darkMode : false
           this.zoomLevel = (typeof parsed.zoomLevel === 'number' && parsed.zoomLevel >= 2 && parsed.zoomLevel <= 12) ? parsed.zoomLevel : 5
           this.themeConfig = parsed.themeConfig || { primaryColor: null, sidebarColor: null }
-          
+
           this.applySettings()
         } catch (error) {
           logger.error('Error parsing settings:', error)

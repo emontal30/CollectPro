@@ -7,6 +7,7 @@ import logger from '@/utils/logger.js'
 import { supabase } from '@/supabase';
 import { useAuthStore } from './auth';
 import { TimeService } from '@/utils/time';
+import { setLocalStorageCache, getLocalStorageCache } from '@/services/cacheManager';
 
 export const useAdminStore = defineStore('admin', () => {
   // --- State ---
@@ -24,12 +25,17 @@ export const useAdminStore = defineStore('admin', () => {
   const pendingSubscriptions = ref([]);
   const allSubscriptions = ref([]);
 
-  const savedPeriod = localStorage.getItem('admin_active_users_period');
+  const savedPeriod = 30; // Default, loaded async later
   const filters = ref({
     status: 'all',
     expiry: 'all',
     usersSearch: '',
-    activeUsersPeriod: savedPeriod ? parseInt(savedPeriod) : 30
+    activeUsersPeriod: savedPeriod
+  });
+
+  // Async load for saved period
+  getLocalStorageCache('admin_active_users_period').then(val => {
+    if (val) filters.value.activeUsersPeriod = parseInt(val);
   });
 
   const isLoading = ref(false);
@@ -42,8 +48,8 @@ export const useAdminStore = defineStore('admin', () => {
   const authStore = useAuthStore();
 
   // --- Watchers ---
-  watch(() => filters.value.activeUsersPeriod, (newVal) => {
-    localStorage.setItem('admin_active_users_period', newVal);
+  watch(() => filters.value.activeUsersPeriod, async (newVal) => {
+    await setLocalStorageCache('admin_active_users_period', newVal);
     // اقتراح: إعادة جلب الإحصائيات تلقائياً عند تغيير الفترة الزمنية
     fetchStats(true);
   });
@@ -122,7 +128,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (data) {
         // تحسين قراءة القيمة سواء كانت string أو boolean
         isSubscriptionEnforced.value = String(data.value) === 'true';
-        localStorage.setItem('sys_config_enforce', String(isSubscriptionEnforced.value));
+        await setLocalStorageCache('sys_config_enforce', String(isSubscriptionEnforced.value));
       }
     } catch (e) {
       logger.error('Error fetching system config:', e);
@@ -145,7 +151,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (error) throw error;
 
       isSubscriptionEnforced.value = status;
-      localStorage.setItem('sys_config_enforce', String(status));
+      await setLocalStorageCache('sys_config_enforce', String(status));
 
       closeLoading();
       addNotification(`تم ${status ? 'تفعيل' : 'إيقاف'} وضع الاشتراك الإجباري بنجاح`, 'success');

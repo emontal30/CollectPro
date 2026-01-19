@@ -9,6 +9,10 @@ import api from '@/services/api';
 
 export const QUEUE_KEY = 'archive_sync_queue'; // Exported for store usage
 
+// متغير لمنع معالجة متزامنة (Race Condition Protection)
+let isProcessing = false;
+let processingPromise = null;
+
 /**
  * إضافة عملية (حفظ أو حذف) إلى طابور المزامنة
  */
@@ -51,7 +55,8 @@ async function addToSyncQueue(item) {
 
     // Trigger processing immediately if online
     if (navigator.onLine) {
-      processQueue();
+      // استخدام void لتفادي مشاكل ESLint مع Promise غير المحظوظة
+      void processQueue();
     }
 
   } catch (err) {
@@ -61,8 +66,38 @@ async function addToSyncQueue(item) {
 
 /**
  * معالجة العمليات المنتظرة في الطابور
+ * مع حماية من Race Conditions (منع المعالجة المتزامنة)
  */
 async function processQueue() {
+  // منع المعالجة المتزامنة - إذا كانت المعالجة جارية، ننتظرها
+  if (isProcessing) {
+    if (processingPromise) {
+      logger.info('⏳ SyncQueue: Already processing, attaching to existing promise.');
+      return processingPromise;
+    }
+    return;
+  }
+
+  // تحديد حالة المعالجة
+  isProcessing = true;
+
+  // إنشاء promise للمعالجة حتى يمكن للعمليات الأخرى الانتظار
+  processingPromise = (async () => {
+    try {
+      return await _processQueueInternal();
+    } finally {
+      isProcessing = false;
+      processingPromise = null;
+    }
+  })();
+
+  return processingPromise;
+}
+
+/**
+ * الدالة الداخلية الفعلية للمعالجة
+ */
+async function _processQueueInternal() {
   const authStore = useAuthStore();
   const archiveStore = useArchiveStore();
   const syncStore = useSyncStore(); // Use Sync Store
@@ -131,6 +166,17 @@ async function processQueue() {
 
   if (syncedArchives.length > 0 || deletedArchives.length > 0) {
     await archiveStore.loadAvailableDates();
+  }
+
+  // التحقق مرة أخرى من وجود عناصر جديدة في الطابور بعد المعالجة
+  // (في حالة إضافة عناصر جديدة أثناء المعالجة)
+  const remainingQueue = (await localforage.getItem(QUEUE_KEY)) || [];
+  if (remainingQueue.length > 0) {
+    logger.info(`🔄 Queue still has ${remainingQueue.length} item(s), scheduling another process...`);
+    // جدولة معالجة أخرى بعد وقت قصير لمعالجة العناصر الجديدة
+    setTimeout(() => {
+      void processQueue();
+    }, 1000);
   }
 }
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import api from '@/services/api';
 import logger from '@/utils/logger.js'
+import { setLocalStorageCache, getLocalStorageCache, removeFromAllCaches } from '@/services/cacheManager';
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // --- الحالة (State) ---
@@ -11,17 +12,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
   let saveTimeout = null;
 
   // استعادة البيانات عند التحميل
-  const init = () => {
-    const savedData = localStorage.getItem('clientData');
+  const init = async () => {
+    const savedData = await getLocalStorageCache('clientData');
     const dataCleared = sessionStorage.getItem('dataCleared');
-    
+
     if (savedData && savedData.trim() !== "" && dataCleared !== "true") {
       clientData.value = savedData;
     }
   };
 
   // --- الدوال المساعدة (Helpers) ---
-  
+
   function filterClientDataLines(raw) {
     if (!raw) return raw;
     const lines = raw.split("\n");
@@ -58,12 +59,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
       if (!trimmed) return;
 
       // المثال: 1	توب تن:15972 رصيده : 3016.230 نوع التعامل : مكن	01004402042	3000.000
-      
+
       // 1. استخراج الرصيد (بعد "رصيده :")
       let balance = 0;
       const balanceMatch = trimmed.match(/رصيده\s*[:\s]+\s*([-+]?[0-9٠-٩\.]+)/);
       if (balanceMatch) {
-          balance = parseFloat(normalizeArabicNumbers(balanceMatch[1])) || 0;
+        balance = parseFloat(normalizeArabicNumbers(balanceMatch[1])) || 0;
       }
 
       // 2. استخراج الاسم والكود
@@ -73,34 +74,34 @@ export const useDashboardStore = defineStore('dashboard', () => {
       let code = "";
 
       if (trimmed.includes(":")) {
-          const parts = trimmed.split(":");
-          
-          // الجزء الذي قبل ":" يحتوي على المسلسل والاسم
-          const beforeColon = parts[0].trim();
-          // نزيل المسلسل من البداية (عادة يكون رقم في بداية السطر متبوعاً بمسافات)
-          name = beforeColon.replace(/^[0-9٠-٩]+\s+/, '').trim();
-          
-          // الجزء الذي بعد ":" يبدأ بالكود
-          const afterColon = parts[1].trim();
-          // نأخذ أول رقم يظهر بعد النقطتين (والذي هو الكود)
-          const codeMatch = afterColon.match(/^([0-9٠-٩]+)/);
-          if (codeMatch) {
-              code = normalizeArabicNumbers(codeMatch[1]);
-          }
+        const parts = trimmed.split(":");
+
+        // الجزء الذي قبل ":" يحتوي على المسلسل والاسم
+        const beforeColon = parts[0].trim();
+        // نزيل المسلسل من البداية (عادة يكون رقم في بداية السطر متبوعاً بمسافات)
+        name = beforeColon.replace(/^[0-9٠-٩]+\s+/, '').trim();
+
+        // الجزء الذي بعد ":" يبدأ بالكود
+        const afterColon = parts[1].trim();
+        // نأخذ أول رقم يظهر بعد النقطتين (والذي هو الكود)
+        const codeMatch = afterColon.match(/^([0-9٠-٩]+)/);
+        if (codeMatch) {
+          code = normalizeArabicNumbers(codeMatch[1]);
+        }
       }
 
       // تحسين أخير للاسم: إذا كان الاسم لا يزال يحتوي على "رصيده" أو أي شيء آخر
       if (name.includes("رصيده")) {
-          name = name.split("رصيده")[0].trim();
+        name = name.split("رصيده")[0].trim();
       }
 
       // التأكد من جودة البيانات قبل الإضافة
       if (code && name) {
-          routeItems.push({
-              code: code,
-              name: name,
-              balance: balance
-          });
+        routeItems.push({
+          code: code,
+          name: name,
+          balance: balance
+        });
       }
     });
 
@@ -124,17 +125,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  function clearData() {
+  async function clearData() {
     clientData.value = "";
-    localStorage.removeItem("clientData");
-    localStorage.removeItem("harvestData");
-    localStorage.removeItem("routeData");
+    await removeFromAllCaches("clientData");
+    await removeFromAllCaches("harvestData");
+    await removeFromAllCaches("routeData");
     sessionStorage.setItem("dataCleared", "true");
   }
 
-  function processAndSave() {
+  async function processAndSave() {
     const rawData = clientData.value.trim();
-    
+
     if (!rawData) {
       return { status: 'error', message: 'من فضلك أدخل البيانات أولاً!' };
     }
@@ -142,18 +143,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
     const harvestFilteredData = filterClientDataLines(rawData);
     const routeParsedData = extractRouteData(rawData);
 
-    clientData.value = harvestFilteredData; 
+    clientData.value = harvestFilteredData;
 
-    localStorage.setItem("clientData", harvestFilteredData);
-    localStorage.setItem("harvestData", harvestFilteredData);
-    localStorage.setItem("routeData", JSON.stringify(routeParsedData));
+    await setLocalStorageCache("clientData", harvestFilteredData);
+    await setLocalStorageCache("harvestData", harvestFilteredData);
+    await setLocalStorageCache("routeData", JSON.stringify(routeParsedData));
 
     logger.info(`تم استخراج ${routeParsedData.length} عميل لخط السير.`);
 
-    return { 
-      status: 'success', 
+    return {
+      status: 'success',
       harvestData: harvestFilteredData,
-      routeData: routeParsedData 
+      routeData: routeParsedData
     };
   }
 
@@ -161,8 +162,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (saveTimeout) {
       clearTimeout(saveTimeout);
     }
-    saveTimeout = setTimeout(() => {
-      localStorage.setItem("clientData", newVal.trim());
+    saveTimeout = setTimeout(async () => {
+      await setLocalStorageCache("clientData", newVal.trim());
     }, 1000);
   });
 
@@ -181,9 +182,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  init();
+  // init() removed from here, called in MainLayout
 
   return {
+    init,
     clientData,
     subscriptionStatus,
     isLoadingSubscription,

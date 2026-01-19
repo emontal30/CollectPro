@@ -257,7 +257,8 @@ const handleSaveAndGo = async () => {
     showStatusMessage('saving', '⏳ جاري حفظ البيانات والمزامنة...', 'يرجى الانتظار', 0);
     
     // Proceed with processing and saving
-    const result = store.processAndSave();
+    // Proceed with processing and saving
+    const result = await store.processAndSave();
 
     if (result.status === 'success') {
       // Track the user action
@@ -290,7 +291,7 @@ const handleUpdateBalances = async () => {
 
     showStatusMessage('saving', '⏳ جاري تحديث الأرصدة...', 'يرجى الانتظار', 0);
 
-    const result = store.processAndSave();
+    const result = await store.processAndSave();
 
     if (result.status === 'success' && result.routeData && result.routeData.length > 0) {
       // Track the user action

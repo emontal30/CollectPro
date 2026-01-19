@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
     },
+    esbuild: {
+      drop: isProd ? ['console', 'debugger'] : [],
+    },
     plugins: [
       vue(),
       VitePWA({
@@ -39,7 +42,7 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           // تضمين كافة الملفات الضرورية للعمل أوفلاين عند الريفرش
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
-          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, 
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
           // هذا الإعداد بالغ الأهمية لنجاح عملية الـ Refresh أوفلاين
           navigateFallback: 'index.html',
           navigateFallbackAllowlist: [/^(?!\/__).*/], // السماح بكافة المسارات ما عدا مسارات النظام الداخلية
@@ -75,15 +78,15 @@ export default defineConfig(({ mode }) => {
               },
             },
             {
-               urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf|eot)$/,
-               handler: 'CacheFirst',
-               options: {
-                  cacheName: 'assets-cache',
-                  expiration: {
-                     maxEntries: 200,
-                     maxAgeSeconds: 30 * 24 * 60 * 60,
-                  },
-               },
+              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|woff2?|ttf|eot)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'assets-cache',
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 30 * 24 * 60 * 60,
+                },
+              },
             }
           ],
         },
@@ -124,7 +127,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules')) {
               const parts = id.split('node_modules/')[1].split('/');
               // handle scoped packages like @supabase/supabase-js
-              const pkgName = parts[0].startsWith('@') ? parts.slice(0,2).join('/') : parts[0];
+              const pkgName = parts[0].startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
               return `vendor-${pkgName.replace('@', '')}`;
             }
           }

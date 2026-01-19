@@ -6,7 +6,8 @@ import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
 import logger from '@/utils/logger.js';
 import api, { apiInterceptor } from '@/services/api';
-import { clearCacheOnLogout } from '@/services/cacheManager';
+
+import { clearCacheOnLogout, setLocalStorageCache, getLocalStorageCache, removeFromAllCaches } from '@/services/cacheManager';
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
@@ -82,11 +83,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function loadProfileFromCache() {
-    const cachedProfile = localStorage.getItem(USER_PROFILE_CACHE_KEY);
+  async function loadProfileFromCache() {
+    const cachedProfile = await getLocalStorageCache(USER_PROFILE_CACHE_KEY);
     if (cachedProfile) {
       try {
-        userProfile.value = JSON.parse(cachedProfile);
+        // cacheManager parses JSON automatically if needed, but if encryption returns object, we use it directly
+        // We handle potential double parsing or object structure here
+        userProfile.value = typeof cachedProfile === 'string' ? JSON.parse(cachedProfile) : cachedProfile;
         logger.info('📦 Profile loaded from cache');
       } catch (e) {
         logger.warn('Failed to parse cached profile');
@@ -96,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function syncUserProfile(userData) {
     if (!userData) return;
-    if (!userProfile.value) loadProfileFromCache();
+    if (!userProfile.value) await loadProfileFromCache();
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     try {
@@ -104,7 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (result && !result.error && result.profile) {
         if (JSON.stringify(userProfile.value) !== JSON.stringify(result.profile)) {
           userProfile.value = result.profile;
-          localStorage.setItem(USER_PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+          await setLocalStorageCache(USER_PROFILE_CACHE_KEY, result.profile);
         }
       }
     } catch (err) {
@@ -114,7 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function loadSystemConfig() {
     try {
-      const cached = localStorage.getItem('sys_config_enforce');
+      const cached = await getLocalStorageCache('sys_config_enforce');
       if (cached !== null) isSubscriptionEnforced.value = cached === 'true';
 
       if (navigator.onLine) {
@@ -122,7 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (config) {
           const value = config.value === 'true' || config.value === true;
           isSubscriptionEnforced.value = value;
-          localStorage.setItem('sys_config_enforce', String(value));
+          await setLocalStorageCache('sys_config_enforce', String(value));
         }
       }
     } catch (err) { }
@@ -218,15 +221,24 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (userId) clearCacheOnLogout(userId).catch(e => logger.warn('Cache clear error', e));
 
+      // Use secure removal
+      const keysToRemove = [
+        USER_PROFILE_CACHE_KEY,
+        'sys_config_enforce',
+        'my_subscription_data_v2',
+        'app_last_route'
+      ];
+
+      for (const key of keysToRemove) {
+        await removeFromAllCaches(key);
+      }
+
+      // Clear Supabase/Auth items from localStorage directly (as they are managed by Supabase client)
       Object.keys(localStorage).forEach(key => {
         if (
           key.startsWith('sb-') ||
           key.includes('auth-token') ||
-          key.includes('supabase.auth.token') ||
-          key === USER_PROFILE_CACHE_KEY ||
-          key === 'sys_config_enforce' ||
-          key === 'my_subscription_data_v2' ||
-          key === 'app_last_route'
+          key.includes('supabase.auth.token')
         ) {
           localStorage.removeItem(key);
         }

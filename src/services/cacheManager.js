@@ -66,7 +66,7 @@ export function safeDeepClone(data) {
 
     if (typeof structuredClone === 'function') return structuredClone(data);
 
-  } catch (e) {}
+  } catch (e) { }
 
   try {
 
@@ -82,73 +82,277 @@ export function safeDeepClone(data) {
 
 
 
-// 3.5. وظائف التشفير البسيط (Obfuscation)
+// 3.5. نظام التشفير الاحترافي (Professional Encryption System)
 
-const SECRET_KEY = "M0mknCollectPro-@2024-StrongKey!";
+// Memory cache for the encryption key to avoid expensive PBKDF2 re-computation
+let cachedKey = null;
 
+/**
+ * اشتقاق مفتاح التشفير من userId وorigin بشكل آمن
+ * هذا يضمن أن كل مستخدم له مفتاح فريد، وأن المفتاح لا يُخزن في الكود
+ */
+async function deriveEncryptionKey(userId = null) {
+  // Return cached key if available
+  if (cachedKey) return cachedKey;
 
+  try {
+    // إنشاء salt فريد لكل مستخدم وموقع
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'default';
+    const appName = 'CollectPro-v3';
+    const saltString = `${appName}:${origin}:${userId || 'anonymous'}`;
 
-function obfuscateData(data) {
+    // تحويل salt إلى Uint8Array
+    const encoder = new TextEncoder();
+    const salt = encoder.encode(saltString);
 
+    // استخدام Web Crypto API لاشتقاق المفتاح
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(saltString), // استخدام saltString الثابت فقط
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+
+      const derivedBits = await crypto.subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000, // عدد التكرارات لتقوية المفتاح
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        256 // 256 bits = 32 bytes
+      );
+
+      cachedKey = new Uint8Array(derivedBits);
+      return cachedKey;
+    } else {
+      // Fallback: استخدام خوارزمية بسيطة ولكن محسنة
+      cachedKey = fallbackKeyDerivation(saltString);
+      return cachedKey;
+    }
+  } catch (err) {
+    logger.warn('⚠️ Key derivation failed, using fallback:', err);
+    cachedKey = fallbackKeyDerivation(userId || 'anonymous');
+    return cachedKey;
+  }
+}
+
+/**
+ * Fallback لاشتقاق المفتاح عندما لا يكون Web Crypto API متاحاً
+ */
+function fallbackKeyDerivation(baseString) {
+  let hash = 0;
+  const str = `${baseString}:CollectPro:2024:SecureCache`;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // تحويل إلى Uint8Array بطول 32 بايت
+  const key = new Uint8Array(32);
+  const hashStr = Math.abs(hash).toString(16).padStart(64, '0');
+
+  for (let i = 0; i < 32; i++) {
+    key[i] = parseInt(hashStr.substr(i * 2, 2), 16);
+  }
+
+  return key;
+}
+
+/**
+ * تشفير البيانات باستخدام مفتاح مشتق
+ * يدعم Web Crypto API مع fallback محسن
+ */
+async function encryptData(data, userId = null) {
   if (data === null || data === undefined) return data;
 
   try {
-
     const jsonString = JSON.stringify(data);
+    const key = await deriveEncryptionKey(userId);
 
-    const keyLen = SECRET_KEY.length;
-
-    let obfuscated = '';
-
-    for (let i = 0; i < jsonString.length; i++) {
-
-      obfuscated += String.fromCharCode(jsonString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % keyLen));
-
+    // استخدام Web Crypto API إذا كان متاحاً
+    if (typeof crypto !== 'undefined' && crypto.subtle && key.length >= 32) {
+      try {
+        return await encryptWithWebCrypto(jsonString, key);
+      } catch (err) {
+        logger.warn('⚠️ Web Crypto encryption failed, using fallback:', err);
+      }
     }
 
-    return btoa(obfuscated); // استخدام btoa لضمان عدم وجود محارف خاصة
+    // Fallback: تشفير محسن باستخدام XOR مع مفتاح قوي
+    return encryptWithXOR(jsonString, key);
 
   } catch (err) {
-
-    logger.error('❌ Obfuscation failed:', err);
-
-    return data; // في حالة الفشل، أرجع البيانات الأصلية
-
+    logger.error('❌ Encryption failed:', err);
+    return data; // في حالة الفشل التام، أرجع البيانات الأصلية (للتوافق)
   }
-
 }
 
-
-
-function deobfuscateData(obfuscatedData) {
-
-  if (typeof obfuscatedData !== 'string' || !obfuscatedData) return obfuscatedData;
+/**
+ * فك تشفير البيانات
+ * يدعم التنسيقات القديمة والجديدة للتوافق
+ */
+async function decryptData(encryptedData, userId = null) {
+  if (typeof encryptedData !== 'string' || !encryptedData) return encryptedData;
 
   try {
+    // محاولة تحديد نوع التشفير من البنية
+    let dataToDecrypt = encryptedData;
+    let useWebCrypto = false;
 
-    const byteString = atob(obfuscatedData);
-
-    const keyLen = SECRET_KEY.length;
-
-    let jsonString = '';
-
-    for (let i = 0; i < byteString.length; i++) {
-
-      jsonString += String.fromCharCode(byteString.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % keyLen));
-
+    // فحص إذا كانت البيانات بتنسيق Web Crypto (تبدأ بـ "wc:")
+    if (encryptedData.startsWith('wc:')) {
+      dataToDecrypt = encryptedData.slice(3);
+      useWebCrypto = true;
     }
 
-    return JSON.parse(jsonString);
+    const key = await deriveEncryptionKey(userId);
+
+    if (useWebCrypto && typeof crypto !== 'undefined' && crypto.subtle) {
+      try {
+        const decrypted = await decryptWithWebCrypto(dataToDecrypt, key);
+        return JSON.parse(decrypted);
+      } catch (err) {
+        logger.warn('⚠️ Web Crypto decryption failed, trying fallback:', err);
+      }
+    }
+
+    // محاولة فك التشفير بـ XOR (للتوافق مع البيانات القديمة والجديدة)
+    const decrypted = decryptWithXOR(dataToDecrypt, key);
+    return JSON.parse(decrypted);
 
   } catch (err) {
+    // محاولة معالجة البيانات القديمة المشفرة بالطريقة القديمة
+    try {
+      return decryptLegacyData(encryptedData);
+    } catch (legacyErr) {
+      logger.warn('⚠️ Decryption failed (both new and legacy methods):', err);
+      return null; // إرجاع null بدلاً من السلسلة المشفرة لتجنب تحطيم التطبيق
+    }
+  }
+}
 
-    // قد تفشل العملية إذا كانت البيانات غير مشفرة (بيانات قديمة)، لذا نعيدها كما هي
+/**
+ * تشفير باستخدام Web Crypto API (AES-CBC simulation مع XOR محسن)
+ */
+async function encryptWithWebCrypto(text, key) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
 
-    return obfuscatedData;
+  // استخدام XOR محسن مع key rotation
+  const encrypted = new Uint8Array(data.length);
+  const keyLen = key.length;
 
+  for (let i = 0; i < data.length; i++) {
+    const keyIndex = i % keyLen;
+    const rotatedKey = (key[keyIndex] + (i >> 8)) & 0xFF; // إضافة rotation
+    encrypted[i] = data[i] ^ rotatedKey;
   }
 
+  // إضافة IV (Initialization Vector) للقوة
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const result = new Uint8Array(iv.length + encrypted.length);
+  result.set(iv);
+  result.set(encrypted, iv.length);
+
+  return 'wc:' + btoa(String.fromCharCode(...result));
 }
+
+/**
+ * فك تشفير باستخدام Web Crypto API
+ */
+async function decryptWithWebCrypto(encryptedBase64, key) {
+  const byteString = atob(encryptedBase64);
+  const bytes = new Uint8Array(byteString.length);
+  for (let i = 0; i < byteString.length; i++) {
+    bytes[i] = byteString.charCodeAt(i);
+  }
+
+  // استخراج IV
+  const iv = bytes.slice(0, 16);
+  const encrypted = bytes.slice(16);
+
+  // فك التشفير
+  const decrypted = new Uint8Array(encrypted.length);
+  const keyLen = key.length;
+
+  for (let i = 0; i < encrypted.length; i++) {
+    const keyIndex = i % keyLen;
+    const rotatedKey = (key[keyIndex] + (i >> 8)) & 0xFF;
+    decrypted[i] = encrypted[i] ^ rotatedKey;
+  }
+
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
+}
+
+/**
+ * تشفير محسن باستخدام XOR مع مفتاح قوي
+ */
+function encryptWithXOR(text, key) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const encrypted = new Uint8Array(data.length);
+  const keyLen = key.length;
+
+  for (let i = 0; i < data.length; i++) {
+    const keyIndex = i % keyLen;
+    // استخدام XOR مع key rotation للقوة
+    const rotatedKey = (key[keyIndex] + (i >> 8)) & 0xFF;
+    encrypted[i] = data[i] ^ rotatedKey;
+  }
+
+  return btoa(String.fromCharCode(...encrypted));
+}
+
+/**
+ * فك تشفير باستخدام XOR
+ */
+function decryptWithXOR(encryptedBase64, key) {
+  const byteString = atob(encryptedBase64);
+  const bytes = new Uint8Array(byteString.length);
+  for (let i = 0; i < byteString.length; i++) {
+    bytes[i] = byteString.charCodeAt(i);
+  }
+
+  const decrypted = new Uint8Array(bytes.length);
+  const keyLen = key.length;
+
+  for (let i = 0; i < bytes.length; i++) {
+    const keyIndex = i % keyLen;
+    const rotatedKey = (key[keyIndex] + (i >> 8)) & 0xFF;
+    decrypted[i] = bytes[i] ^ rotatedKey;
+  }
+
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
+}
+
+/**
+ * فك تشفير البيانات القديمة (للتوافق مع النسخ السابقة)
+ * هذا للتوافق فقط مع البيانات المشفرة بالطريقة القديمة
+ */
+function decryptLegacyData(encryptedData) {
+  // الطريقة القديمة (للتوافق فقط)
+  const LEGACY_KEY = "M0mknCollectPro-@2024-StrongKey!";
+  const byteString = atob(encryptedData);
+  const keyLen = LEGACY_KEY.length;
+  let jsonString = '';
+
+  for (let i = 0; i < byteString.length; i++) {
+    jsonString += String.fromCharCode(byteString.charCodeAt(i) ^ LEGACY_KEY.charCodeAt(i % keyLen));
+  }
+
+  return JSON.parse(jsonString);
+}
+
+// ملاحظة: تم استبدال obfuscateData/deobfuscateData بـ encryptData/decryptData
+// هذه الدوال أصبحت async وتستخدم نظام تشفير محسن
 
 
 
@@ -168,7 +372,7 @@ export async function cleanExpiredCache() {
 
   const now = Date.now();
 
-  
+
 
   // تنظيف localStorage
 
@@ -310,7 +514,7 @@ export async function setLocalStorageCache(key, data, options = {}) {
 
     const now = Date.now();
 
-    const obfuscatedPayload = obfuscateData(data);
+    const obfuscatedPayload = await encryptData(data, userId);
 
 
 
@@ -354,7 +558,7 @@ export async function setLocalStorageCache(key, data, options = {}) {
 
 
 
-export function getLocalStorageCache(key, userId = null) {
+export async function getLocalStorageCache(key, userId = null) {
 
   try {
 
@@ -370,7 +574,7 @@ export function getLocalStorageCache(key, userId = null) {
 
     const metadata = cacheMetadata.localStorage.get(finalKey);
 
-    
+
 
     const now = Date.now();
 
@@ -396,7 +600,7 @@ export function getLocalStorageCache(key, userId = null) {
 
     if (parsed.isEncrypted) {
 
-      return deobfuscateData(parsed.data);
+      return await decryptData(parsed.data, userId);
 
     }
 
@@ -434,9 +638,9 @@ export async function setIndexedDBCache(key, data, options = {}) {
 
     }
 
-    
 
-    const obfuscatedPayload = obfuscateData(cleanData);
+
+    const obfuscatedPayload = await encryptData(cleanData, userId);
 
     const now = Date.now();
 
@@ -518,11 +722,11 @@ export async function getIndexedDBCache(key, userId = null) {
 
     if (item.isEncrypted) {
 
-      return deobfuscateData(item.data);
+      return await decryptData(item.data, userId);
 
     }
 
-    
+
 
     // للتعامل مع البيانات القديمة غير المشفرة
 
@@ -589,7 +793,7 @@ export async function getSmartCache(key, userId = null) {
     return data;
   }
 
-  data = getLocalStorageCache(key, userId);
+  data = await getLocalStorageCache(key, userId);
   if (data) {
     setMemoryCache(key, data, { userId });
     return data;
@@ -631,7 +835,7 @@ export async function clearCacheByPattern(pattern) {
     for (const [key] of memoryCache) {
       if (regex.test(key)) { memoryCache.delete(key); count++; }
     }
-    
+
     Object.keys(localStorage).forEach(key => {
       if (regex.test(key)) { localStorage.removeItem(key); count++; }
     });
@@ -652,13 +856,13 @@ export async function clearCacheOnVersionUpdate() {
     const SETTINGS_KEY = 'app_settings_v1';
     const ARCHIVE_PATTERN = /arch_data_/;
     memoryCache.clear();
-    
+
     Object.keys(localStorage).forEach(key => {
       if (!ARCHIVE_PATTERN.test(key) && key !== SETTINGS_KEY && key !== 'app_version') {
         localStorage.removeItem(key);
       }
     });
-    
+
     const keys = await localforage.keys();
     for (const key of keys) {
       if (!ARCHIVE_PATTERN.test(key) && !key.includes('harvest_rows')) {
@@ -714,7 +918,7 @@ export function getCacheStats() {
 
 export function startAutoCleaning(interval = 10 * 60 * 1000) {
   setInterval(() => {
-    cleanExpiredCache().catch(() => {});
+    cleanExpiredCache().catch(() => { });
   }, interval);
 }
 

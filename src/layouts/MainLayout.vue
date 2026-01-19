@@ -52,12 +52,16 @@ import { useSettingsStore } from '@/stores/settings';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
 import { useHarvestStore } from '@/stores/harvest';
+import { useDashboardStore } from '@/stores/dashboard';
+import { useCounterStore } from '@/stores/counterStore';
 
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
 const subStore = useMySubscriptionStore();
 const sidebarStore = useSidebarStore();
 const harvestStore = useHarvestStore();
+const dashboardStore = useDashboardStore();
+const counterStore = useCounterStore();
 const notifications = useNotifications();
 
 provide('notifications', notifications);
@@ -120,14 +124,19 @@ const handleVisibilityChange = () => {
     // Save any critical data here
     if (harvestStore.isModified) {
        harvestStore.saveRowsToStorage();
-       console.log('Harvest data saved due to page visibility change.');
+       // console.log('Harvest data saved due to page visibility change.');
     }
   }
 };
 
 onMounted(async () => {
   if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
-  if (settingsStore?.loadSettings) settingsStore.loadSettings();
+  
+  // Await async initialization for secure storage
+  if (settingsStore?.loadSettings) await settingsStore.loadSettings();
+  if (dashboardStore?.init) await dashboardStore.init();
+  if (counterStore?.init) await counterStore.init();
+  
   if (subStore.isInitialized) checkSubscriptionExpiry();
 
   document.addEventListener('visibilitychange', handleVisibilityChange);

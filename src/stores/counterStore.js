@@ -1,52 +1,89 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import logger from '@/utils/logger.js'
+import { setLocalStorageCache, getLocalStorageCache } from '@/services/cacheManager';
 
 export const useCounterStore = defineStore('counter', () => {
   // --- الحالة (State) ---
-  
+
   // الفئات النقدية المدعومة
   const denominations = [200, 100, 50, 20, 10, 5, 1];
 
-  // هيكل البيانات للعدادين (يتم تحميله من LocalStorage أو تهيئته بأصفار)
-  const savedData = JSON.parse(localStorage.getItem('moneyCountersData') || '{}');
-  
+  // هيكل البيانات للعدادين (يتم تحميله لاحقاً)
+  // const savedData = JSON.parse(localStorage.getItem('moneyCountersData') || '{}');
+
   // دالة مساعدة لتهيئة العداد
-  const initCounter = (counterId) => {
+  const initCounter = () => {
     const counter = {};
     denominations.forEach(val => {
-      // المفتاح في LocalStorage كان بصيغة "1_200" (رقم العداد_القيمة)
-      const key = `${counterId}_${val}`;
-      counter[val] = Number(savedData[key]) || 0; // العدد (qty)
+      counter[val] = 0; // القيم الافتراضية 0
     });
     return ref(counter);
   };
 
-  const counter1 = initCounter(1);
-  const counter2 = initCounter(2);
+  const counter1 = initCounter();
+  const counter2 = initCounter();
 
-  // بيانات خارجية (تأتي من صفحات أخرى عبر LocalStorage)
-  const masterLimit = ref(Number(localStorage.getItem('masterLimit')) || 0);
-  const currentBalance = ref(Number(localStorage.getItem('currentBalance')) || 0);
-  
-  // إجمالي المحصل يتم مزامنته مع صفحة التحصيلات
+  // بيانات خارجية
+  const masterLimit = ref(0);
+  const currentBalance = ref(0);
+
+  // إجمالي المحصل
   const totalCollected = ref(0);
-  
+
+  // --- دالة التهيئة (Async Init) ---
+  async function init() {
+    try {
+      // 1. استرجاع بيانات العدادات
+      const savedData = (await getLocalStorageCache('moneyCountersData')) || {};
+      // دعم التنسيق القديم (string) أو الجديد (object)
+      const dataObj = typeof savedData === 'string' ? JSON.parse(savedData) : savedData;
+
+      denominations.forEach(val => {
+        // تحديث counter1
+        const key1 = `1_${val}`;
+        if (dataObj[key1] !== undefined) counter1.value[val] = Number(dataObj[key1]);
+
+        // تحديث counter2
+        const key2 = `2_${val}`;
+        if (dataObj[key2] !== undefined) counter2.value[val] = Number(dataObj[key2]);
+      });
+
+      // 2. استرجاع الحدود والرصيد
+      const mLimit = await getLocalStorageCache('masterLimit');
+      if (mLimit !== null) masterLimit.value = Number(mLimit);
+
+      const cBalance = await getLocalStorageCache('currentBalance');
+      if (cBalance !== null) currentBalance.value = Number(cBalance);
+
+      // 3. مزامنة إجمالي المحصل (بشكل غير متزامن)
+      await syncTotalCollectedFromHarvest();
+
+      logger.info('🔢 CounterStore initialized with secure storage');
+    } catch (e) {
+      logger.error('Failed to init counter store:', e);
+    }
+  }
+
   // دالة لتحميل إجمالي المحصل من صفحة التحصيلات
-  function syncTotalCollectedFromHarvest() {
+  async function syncTotalCollectedFromHarvest() {
     try {
       // جرب الحصول على القيمة المحفوظة مباشرة أولاً
-      const savedTotal = localStorage.getItem('totalCollected');
+      const savedTotal = await getLocalStorageCache('totalCollected');
       let newTotal = 0;
-      
+
       if (savedTotal) {
         newTotal = Number(savedTotal) || 0;
       } else {
         // إذا لم توجد قيمة محفوظة، احسب من البيانات الخام
-        const harvestRows = JSON.parse(localStorage.getItem('harvest_rows') || '[]');
-        newTotal = harvestRows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0);
+        const harvestRowsData = await getLocalStorageCache('harvest_rows');
+        const harvestRows = typeof harvestRowsData === 'string' ? JSON.parse(harvestRowsData) : (harvestRowsData || []);
+
+        if (Array.isArray(harvestRows)) {
+          newTotal = harvestRows.reduce((sum, row) => sum + (parseFloat(row.collector) || 0), 0);
+        }
       }
-      
+
       // تحديث القيمة فقط إذا كانت مختلفة
       if (totalCollected.value !== newTotal) {
         totalCollected.value = newTotal;
@@ -54,11 +91,11 @@ export const useCounterStore = defineStore('counter', () => {
       } else {
         logger.info('✅ إجمالي المحصل محدث بالفعل:', newTotal);
       }
-      
+
     } catch (error) {
       logger.error('❌ خطأ في مزامنة إجمالي المحصل:', error);
       // محاولة استخدام القيمة القديمة
-      const fallback = Number(localStorage.getItem('totalCollected')) || 0;
+      const fallback = Number(await getLocalStorageCache('totalCollected')) || 0;
       if (totalCollected.value !== fallback) {
         totalCollected.value = fallback;
       }
@@ -79,7 +116,7 @@ export const useCounterStore = defineStore('counter', () => {
 
   const total1 = computed(() => getCounterTotal(counter1));
   const total2 = computed(() => getCounterTotal(counter2));
-  
+
   const smallCount1 = computed(() => getSmallCount(counter1));
   const smallCount2 = computed(() => getSmallCount(counter2));
 
@@ -105,7 +142,7 @@ export const useCounterStore = defineStore('counter', () => {
 
   // الحالة (الفرق بين المجموع الكلي وإجمالي المحصل)
   const statusDiff = computed(() => grandTotal.value - totalCollected.value);
-  
+
   const status = computed(() => {
     if (statusDiff.value === 0) return { text: 'تم التصفير ●', class: 'status-zero', val: 0 };
     if (statusDiff.value > 0) return { text: 'زيادة ▲', class: 'status-surplus', val: statusDiff.value };
@@ -123,13 +160,13 @@ export const useCounterStore = defineStore('counter', () => {
     saveToStorage();
   }
 
-  function saveToStorage() {
+  async function saveToStorage() {
     const data = {};
     denominations.forEach(val => {
       if (counter1.value[val]) data[`1_${val}`] = counter1.value[val];
       if (counter2.value[val]) data[`2_${val}`] = counter2.value[val];
     });
-    localStorage.setItem('moneyCountersData', JSON.stringify(data));
+    await setLocalStorageCache('moneyCountersData', data);
   }
 
   // دالة لتنسيق الأرقام
@@ -138,8 +175,8 @@ export const useCounterStore = defineStore('counter', () => {
   }
 
   // دالة لتحديث إجمالي المحصل من صفحة التحصيلات
-  function updateTotalCollected() {
-    syncTotalCollectedFromHarvest();
+  async function updateTotalCollected() {
+    await syncTotalCollectedFromHarvest();
   }
 
   // --- المراقبة (Auto-Save) ---
@@ -178,6 +215,7 @@ export const useCounterStore = defineStore('counter', () => {
   });
 
   return {
+    init,
     denominations,
     counter1,
     counter2,

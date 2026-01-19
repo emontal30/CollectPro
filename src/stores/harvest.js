@@ -4,7 +4,8 @@ import { useArchiveStore } from './archiveStore';
 import { useCollaborationStore } from './collaborationStore';
 import { useItineraryStore } from './itineraryStore';
 import { addToSyncQueue } from '@/services/archiveSyncQueue';
-import { safeDeepClone } from '@/services/cacheManager';
+
+import { safeDeepClone, setLocalStorageCache, getLocalStorageCache, removeFromAllCaches } from '@/services/cacheManager';
 import { apiInterceptor } from '@/services/apiInterceptor';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
@@ -98,9 +99,9 @@ export const useHarvestStore = defineStore('harvest', {
       // This function ONLY loads local data. Shared data is handled by switchToUserSession.
       this.isLoading = true;
       try {
-        this.loadMasterLimit(); // From localStorage
-        this.loadExtraLimit(); // From localStorage
-        const savedBalance = localStorage.getItem('currentBalance');
+        await this.loadMasterLimit(); // From localStorage
+        await this.loadExtraLimit(); // From localStorage
+        const savedBalance = await getLocalStorageCache('currentBalance');
         if (savedBalance) this.currentBalance = parseFloat(savedBalance);
 
         const hasImportedData = await this.loadDataFromStorage();
@@ -495,8 +496,10 @@ export const useHarvestStore = defineStore('harvest', {
       this.searchQuery = '';
       this.currentBalance = 0;
       this.extraLimit = 0;
-      localStorage.removeItem('currentBalance');
-      localStorage.removeItem('extraLimit');
+      this.currentBalance = 0;
+      this.extraLimit = 0;
+      await removeFromAllCaches('currentBalance');
+      await removeFromAllCaches('extraLimit');
       await localforage.removeItem(HARVEST_ROWS_KEY);
       this.isModified = false;
     },
@@ -613,13 +616,13 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async loadDataFromStorage() {
-      const newData = localStorage.getItem("harvestData");
+      const newData = await getLocalStorageCache("harvestData");
       if (newData) {
         const newRows = this.parseRawDataToRows(newData);
         if (newRows.length > 0) {
           this.rows = newRows;
           await this.addRow();
-          localStorage.removeItem("harvestData");
+          await removeFromAllCaches("harvestData");
           await this.saveRowsToStorage();
           return true;
         }
@@ -652,31 +655,31 @@ export const useHarvestStore = defineStore('harvest', {
       await this.saveRowsToStorage();
     },
 
-    setMasterLimit(limit) {
+    async setMasterLimit(limit) {
       this.masterLimit = parseFloat(limit) || 0;
-      localStorage.setItem('masterLimit', this.masterLimit.toString());
+      await setLocalStorageCache('masterLimit', this.masterLimit.toString());
       this.saveRowsToStorage();
     },
 
-    loadMasterLimit() {
-      const limit = localStorage.getItem('masterLimit');
+    async loadMasterLimit() {
+      const limit = await getLocalStorageCache('masterLimit');
       this.masterLimit = limit !== null ? parseFloat(limit) : 100000;
     },
 
-    setExtraLimit(limit) {
+    async setExtraLimit(limit) {
       this.extraLimit = parseFloat(limit) || 0;
-      localStorage.setItem('extraLimit', this.extraLimit.toString());
+      await setLocalStorageCache('extraLimit', this.extraLimit.toString());
       this.saveRowsToStorage();
     },
 
-    loadExtraLimit() {
-      const limit = localStorage.getItem('extraLimit');
+    async loadExtraLimit() {
+      const limit = await getLocalStorageCache('extraLimit');
       if (limit) this.extraLimit = parseFloat(limit);
     },
 
-    setCurrentBalance(balance) {
+    async setCurrentBalance(balance) {
       this.currentBalance = parseFloat(balance) || 0;
-      localStorage.setItem('currentBalance', this.currentBalance.toString());
+      await setLocalStorageCache('currentBalance', this.currentBalance.toString());
       this.saveRowsToStorage();
     },
 
