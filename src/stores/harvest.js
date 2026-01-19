@@ -150,43 +150,22 @@ export const useHarvestStore = defineStore('harvest', {
 
     // Syncs LOCAL data to the cloud for the logged-in user.
     async syncToCloud(targetUserId) {
-      if (!targetUserId) {
-        logger.warn('⚠️ syncToCloud: No targetUserId provided');
-        return;
-      }
-
+      if (!targetUserId) return;
       this.isCloudSyncing = true;
       try {
-        const currentUser = (await supabase.auth.getUser()).data.user;
-        if (!currentUser) {
-          throw new Error('No authenticated user');
-        }
-
         const payload = {
           user_id: targetUserId,
           rows: this.rows,
           master_limit: this.masterLimit,
           extra_limit: this.extraLimit,
           current_balance: this.currentBalance,
-          last_updated_by: currentUser.id,
-          updated_at: new Date().toISOString()
+          last_updated_by: (await supabase.auth.getUser()).data.user?.id,
+          updated_at: new Date()
         };
-
-        logger.info(`☁️ Syncing ${this.rows.length} rows to cloud for user ${targetUserId}...`);
-
-        const { error } = await supabase.from('live_harvest').upsert(payload, {
-          onConflict: 'user_id'
-        });
-
-        if (error) {
-          logger.error('❌ Cloud sync failed:', error);
-          throw error;
-        }
-
-        logger.info('✅ Cloud sync successful');
+        const { error } = await supabase.from('live_harvest').upsert(payload);
+        if (error) throw error;
       } catch (error) {
-        logger.error('❌ Sync local data to cloud failed:', error.message, error);
-        // Don't throw - allow local save to succeed even if cloud sync fails
+        console.warn('Sync local data to cloud failed:', error.message);
       } finally {
         this.isCloudSyncing = false;
       }
