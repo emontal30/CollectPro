@@ -9,6 +9,7 @@ import { exportAndShareTable } from '@/utils/exportUtils.js';
 import { handleMoneyInput } from '@/utils/validators.js';
 import api from '@/services/api';
 import logger from '@/utils/logger.js';
+import localforage from 'localforage';
 
 export function useHarvest(props) {
   // --- Stores & Injections ---
@@ -42,6 +43,7 @@ export function useHarvest(props) {
   const isOverdueModalOpen = ref(false);
   const overdueStores = ref([]);
   const selectedOverdueStores = ref([]);
+  const overdueDate = ref(null); // ← إضافة
 
   // --- Extra Details Modal State ---
   const isExtraDetailsModalOpen = ref(false);
@@ -184,15 +186,47 @@ export function useHarvest(props) {
 
   const showOverdueModal = async () => {
     overdueStores.value = await store.fetchOverdueStores();
+
+    // ← الحصول على التاريخ من metadata
+    const metadata = await localforage.getItem('overdue_stores_metadata');
+    overdueDate.value = metadata?.archive_date || null;
+
     selectedOverdueStores.value = [];
     isOverdueModalOpen.value = true;
   };
 
   const applyOverdue = async () => {
     if (selectedOverdueStores.value.length === 0) return addNotification('لم يتم تحديد أي متاجر', 'warning');
-    await store.applyOverdueStores(selectedOverdueStores.value);
+
+    // Check for duplicates where overdue was ALREADY applied
+    const appliedOverdueCodes = new Set(
+      store.rows
+        .filter(r => r.isOverdueApplied && r.code)
+        .map(r => String(r.code).trim())
+    );
+    const duplicates = selectedOverdueStores.value.filter(s => appliedOverdueCodes.has(String(s.code).trim()));
+
+    if (duplicates.length > 0) {
+      const { isConfirmed } = await confirm({
+        title: 'تنبيه: محلات مكررة',
+        text: `هناك ${duplicates.length} محل/محلات مضافة بالفعل في القائمة. هل تريد إضافة المبالغ مرة أخرى؟`,
+        icon: 'warning',
+        confirmButtonText: 'نعم، أضف المكرر',
+        cancelButtonText: 'إلغاء',
+        showCancelButton: true
+      });
+
+      if (!isConfirmed) return;
+    }
+
+    const { addedCount, duplicatesCount } = await store.applyOverdueStores(selectedOverdueStores.value);
     isOverdueModalOpen.value = false;
-    addNotification('تمت إضافة المديونيات بنجاح!', 'success');
+
+    if (duplicatesCount > 0) {
+      addNotification(`تمت إضافة ${addedCount} عنصر (بما في ذلك الحالات المكررة)`, 'success');
+    } else {
+      addNotification('تمت إضافة المديونيات بنجاح!', 'success');
+    }
   };
 
   const deleteSelectedOverdue = async () => {
@@ -297,6 +331,7 @@ export function useHarvest(props) {
       if (newValue === null) {
         row.extraDetails = [];
       }
+      row.isOverdueApplied = false; // Allow re-application of overdue if manually edited
       updateField(row, index, 'extra', newValue);
     }
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
@@ -553,6 +588,8 @@ export function useHarvest(props) {
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
     confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,
     // Extra Details Modal
-    isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails
+    isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails,
+    // Overdue date
+    overdueDate
   };
 }

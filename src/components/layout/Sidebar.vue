@@ -259,11 +259,12 @@ const handleRefreshData = async () => {
       });
       const idbKeys = await localforage.keys();
       for (const key of idbKeys) {
-        // Include archives, harvest rows, overdue stores, and itinerary data/profiles
+        // Include archives, harvest rows, overdue stores (old & new format), and itinerary data/profiles
         if (
           key.startsWith('arch_data_') ||
           key === 'harvest_rows' ||
-          key === 'overdue_stores' ||
+          key === 'overdue_stores' ||              // النظام القديم (للتوافق مع الإصدارات السابقة)
+          key === 'overdue_stores_metadata' ||     // النظام الجديد (يحتوي على archive_date)
           key === 'itinerary_profiles' ||
           key.startsWith('itinerary_data_')
         ) {
@@ -304,6 +305,39 @@ const handleRefreshData = async () => {
           await localforage.setItem(key, val);
         }
       }
+
+      // ✅ Migration: Convert old overdue_stores to new overdue_stores_metadata format
+      const oldOverdueStores = await localforage.getItem('overdue_stores');
+      const newOverdueMetadata = await localforage.getItem('overdue_stores_metadata');
+      
+      if (oldOverdueStores && Array.isArray(oldOverdueStores) && oldOverdueStores.length > 0 && !newOverdueMetadata) {
+        // إذا كانت هناك بيانات قديمة ولا توجد بيانات جديدة، نقوم بالترحيل
+        try {
+          // الحصول على آخر تاريخ أرشيف من archiveStore
+          await archiveStore.loadAvailableDates(false);
+          const latestArchiveDate = archiveStore.availableDates[0]?.value || null;
+          
+          if (latestArchiveDate) {
+            // إنشاء metadata جديد بالتاريخ
+            const metadata = {
+              archive_date: latestArchiveDate,
+              created_at: new Date().toISOString(),
+              synced_to_cloud: false,
+              items: oldOverdueStores
+            };
+            
+            await localforage.setItem('overdue_stores_metadata', metadata);
+            logger.info(`✅ Migrated ${oldOverdueStores.length} old overdue items to new format with date: ${latestArchiveDate}`);
+            
+            // حذف البيانات القديمة بعد الترحيل الناجح
+            await localforage.removeItem('overdue_stores');
+          }
+        } catch (migrationErr) {
+          console.error('⚠️ Migration from old overdue format failed:', migrationErr);
+          // في حالة فشل الترحيل، نبقي البيانات القديمة كما هي
+        }
+      }
+
       localStorage.setItem('app_version', currentVersion);
       await subStore.forceRefresh(authStore.user);
       await checkEnforcementStatus();

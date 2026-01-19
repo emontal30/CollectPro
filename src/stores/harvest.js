@@ -37,7 +37,6 @@ export const useHarvestStore = defineStore('harvest', {
     currentDate: new Date().toISOString().split('T')[0],
     error: null,
     searchQuery: '',
-    searchQuery: '',
     realtimeChannel: null, // For shared session
     ownRealtimeChannel: null, // For my own session (Admin sync)
     isCloudSyncing: false,
@@ -315,8 +314,6 @@ export const useHarvestStore = defineStore('harvest', {
         .subscribe();
     },
 
-
-
     // دالة جديدة: مزامنة إجبارية فورية مع السحابة
     async forceSyncToCloud(targetUserId) {
       if (!targetUserId) return;
@@ -343,10 +340,69 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    /**
+     * حفظ المتأخرات مع تاريخ الأرشيف
+     * @param {Array} overdueItems - المتأخرات
+     * @param {String} archiveDate - تاريخ الأرشيف
+     */
+    async _saveOverdueWithArchiveDate(overdueItems, archiveDate) {
+      // ✅ حذف البيانات القديمة أولاً (كلا النظامين)
+      await Promise.all([
+        localforage.removeItem('overdue_stores'),          // النظام القديم
+        localforage.removeItem('overdue_stores_metadata')  // النظام الجديد
+      ]);
+
+      logger.info('🗑️ Cleared old overdue data locally (both formats)');
+
+      // ✅ حفظ البيانات الجديدة
+      const metadata = {
+        archive_date: archiveDate,
+        created_at: new Date().toISOString(),
+        synced_to_cloud: false,
+        items: overdueItems
+      };
+
+      await localforage.setItem('overdue_stores_metadata', metadata);
+      logger.info(`💾 Saved ${overdueItems.length} overdue items for archive date: ${archiveDate}`);
+    },
+
+    /**
+     * الحصول على آخر تاريخ أرشيف
+     * @returns {String|null} آخر تاريخ أرشيف أو null
+     */
+    async _getLatestArchiveDate() {
+      const archiveStore = useArchiveStore();
+
+      // جلب التواريخ المتاحة إذا لم تكن محملة
+      if (archiveStore.availableDates.length === 0) {
+        await archiveStore.loadAvailableDates();
+      }
+
+      // آخر تاريخ هو الأول في القائمة (مرتبة تنازلياً)
+      const latestDate = archiveStore.availableDates[0]?.value || null;
+
+      logger.info(`📅 Latest archive date: ${latestDate || 'none'}`);
+      return latestDate;
+    },
+
     // دالة خاصة لمزامنة المتأخرات سحابياً (حذف القديم وإضافة الجديد)
-    async syncOverdueStoresToCloud(overdueItems) {
+    async syncOverdueStoresToCloud(overdueItems, archiveDate) {
       const authStore = useAuthStore();
-      if (!authStore.user || !navigator.onLine) return;
+
+      if (!authStore.user) {
+        logger.warn('⚠️ Cannot sync overdue: No authenticated user');
+        return;
+      }
+
+      if (!navigator.onLine) {
+        logger.warn('⚠️ Cannot sync overdue: Offline');
+        await addToSyncQueue({
+          type: 'sync_overdue_stores',
+          payload: { items: overdueItems, archive_date: archiveDate },
+          timestamp: Date.now()
+        });
+        return;
+      }
 
       try {
         const userId = authStore.user.id;
@@ -359,13 +415,16 @@ export const useHarvestStore = defineStore('harvest', {
 
         if (deleteError) throw deleteError;
 
+        logger.info('🗑️ Deleted all old overdue stores from cloud');
+
         // 2. If we have new items, insert them
         if (overdueItems && overdueItems.length > 0) {
           const records = overdueItems.map(item => ({
             user_id: userId,
             shop: item.shop,
             code: item.code,
-            net: item.net
+            net: item.net,
+            archive_date: archiveDate  // ← إضافة التاريخ
           }));
 
           const { error: insertError } = await supabase
@@ -373,59 +432,130 @@ export const useHarvestStore = defineStore('harvest', {
             .insert(records);
 
           if (insertError) throw insertError;
+
+          logger.info(`☁️ Synced ${overdueItems.length} overdue items to cloud with date: ${archiveDate}`);
+        } else {
+          logger.info('☁️ No overdue items to sync (all cleared)');
         }
 
-        logger.info('☁️ Overdue stores synced to cloud successfully');
       } catch (err) {
         logger.error('❌ Failed to sync overdue stores to cloud:', err);
+
+        // في حالة الفشل، إضافة للطابور
+        await addToSyncQueue({
+          type: 'sync_overdue_stores',
+          payload: { items: overdueItems, archive_date: archiveDate },
+          timestamp: Date.now()
+        });
+
         throw err; // Re-throw to be caught by caller if needed
       }
     },
 
-    // --- All other actions remain largely the same, operating on LOCAL state ---
-
+    /**
+     * جلب المتأخرات - منطق مبسط بناءً على مطابقة تاريخ الأرشيف
+     */
     async fetchOverdueStores() {
-      let localOverdue = await localforage.getItem('overdue_stores');
-
-      // If found locally and not empty, return it.
-      if (localOverdue && Array.isArray(localOverdue) && localOverdue.length > 0) {
-        return localOverdue;
-      }
-
-      // If not found locally, try to fetch from cloud (fallback)
       const authStore = useAuthStore();
-      if (authStore.user && navigator.onLine) {
-        try {
-          const { data, error } = await supabase
-            .from('pending_overdue_stores')
-            .select('shop, code, net')
-            .eq('user_id', authStore.user.id);
 
-          if (!error && data && data.length > 0) {
-            // Found in cloud! Save locally for next time and return.
-            await localforage.setItem('overdue_stores', data);
-            return data;
-          }
-        } catch (err) {
-          logger.warn('Failed to fetch overdue stores from cloud:', err);
-        }
+      // ✅ الخطوة 1: الحصول على آخر تاريخ أرشيف
+      const latestArchiveDate = await this._getLatestArchiveDate();
+
+      if (!latestArchiveDate) {
+        logger.info('📭 No archives found, no overdue to fetch');
+        return [];
       }
 
-      return [];
+      logger.info(`📅 Latest archive date: ${latestArchiveDate}`);
+
+      // ✅ الخطوة 2: الحصول على المتأخرات المحلية
+      const localMetadata = await localforage.getItem('overdue_stores_metadata');
+      const localDate = localMetadata?.archive_date || null;
+      const localItems = localMetadata?.items || [];
+
+      logger.info(`📍 Local overdue date: ${localDate || 'none'}`);
+
+      // ✅ الخطوة 3: المقارنة البسيطة
+      if (localDate === latestArchiveDate) {
+        // ✅ التاريخ مطابق - إرجاع المحلي
+        logger.info('✅ Local overdue matches latest archive date - using local');
+
+        // التحقق من المزامنة في الخلفية
+        if (!localMetadata.synced_to_cloud && navigator.onLine && authStore.user) {
+          this.syncOverdueStoresToCloud(localItems, localDate).catch(err => {
+            logger.warn('Background sync failed:', err);
+          });
+        }
+
+        return localItems;
+      }
+
+      // ✅ الخطوة 4: التاريخ غير مطابق أو لا يوجد محلي - جلب من السحابة
+      logger.info('🔄 Local date does not match or missing - fetching from cloud');
+
+      if (!navigator.onLine || !authStore.user) {
+        logger.warn('⚠️ Offline and local date mismatch - returning local (may be outdated)');
+        return localItems;
+      }
+
+      try {
+        const { data: cloudItems, error } = await supabase
+          .from('pending_overdue_stores')
+          .select('shop, code, net, archive_date')
+          .eq('user_id', authStore.user.id)
+          .eq('archive_date', latestArchiveDate);
+
+        if (error) throw error;
+
+        if (cloudItems && cloudItems.length > 0) {
+          // حفظ محلياً
+          await this._saveOverdueWithArchiveDate(cloudItems, latestArchiveDate);
+
+          logger.info(`📥 Fetched ${cloudItems.length} overdue items from cloud`);
+          return cloudItems;
+        } else {
+          // لا توجد متأخرات في السحابة لهذا التاريخ
+          logger.info('📭 No overdue items in cloud for this date');
+
+          // حذف المحلي القديم
+          await localforage.removeItem('overdue_stores_metadata');
+
+          return [];
+        }
+
+      } catch (err) {
+        logger.error('❌ Failed to fetch from cloud:', err);
+        // في حالة الخطأ، إرجاع المحلي
+        return localItems;
+      }
     },
 
     async applyOverdueStores(storesToApply) {
-      if (!storesToApply || storesToApply.length === 0) return;
+      if (!storesToApply || storesToApply.length === 0) return { addedCount: 0, duplicatesCount: 0 };
+
+      let addedCount = 0;
+      let duplicatesCount = 0;
 
       storesToApply.forEach(overdueStore => {
         const existingRow = this.rows.find(r => r.code && r.code.toString() === overdueStore.code.toString());
+
+        // Count as duplicate for reporting if it already exists
+        if (existingRow) {
+          duplicatesCount++;
+        }
+
         const overdueAmount = overdueStore.net * -1;
 
         if (existingRow) {
+          // Accumulate the amount (e.g. 1000 + 1000 = 2000)
           existingRow.extra = (parseFloat(existingRow.extra) || 0) + overdueAmount;
           if (overdueStore.net < 0) existingRow.hasOverdue = true;
           else existingRow.hasOverpayment = true;
+
+          existingRow.isOverdueApplied = true; // Mark as applied (Persistent)
+          addedCount++;
         } else {
+          // Add new row logic...
           if (this.rows.length === 1 && !this.rows[0].shop && !this.rows[0].code) {
             this.rows.pop();
           }
@@ -440,7 +570,9 @@ export const useHarvestStore = defineStore('harvest', {
             isImported: false,
             hasOverdue: overdueStore.net < 0,
             hasOverpayment: overdueStore.net > 0,
+            isOverdueApplied: true // Mark as applied (Persistent)
           });
+          addedCount++;
         }
       });
 
@@ -450,10 +582,13 @@ export const useHarvestStore = defineStore('harvest', {
       }
 
       await this.saveRowsToStorage();
+      return { addedCount, duplicatesCount };
     },
 
     async clearOverdueStores() {
+      // 1. Clear both old and new local storage keys
       await localforage.removeItem('overdue_stores');
+      await localforage.removeItem('overdue_stores_metadata');
 
       const authStore = useAuthStore();
       if (authStore.user && navigator.onLine) {
@@ -471,10 +606,28 @@ export const useHarvestStore = defineStore('harvest', {
     async deleteOverdueStores(codes = []) {
       if (!Array.isArray(codes) || codes.length === 0) return;
       try {
-        const current = (await localforage.getItem('overdue_stores')) || [];
-        const filtered = current.filter(s => !codes.includes(String(s.code)));
-        if (filtered.length > 0) await localforage.setItem('overdue_stores', filtered);
-        else await localforage.removeItem('overdue_stores');
+        // Support both old format (array) and new format (metadata object)
+        const metadata = await localforage.getItem('overdue_stores_metadata');
+        let currentItems = [];
+
+        if (metadata && metadata.items) {
+          currentItems = metadata.items;
+        } else {
+          // Fallback to old key for one last time
+          currentItems = (await localforage.getItem('overdue_stores')) || [];
+        }
+
+        const filtered = currentItems.filter(s => !codes.includes(String(s.code)));
+
+        // Update both if they exist, but primarily the new metadata format
+        if (metadata) {
+          metadata.items = filtered;
+          await localforage.setItem('overdue_stores_metadata', metadata);
+        } else if (currentItems.length > 0) {
+          // If we only have the old format, we don't migrate here (fetch will handle it), just update old key
+          if (filtered.length > 0) await localforage.setItem('overdue_stores', filtered);
+          else await localforage.removeItem('overdue_stores');
+        }
 
         // Cloud Delete
         const authStore = useAuthStore();
@@ -548,17 +701,48 @@ export const useHarvestStore = defineStore('harvest', {
           .filter(row => row.net !== 0)
           .map(row => ({ shop: row.shop, code: row.code, net: row.net }));
 
+        // ✅ التغيير: حفظ مع تاريخ الأرشيف باستخدام النظام الجديد
         await Promise.all([
           localforage.setItem(localKey, cleanRows),
           overdueStores.length > 0
-            ? localforage.setItem('overdue_stores', overdueStores)
-            : localforage.removeItem('overdue_stores')
+            ? this._saveOverdueWithArchiveDate(overdueStores, dateToSave)
+            : Promise.all([
+              localforage.removeItem('overdue_stores'),          // حذف النظام القديم
+              localforage.removeItem('overdue_stores_metadata')  // حذف النظام الجديد
+            ])
         ]);
 
-        // Background Sync for Overdue Stores (Fire and Forget)
-        this.syncOverdueStoresToCloud(overdueStores).catch(err => {
-          logger.error('Background overdue sync failed:', err);
-        });
+        // ✅ التغيير: المزامنة بدون انتظار (Fire and Forget)
+        // لا نريد أن تعطل مزامنة المتأخرات عملية الأرشفة الأساسية
+        (async () => {
+          try {
+            if (navigator.onLine) {
+              await this.syncOverdueStoresToCloud(overdueStores, dateToSave);
+
+              // تحديث حالة المزامنة
+              const metadata = await localforage.getItem('overdue_stores_metadata');
+              if (metadata) {
+                metadata.synced_to_cloud = true;
+                await localforage.setItem('overdue_stores_metadata', metadata);
+              }
+              logger.info('✅ Overdue synced successfully in background');
+            } else {
+              await addToSyncQueue({
+                type: 'sync_overdue_stores',
+                payload: { items: overdueStores, archive_date: dateToSave },
+                timestamp: Date.now()
+              });
+              logger.info(`📌 Overdue queued for sync (offline) - Date: ${dateToSave}`);
+            }
+          } catch (err) {
+            logger.warn('⚠️ Background overdue sync failed, adding to queue:', err);
+            await addToSyncQueue({
+              type: 'sync_overdue_stores',
+              payload: { items: overdueStores, archive_date: dateToSave },
+              timestamp: Date.now()
+            });
+          }
+        })();
 
         await archiveStore.loadAvailableDates(false);
         this._performCloudSync(dbPayload);

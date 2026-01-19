@@ -1,6 +1,7 @@
 import localforage from 'localforage';
 import { useArchiveStore } from '@/stores/archiveStore';
 import { useAuthStore } from '@/stores/auth';
+import { useHarvestStore } from '@/stores/harvest';
 import { useNotifications } from '@/composables/useNotifications';
 import { useSyncStore } from '@/stores/syncStore'; // Import new store
 import logger from '@/utils/logger.js';
@@ -41,12 +42,13 @@ async function addToSyncQueue(item) {
       await localforage.setItem(QUEUE_KEY, queue);
       logger.info(`📌 Added to sync queue: [${type}] for ${date}`);
     } else {
-      // إذا كانت أرشفة (إضافة)، نقوم بتحديث البيانات في الطابور بدلاً من التكرار
-      if (type === 'daily_archive') {
+      // تحديث للأنواع التي قد تتغير بياناتها
+      if (type === 'daily_archive' || type === 'sync_overdue_stores') {
         queue[existsIndex] = item;
         await localforage.setItem(QUEUE_KEY, queue);
         logger.info(`🔄 Updated sync queue: [${type}] for ${date}`);
       }
+      // delete_archive لا يحتاج تحديث (عملية حذف بسيطة)
     }
 
     // Update Sync Status UI
@@ -128,7 +130,32 @@ async function _processQueueInternal() {
     const date = source.archive_date || source.date;
 
     try {
-      if (type === 'delete_archive') {
+      if (type === 'sync_overdue_stores') {
+        // ✅ معالجة مزامنة المتأخرات
+        const payload = item.payload;
+        const overdueItems = payload.items || [];
+        const archiveDate = payload.archive_date;
+
+        if (!archiveDate) {
+          logger.error('❌ Missing archive_date in overdue sync payload');
+          failedItems.push(item);
+          continue;
+        }
+
+        // استخدام دالة المزامنة من harvestStore
+        const harvestStore = useHarvestStore();
+        await harvestStore.syncOverdueStoresToCloud(overdueItems, archiveDate);
+
+        // تحديث حالة المزامنة المحلية
+        const localMetadata = await localforage.getItem('overdue_stores_metadata');
+        if (localMetadata && localMetadata.archive_date === archiveDate) {
+          localMetadata.synced_to_cloud = true;
+          await localforage.setItem('overdue_stores_metadata', localMetadata);
+        }
+
+        logger.info(`✅ Synced overdue stores for date: ${archiveDate}`);
+
+      } else if (type === 'delete_archive') {
         const { error } = await supabase
           .from('daily_archives')
           .delete()

@@ -80,27 +80,28 @@ export const useAdminStore = defineStore('admin', () => {
         setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 30000);
       });
 
-      // جلب فارق التوقيت من السيرفر أولاً
-      serverTimeOffset.value = await TimeService.getServerTimeOffset();
+      // 2. Fetch Time Offset separately (Low priority)
+      TimeService.getServerTimeOffset().then(offset => {
+        serverTimeOffset.value = offset;
+        logger.info('✅ Time offset fetched:', offset);
+      }).catch(e => logger.warn('⚠️ Time offset fetch failed:', e));
 
-      // فصل استدعاء الـ Charts عن الـ Stats لتسريع الـ Promise.all
-      // واستخدام allSettled لضمان عرض ما تم جلبه حتى لو فشل جزء بسيط
+      // 3. Parallel Data Fetch
       const fetchPromise = Promise.allSettled([
-        fetchStats(false), // لا نحدث الشارت هنا، سنحدثه بالأسفل بشكل منفصل
-        fetchChartsData(), // نحدث الشارت بشكل متوازي
+        fetchStats(false),
+        fetchChartsData(),
         fetchPendingSubscriptions(),
         fetchAllSubscriptions(),
         fetchUsers(),
         fetchSystemConfig()
       ]);
 
-      // استخدام Race لضمان عدم الانتظار للأبد
       const results = await Promise.race([fetchPromise, timeoutPromise]);
 
-      // التحقق مما إذا كان هناك أخطاء حرجة (مثلاً الـ Stats فشلت)
-      const statsRejected = results[0]?.status === 'rejected';
-      // لا نرمي خطأ كامل إذا فشل جزء، سنكتفي بما وصلنا
-      if (statsRejected) logger.warn('Failed to load some admin stats, but continuing...');
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        logger.warn(`⚠️ ${failedCount} admin requests failed or timed out, but continuing with available data.`);
+      }
 
       lastFetchTime.value = Date.now();
 

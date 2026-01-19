@@ -155,7 +155,19 @@ export const adminService = {
    * 7. جلب بيانات الرسم البياني الشهري
    */
   async getMonthlyChartData() {
-    const { data } = await apiInterceptor(supabase.from('subscriptions').select('created_at').order('created_at', { ascending: true }));
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const { data } = await apiInterceptor(
+      supabase
+        .from('subscriptions')
+        .select('created_at')
+        .gte('created_at', sixMonthsAgo.toISOString())
+        .order('created_at', { ascending: true })
+    );
+
     if (!data) return { labels: [], values: [] };
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

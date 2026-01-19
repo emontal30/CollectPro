@@ -286,6 +286,9 @@
                       <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-history text-danger"></i> المديونيات المتأخرة</h3>
                       <button class="btn btn-sm btn-outline-primary" type="button" @click="toggleSelectAllOverdue" title="تحديد الكل">تحديد الكل</button>
                     </div>
+                    <span v-if="overdueDate" class="overdue-date-badge" :title="`تاريخ الأرشفة: ${overdueDate}`">
+                      📅 {{ overdueDate }}
+                    </span>
                     <button class="close-btn" @click="isOverdueModalOpen = false">&times;</button>
                 </div>
                 <div class="modal-body scrollable-list">
@@ -557,7 +560,9 @@ const {
   formatInputNumber,
   customTooltipContext,
   // Extra Details Modal
-  isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails
+  isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails,
+  // Overdue date
+  overdueDate
 } = useHarvest(props);
 
 // Toggle select/deselect all overdue stores
@@ -652,6 +657,27 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Overdue Date Badge */
+.overdue-date-badge {
+  background: var(--primary);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.overdue-date-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
 }
 
 /* Original Styles (Implied to be global or inherited, but preserving scoped if any existed in Code 1 context) */
