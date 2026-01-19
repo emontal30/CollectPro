@@ -274,14 +274,13 @@ const sendInvite = async () => {
 const handleRespond = async (reqId, status) => {
   try {
     await collabStore.respondToInvite(reqId, status);
-    const msg = status === 'accepted' ? 'تم قبول الدعوة' : 'تم رفض الدعوة';
+    const msg = status === 'accepted' ? 'تم قبول الدعوة بنجاح ✅' : 'تم رفض الدعوة';
     addNotification(msg, status === 'accepted' ? 'success' : 'info');
-    // تحديث القائمة بعد القبول
-    if (status === 'accepted') {
-      await collabStore.fetchCollaborators();
-    }
+    // Note: fetchCollaborators is already called in respondToInvite with timeout protection
   } catch (err) {
-    addNotification('حدث خطأ أثناء معالجة الطلب', 'error');
+    console.error('Error responding to invitation:', err);
+    const errorMsg = err.message || 'حدث خطأ أثناء معالجة الطلب';
+    addNotification(errorMsg, 'error');
   }
 };
 

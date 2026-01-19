@@ -188,33 +188,71 @@ export const useCollaborationStore = defineStore('collaboration', {
         .select('id, full_name')
         .in('id', senderIds);
 
+      if (profError) {
+        logger.error('❌ Error fetching sender profiles:', profError);
+      }
+
+      logger.info('📋 Fetched profiles:', profiles);
+
       const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      this.incomingRequests = requests.map(req => ({
-        ...req,
-        sender_profile: profilesMap.get(req.sender_id) || { full_name: 'Unknown User' }
-      }));
+      this.incomingRequests = requests.map(req => {
+        const profile = profilesMap.get(req.sender_id);
+        const displayName = profile?.full_name || 'مستخدم';
+
+        logger.info(`👤 Sender ${req.sender_id}: ${displayName}`);
+
+        return {
+          ...req,
+          sender_profile: {
+            full_name: displayName
+          }
+        };
+      });
     },
 
     async respondToInvite(requestId, status) {
       const auth = useAuthStore();
+
+      if (!auth.user) {
+        throw new Error('يجب تسجيل الدخول أولاً');
+      }
+
       const updateData = { status };
 
       if (status === 'accepted') {
         updateData.receiver_id = auth.user.id;
       }
 
+      logger.info(`📨 Responding to invitation ${requestId} with status: ${status}`);
+
       const { error } = await supabase
         .from('collaboration_requests')
         .update(updateData)
         .eq('id', requestId);
 
-      if (!error) {
-        this.incomingRequests = this.incomingRequests.filter(req => req.id !== requestId);
-        // If accepted, we might want to refresh to ensure everything is synced, 
-        // though the realtime listener should handle the sender side.
-        if (status === 'accepted') {
-          await this.fetchCollaborators(); // Refresh my list (unlikely to change here but for safety)
+      if (error) {
+        logger.error('❌ Failed to respond to invitation:', error);
+        throw error;
+      }
+
+      logger.info('✅ Successfully responded to invitation');
+
+      // Remove from incoming requests immediately
+      this.incomingRequests = this.incomingRequests.filter(req => req.id !== requestId);
+
+      // If accepted, refresh collaborators list (but don't wait indefinitely)
+      if (status === 'accepted') {
+        try {
+          logger.info('🔄 Refreshing collaborators list...');
+          await Promise.race([
+            this.fetchCollaborators(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+          ]);
+          logger.info('✅ Collaborators list refreshed');
+        } catch (err) {
+          logger.warn('⚠️ Failed to refresh collaborators (non-critical):', err.message);
+          // Don't throw - the realtime listener will eventually sync
         }
       }
     },
