@@ -148,6 +148,9 @@ export const useAuthStore = defineStore('auth', () => {
         await updateUserState(session);
       }
 
+      // Load system config (Enforce Subscription) before finishing init
+      await loadSystemConfig();
+
       isLoading.value = false;
       isInitialized.value = true;
       cleanUrlHash();

@@ -122,31 +122,44 @@ async function _processQueueInternal() {
 
   const syncedArchives = [];
   const deletedArchives = [];
-  const failedItems = [];
+  // const failedItems = []; // No longer needed as separate array
 
-  for (const item of queue) {
+  // We process a COPY allowing us to manipulate the original queue state logically later
+  const processingBatch = [...queue];
+  const processedIndices = new Set(); // To track what we should remove
+
+  for (let i = 0; i < processingBatch.length; i++) {
+    const item = processingBatch[i];
+
+    // --- Backoff Check ---
+    // If item failed recently (less than 10 seconds ago), skip it to avoid infinite loop
+    const lastAttempt = item.lastAttempt || 0;
+    const now = Date.now();
+    if (now - lastAttempt < 10000 && item.retryCount > 0) {
+      continue; // Skip this item for now
+    }
+
     const type = item.type;
     const source = item.payload || item;
     const date = source.archive_date || source.date;
 
     try {
       if (type === 'sync_overdue_stores') {
-        // ✅ معالجة مزامنة المتأخرات
         const payload = item.payload;
         const overdueItems = payload.items || [];
         const archiveDate = payload.archive_date;
 
         if (!archiveDate) {
           logger.error('❌ Missing archive_date in overdue sync payload');
-          failedItems.push(item);
+          processedIndices.add(i); // Mark for removal (invalid)
           continue;
         }
 
-        // استخدام دالة المزامنة من harvestStore
         const harvestStore = useHarvestStore();
-        await harvestStore.syncOverdueStoresToCloud(overdueItems, archiveDate);
+        // Pass a flag to avoid internal queueing on error, we handle it here
+        await harvestStore.syncOverdueStoresToCloud(overdueItems, archiveDate, true);
 
-        // تحديث حالة المزامنة المحلية
+        // Update local metadata
         const localMetadata = await localforage.getItem('overdue_stores_metadata');
         if (localMetadata && localMetadata.archive_date === archiveDate) {
           localMetadata.synced_to_cloud = true;
@@ -154,6 +167,7 @@ async function _processQueueInternal() {
         }
 
         logger.info(`✅ Synced overdue stores for date: ${archiveDate}`);
+        processedIndices.add(i); // Mark for removal (success)
 
       } else if (type === 'delete_archive') {
         const { error } = await supabase
@@ -164,25 +178,78 @@ async function _processQueueInternal() {
 
         if (error) throw error;
         deletedArchives.push(date);
+        processedIndices.add(i); // Mark for removal (success)
+
       } else {
-        // استخدام API الأرشفة الموحد
         const { error } = await api.archive.saveDailyArchive(authStore.user.id, date, source.data);
         if (error) throw error;
         syncedArchives.push(date);
+        processedIndices.add(i); // Mark for removal (success)
       }
     } catch (err) {
-      logger.error(`❌ Sync failed for [${type}] ${date}:`, err);
-      failedItems.push(item); // الاحتفاظ بالعناصر الفاشلة للمرة القادمة
+      logger.error(`❌ Sync failed for [${type}]:`, err);
+      // Don't remove from queue. Update retry metadata.
+      // We modify the item IN PLACE within the local batch variable, 
+      // but we need to ensure this update persists when we merge.
+      item.lastAttempt = Date.now();
+      item.retryCount = (item.retryCount || 0) + 1;
     }
   }
 
-  // 2. تحديث الطابور بما تبقى فقط
-  await localforage.setItem(QUEUE_KEY, failedItems);
+  // --- CRITICAL: Merge & Save ---
+  // We fetch the queue AGAIN to account for items added *while* we were processing
+  const currentQueue = (await localforage.getItem(QUEUE_KEY)) || [];
+
+  // Reconstruct the new queue:
+  // 1. Keep items from 'currentQueue' that were NOT part of our 'processingBatch' (newly added)
+  // 2. Keep items from 'processingBatch' that FAILED (attempted but not in processedIndices)
+  //    AND ensure we save their updated metadata (retryCount)
+  // 3. Remove items that SUCCEEDED (in processedIndices)
+
+  const newQueue = [];
+
+  // A. Logic to handle items that might have been added/modified concurrently?
+  // Since 'addToSyncQueue' appends or updates by (type+date), let's use a unique key map.
+
+  // Helper to generate key
+  const getItemKey = (it) => `${it.type}_${(it.payload?.archive_date || it.payload?.date || it.date)}`;
+
+  // Map of our batch status
+  const batchMap = new Map();
+  processingBatch.forEach((item, idx) => {
+    batchMap.set(getItemKey(item), {
+      processed: processedIndices.has(idx),
+      item: item // This has updated retryCount
+    });
+  });
+
+  // Iterate over whatever is currently in storage
+  for (const storedItem of currentQueue) {
+    const key = getItemKey(storedItem);
+    const batchInfo = batchMap.get(key);
+
+    if (batchInfo) {
+      // This item was part of our batch
+      if (!batchInfo.processed) {
+        // It failed. Keep it, but use the version with updated retryCount
+        newQueue.push(batchInfo.item);
+      }
+      // If processed, we drop it (it's done)
+    } else {
+      // This item wasn't in our batch (added recently), keep it
+      newQueue.push(storedItem);
+    }
+  }
+
+  // Also catch edge case where something was in processingBatch but somehow not in currentQueue? 
+  // (Unlikely unless 'addToSyncQueue' logic removed it, which it doesn't).
+
+  await localforage.setItem(QUEUE_KEY, newQueue);
 
   // Update Sync Status UI immediately
   syncStore.checkQueue();
 
-  // 3. إرسال تنبيهات مفصلة للمستخدم
+  // 3. إرسال تنبيهات
   if (syncedArchives.length > 0) {
     addNotification(`تم مزامنة أرشيف: ${syncedArchives.join(', ')} سحابياً ✅`, 'success');
   }
@@ -195,15 +262,13 @@ async function _processQueueInternal() {
     await archiveStore.loadAvailableDates();
   }
 
-  // التحقق مرة أخرى من وجود عناصر جديدة في الطابور بعد المعالجة
-  // (في حالة إضافة عناصر جديدة أثناء المعالجة)
-  const remainingQueue = (await localforage.getItem(QUEUE_KEY)) || [];
-  if (remainingQueue.length > 0) {
-    logger.info(`🔄 Queue still has ${remainingQueue.length} item(s), scheduling another process...`);
-    // جدولة معالجة أخرى بعد وقت قصير لمعالجة العناصر الجديدة
-    setTimeout(() => {
-      void processQueue();
-    }, 1000);
+  // Check if we need to schedule another run (if there are failed items waiting for backoff or new items)
+  if (newQueue.length > 0) {
+    // Check if any item is ready to retry immediately (new items)
+    const hasReadyItems = newQueue.some(i => !i.lastAttempt || (Date.now() - i.lastAttempt > 10000));
+    if (hasReadyItems) {
+      setTimeout(() => { void processQueue(); }, 1000);
+    }
   }
 }
 

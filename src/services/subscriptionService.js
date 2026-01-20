@@ -91,7 +91,7 @@ export const subscriptionService = {
       await apiInterceptor(
         supabase
           .from('subscriptions')
-          .update({ status: 'cancelled', end_date: new Date().toISOString() })
+          .update({ status: 'cancelled' })
           .eq('user_id', userId)
           .eq('status', 'active')
       );

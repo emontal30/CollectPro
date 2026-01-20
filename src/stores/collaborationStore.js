@@ -274,11 +274,16 @@ export const useCollaborationStore = defineStore('collaboration', {
     // --- Real-time Subscription ---
     subscribeToRequests() {
       const auth = useAuthStore();
-      if (!auth.user) return;
+      if (!auth.user || !auth.user.userCode) {
+        logger.warn('🚫 Cannot subscribe to requests: Missing user or userCode');
+        return;
+      }
 
       if (this.realtimeChannel) {
         supabase.removeChannel(this.realtimeChannel);
       }
+
+      logger.info(`🔌 Subscribing to collaboration requests for code: ${auth.user.userCode}`);
 
       this.realtimeChannel = supabase
         .channel('collab-changes')
@@ -291,6 +296,7 @@ export const useCollaborationStore = defineStore('collaboration', {
             filter: `receiver_code=eq.${auth.user.userCode}`
           },
           async (payload) => {
+            logger.info('🔔 New collaboration request received vi Realtime:', payload);
             // New invite for me
             if (payload.new && payload.new.status === 'pending') {
               // Fetch details to get name
@@ -299,7 +305,12 @@ export const useCollaborationStore = defineStore('collaboration', {
                 ...payload.new,
                 sender_profile: { full_name: profile?.full_name || 'مستخدم' }
               };
-              this.incomingRequests.push(newReq);
+              // Avoid duplicates
+              if (!this.incomingRequests.find(r => r.id === newReq.id)) {
+                this.incomingRequests.push(newReq);
+                // Trigger a notification via event bus or similar if possible, 
+                // but for now the store update reacts in the UI
+              }
             }
           }
         )
@@ -312,13 +323,20 @@ export const useCollaborationStore = defineStore('collaboration', {
             filter: `sender_id=eq.${auth.user.id}`
           },
           (payload) => {
+            logger.info('🔔 Collaboration status update received:', payload);
             // My invite was accepted/rejected
             if (payload.new && payload.new.status === 'accepted') {
               this.fetchCollaborators(); // Reload list to show the new person
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            logger.info('✅ Collaboration Realtime Channel Subscribed!');
+          } else if (status === 'CHANNEL_ERROR') {
+            logger.error('❌ Collaboration Realtime Channel Error');
+          }
+        });
 
       // الاستماع لإشعارات PostgreSQL الفورية
       this.subscribeToPgNotifications();

@@ -348,7 +348,8 @@ onMounted(() => {
 .days-counter.cancelled { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.2); }
 
 .card-footer { padding: 24px; background: var(--gray-100); border-top: 1px solid var(--border-color); }
-.subscription-active-msg { text-align: center; color: var(--primary); font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.subscription-active-msg { text-align: center; color: #2ecc71; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.1rem; }
+.subscription-active-msg .pulse-icon { color: #2ecc71 !important; }
 
 /* Pulse animations */
 .pulse-icon { animation: pulse 2s infinite; }

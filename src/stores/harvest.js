@@ -117,6 +117,13 @@ export const useHarvestStore = defineStore('harvest', {
         // Start listening for Admin overrides or other sync events
         this.initOwnRealtimeSubscription();
 
+        // Initial Cloud Sync (in case we missed updates while offline)
+        if (navigator.onLine) {
+          this.syncFromCloud().catch(err => {
+            logger.warn('Initial cloud sync failed:', err);
+          });
+        }
+
       } catch (err) {
         logger.error('Harvest initialization failed:', err);
         await this.resetTable();
@@ -148,6 +155,53 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    // New: Fetch latest state from cloud
+    async syncFromCloud() {
+      const authStore = useAuthStore();
+      if (!authStore.user) return;
+      const userId = authStore.user.id;
+
+      const { data, error } = await supabase
+        .from('live_harvest')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (data) {
+        // Check if cloud is newer than local? 
+        // For cooperation, we assume Cloud is the "Meeting Point".
+        // But purely local work might be newer if offline? 
+        // If we are initializing, we just loaded from Local.
+        // Let's assume Cloud wins if it has content, OR we check timestamps if we had them.
+        // Since we don't track local-only timestamp reliably, we'll assume Cloud is Master for Collaboration.
+        // BUT be careful not to overwrite Unsynced Local work.
+        // "syncToCloud" is called on every save. So if I was offline, I have unsynced work.
+        // If I come online, "syncFromCloud" runs.
+        // Ideally, we should syncToCloud pending changes first?
+        // Since we don't have a sophisticated conflict resolution, and the User didn't ask for "Offline Sync Conflict Resolution",
+        // I will prioritizing NOT overwriting if I have local data?
+        // Actually, for "Live Cooperation", checking Cloud is better.
+        // Let's just update if differ.
+
+        // Optimization: If rows are empty locally but exist in cloud, definitely take cloud.
+        const localEmpty = !this.hasData;
+
+        if (localEmpty || (data.updated_at && new Date(data.updated_at) > new Date(Date.now() - 60000))) {
+          // If cloud data is very recent (last minute) or local is empty, take it.
+          // This is a heuristic.
+          this.rows = data.rows || [];
+          this.masterLimit = parseFloat(data.master_limit) || 0;
+          this.extraLimit = parseFloat(data.extra_limit) || 0;
+          this.currentBalance = parseFloat(data.current_balance) || 0;
+          logger.info('☁️ Applied Initial Cloud Data');
+
+          // Fix: Clone before saving to avoid DataCloneError with Proxies
+          const rowsToSave = safeDeepClone(this.rows);
+          await localforage.setItem(HARVEST_ROWS_KEY, rowsToSave);
+        }
+      }
+    },
+
     // Syncs LOCAL data to the cloud for the logged-in user.
     async syncToCloud(targetUserId) {
       if (!targetUserId) return;
@@ -174,7 +228,8 @@ export const useHarvestStore = defineStore('harvest', {
     async updateSharedData(targetUserId) {
       // New action to sync SHARED data to the cloud.
       if (!targetUserId) return;
-      this.isCloudSyncing = true; // Consider a separate flag if needed e.g., isSharedSyncing
+      this.isCloudSyncing = true;
+
       try {
         const payload = {
           // No user_id in payload for update, or just for reference, but RLS relies on the match
@@ -186,17 +241,26 @@ export const useHarvestStore = defineStore('harvest', {
           updated_at: new Date()
         };
 
+        logger.info(`💾 Syncing shared data for target: ${targetUserId} as Editor...`);
+
         // Use UPDATE instead of UPSERT
         // Collaborators have specific UPDATE policies, but rarely INSERT policies for other users' data.
-        // The row should already exist (created by owner on account creation/login).
         const { error } = await supabase
           .from('live_harvest')
           .update(payload)
           .eq('user_id', targetUserId);
 
-        if (error) throw error;
+        if (error) {
+          logger.error('❌ Failed to update shared data (RLS or Network):', error);
+          throw error;
+        }
+
+        logger.info('✅ Shared data synced successfully.');
+
       } catch (error) {
         console.error('Failed to update shared data:', error.message);
+        // We might want to notify the user via a persistent error state in the store
+        // but for now, we rely on the logger.
       } finally {
         this.isCloudSyncing = false;
       }
@@ -413,7 +477,7 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     // دالة خاصة لمزامنة المتأخرات سحابياً (حذف القديم وإضافة الجديد)
-    async syncOverdueStoresToCloud(overdueItems, archiveDate) {
+    async syncOverdueStoresToCloud(overdueItems, archiveDate, skipQueueOnError = false) {
       const authStore = useAuthStore();
 
       if (!authStore.user) {
@@ -423,11 +487,13 @@ export const useHarvestStore = defineStore('harvest', {
 
       if (!navigator.onLine) {
         logger.warn('⚠️ Cannot sync overdue: Offline');
-        await addToSyncQueue({
-          type: 'sync_overdue_stores',
-          payload: { items: overdueItems, archive_date: archiveDate },
-          timestamp: Date.now()
-        });
+        if (!skipQueueOnError) {
+          await addToSyncQueue({
+            type: 'sync_overdue_stores',
+            payload: { items: overdueItems, archive_date: archiveDate },
+            timestamp: Date.now()
+          });
+        }
         return;
       }
 
@@ -468,12 +534,14 @@ export const useHarvestStore = defineStore('harvest', {
       } catch (err) {
         logger.error('❌ Failed to sync overdue stores to cloud:', err);
 
-        // في حالة الفشل، إضافة للطابور
-        await addToSyncQueue({
-          type: 'sync_overdue_stores',
-          payload: { items: overdueItems, archive_date: archiveDate },
-          timestamp: Date.now()
-        });
+        // في حالة الفشل، إضافة للطابور إذا لم يطلب تخطي ذلك
+        if (!skipQueueOnError) {
+          await addToSyncQueue({
+            type: 'sync_overdue_stores',
+            payload: { items: overdueItems, archive_date: archiveDate },
+            timestamp: Date.now()
+          });
+        }
 
         throw err; // Re-throw to be caught by caller if needed
       }

@@ -38,7 +38,13 @@
     </section>
 
     <div class="stats-container">
-      <div v-for="(stat, key) in adminStats" :key="key" class="stat-card">
+      <div 
+        v-for="(stat, key) in adminStats" 
+        :key="key" 
+        class="stat-card" 
+        :class="{ 'cursor-pointer hover-effect': key === 'pendingRequests' }"
+        @click="handleStatClick(key)"
+      >
         <div class="stat-icon"><i :class="stat.icon"></i></div>
         <div class="stat-content">
           <h3>{{ stat.label }}</h3>
@@ -81,6 +87,7 @@
         <div class="search-input-wrapper w-full">
            <i class="fas fa-search control-icon"></i>
            <input v-model="store.filters.usersSearch" type="text" class="search-input" placeholder="ابحث بالكود، الاسم أو البريد" />
+           <i v-if="store.filters.usersSearch" class="fas fa-times clear-icon" @click="store.filters.usersSearch = ''" title="مسح البحث"></i>
         </div>
       </div>
 
@@ -148,7 +155,7 @@
       </div>
     </section>
 
-    <section class="admin-section">
+    <section id="pending-requests-section" class="admin-section">
       <div class="admin-section-header">
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
@@ -247,8 +254,9 @@
                   <div v-if="sub.end_date" class="expiry-date-sub">إلى: {{ store.formatDate(sub.end_date) }}</div>
                 </td>
                 <td class="col-days text-center font-bold">
-                  <span v-if="sub.status === 'active'" :style="{ color: getRemainingDaysColor(sub.end_date) }">
-                    {{ calculateRemainingDays(sub.end_date) }}
+                  <span v-if="sub.status === 'active' || sub.status === 'cancelled'" 
+                        :style="{ color: sub.status === 'cancelled' ? '#ef4444' : getRemainingDaysColor(sub.end_date) }">
+                    {{ calculateRemainingDays(sub.end_date, sub.status, sub.updated_at) }}
                   </span>
                   <span v-else>-</span>
                 </td>
@@ -353,6 +361,19 @@ const showSubscriptionDetails = (sub) => {
   showDetailsModal.value = true;
 };
 
+const handleStatClick = (key) => {
+  if (key === 'pendingRequests') {
+    const sectionElement = document.getElementById('pending-requests-section');
+    if (sectionElement) {
+      sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      sectionElement.classList.add('highlight-section');
+      setTimeout(() => sectionElement.classList.remove('highlight-section'), 2000);
+    } else {
+      console.warn('Pending requests section not found');
+    }
+  }
+};
+
 const handleActiveUsersPeriodChange = () => store.fetchStats(false);
 
 const isAllSelected = computed(() => {
@@ -426,7 +447,15 @@ const filteredUsers = computed(() => {
 /**
  * حساب الأيام المتبقية مع الأخذ في الاعتبار فارق التوقيت
  */
-const calculateRemainingDays = (endDate) => {
+const calculateRemainingDays = (endDate, status = 'active', updatedAt = null) => {
+  if (status === 'cancelled' && updatedAt) {
+     // Freeze the countdown: Calculate remaining duration from the moment of cancellation
+     // effectively: EndDate - UpdatedAt
+     const end = new Date(endDate);
+     const pausedAt = new Date(updatedAt);
+     const diffTime = end - pausedAt;
+     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  }
   return TimeService.calculateDaysRemaining(endDate, store.serverTimeOffset);
 };
 
@@ -623,4 +652,26 @@ body.dark .detail-item label { color: var(--gray-400); }
 .d-flex { display: flex !important; }
 .justify-between { justify-content: space-between !important; }
 .align-center { align-items: center !important; }
+
+/* Clear Icon Styles */
+.search-input-wrapper { position: relative; display: flex; align-items: center; } /* Ensure wrapper is relative */
+.clear-icon {
+  position: absolute;
+  left: 10px; /* Adjust based on RTL/LTR, usually left in RTL if text is right? No, input text is usually right in RTL. Icon should be on the left (end of input). */
+  cursor: pointer;
+  color: #999;
+  padding: 5px;
+  transition: color 0.2s;
+  z-index: 2;
+}
+.clear-icon:hover { color: var(--danger, #ef4444); }
+
+.cursor-pointer { cursor: pointer; }
+.hover-effect:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: all 0.3s ease; }
+.highlight-section { animation: glow 2s ease-in-out; }
+@keyframes glow {
+  0% { box-shadow: 0 0 5px rgba(0, 121, 101, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(0, 121, 101, 0.8); }
+  100% { box-shadow: none; }
+}
 </style>

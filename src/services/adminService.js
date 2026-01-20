@@ -119,7 +119,7 @@ export const adminService = {
       return apiInterceptor(supabase.from('subscriptions').update({ status: 'active', start_date: now.toISOString(), end_date: end.toISOString(), ...updates }).eq('id', id).select().single());
     }
     if (action === 'reject' || action === 'delete') {
-      return apiInterceptor(supabase.from('subscriptions').delete().eq('id', id).select().single());
+      return apiInterceptor(supabase.from('subscriptions').delete().eq('id', id).select());
     }
     if (action === 'cancel') {
       return apiInterceptor(supabase.from('subscriptions').update({ status: 'cancelled', ...updates }).eq('id', id).select().single());

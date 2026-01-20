@@ -26,7 +26,7 @@ export const paymentService = {
       // Log the error but proceed with fallback
       logger.error("Error fetching plan from DB, using fallback.", error);
     }
-    
+
     if (data) {
       return { ...data, period: planInfo.period };
     } else {
@@ -56,7 +56,7 @@ export const paymentService = {
       await apiInterceptor(
         supabase
           .from('subscriptions')
-          .update({ status: 'cancelled', end_date: new Date().toISOString() })
+          .update({ status: 'cancelled' })
           .eq('user_id', userId)
           .eq('status', 'active')
       );

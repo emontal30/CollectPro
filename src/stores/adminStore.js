@@ -75,9 +75,9 @@ export const useAdminStore = defineStore('admin', () => {
     fetchError.value = null;
 
     try {
-      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي - زيادة إلى 30 ثانية
+      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي - زيادة إلى 60 ثانية
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 30000);
+        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 60000);
       });
 
       // 2. Fetch Time Offset separately (Low priority)
@@ -275,8 +275,11 @@ export const useAdminStore = defineStore('admin', () => {
       const subBefore = allSubscriptions.value.find(s => s.id === id);
       const targetUserId = subBefore?.user_id;
 
-      const { data: updatedSub, error } = await api.admin.handleSubscriptionAction(id, action);
+      const { data: responseData, error } = await api.admin.handleSubscriptionAction(id, action);
       if (error) throw error;
+
+      // Handle response which might be an array (for delete) or object
+      const updatedSub = Array.isArray(responseData) ? responseData[0] : responseData;
 
       // === تحديث البيانات محلياً لتجنب إعادة التحميل ===
 
