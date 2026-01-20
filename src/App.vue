@@ -92,7 +92,8 @@ onMounted(() => {
         collabStore.fetchCollaborators(),
         adminStore.loadDashboardData(true),
         harvestStore.initialize(),
-        mySubStore.forceRefresh(authStore.user) // تحديث حالة الاشتراك عند العودة للتطبيق
+        mySubStore.forceRefresh(authStore.user), // تحديث حالة الاشتراك عند العودة للتطبيق
+        settingsStore.checkRemoteCommands() // New: Check for admin commands (wipe cache etc)
       ]);
       logger.info('App resumed: stores refreshed');
     } catch (err) {

@@ -93,7 +93,8 @@ export const useAdminStore = defineStore('admin', () => {
         fetchPendingSubscriptions(),
         fetchAllSubscriptions(),
         fetchUsers(),
-        fetchSystemConfig()
+        fetchSystemConfig(),
+        fetchAppErrors()
       ]);
 
       const results = await Promise.race([fetchPromise, timeoutPromise]);
@@ -394,10 +395,137 @@ export const useAdminStore = defineStore('admin', () => {
     return new Date(dateStr).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
+  // Error Logging State
+  const appErrors = ref([]);
+
+  // ... (previous code)
+
+  async function fetchAppErrors(showFeedback = false) {
+    if (showFeedback) showLoading('جاري تحديث سجل الأخطاء...');
+    try {
+      const { data, error } = await supabase
+        .from('app_errors')
+        .select(`
+          *,
+          users:user_id (email, full_name, role)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      appErrors.value = data || [];
+
+      if (showFeedback) {
+        closeLoading();
+        addNotification('تم تحديث سجل الأخطاء بنجاح', 'success');
+      }
+    } catch (e) {
+      if (showFeedback) closeLoading();
+      logger.error('Error fetching app errors:', e);
+      if (showFeedback) addNotification('فشل تحديث سجل الأخطاء', 'error');
+    }
+  }
+
+  async function resolveError(id) {
+    try {
+      const { error } = await supabase
+        .from('app_errors')
+        .update({ is_resolved: true })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      const idx = appErrors.value.findIndex(e => e.id === id);
+      if (idx !== -1) appErrors.value[idx].is_resolved = true;
+
+      addNotification('تم تحديد الخطأ كمعالج', 'success');
+    } catch (e) {
+      logger.error('Error resolving error:', e);
+      addNotification('فشل تحديث الحالة', 'error');
+    }
+  }
+
+  async function deleteError(id) {
+    const result = await confirm({
+      title: 'حذف السجل',
+      text: 'هل أنت متأكد من حذف هذا الخطأ؟',
+      icon: 'warning'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const { error } = await supabase.from('app_errors').delete().eq('id', id);
+      if (error) throw error;
+      appErrors.value = appErrors.value.filter(e => e.id !== id);
+      addNotification('تم الحذف بنجاح', 'success');
+    } catch (e) {
+      logger.error('Failed to delete error:', e);
+      addNotification('فشل الحذف', 'error');
+    }
+  }
+
+  async function runRepairTool(userId) {
+    if (!userId) return;
+    const result = await confirm({
+      title: 'إصلاح حساب المستخدم',
+      text: 'هل تريد إجراء فحص وإصلاح شامل لبيانات هذا المستخدم؟',
+      icon: 'info',
+      confirmButtonText: 'إبدأ الإصلاح'
+    });
+    if (!result.isConfirmed) return;
+
+    showLoading('جاري إصلاح البيانات...');
+    try {
+      const { data, error } = await supabase.rpc('repair_user_account', { target_user_id: userId });
+      if (error) throw error;
+
+      closeLoading();
+      if (data.success) {
+        showSuccess(data.message);
+        // Refresh User List
+        fetchUsers(false);
+      } else {
+        showError(data.message);
+      }
+    } catch (e) {
+      closeLoading();
+      logger.error('Repair failed:', e);
+      showError('فشل إصلاح الحساب');
+    }
+  }
+
+  async function sendRemoteCommand(userId, commandType) {
+    const cmdMap = {
+      'clear_cache': 'مسح الكاش وإعادة التحميل',
+      'force_logout': 'تسجيل خروج إجباري'
+    };
+
+    const result = await confirm({
+      title: 'أمر تحكم عن بعد',
+      text: `هل تريد إرسال أمر "${cmdMap[commandType]}" لهذا المستخدم؟ سيتم تنفيذه عند فتح التطبيق.`,
+      icon: 'warning'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const { error } = await supabase.from('admin_user_commands').insert({
+        user_id: userId,
+        command_type: commandType
+      });
+      if (error) throw error;
+      showSuccess(`تم إرسال الأمر (${cmdMap[commandType]}) بنجاح`);
+    } catch (e) {
+      logger.error('Command failed:', e);
+      showError('فشل إرسال الأمر');
+    }
+  }
+
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
-    serverTimeOffset, // إضافة serverTimeOffset
-    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers,
-    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig
+    serverTimeOffset, appErrors,
+    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers, fetchAppErrors, resolveError, deleteError,
+    handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig,
+    runRepairTool, sendRemoteCommand
   };
 });

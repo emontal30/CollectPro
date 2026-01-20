@@ -93,52 +93,68 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     isLoading.value = true;
+    const TIMEOUT_MS = 15000;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Subscription Refresh Timeout')), TIMEOUT_MS)
+    );
+
     try {
       const userToRefresh = currentUser || user.value;
-      if (!userToRefresh) {
-        const { data: { session } } = await supabase.auth.getSession();
-        user.value = session?.user || null;
-      } else {
-        user.value = userToRefresh;
-      }
 
-      if (!user.value) {
-        clearSubscription();
-        return;
-      }
+      // Perform the refresh logic wrapped in race
+      await Promise.race([
+        (async () => {
+          if (!userToRefresh) {
+            const { data: { session } } = await supabase.auth.getSession();
+            user.value = session?.user || null;
+          } else {
+            user.value = userToRefresh;
+          }
 
-      const [subRes, histRes, serverTimeRes] = await Promise.all([
-        api.subscriptions.getUserSubscription(user.value.id),
-        api.subscriptions.getSubscriptionHistory(user.value.id),
-        supabase.rpc('get_server_time')
+          if (!user.value) {
+            clearSubscription();
+            return;
+          }
+
+          const [subRes, histRes, serverTimeRes] = await Promise.all([
+            api.subscriptions.getUserSubscription(user.value.id),
+            api.subscriptions.getSubscriptionHistory(user.value.id),
+            supabase.rpc('get_server_time')
+          ]);
+
+          if (!serverTimeRes.error && serverTimeRes.data) {
+            serverTimeOffset.value = new Date(serverTimeRes.data).getTime() - Date.now();
+          }
+
+          if (subRes.error) {
+            subscription.value = null;
+          } else {
+            subscription.value = subRes.subscription;
+          }
+
+          if (histRes.error) {
+            history.value = [];
+          } else {
+            history.value = histRes.history || [];
+          }
+
+          localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({
+            sub: subscription.value,
+            hist: history.value
+          }));
+
+          isInitialized.value = true;
+          setupRealtimeListener();
+        })(),
+        timeoutPromise
       ]);
 
-      if (!serverTimeRes.error && serverTimeRes.data) {
-        serverTimeOffset.value = new Date(serverTimeRes.data).getTime() - Date.now();
-      }
-
-      if (subRes.error) {
-        subscription.value = null;
-      } else {
-        subscription.value = subRes.subscription;
-      }
-
-      if (histRes.error) {
-        history.value = [];
-      } else {
-        history.value = histRes.history || [];
-      }
-
-      localStorage.setItem(SUBSCRIPTION_CACHE_KEY, JSON.stringify({
-        sub: subscription.value,
-        hist: history.value
-      }));
-
-      isInitialized.value = true;
-      setupRealtimeListener();
-
     } catch (err) {
-      logger.error('ForceRefresh failed:', err);
+      logger.error('ForceRefresh failed or timed out:', err);
+      // Even on error, we might want to say initialized so we don't block? 
+      // OR we just leave it. If init fails, maybe we shouldn't block user from accessing free features?
+      // Since this is forceRefresh, it's called often. If it fails, we assume old data or no data.
+      if (!isInitialized.value) isInitialized.value = true; // Unblock app if this was the first load
     } finally {
       isLoading.value = false;
     }

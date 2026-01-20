@@ -42,15 +42,20 @@
         v-for="(stat, key) in adminStats" 
         :key="key" 
         class="stat-card" 
-        :class="{ 'cursor-pointer hover-effect': key === 'pendingRequests' }"
+        :class="{ 'cursor-pointer hover-effect': key === 'pendingRequests' || key === 'appErrors' }"
         @click="handleStatClick(key)"
       >
         <div class="stat-icon"><i :class="stat.icon"></i></div>
         <div class="stat-content">
           <h3>{{ stat.label }}</h3>
           <p class="stat-value">
-             <span v-if="store.isLoading && !store.stats[key]" class="spinner-tiny"></span>
-             <span v-else>{{ store.stats[key] || 0 }}</span>
+             <template v-if="key === 'appErrors'">
+               <span>{{ store.appErrors.length }}</span>
+             </template>
+             <template v-else>
+               <span v-if="store.isLoading && !store.stats[key]" class="spinner-tiny"></span>
+               <span v-else>{{ store.stats[key] || 0 }}</span>
+             </template>
              {{ stat.unit }}
           </p>
           
@@ -138,18 +143,71 @@
                   </div>
                 </td>
                 <td class="text-center">
-                  <button 
-                    class="btn btn--icon"
-                    :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
-                    @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
-                    <i class="fas fa-play-circle"></i>
-                  </button>
+                  <div class="d-flex justify-center gap-1 align-center">
+                    <button 
+                      class="btn btn--icon"
+                      :title="user.hasActiveSub ? 'إضافة أيام للاشتراك الحالي' : 'تفعيل اشتراك جديد'"
+                      @click="store.activateManualSubscription(user.id, user.manualDays, user.hasActiveSub)">
+                      <i class="fas fa-play-circle"></i>
+                    </button>
+                    
+                    <!-- Support Tools Button -->
+                    <button class="btn btn--icon text-muted" title="أدوات الدعم المتقدمة" @click="openSupportModal(user)">
+                      <i class="fas fa-wrench"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="filteredUsers.length === 0 && !store.isLoading">
                  <td colspan="5" class="text-center p-3 text-muted">لا يوجد مستخدمين مطابقين للبحث</td>
               </tr>
             </template>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="app-errors-section" class="admin-section">
+      <div class="admin-section-header d-flex justify-between align-center">
+        <h2><i class="fas fa-bug"></i> سجل أخطاء التطبيق ({{ store.appErrors.length }})</h2>
+        <button class="btn btn-sm btn-secondary" @click="store.fetchAppErrors(true)"><i class="fas fa-sync"></i> تحديث</button>
+      </div>
+      
+      <div class="table-wrapper m-0 rounded-none shadow-none" style="max-height: 400px; overflow-y: auto;">
+        <table class="modern-table auto-layout">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>المستخدم</th>
+              <th>الرسالة</th>
+              <th>الحالة</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="store.appErrors.length === 0">
+              <td colspan="5" class="text-center p-3 text-muted">سجل الأخطاء نظيف ✅</td>
+            </tr>
+            <tr v-for="err in store.appErrors" :key="err.id" :class="{ 'bg-resolved': err.is_resolved }">
+              <td class="text-xs">{{ store.formatDate(err.created_at) }} <br> {{ new Date(err.created_at).toLocaleTimeString() }}</td>
+              <td class="text-xs">
+                <div v-if="err.users">{{ err.users.full_name }}<br><span class="text-muted">{{ err.users.email }}</span></div>
+                <div v-else class="text-muted">زائر / غير مسجل</div>
+              </td>
+              <td class="text-sm error-msg-cell" :title="err.stack_trace">
+                <div class="font-bold text-danger">{{ err.error_message }}</div>
+                <div class="text-xs text-muted truncate">{{ err.context?.url }}</div>
+              </td>
+              <td class="text-center">
+                <span class="status-badge" :class="err.is_resolved ? 'status-active' : 'status-expired'">{{ err.is_resolved ? 'معالج' : 'جديد' }}</span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex justify-center gap-1">
+                  <button v-if="!err.is_resolved" class="btn btn--icon text-success" title="تحديد كمعالج" @click="store.resolveError(err.id)"><i class="fas fa-check"></i></button>
+                  <button class="btn btn--icon text-danger" title="حذف" @click="store.deleteError(err.id)"><i class="fas fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -326,6 +384,78 @@
         <button class="btn btn-secondary" @click="showDetailsModal = false">إغلاق</button>
       </template>
     </BaseModal>
+
+    <!-- New User Support Modal -->
+    <BaseModal 
+      v-model:show="showSupportModal" 
+      :title="'دعم فني: ' + (selectedSupportUser?.full_name || 'مستخدم')"
+    >
+      <div v-if="selectedSupportUser" class="support-modal-content">
+        <div class="user-quick-info mb-3">
+          <div class="text-xs text-muted">ID: <span class="font-mono">{{ selectedSupportUser.id }}</span></div>
+          <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span></div>
+          <div class="text-xs text-muted">Email: {{ selectedSupportUser.email }}</div>
+        </div>
+
+        <!-- Recent Errors Section -->
+        <div class="error-history-section mb-4">
+          <h4 class="text-sm font-bold mb-2 border-bottom pb-1"><i class="fas fa-history text-danger"></i> أحدث الأخطاء المسجلة</h4>
+          
+          <div v-if="selectedUserErrors.length === 0" class="text-center p-3 text-muted bg-light rounded text-sm">
+            لا توجد أخطاء مسجلة حديثاً لهذا المستخدم.
+          </div>
+          
+          <div v-else class="error-list-container" style="max-height: 200px; overflow-y: auto;">
+            <div v-for="err in selectedUserErrors" :key="err.id" class="error-item p-2 mb-1 border rounded bg-light text-xs">
+              <div class="d-flex justify-between font-bold">
+                 <span class="text-danger">{{ err.error_message }}</span>
+                 <span class="text-muted" style="min-width: 70px; text-align: left">{{ store.formatDate(err.created_at) }}</span>
+              </div>
+              <div class="text-muted mt-1 truncate">{{ err.context?.url || 'No URL' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="support-actions-section">
+          <h4 class="text-sm font-bold mb-2 border-bottom pb-1"><i class="fas fa-tools text-primary"></i> أدوات الإصلاح</h4>
+          
+          <div class="actions-grid d-flex gap-2 flex-wrap">
+             <button class="btn btn-primary d-flex align-center gap-2 flex-1" @click="store.runRepairTool(selectedSupportUser.id)">
+               <i class="fas fa-magic"></i>
+               <div class="text-right">
+                 <div class="font-bold">إصلاح شامل</div>
+                 <div class="text-xs opacity-75">مزامنة البيانات وإصلاح الملف</div>
+               </div>
+             </button>
+
+             <button class="btn btn-warning d-flex align-center gap-2 flex-1" @click="store.sendRemoteCommand(selectedSupportUser.id, 'clear_cache')">
+               <i class="fas fa-eraser"></i>
+               <div class="text-right">
+                 <div class="font-bold">مسح الكاش</div>
+                 <div class="text-xs opacity-75">إجبار التطبيق على التحديث</div>
+               </div>
+             </button>
+
+             <button class="btn btn-danger d-flex align-center gap-2 flex-1" @click="store.sendRemoteCommand(selectedSupportUser.id, 'force_logout')">
+               <i class="fas fa-sign-out-alt"></i>
+               <div class="text-right">
+                 <div class="font-bold">خروج إجباري</div>
+                 <div class="text-xs opacity-75">إنهاء الجلسة الحالية</div>
+               </div>
+             </button>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn btn-secondary" @click="showSupportModal = false">إغلاق</button>
+      </template>
+    </BaseModal>
+
+    <!-- Scroll To Top Button -->
+    <button v-show="showScrollTop" class="scroll-top-btn" @click="scrollToTop">
+      <i class="fas fa-arrow-up"></i>
+    </button>
   </div>
 </template>
 
@@ -349,28 +479,81 @@ const adminStats = {
   pendingRequests: { label: 'طلبات قيد المراجعة', icon: 'fas fa-clock', unit: '' },
   activeSubscriptions: { label: 'الاشتراكات النشطة', icon: 'fas fa-check-circle', unit: '' },
   totalRevenue: { label: 'إجمالي الإيرادات', icon: 'fas fa-money-bill-wave', unit: 'ج.م' },
+  appErrors: { label: 'الأخطاء', icon: 'fas fa-bug', unit: '' },
 };
 
 const selectedUsers = ref([]);
 const bulkDays = ref(null);
 const showDetailsModal = ref(false);
 const selectedSub = ref(null);
+// showDetailsModal is already defined above, avoiding duplicate
+const showSupportModal = ref(false);
+const selectedSupportUser = ref(null);
+const showScrollTop = ref(false);
+
+const activeDropdownId = ref(null); // REMOVED
+
+const selectedUserErrors = computed(() => {
+  if (!selectedSupportUser.value) return [];
+  return store.appErrors.filter(e => e.user_id === selectedSupportUser.value.id);
+});
+
+const openSupportModal = (user) => {
+  selectedSupportUser.value = user;
+  showSupportModal.value = true;
+};
 
 const showSubscriptionDetails = (sub) => {
   selectedSub.value = sub;
   showDetailsModal.value = true;
 };
 
+// NEW: Scroll To Top Logic
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300;
+};
+
+const scrollToTop = () => {
+    // Force immediate scroll for maximum compatibility
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+};
+
+// Close dropdown when clicking outside
+const closeDropdown = (e) => {
+  if (!e.target.closest('.dropdown-wrapper')) {
+     // activeDropdownId.value = null; 
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('click', closeDropdown);
+  window.addEventListener('scroll', handleScroll);
+});
+
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+  window.removeEventListener('click', closeDropdown);
+  window.removeEventListener('scroll', handleScroll);
+});
+
 const handleStatClick = (key) => {
-  if (key === 'pendingRequests') {
-    const sectionElement = document.getElementById('pending-requests-section');
+  const sectionMap = {
+    'pendingRequests': 'pending-requests-section',
+    'appErrors': 'app-errors-section'
+  };
+
+  const sectionId = sectionMap[key];
+  if (sectionId) {
+    const sectionElement = document.getElementById(sectionId);
     if (sectionElement) {
       sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       sectionElement.classList.add('highlight-section');
       setTimeout(() => sectionElement.classList.remove('highlight-section'), 2000);
-    } else {
-      console.warn('Pending requests section not found');
     }
+  } else {
+    if (key === 'pendingRequests') console.warn('Pending requests section not found');
   }
 };
 
@@ -506,10 +689,8 @@ watch(() => authStore.isAdmin, (newVal) => {
 .no-spin { -moz-appearance: textfield; }
 .input-with-notch { position: relative; display: flex; align-items: center; }
 .btn-notch-sign { position: absolute; left: 0; bottom: 0; background: var(--border-color, #ddd); color: var(--primary); border: none; border-radius: 0 4px 0 0; width: 18px; height: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; cursor: pointer; opacity: 0.7; transition: all 0.2s; padding: 0; line-height: 0; }
-.btn-notch-sign:hover { opacity: 1; background: var(--primary); color: white; }
-.bulk-actions { display: flex; align-items: center; gap: 8px; }
-.bulk-input { width: 70px; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-weight: bold; }
-.admin-section { margin-bottom: 2rem; background: var(--surface-bg); border-radius: var(--border-radius-lg); overflow: hidden; }
+
+.admin-section { margin-bottom: 2rem; background: var(--surface-bg); border-radius: var(--border-radius-lg); overflow: visible; } /* Changed to visible to allow dropdowns */
 .protection-card { border: 1px solid var(--border-color); }
 .protection-content { padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
 .protection-info { flex: 1; }
@@ -543,6 +724,37 @@ input:checked + .slider:before { transform: translateX(26px); }
   padding: 8px 4px !important;
   text-align: center !important;
 }
+
+/* Dropdown Support Styles refined */
+.dropdown-wrapper { position: relative; display: inline-block; }
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 0; /* Changed to left:0 to expand into table in RTL */
+  top: 100%;
+  background-color: var(--surface-bg);
+  min-width: 180px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1000;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  text-align: right;
+  margin-top: 5px;
+}
+.dropdown-content.show { display: block; }
+
+.dropdown-content a {
+  color: var(--text-main);
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.dropdown-content a:hover { background-color: var(--bg-secondary); color: var(--primary); }
+.dropdown-content a i { display: inline-block; width: 20px; text-align: center; margin-left: 8px; }
 
 /* User column in logged-in users table - fixed width 150px */
 #logged-in-users-table th.col-user,
@@ -674,4 +886,32 @@ body.dark .detail-item label { color: var(--gray-400); }
   50% { box-shadow: 0 0 20px rgba(0, 121, 101, 0.8); }
   100% { box-shadow: none; }
 }
+
+
+/* Scroll To Top Button */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 2147483647; /* Max Safe Integer for z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0.9;
+}
+.scroll-top-btn:hover {
+  transform: translateY(-5px);
+  opacity: 1;
+  background-color: var(--primary-dark);
+}
+
 </style>

@@ -141,15 +141,26 @@ export const useAuthStore = defineStore('auth', () => {
     isInitializing = true;
     isLoading.value = true;
 
+    const TIMEOUT_MS = 15000;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth Initialization Timeout')), TIMEOUT_MS)
+    );
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Race between the actual initialization and the timeout
+      await Promise.race([
+        (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
 
-      if (session?.user) {
-        await updateUserState(session);
-      }
+          if (session?.user) {
+            await updateUserState(session);
+          }
 
-      // Load system config (Enforce Subscription) before finishing init
-      await loadSystemConfig();
+          // Load system config (Enforce Subscription) before finishing init
+          await loadSystemConfig();
+        })(),
+        timeoutPromise
+      ]);
 
       isLoading.value = false;
       isInitialized.value = true;
@@ -168,7 +179,9 @@ export const useAuthStore = defineStore('auth', () => {
       authListener.value = listener;
 
     } catch (err) {
-      logger.error('💥 Auth Init Error:', err);
+      logger.error('💥 Auth Init Error or Timeout:', err);
+      // Even on timeout/error, we mark as initialized to allow app to mount
+      // The router will then redirect to Login if not authenticated
       isLoading.value = false;
       isInitialized.value = true;
     } finally {

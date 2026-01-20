@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import logger from '@/utils/logger.js'
+import { supabase } from '@/supabase';
 import { setLocalStorageCache, getLocalStorageCache } from '@/services/cacheManager';
 
 // إصدار الإعدادات - يتم تغييره عند حدوث تغييرات جذرية في التنسيقات لضمان تحديث كاش المستخدم
@@ -135,6 +136,49 @@ export const useSettingsStore = defineStore('settings', {
     detectSystemPreferences() {
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         this.darkMode = true
+      }
+    },
+
+    async checkRemoteCommands() {
+      try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+        const { data: commands, error } = await supabase.rpc('fetch_and_ack_commands');
+        if (error || !commands) return;
+
+        for (const cmd of commands) {
+          logger.info(`📝 Received remote command: ${cmd.command}`);
+
+          if (cmd.command === 'clear_cache' || cmd.command === 'refresh_data') {
+            await this.forceClearCacheAndReload();
+          }
+          else if (cmd.command === 'force_logout') {
+            const { useAuthStore } = await import('@/stores/auth');
+            const authStore = useAuthStore();
+            await authStore.logout();
+          }
+        }
+      } catch (e) {
+        logger.warn('Failed to check remote commands:', e);
+      }
+    },
+
+    async forceClearCacheAndReload() {
+      try {
+        logger.info('🧹 Executing Force Cache Clear...');
+        localStorage.clear();
+        sessionStorage.clear();
+
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+        }
+
+        window.location.reload(true);
+      } catch (e) {
+        window.location.reload();
       }
     },
 
