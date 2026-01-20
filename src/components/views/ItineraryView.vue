@@ -64,6 +64,10 @@
            >
              <i class="fas fa-trash-alt"></i> <span>سلة ({{ store.selectedIds.length }})</span>
            </button>
+
+           <button class="btn-itinerary-action btn-export" @click="handleExportLocations" title="تصدير المواقع">
+             <i class="fas fa-file-export"></i> <span>تصدير المواقع</span>
+           </button>
         </div>
       </div>
 
@@ -332,16 +336,48 @@
       </div>
     </div>
   
+    <!-- Offline Export Table (Hidden) -->
+    <div class="offline-export-container">
+      <div id="locations-export-table">
+         <div style="text-align: center; margin-bottom: 20px;">
+           <h2 style="margin: 0; color: #007965;">تقرير مواقع التجار</h2>
+           <p style="margin: 5px 0; color: #666;">تم التصدير بتاريخ: {{ new Date().toLocaleDateString('ar-EG') }}</p>
+         </div>
+         <table style="width: 100%; border-collapse: collapse; direction: rtl;">
+           <thead>
+             <tr style="background-color: #f1f5f9;">
+               <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">اسم التاجر</th>
+               <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">الكود</th>
+               <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">الإحداثيات (Lat, Lng)</th>
+               <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">آخر تحديث</th>
+             </tr>
+           </thead>
+           <tbody>
+             <tr v-for="route in exportableRoutes" :key="route.id">
+               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{{ route.shop_name }}</td>
+               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ route.shop_code }}</td>
+               <td style="padding: 8px; border: 1px solid #ddd; text-align: center; direction: ltr;">{{ route.latitude }}, {{ route.longitude }}</td>
+               <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{{ formatTimestamp(route.location_updated_at) }}</td>
+             </tr>
+           </tbody>
+         </table>
+         <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #888;">
+           تم استخراج هذا التقرير من نظام CollectPro
+         </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 
 <script setup>
-import { onMounted, watch, ref, nextTick, onActivated } from 'vue';
+import { onMounted, watch, ref, nextTick, onActivated, computed } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 import { useItineraryStore } from '@/stores/itineraryStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import logger from '@/utils/logger.js';
+import { exportAndShareTable } from '@/utils/exportUtils';
 import "leaflet/dist/leaflet.css";
 import { LMap, LTileLayer, LMarker, LPolyline, LIcon, LPopup } from "@vue-leaflet/vue-leaflet";
 
@@ -349,6 +385,21 @@ const store = useItineraryStore();
 const mapRef = ref(null);
 
 let isInitializing = false; // Guard لمنع التنفيذ المتز امن
+
+// Computed property for exportable routes (only those with valid coordinates)
+const exportableRoutes = computed(() => {
+  return store.routes.filter(r => r.latitude && r.longitude);
+});
+
+const handleExportLocations = async () => {
+    if (exportableRoutes.value.length === 0) {
+      return alert('لا توجد مواقع محددة للتصدير. يرجى تحديد مواقع للمحلات أولاً.');
+    }
+    await exportAndShareTable('locations-export-table', 'Merchant_Locations_Report', {
+      title: 'تصدير مواقع التجار',
+      description: `سيتم تصدير قائمة تحتوي على <strong>${exportableRoutes.value.length}</strong> تاجر مع إحداثياتهم المسجلة وتاريخ آخر تحديث.`
+    });
+};
 
 /**
  * دالة مركزية لتهيئة بيانات خط السير
@@ -406,7 +457,7 @@ watch(() => store.activeTab, (newTab) => {
 });
 
 const formatTimestamp = (isoString) => {
-  if (!isoString) return '';
+  if (!isoString) return 'غير مسجل';
   const options = {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true
@@ -420,6 +471,7 @@ watch(() => store.polylineCoords, () => {
     fitMapToBounds();
   }
 }, { deep: true });
+
 </script>
 
 <style scoped>
@@ -654,5 +706,24 @@ watch(() => store.polylineCoords, () => {
 }
 .ignored-modal .modal-body::-webkit-scrollbar-thumb:hover {
   background: #aaa; 
+}
+/* Hidden Export Table */
+.offline-export-container {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  visibility: hidden;
+  z-index: -1;
+}
+
+/* Export Button Style */
+.btn-export {
+  background-color: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.btn-export:hover {
+  background-color: var(--success);
+  color: white;
 }
 </style>

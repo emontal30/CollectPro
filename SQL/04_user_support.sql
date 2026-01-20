@@ -172,6 +172,3 @@ BEGIN
     RETURNING command_type AS command;
 END;
 $$;
-
-
-
