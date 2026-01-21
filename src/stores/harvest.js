@@ -155,6 +155,56 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    /**
+     * تحضير البيانات قبل التحديث - حفظ جميع البيانات الحرجة
+     * يتم استدعاؤها قبل تحديث Service Worker لضمان عدم فقدان البيانات
+     */
+    async prepareForUpdate() {
+      logger.info('💾 Preparing for update - saving all critical data...');
+
+      try {
+        // 1. حفظ الصفوف الحالية
+        const cleanedRows = safeDeepClone(this.rows);
+        await localforage.setItem(HARVEST_ROWS_KEY, cleanedRows);
+        logger.info('✅ Saved harvest rows');
+
+        // 2. حفظ الإعدادات في localStorage
+        await Promise.all([
+          setLocalStorageCache('masterLimit', String(this.masterLimit)),
+          setLocalStorageCache('extraLimit', String(this.extraLimit)),
+          setLocalStorageCache('currentBalance', String(this.currentBalance))
+        ]);
+        logger.info('✅ Saved limits and balance');
+
+        // 3. التأكد من حفظ بيانات المتأخرات إذا كانت موجودة
+        const overdueMetadata = await localforage.getItem('overdue_stores_metadata');
+        if (overdueMetadata && overdueMetadata.items && overdueMetadata.items.length > 0) {
+          // إعادة حفظها للتأكد من استمراريتها
+          await localforage.setItem('overdue_stores_metadata', overdueMetadata);
+          logger.info(`✅ Verified overdue metadata (${overdueMetadata.items.length} items)`);
+        }
+
+        // 4. محاولة المزامنة السحابية إذا كان متصلاً
+        const authStore = useAuthStore();
+        if (navigator.onLine && authStore.user) {
+          try {
+            await this.syncToCloud(authStore.user.id);
+            logger.info('✅ Synced to cloud before update');
+          } catch (syncErr) {
+            logger.warn('⚠️ Cloud sync failed, but local data is saved:', syncErr.message);
+            // لا نفشل العملية إذا فشلت المزامنة السحابية
+          }
+        }
+
+        logger.info('✅ All data prepared successfully for update');
+        return { success: true };
+
+      } catch (error) {
+        logger.error('❌ Failed to prepare data for update:', error);
+        throw error;
+      }
+    },
+
     // New: Fetch latest state from cloud
     async syncFromCloud() {
       const authStore = useAuthStore();
@@ -695,6 +745,104 @@ export const useHarvestStore = defineStore('harvest', {
         } catch (err) {
           logger.error('Error clearing cloud overdue stores:', err);
         }
+      }
+    },
+
+    /**
+     * استعادة آخر متأخرات من الأرشيف
+     * يقوم بحذف جميع المتأخرات الحالية ثم جلب المتأخرات من آخر تاريخ أرشيف
+     */
+    async restoreLatestOverdueFromArchive() {
+      logger.info('🔄 Starting restore latest overdue from archive...');
+
+      try {
+        // 1. حذف جميع المتأخرات الحالية بشكل جذري (محلياً وسحابياً)
+        logger.info('🗑️ Clearing all current overdue data...');
+        await this.clearOverdueStores();
+
+        // 2. الحصول على آخر تاريخ أرشيف من القائمة المحلية
+        const archiveStore = useArchiveStore();
+
+        // تحميل التواريخ المتاحة إذا لم تكن محملة (سريع جداً لأنها محلية)
+        if (archiveStore.availableDates.length === 0) {
+          await archiveStore.loadAvailableDates(false); // false = don't force cloud fetch
+        }
+
+        const latestArchiveDate = archiveStore.availableDates[0]?.value || null;
+
+        if (!latestArchiveDate) {
+          logger.warn('⚠️ No archive dates found');
+          return {
+            success: false,
+            message: 'لا توجد تواريخ أرشيف متاحة',
+            items: []
+          };
+        }
+
+        logger.info(`📅 Latest archive date found (local): ${latestArchiveDate}`);
+
+        // 3. جلب بيانات الأرشيف من IndexedDB مباشرة (سريع جداً)
+        const localKey = `${archiveStore.DB_PREFIX}${latestArchiveDate}`;
+        const archiveData = await localforage.getItem(localKey);
+
+
+        if (!archiveData || !Array.isArray(archiveData) || archiveData.length === 0) {
+          logger.warn('⚠️ No archive data found locally for this date');
+          return {
+            success: false,
+            message: `لا توجد بيانات أرشيف محلية للتاريخ ${latestArchiveDate}`,
+            items: []
+          };
+        }
+
+        logger.info(`📦 Found ${archiveData.length} rows in local archive`);
+
+        // 4. حساب المتأخرات من بيانات الأرشيف المحلية
+        const overdueItems = archiveData
+          .map(row => ({
+            shop: row.shop,
+            code: row.code,
+            net: (parseFloat(row.collector) || 0) - ((parseFloat(row.amount) || 0) + (parseFloat(row.extra) || 0))
+          }))
+          .filter(item => item.net !== 0); // فقط المحلات التي لديها متأخرات
+
+        if (overdueItems.length === 0) {
+          logger.info('📭 No overdue items found in archive (all balanced)');
+          return {
+            success: true,
+            message: 'لا توجد متأخرات في الأرشيف لهذا التاريخ (جميع المحلات متوازنة)',
+            items: [],
+            archiveDate: latestArchiveDate
+          };
+        }
+
+        // 5. حفظ المتأخرات المستعادة محلياً
+        await this._saveOverdueWithArchiveDate(overdueItems, latestArchiveDate);
+
+        // 6. مزامنة مع السحابة في الخلفية (غير محظور)
+        const authStore = useAuthStore();
+        if (navigator.onLine && authStore.user) {
+          this.syncOverdueStoresToCloud(overdueItems, latestArchiveDate, true).catch(err => {
+            logger.warn('⚠️ Background sync to cloud failed (non-critical):', err);
+          });
+        }
+
+        logger.info(`✅ Successfully restored ${overdueItems.length} overdue items from local archive ${latestArchiveDate}`);
+
+        return {
+          success: true,
+          message: `تم استعادة ${overdueItems.length} متأخرات من تاريخ ${latestArchiveDate}`,
+          items: overdueItems,
+          archiveDate: latestArchiveDate
+        };
+
+      } catch (error) {
+        logger.error('❌ Failed to restore overdue from archive:', error);
+        return {
+          success: false,
+          message: 'حدث خطأ أثناء استعادة المتأخرات',
+          items: []
+        };
       }
     },
 

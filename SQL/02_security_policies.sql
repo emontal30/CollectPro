@@ -154,6 +154,31 @@ DO $$ BEGIN
         PERFORM public.drop_all_policies_for_table('public', 'daily_archives');
         CREATE POLICY "Users manage own archives" ON public.daily_archives FOR ALL USING ((auth.uid() = user_id) AND public.can_write_data());
     END IF;
+
+    -- K. admin_user_commands (Security Fix)
+    IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'admin_user_commands') THEN
+        ALTER TABLE public.admin_user_commands ENABLE ROW LEVEL SECURITY;
+        PERFORM public.drop_all_policies_for_table('public', 'admin_user_commands');
+        
+        CREATE POLICY "Admins can manage all commands" ON public.admin_user_commands FOR ALL
+        USING (public.is_admin());
+
+        CREATE POLICY "Users can view their own commands" ON public.admin_user_commands FOR SELECT
+        USING (auth.uid() = user_id);
+
+        CREATE POLICY "Users can delete their own commands" ON public.admin_user_commands FOR DELETE
+        USING (auth.uid() = user_id);
+    END IF;
+
+    -- L. archive_search (Security Fix - No Policy)
+    IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'archive_search') THEN
+        ALTER TABLE public.archive_search ENABLE ROW LEVEL SECURITY;
+        PERFORM public.drop_all_policies_for_table('public', 'archive_search');
+        
+        -- Admin Access
+        CREATE POLICY "Admin manage archive search" ON public.archive_search FOR ALL 
+        USING (public.is_admin());
+    END IF;
 END $$;
 
 

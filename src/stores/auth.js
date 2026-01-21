@@ -141,7 +141,7 @@ export const useAuthStore = defineStore('auth', () => {
     isInitializing = true;
     isLoading.value = true;
 
-    const TIMEOUT_MS = 15000;
+    const TIMEOUT_MS = 25000;
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Auth Initialization Timeout')), TIMEOUT_MS)
     );

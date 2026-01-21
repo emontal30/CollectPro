@@ -254,6 +254,36 @@ export function useHarvest(props) {
     }
   };
 
+  const restoreLatestOverdue = async () => {
+    const { isConfirmed } = await confirm({
+      title: 'استعادة المتأخرات من الأرشيف',
+      text: 'سيتم حذف جميع المتأخرات الحالية واستعادة آخر متأخرات من الأرشيف. هل تريد المتابعة؟',
+      icon: 'warning',
+      confirmButtonText: 'نعم، استعادة',
+      confirmButtonColor: '#10b981',
+      showCancelButton: true
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const result = await store.restoreLatestOverdueFromArchive();
+
+      if (result.success) {
+        // تحديث القائمة في النافذة
+        overdueStores.value = result.items;
+        overdueDate.value = result.archiveDate;
+        selectedOverdueStores.value = [];
+        addNotification(result.message, 'success');
+      } else {
+        addNotification(result.message, 'error');
+      }
+    } catch (err) {
+      logger.error('Failed to restore overdue from archive', err);
+      addNotification('حدث خطأ أثناء استعادة المتأخرات', 'error');
+    }
+  };
+
   const showMissingCenters = () => {
     const currentCodes = new Set(displayRows.value.map(r => String(r.code).trim()));
     missingCenters.value = itineraryStore.routes.filter(route => !currentCodes.has(String(route.shop_code).trim()));
@@ -583,7 +613,10 @@ export function useHarvest(props) {
     getFilteredTotalNetClass,
     getFilteredTotalNetIcon,
     calculateNet, getRowNetStatus, getRowNetIcon,
-    exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, toggleProfileDropdown,
+    // Add overdueTotal
+    overdueTotal: computed(() => overdueStores.value.reduce((sum, item) => sum + (parseFloat(item.net) || 0), 0)),
+
+    exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, restoreLatestOverdue, toggleProfileDropdown,
     applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
     confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,

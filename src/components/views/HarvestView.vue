@@ -281,15 +281,32 @@
     <teleport to="body" v-if="!isSharedView">
         <div v-if="isOverdueModalOpen" class="modal-overlay" @click="isOverdueModalOpen = false">
             <div class="modal-content overdue-modal" @click.stop>
-                <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                      <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i class="fas fa-history text-danger"></i> المديونيات المتأخرة</h3>
-                      <button class="btn btn-sm btn-outline-primary" type="button" @click="toggleSelectAllOverdue" title="تحديد الكل">تحديد الكل</button>
+                <div class="modal-header flex-column align-items-start" style="padding-bottom: 10px; position: relative;">
+                    <button class="close-btn" @click="isOverdueModalOpen = false" style="position: absolute; left: 15px; top: 15px; margin: 0;">&times;</button>
+                    
+                    <div class="d-flex justify-content-between w-100 align-items-center mb-2" style="padding-left: 30px;">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px; font-size: 1.2rem;">
+                            <i class="fas fa-history text-danger"></i> 
+                            المديونيات المتأخرة
+                            <span v-if="overdueDate" class="text-muted font-normal text-sm" style="font-size: 0.85rem; margin-right: 5px;">
+                                📅 {{ overdueDate }}
+                            </span>
+                        </h3>
                     </div>
-                    <span v-if="overdueDate" class="overdue-date-badge" :title="`تاريخ الأرشفة: ${overdueDate}`">
-                      📅 {{ overdueDate }}
-                    </span>
-                    <button class="close-btn" @click="isOverdueModalOpen = false">&times;</button>
+                    
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 10px;">
+                        <button class="btn btn-sm btn-outline-primary" type="button" @click="toggleSelectAllOverdue" title="تحديد الكل">
+                            تحديد الكل
+                        </button>
+                        <button 
+                            class="btn btn-sm btn-outline-success" 
+                            type="button" 
+                            @click="restoreLatestOverdue" 
+                            title="حذف المتأخرات الحالية واستعادة آخر متأخرات من الأرشيف"
+                        >
+                            <i class="fas fa-sync-alt"></i> استعادة من الأرشيف
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-body scrollable-list">
                     <div v-if="overdueStores.length === 0" class="text-center text-success p-4">
@@ -304,21 +321,28 @@
                             <span class="header-item text-center">المديونية</span>
                         </div>
                         <div class="overdue-body">
-                            <div v-for="store in overdueStores" :key="store.code" class="overdue-row">
-                                <input type="checkbox" v-model="selectedOverdueStores" :value="store" />
-                                <span class="cell-item">{{ store.shop || 'بدون اسم' }}</span>
-                                <span class="cell-item text-center">{{ store.code }}</span>
+                            <div v-for="overdueItem in overdueStores" :key="overdueItem.code" class="overdue-row">
+                                <input type="checkbox" v-model="selectedOverdueStores" :value="overdueItem" />
+                                <span class="cell-item">{{ overdueItem.shop || 'بدون اسم' }}</span>
+                                <span class="cell-item text-center">{{ overdueItem.code }}</span>
                                 <span 
                                     class="cell-item text-center font-bold"
-                                    :class="store.net > 0 ? 'text-primary' : 'text-danger'"
+                                    :class="overdueItem.net > 0 ? 'text-primary' : 'text-danger'"
                                 >
-                                    {{ store.net > 0 ? '+' : '' }}{{ store.net }}
+                                    {{ overdueItem.net > 0 ? '+' : '' }}{{ store.formatNumber(overdueItem.net) }}
                                 </span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" v-if="overdueStores.length > 0">
+                <!-- شريط الإجمالي المنفصل -->
+                <div class="overdue-summary-bar" v-if="overdueStores.length > 0">
+                    <span class="label">اجمالى المتاخرات :</span>
+                    <span class="value" :class="overdueTotal > 0 ? 'text-primary' : (overdueTotal < 0 ? 'text-danger' : 'text-muted')">
+                        {{ overdueTotal > 0 ? '+' : '' }}{{ store.formatNumber(overdueTotal) }}
+                    </span>
+                </div>
+                <div class="modal-footer" v-if="overdueStores.length > 0" style="justify-content: center; gap: 10px;">
                     <button class="btn btn-secondary" @click="isOverdueModalOpen = false">إلغاء</button>
                   <button class="btn btn-danger" @click="deleteSelectedOverdue" :disabled="selectedOverdueStores.length === 0">
                     <i class="fas fa-trash"></i> حذف المحدد ({{ selectedOverdueStores.length }})
@@ -562,7 +586,9 @@ const {
   // Extra Details Modal
   isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails,
   // Overdue date
-  overdueDate
+  overdueDate,
+  restoreLatestOverdue,
+  overdueTotal
 } = useHarvest(props);
 
 // Toggle select/deselect all overdue stores
@@ -678,6 +704,35 @@ export default {
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
+}
+
+.overdue-summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* توسيط المحتوى */
+    gap: 15px;
+    background: var(--surface-50, #f8fafc); /* لون خلفية مميز */
+    padding: 16px; /* زيادة المساحة */
+    border-top: 2px solid var(--border-color); /* حد علوي أسمك */
+    border-bottom: 2px solid var(--border-color);
+    margin-top: 0;
+    width: 100%;
+    font-weight: bold;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* ظل خفيف */
+}
+
+.overdue-summary-bar .label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.overdue-summary-bar .value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    direction: ltr;
+    display: inline-block;
 }
 
 /* Original Styles (Implied to be global or inherited, but preserving scoped if any existed in Code 1 context) */

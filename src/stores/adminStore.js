@@ -483,8 +483,13 @@ export const useAdminStore = defineStore('admin', () => {
       closeLoading();
       if (data.success) {
         showSuccess(data.message);
-        // Refresh User List
+
+        // Auto-resolve errors for this user
+        await supabase.from('app_errors').update({ is_resolved: true }).eq('user_id', userId);
+
+        // Refresh Lists
         fetchUsers(false);
+        fetchAppErrors(false);
       } else {
         showError(data.message);
       }

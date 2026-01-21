@@ -44,9 +44,18 @@ provide('notifications', notifications);
 
 // إعداد PWA Service Worker
 const { needRefresh, updateServiceWorker } = useRegisterSW();
+const harvestStore = useHarvestStore();
 
 const updateSW = async () => {
-  await updateServiceWorker();
+  try {
+    // حفظ البيانات قبل التحديث كإجراء احترازي
+    await harvestStore.prepareForUpdate();
+    await updateServiceWorker();
+  } catch (error) {
+    logger.error('Failed to update service worker:', error);
+    // حتى في حالة الفشل، نحاول التحديث
+    await updateServiceWorker();
+  }
 };
 
 onMounted(() => {
@@ -75,6 +84,28 @@ onMounted(() => {
      mySubStore.init(authStore.user);
   }
 
+  // دالة مركزية لتحديث جميع البيانات
+  const refreshAllStores = async (force = false) => {
+    if (!navigator.onLine || !authStore.isAuthenticated) return;
+
+    try {
+      const initPromises = [
+        itineraryStore.fetchRoutes(force),
+        archiveStore.loadAvailableDates(force),
+        collabStore.fetchCollaborators(),
+        adminStore.loadDashboardData(force),
+        harvestStore.initialize(),
+        mySubStore.forceRefresh(authStore.user),
+        settingsStore.checkRemoteCommands()
+      ];
+
+      await Promise.allSettled(initPromises);
+      logger.info('✅ Global Data Refreshed');
+    } catch (err) {
+      logger.error('❌ Error refreshing stores:', err);
+    }
+  };
+
   const handleResume = async () => {
     try {
       if (!navigator.onLine) return;
@@ -84,17 +115,9 @@ onMounted(() => {
 
       if (!authStore.isAuthenticated) return;
 
-      // Trigger background refreshes (force = true)
-      // Use Promise.allSettled to avoid blocking on any single failure
-      await Promise.allSettled([
-        itineraryStore.fetchRoutes(true),
-        archiveStore.loadAvailableDates(true),
-        collabStore.fetchCollaborators(),
-        adminStore.loadDashboardData(true),
-        harvestStore.initialize(),
-        mySubStore.forceRefresh(authStore.user), // تحديث حالة الاشتراك عند العودة للتطبيق
-        settingsStore.checkRemoteCommands() // New: Check for admin commands (wipe cache etc)
-      ]);
+      // Trigger background refreshes
+      await refreshAllStores(true);
+      
       logger.info('App resumed: stores refreshed');
     } catch (err) {
       logger.error('Error refreshing stores on resume:', err);
@@ -102,6 +125,7 @@ onMounted(() => {
   };
 
   const visibilityHandler = () => { if (!document.hidden) handleResume(); };
+
   window.addEventListener('visibilitychange', visibilityHandler);
   window.addEventListener('focus', handleResume);
 
@@ -110,6 +134,31 @@ onMounted(() => {
     window.removeEventListener('visibilitychange', visibilityHandler);
     window.removeEventListener('focus', handleResume);
   });
+
+  // --- Initial App Mount Logic ---
+  const initializeApp = async () => {
+    try {
+      logger.info('🚀 Starting App Initialization...');
+      
+      // 1. Initialize Auth FIRST
+      await authStore.initializeAuth();
+
+      // 2. Fetch Data if Authenticated
+      if (authStore.isAuthenticated) {
+        logger.info('👤 User authenticated, fetching initial data...');
+        mySubStore.init(authStore.user);
+        await refreshAllStores(true); // Force fetch on first load to ensure fresh data
+      } else {
+        logger.info('👋 No user session found (Guest)');
+      }
+      
+    } catch (error) {
+      logger.error('💥 App Initialization Failed:', error);
+    }
+  };
+
+  // تشغيل التهيئة عند التركيب
+  initializeApp();
 });
 </script>
 

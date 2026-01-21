@@ -3,19 +3,20 @@
     <div class="update-content">
       <div class="update-icon">
         <div class="icon-circle">
-          <i class="fas fa-rocket"></i>
+          <i v-if="!isUpdating" class="fas fa-rocket"></i>
+          <i v-else class="fas fa-spinner fa-spin"></i>
         </div>
       </div>
       <div class="update-text">
-        <h3>تحديث جديد متاح!</h3>
-        <p>يتوفر إصدار جديد من التطبيق مع تحسينات ومميزات جديدة.</p>
+        <h3>{{ isUpdating ? 'جاري التحديث...' : 'تحديث جديد متاح!' }}</h3>
+        <p>{{ isUpdating ? 'جاري حفظ البيانات وتحديث التطبيق...' : 'يتوفر إصدار جديد من التطبيق مع تحسينات ومميزات جديدة.' }}</p>
       </div>
       <div class="update-actions">
-        <button @click="updateServiceWorker" class="btn-update">
-          <i class="fas fa-sync-alt"></i>
-          تحديث الآن
+        <button @click="handleUpdate" class="btn-update" :disabled="isUpdating">
+          <i class="fas" :class="isUpdating ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
+          {{ isUpdating ? 'جاري التحديث...' : 'تحديث الآن' }}
         </button>
-        <button @click="closePrompt" class="btn-later">
+        <button @click="closePrompt" class="btn-later" :disabled="isUpdating">
           لاحقاً
         </button>
       </div>
@@ -24,12 +25,41 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
+import { useHarvestStore } from '@/stores/harvest';
+import logger from '@/utils/logger';
 
 const {
   needRefresh,
   updateServiceWorker,
 } = useRegisterSW();
+
+const harvestStore = useHarvestStore();
+const isUpdating = ref(false);
+
+const handleUpdate = async () => {
+  if (isUpdating.value) return; // منع الضغط المتكرر
+  
+  isUpdating.value = true;
+  
+  try {
+    logger.info('🔄 Starting update process...');
+    
+    // حفظ جميع البيانات الحرجة قبل التحديث
+    await harvestStore.prepareForUpdate();
+    
+    // الآن يمكننا التحديث بأمان
+    logger.info('🚀 Data saved, updating service worker...');
+    await updateServiceWorker();
+    
+  } catch (error) {
+    logger.error('❌ Failed to prepare for update:', error);
+    isUpdating.value = false;
+    // في حالة الفشل، نسمح للمستخدم بالمحاولة مرة أخرى
+    alert('حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.');
+  }
+};
 
 const closePrompt = () => {
   needRefresh.value = false;
@@ -130,6 +160,18 @@ const closePrompt = () => {
 
 .btn-later:hover {
   background: var(--gray-200, #e9ecef);
+}
+
+.btn-update:disabled,
+.btn-later:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-update:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb, 0, 121, 101), 0.2);
 }
 
 /* Dark Mode Overrides */

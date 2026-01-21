@@ -38,7 +38,10 @@ ALTER TABLE public.app_errors ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can insert errors" 
 ON public.app_errors 
 FOR INSERT 
-WITH CHECK (true);
+WITH CHECK (
+  auth.role() IN ('anon', 'authenticated') 
+  AND severity IN ('error', 'warning', 'critical', 'info')
+);
 
 -- Allow ONLY Admins to SELECT/VIEW errors
 CREATE POLICY "Admins can view errors" 
@@ -64,6 +67,7 @@ CREATE OR REPLACE FUNCTION public.cleanup_old_errors()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     -- Delete errors older than 30 days 
@@ -151,6 +155,13 @@ BEGIN
       AND status = 'pending' 
       AND created_at < (NOW() - INTERVAL '24 hours');
 
+    -- E. Auto-resolve App Errors
+    UPDATE public.app_errors 
+    SET is_resolved = TRUE 
+    WHERE user_id = target_user_id;
+
+    res_msg := res_msg || 'Errors resolved. ';
+
     RETURN json_build_object('success', true, 'message', 'Account repaired successfully: ' || res_msg);
 END;
 $$;
@@ -160,6 +171,7 @@ CREATE OR REPLACE FUNCTION public.fetch_and_ack_commands()
 RETURNS TABLE (command TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     curr_user_id UUID := auth.uid();
