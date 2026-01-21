@@ -30,29 +30,46 @@ export const adminService = {
    * 2. جلب طلبات الاشتراك المعلقة
    */
   async getPendingSubscriptions() {
-    // Step 1: Fetch subscriptions with nested user data
-    const { data: subsData, error: subsError } = await apiInterceptor(
-      supabase
-        .from('subscriptions')
-        .select('*, users:user_id (full_name, email), subscription_plans:plan_id (name, name_ar, price_egp, duration_months)')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-    );
+    try {
+      // Step 1: Fetch subscriptions with nested user data
+      const { data: subsData, error: subsError } = await apiInterceptor(
+        supabase
+          .from('subscriptions')
+          .select('*, users:user_id (full_name, email), subscription_plans:plan_id (name, name_ar, price_egp, duration_months)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+      );
 
-    if (subsError || !subsData) return [];
+      if (subsError) {
+        logger.error('❌ Error fetching pending subscriptions:', subsError);
+        return [];
+      }
 
-    const userIds = subsData.map(s => s.user_id);
-    if (userIds.length === 0) return [];
+      if (!subsData) {
+        logger.warn('⚠️ No pending subscriptions found');
+        return [];
+      }
 
-    const { data: profilesData, error: profilesError } = await apiInterceptor(
-      supabase.from('profiles').select('id, user_code').in('id', userIds)
-    );
+      logger.info(`✅ Found ${subsData.length} pending subscriptions`);
 
-    if (profilesError) logger.warn('Could not fetch profiles for pending subs.');
+      if (subsData.length === 0) return [];
 
-    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
+      const userIds = subsData.map(s => s.user_id);
+      const { data: profilesData, error: profilesError } = await apiInterceptor(
+        supabase.from('profiles').select('id, user_code').in('id', userIds)
+      );
 
-    return subsData.map(sub => ({ ...sub, user_code: profilesMap.get(sub.user_id) || null }));
+      if (profilesError) logger.warn('⚠️ Could not fetch profiles for pending subs:', profilesError);
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
+
+      const result = subsData.map(sub => ({ ...sub, user_code: profilesMap.get(sub.user_id) || null }));
+      logger.info(`✅ Processed ${result.length} pending subscriptions`);
+      return result;
+    } catch (e) {
+      logger.error('❌ Exception in getPendingSubscriptions:', e);
+      return [];
+    }
   },
 
   /**

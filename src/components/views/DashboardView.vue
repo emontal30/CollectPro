@@ -265,7 +265,7 @@ const handleSaveAndGo = async () => {
       api.user.trackUserAction('save_and_go_to_harvest');
       // Sync data with Itinerary Store
       if (result.routeData && result.routeData.length > 0) {
-        await itineraryStore.syncFromDashboard(result.routeData);
+        itineraryStore.syncFromDashboard(result.routeData); // Background sync
       }
 
       showStatusMessage('success', '✅ تم حفظ البيانات بنجاح!', 'جاري الانتقال لصفحة التحصيلات...');
@@ -296,7 +296,7 @@ const handleUpdateBalances = async () => {
     if (result.status === 'success' && result.routeData && result.routeData.length > 0) {
       // Track the user action
       api.user.trackUserAction('update_balances');
-      await itineraryStore.syncFromDashboard(result.routeData);
+      itineraryStore.syncFromDashboard(result.routeData);
       showStatusMessage('success', '✅ تم تحديث الأرصدة بنجاح!', 'جاري الانتقال لصفحة خط السير...');
       setTimeout(() => { router.push('/app/itinerary'); }, 1400);
     } else {

@@ -548,5 +548,88 @@ body.dark .btn-toggle-sign { background: rgba(255, 255, 255, 0.1); color: var(--
 .w-full { width: 100%; }
 .pr-2 { padding-right: 8px; }
 .custom-tooltip { position: fixed; background: var(--bg-primary); color: var(--text-primary); padding: 5px 10px; border-radius: 6px; z-index: 9999; border: 1px solid var(--border-color); pointer-events: none; }
+
+/* App Errors Table - Fix Status Column Display */
+#app-errors-section .modern-table.auto-layout {
+  table-layout: auto;
+  width: 100%;
+}
+
+#app-errors-section .modern-table.auto-layout thead th,
+#app-errors-section .modern-table.auto-layout tbody td {
+  padding: 10px 8px;
+  white-space: normal;
+  overflow: visible;
+  word-wrap: break-word;
+}
+
+/* Column sizing for error log table */
+#app-errors-section .modern-table.auto-layout thead th:nth-child(1),
+#app-errors-section .modern-table.auto-layout tbody td:nth-child(1) {
+  width: 120px !important;
+  min-width: 120px !important;
+}
+
+#app-errors-section .modern-table.auto-layout thead th:nth-child(2),
+#app-errors-section .modern-table.auto-layout tbody td:nth-child(2) {
+  width: 140px !important;
+  min-width: 140px !important;
+}
+
+#app-errors-section .modern-table.auto-layout thead th:nth-child(3),
+#app-errors-section .modern-table.auto-layout tbody td:nth-child(3) {
+  flex: 1;
+  min-width: 150px !important;
+  max-width: none;
+  word-break: break-word;
+  white-space: normal;
+  text-align: left;
+}
+
+#app-errors-section .modern-table.auto-layout thead th:nth-child(4),
+#app-errors-section .modern-table.auto-layout tbody td:nth-child(4) {
+  width: 100px !important;
+  min-width: 100px !important;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+#app-errors-section .modern-table.auto-layout thead th:nth-child(5),
+#app-errors-section .modern-table.auto-layout tbody td:nth-child(5) {
+  width: 100px !important;
+  min-width: 100px !important;
+}
+
+/* Ensure status badge is fully visible */
+#app-errors-section .status-badge {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: visible;
+  padding: 6px 12px;
+  width: auto;
+  min-width: fit-content;
+}
+
+/* Error message cell styling */
+#app-errors-section .error-msg-cell {
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  max-width: none;
+  overflow: visible;
+}
+
+#app-errors-section .error-msg-cell .font-bold {
+  display: block;
+  margin-bottom: 4px;
+}
+
+#app-errors-section .error-msg-cell .truncate {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
    
    

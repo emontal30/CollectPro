@@ -1,0 +1,557 @@
+
+/* --- Admin Global Styles --- */
+
+.admin-dashboard { 
+    padding-bottom: 2rem; 
+}
+.no-spin::-webkit-inner-spin-button, 
+.no-spin::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+.no-spin { 
+    -moz-appearance: textfield; 
+}
+.input-with-notch { 
+    position: relative; 
+    display: flex; 
+    align-items: center; 
+}
+.btn-notch-sign { 
+    position: absolute; 
+    left: 0; 
+    bottom: 0; 
+    background: var(--border-color, #ddd); 
+    color: var(--primary); 
+    border: none; 
+    border-radius: 0 4px 0 0; 
+    width: 18px; 
+    height: 14px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-weight: 900; 
+    font-size: 14px; 
+    cursor: pointer; 
+    opacity: 0.7; 
+    transition: all 0.2s; 
+    padding: 0; 
+    line-height: 0; 
+}
+
+.admin-section { 
+    margin-bottom: 2rem; 
+    background: var(--surface-bg); 
+    border-radius: var(--border-radius-lg); 
+    overflow: visible; /* Changed to visible to allow dropdowns */ 
+}
+.protection-card { 
+    border: 1px solid var(--border-color); 
+}
+.protection-content { 
+    padding: 1.5rem; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 1.5rem; 
+}
+.protection-info { 
+    flex: 1; 
+}
+.protection-desc { 
+    font-size: 0.9rem; 
+    color: var(--text-muted); 
+}
+.warning-text { 
+    display: block; 
+    margin-top: 0.5rem; 
+    font-weight: 700; 
+    color: var(--primary); 
+}
+.switch { 
+    position: relative; 
+    display: inline-block; 
+    width: 60px; 
+    height: 34px; 
+}
+.switch input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+.slider { 
+    position: absolute; 
+    cursor: pointer; 
+    inset: 0; 
+    background-color: #ccc; 
+    transition: .4s; 
+    border-radius: 34px; 
+}
+.slider:before { 
+    position: absolute; 
+    content: ""; 
+    height: 26px; 
+    width: 26px; 
+    left: 4px; 
+    bottom: 4px; 
+    background-color: white; 
+    transition: .4s; 
+    border-radius: 50%; 
+}
+input:checked + .slider { 
+    background-color: var(--primary); 
+}
+input:checked + .slider:before { 
+    transform: translateX(26px); 
+}
+.modern-table.auto-layout { 
+    table-layout: auto !important; 
+    width: 100%; 
+}
+.modern-table th, 
+.modern-table td { 
+    white-space: nowrap; 
+} /* Apply to all cells by default */
+
+/* Make all columns adapt to content */
+#logged-in-users-table th,
+#logged-in-users-table td,
+#pending-subscriptions-table th,
+#pending-subscriptions-table td,
+#all-subscriptions-table th,
+#all-subscriptions-table td {
+  width: 1%; /* Forces columns to be as narrow as possible, fitting content */
+}
+
+/* Checkbox column - minimal width to fit checkbox only */
+#logged-in-users-table th.th-checkbox,
+#logged-in-users-table td.td-checkbox {
+  width: 1% !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+}
+
+/* Dropdown Support Styles refined */
+.dropdown-wrapper { 
+    position: relative; 
+    display: inline-block; 
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 0; /* Changed to left:0 to expand into table in RTL */
+  top: 100%;
+  background-color: var(--surface-bg);
+  min-width: 180px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1000;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  text-align: right;
+  margin-top: 5px;
+}
+.dropdown-content.show { 
+    display: block; 
+}
+
+.dropdown-content a {
+  color: var(--text-main);
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.dropdown-content a:hover { 
+    background-color: var(--bg-secondary); 
+    color: var(--primary); 
+}
+.dropdown-content a i { 
+    display: inline-block; 
+    width: 20px; 
+    text-align: center; 
+    margin-left: 8px; 
+}
+
+/* User column in logged-in users table - fixed width 150px */
+#logged-in-users-table th.col-user,
+#logged-in-users-table td.col-user {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+}
+
+/* User column in other tables - fixed width 200px for consistency */
+#pending-subscriptions-table th.col-user,
+#pending-subscriptions-table td.col-user,
+#all-subscriptions-table th.col-user,
+#all-subscriptions-table td.col-user {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+}
+
+/* Status column in all tables - fixed width 100px for consistency */
+#logged-in-users-table th.col-status,
+#logged-in-users-table td.col-status,
+#all-subscriptions-table th.col-status,
+#all-subscriptions-table td.col-status {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+}
+
+/* Specific column adjustments */
+.col-user { /* flex-grow for user details */ }
+.col-plan { }
+/* Apply width constraint to Transaction ID with text wrapping */
+#pending-subscriptions-table th.col-transaction-id,
+#pending-subscriptions-table td.col-transaction-id,
+#all-subscriptions-table th.col-transaction-id,
+#all-subscriptions-table td.col-transaction-id {
+  max-width: 200px;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: break-all !important;
+}
+
+/* Subscription days column - fixed width 50px */
+#logged-in-users-table th.col-subscription-days,
+#logged-in-users-table td.col-subscription-days {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+}
+
+/* Action column - fixed width to prevent auto-resizing */
+#logged-in-users-table th:last-child,
+#logged-in-users-table td:last-child {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+}
+
+.col-actions { 
+    min-width: 100px; 
+} /* Keep a min-width for action buttons */
+
+/* Apply no-wrap to plan column */
+.admin-dashboard table th.col-plan,
+.admin-dashboard table td.col-plan {
+  white-space: nowrap;
+}
+
+.status-badge { 
+    padding: 4px 10px; 
+    border-radius: 12px; 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+}
+.status-active { 
+    background: rgba(16, 185, 129, 0.1); 
+    color: #10b981; 
+}
+.status-cancelled { 
+    background: rgba(245, 158, 11, 0.1); 
+    color: #f59e0b; 
+}
+.status-expired { 
+    background: rgba(239, 68, 68, 0.1); 
+    color: #ef4444; 
+}
+.user-info-cell { 
+    text-align: right; 
+    white-space: normal; /* Allow text wrapping for user names */ 
+}
+
+/* التحديث: تكبير الخط وجعله عريضاً */
+.user-short-id { 
+  font-size: 13px;  /* تم التغيير من 10px إلى 13px */
+  font-weight: bold; /* تمت إضافة هذه الخاصية */
+  color: var(--gray-600); 
+  background: var(--gray-100); 
+  padding: 2px 6px; /* زيادة بسيطة في الحشو */
+  border-radius: 4px; 
+  margin-top: 4px; 
+  font-family: monospace;
+  display: inline-block;
+  width: fit-content;
+}
+
+.expiry-date-sub { 
+    font-size: 10px; 
+    color: var(--gray-600); 
+}
+.spinner-tiny { 
+    width: 1rem; 
+    height: 1rem; 
+    border: 2px solid rgba(0,0,0,0.1); 
+    border-top-color: var(--primary); 
+    border-radius: 50%; 
+    animation: spin 0.8s linear infinite; 
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.details-grid { 
+    display: grid; 
+    gap: 15px; 
+}
+.detail-item { 
+    display: flex; 
+    justify-content: space-between; 
+    padding: 10px; 
+    border-bottom: 1px solid var(--border-color); 
+}
+.full-width { 
+    grid-column: 1 / -1; 
+    border-top: 1px dashed var(--border-color); 
+    margin: 10px 0; 
+}
+body.dark .user-short-id { 
+    background: rgba(255, 255, 255, 0.05); 
+    color: var(--gray-400); 
+}
+body.dark .bg-light { 
+    background-color: #0f172a !important; 
+    border-color: #334155 !important; 
+}
+body.dark .detail-item label { 
+    color: var(--gray-400); 
+}
+
+/* أنماط إضافية لزر إعادة المحاولة */
+.alert { 
+    padding: 0.75rem 1.25rem; 
+    margin-bottom: 1rem; 
+    border: 1px solid transparent; 
+    border-radius: 0.25rem; 
+}
+.alert-danger { 
+    color: #721c24; 
+    background-color: #f8d7da; 
+    border-color: #f5c6cb; 
+}
+/* Utility classes if not in global */
+.d-flex { display: flex !important; }
+.justify-between { justify-content: space-between !important; }
+.align-center { align-items: center !important; }
+
+/* Clear Icon Styles */
+.search-input-wrapper { 
+    position: relative; 
+    display: flex; 
+    align-items: center; 
+} /* Ensure wrapper is relative */
+.clear-icon {
+  position: absolute;
+  left: 10px; 
+  cursor: pointer;
+  color: #999;
+  padding: 5px;
+  transition: color 0.2s;
+  z-index: 2;
+}
+.clear-icon:hover { 
+    color: var(--danger, #ef4444); 
+}
+
+.cursor-pointer { 
+    cursor: pointer; 
+}
+.hover-effect:hover { 
+    transform: translateY(-3px); 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+    transition: all 0.3s ease; 
+}
+.highlight-section { 
+    animation: glow 2s ease-in-out; 
+}
+@keyframes glow {
+  0% { box-shadow: 0 0 5px rgba(0, 121, 101, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(0, 121, 101, 0.8); }
+  100% { box-shadow: none; }
+}
+
+/* Scroll To Top Button */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 2147483647; /* Max Safe Integer for z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0.9;
+}
+.scroll-top-btn:hover {
+  transform: translateY(-5px);
+  opacity: 1;
+  background-color: var(--primary-dark);
+}
+
+/* Location Stats in Stat Card */
+.location-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Error Stats in Stat Card */
+.error-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stat-highlight {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.stat-highlight.text-success {
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.stat-highlight.text-danger {
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.stat-divider {
+  color: var(--border-color);
+  font-weight: 300;
+  padding: 0 4px;
+}
+
+/* Location Stats in Modal Header */
+.location-stats-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(var(--primary-rgb), 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.stat-item .stat-label {
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+  padding: 0;
+}
+
+.stat-item .stat-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary);
+  min-width: 40px;
+  text-align: center;
+}
+
+.stat-value.text-success {
+  color: var(--success);
+}
+
+.stat-divider {
+  color: var(--border-color);
+  font-weight: 300;
+}
+
+/* Location Table Row Styling */
+.has-location {
+  background-color: rgba(16, 185, 129, 0.03);
+}
+
+.has-location:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.location-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.no-location-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Bulk Actions for Locations */
+.bulk-actions-locations {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(220, 38, 38, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(220, 38, 38, 0.1);
+}
+
+.bulk-actions-locations .btn {
+  margin: 0;
+}
+
+/* Checkbox styles for locations table */
+#locations-table-container th.th-checkbox,
+#locations-table-container td.td-checkbox {
+  width: 1% !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+}
+
+#locations-table-container input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}

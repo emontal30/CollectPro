@@ -8,6 +8,7 @@ import { bootstrapApp } from './bootstrap';
 /* --- Global Design System (Single Entry Point) --- */
 import './assets/css/main.css';
 import './assets/css/itinerary.css';
+import './assets/css/admin.css';
 
 // --- Stores ---
 import { useSettingsStore } from './stores/settings';

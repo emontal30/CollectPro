@@ -12,6 +12,7 @@ import HarvestView from '@/components/views/HarvestView.vue'
 // الإبقاء على المكونات الثانوية كـ Lazy Loading لتقليل حجم الحزمة الأولية
 const ArchiveView = () => import('@/components/views/ArchiveView.vue')
 const CounterView = () => import('@/components/views/CounterView.vue')
+const ReportsView = () => import('@/components/views/ReportsView.vue')
 const SubscriptionsView = () => import('@/components/views/SubscriptionsView.vue')
 const MySubscriptionView = () => import('@/components/views/MySubscriptionView.vue')
 const PaymentView = () => import('@/components/views/PaymentView.vue')
@@ -31,66 +32,72 @@ const routes = [
     component: MainLayout,
     meta: { requiresAuth: true },
     children: [
-      { 
-        path: '', 
-        redirect: { name: 'Dashboard' } 
+      {
+        path: '',
+        redirect: { name: 'Dashboard' }
       },
-      { 
-        path: 'dashboard', 
-        name: 'Dashboard', 
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
         component: DashboardView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'harvest', 
-        name: 'Harvest', 
+      {
+        path: 'harvest',
+        name: 'Harvest',
         component: HarvestView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'itinerary', 
-        name: 'Itinerary', 
+      {
+        path: 'itinerary',
+        name: 'Itinerary',
         component: ItineraryView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'share', 
-        name: 'Collaboration', 
+      {
+        path: 'share',
+        name: 'Collaboration',
         component: ShareHarvestView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'archive', 
-        name: 'Archive', 
+      {
+        path: 'archive',
+        name: 'Archive',
         component: ArchiveView,
         meta: { requiresSubscription: true }
       },
-      { 
-        path: 'counter', 
-        name: 'Counter', 
+      {
+        path: 'counter',
+        name: 'Counter',
         component: CounterView,
-        meta: { requiresSubscription: true } 
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'subscriptions', 
-        name: 'Subscriptions', 
-        component: SubscriptionsView 
+      {
+        path: 'reports',
+        name: 'Reports',
+        component: ReportsView,
+        meta: { requiresSubscription: true }
       },
-      { 
-        path: 'my-subscription', 
-        name: 'MySubscription', 
-        component: MySubscriptionView 
+      {
+        path: 'subscriptions',
+        name: 'Subscriptions',
+        component: SubscriptionsView
       },
-      { 
-        path: 'payment', 
-        name: 'Payment', 
-        component: PaymentView 
+      {
+        path: 'my-subscription',
+        name: 'MySubscription',
+        component: MySubscriptionView
       },
-      { 
-        path: 'admin', 
-        name: 'Admin', 
+      {
+        path: 'payment',
+        name: 'Payment',
+        component: PaymentView
+      },
+      {
+        path: 'admin',
+        name: 'Admin',
         component: AdminView,
-        meta: { requiresAdmin: true } 
+        meta: { requiresAdmin: true }
       }
     ]
   },
@@ -128,7 +135,7 @@ router.beforeEach(async (to, from, next) => {
     const isLoggedIn = authStore.isAuthenticated;
     const requiresAuth = to.matched.some(r => r.meta.requiresAuth);
     const requiresGuest = to.matched.some(r => r.meta.requiresGuest);
-    
+
     // التعامل مع الروابط غير الموجودة
     if (to.name === 'NotFound') return next();
 
@@ -140,7 +147,7 @@ router.beforeEach(async (to, from, next) => {
       const lastRoute = localStorage.getItem('app_last_route') || '/app/dashboard';
       return next(lastRoute);
     }
-    
+
     // التحقق من الصلاحيات والاشتراك
     if (requiresAuth && isLoggedIn) {
       const requiresAdmin = to.matched.some(r => r.meta.requiresAdmin);
@@ -149,12 +156,12 @@ router.beforeEach(async (to, from, next) => {
       const requiresSub = to.matched.some(r => r.meta.requiresSubscription);
       if (requiresSub && !authStore.isAdmin && authStore.isSubscriptionEnforced) {
         const subStore = useMySubscriptionStore();
-        
+
         // التحقق من الاشتراك
         if (!subStore.isInitialized) {
           await subStore.init(authStore.user);
         }
-        
+
         if (!subStore.isSubscribed) {
           return next({ name: 'MySubscription', query: { access: 'denied' } });
         }

@@ -47,7 +47,7 @@
              v-if="store.selectedIds.length > 0" 
              class="btn-itinerary-action btn-permanent-delete" 
              @click="store.confirmPermanentDelete"
-             title="حذف نهائي من الجهاز والسيرفر"
+             title="حذف نهائي من الجهاز محلياً"
            >
              <i class="fas fa-fire-alt"></i> <span>حذف ({{ store.selectedIds.length }})</span>
            </button>
@@ -67,6 +67,10 @@
 
            <button class="btn-itinerary-action btn-export" @click="handleExportLocations" title="تصدير المواقع">
              <i class="fas fa-file-export"></i> <span>تصدير المواقع</span>
+           </button>
+
+           <button class="btn-itinerary-action btn-refresh" @click="store.refreshData" title="تحديث البيانات من السحابة">
+             <i class="fas fa-sync-alt" :class="{'fa-spin': store.isLoading}"></i> <span>تحديث</span>
            </button>
         </div>
       </div>
@@ -393,7 +397,11 @@ const exportableRoutes = computed(() => {
 
 const handleExportLocations = async () => {
     if (exportableRoutes.value.length === 0) {
-      return alert('لا توجد مواقع محددة للتصدير. يرجى تحديد مواقع للمحلات أولاً.');
+      store.addNotification({ 
+        message: 'لا توجد مواقع محددة للتصدير. يرجى تحديد مواقع للمحلات أولاً.', 
+        type: 'warning' 
+      });
+      return;
     }
     await exportAndShareTable('locations-export-table', 'Merchant_Locations_Report', {
       title: 'تصدير مواقع التجار',
@@ -485,6 +493,30 @@ watch(() => store.polylineCoords, () => {
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 0.5rem;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.btn-itinerary-action {
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color); /* Default border */
+  color: var(--text-main);
+}
+.btn-itinerary-action:hover {
+  background-color: var(--bg-secondary);
+  transform: translateY(-1px);
 }
 .tabs-wrapper {
   display: flex;
@@ -724,6 +756,77 @@ watch(() => store.polylineCoords, () => {
 }
 .btn-export:hover {
   background-color: var(--success);
+  color: white;
+}
+
+/* Action Buttons - Matching Design */
+.btn-templates {
+  background-color: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-templates:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-trash {
+  background-color: transparent;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+.btn-trash:hover {
+  background-color: var(--warning);
+  color: white;
+}
+
+.btn-permanent-delete {
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.btn-permanent-delete:hover {
+  background-color: var(--danger);
+  color: white;
+}
+
+.btn-reorder {
+  background-color: transparent;
+  color: var(--secondary);
+  border: 1px solid var(--secondary);
+}
+.btn-reorder:hover {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.btn-multi-trash {
+  background-color: transparent;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+.btn-multi-trash:hover {
+  background-color: var(--warning);
+  color: white;
+}
+
+.btn-export {
+  background-color: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.btn-export:hover {
+  background-color: var(--success);
+  color: white;
+}
+
+.btn-refresh {
+  background-color: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-refresh:hover {
+  background-color: var(--primary);
   color: white;
 }
 </style>

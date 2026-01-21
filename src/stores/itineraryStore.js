@@ -109,23 +109,78 @@ export const useItineraryStore = defineStore('itinerary', () => {
   async function fetchRoutes(force = false) {
     if (!authStore.user) return;
 
-    // Load strictly from local storage
+    // 1. Load Local First (Fast)
     const localData = await localforage.getItem(STORAGE_KEY.value);
     if (localData && Array.isArray(localData)) {
+      // Normalize to remove local duplicates if any
       const normalized = normalizeRoutes(localData);
-
-      // Self-Correction: If duplicates were found and removed, save the clean version immediately
-      if (normalized.length !== localData.length) {
-        logger.info(`♻️ Found ${localData.length - normalized.length} duplicates. Cleaning storage...`);
-        await safeSaveLocal(STORAGE_KEY.value, normalized);
-      }
-
       routes.value = normalized;
       isLoading.value = false;
     }
 
-    // No cloud fetch for active routes
+    // 2. Fetch/Sync Cloud (Background)
+    if (!navigator.onLine) return;
+
+    try {
+      const { data: cloudRoutes, error } = await supabase
+        .from('client_routes')
+        .select('*')
+        .eq('user_id', authStore.user.id);
+
+      if (error) throw error;
+
+      if (cloudRoutes && cloudRoutes.length > 0) {
+        // Merge Cloud & Local
+        // We assume Cloud has the "truth" for persistence, but Local might have unsynced newer edits.
+        // normalizeRoutes logic uses 'updated_at' to pick winner.
+        const currentLocal = routes.value || [];
+        const combined = [...currentLocal, ...cloudRoutes];
+
+        const merged = normalizeRoutes(combined);
+
+        // Update state
+        routes.value = merged;
+
+        // Save back to local to keep them in sync
+        await safeSaveLocal(STORAGE_KEY.value, merged);
+      }
+    } catch (err) {
+      logger.error('Error fetching cloud routes:', err);
+    }
+
+    // Fetch profiles as well
     fetchProfiles();
+  }
+
+  async function refreshData() {
+    console.log('🔄 Refresh button clicked - starting refresh...');
+
+    // Check if online
+    if (!navigator.onLine) {
+      addNotification({ message: 'لا يوجد اتصال بالإنترنت ⚠️', type: 'warning' });
+      console.log('⚠️ Offline - cannot refresh');
+      return;
+    }
+
+    const startTime = Date.now();
+    isLoading.value = true;
+
+    try {
+      // Add minimum delay so user can see the spinner (1.5 seconds)
+      const minDelay = new Promise(resolve => setTimeout(resolve, 0));
+      const fetchPromise = fetchRoutes(true);
+
+      await Promise.all([minDelay, fetchPromise]);
+
+      console.log('✅ Refresh completed successfully');
+      addNotification({ message: 'تم تحديث البيانات من الخادم 🔄', type: 'success' });
+    } catch (error) {
+      console.error('❌ Refresh failed:', error);
+      addNotification({ message: 'فشل التحديث', type: 'error' });
+    } finally {
+      isLoading.value = false;
+      console.log('🏁 Refresh process ended');
+    }
   }
 
   async function syncFromDashboard(dashboardRows) {
@@ -135,21 +190,27 @@ export const useItineraryStore = defineStore('itinerary', () => {
       const timestamp = new Date().toISOString();
       const currentRoutesMap = new Map(routes.value.map(r => [String(r.shop_code).trim(), r]));
 
+      const routesToUpsert = [];
+
       dashboardRows.forEach(row => {
         if (!row.code) return;
         const codeStr = String(row.code).trim();
         const balance = parseFloat(row.balance || row.amount || 0);
         const shopName = row.name || row.shop || '';
 
+        let routeEntry;
+
         if (currentRoutesMap.has(codeStr)) {
           const existing = currentRoutesMap.get(codeStr);
+          // Update existing local fields
           existing.current_balance = balance;
           if (shopName) existing.shop_name = shopName;
           existing.updated_at = timestamp;
+          routeEntry = existing;
         } else {
-          // Local-only IDs
+          // New Route
           const newRoute = {
-            id: `loc_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            id: `loc_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Temp ID until DB sync
             user_id: authStore.user.id,
             shop_code: codeStr,
             shop_name: shopName,
@@ -161,16 +222,51 @@ export const useItineraryStore = defineStore('itinerary', () => {
             updated_at: timestamp
           };
           currentRoutesMap.set(codeStr, newRoute);
+          routeEntry = newRoute;
         }
+
+        // Prepare for Cloud Upsert
+        routesToUpsert.push({
+          user_id: authStore.user.id,
+          shop_code: routeEntry.shop_code,
+          shop_name: routeEntry.shop_name,
+          current_balance: routeEntry.current_balance,
+          // We must include sort_order and other fields to ensure record is complete
+          sort_order: routeEntry.sort_order,
+          is_ignored: routeEntry.is_ignored,
+          updated_at: timestamp,
+          // Only send lat/lng if they exist (don't overwrite with null if DB has them, 
+          // but since we merged DB first in fetchRoutes, local should have them if they exist)
+          latitude: routeEntry.latitude,
+          longitude: routeEntry.longitude,
+          location_updated_at: routeEntry.location_updated_at
+        });
       });
 
+      // 1. Update Local
       routes.value = normalizeRoutes(Array.from(currentRoutesMap.values()).sort((a, b) => a.sort_order - b.sort_order));
       await safeSaveLocal(STORAGE_KEY.value, routes.value);
 
-      addNotification({ message: 'تم تحديث البيانات محلياً ✅', type: 'success' });
+      addNotification({ message: 'تم الحفظ محلياً... جاري المزامنة ☁️', type: 'info' });
+
+      // 2. Update Cloud (Fire and Forget or Await?)
+      if (navigator.onLine && routesToUpsert.length > 0) {
+        // Upsert in chunks
+        const chunkSize = 50;
+        for (let i = 0; i < routesToUpsert.length; i += chunkSize) {
+          const chunk = routesToUpsert.slice(i, i + chunkSize);
+          const { error } = await supabase.from('client_routes').upsert(chunk, { onConflict: 'user_id, shop_code' });
+          if (error) {
+            logger.error('Sync Error (Chunk):', error);
+            throw error;
+          }
+        }
+        addNotification({ message: 'تمت المزامنة مع السحابة ✅', type: 'success' });
+      }
+
     } catch (err) {
       logger.error('Sync Error:', err);
-      addNotification({ message: 'حدث خطأ أثناء المزامنة المحلية', type: 'error' });
+      addNotification({ message: 'تم الحفظ محلياً لكن فشلت المزامنة', type: 'warning' });
     }
   }
 
@@ -257,21 +353,20 @@ export const useItineraryStore = defineStore('itinerary', () => {
 
   async function deleteProfile(slotNumber) {
     if (!isSlotSaved(slotNumber)) return;
-    const result = await confirm({ title: 'حذف القالب', text: 'هل تريد حذف هذا القالب محلياً ومن الخادم (إن وُجد)؟' });
+    const result = await confirm({ title: 'حذف القالب', text: 'سيتم حذف هذا القالب محلياً فقط.' });
     if (!result?.isConfirmed) return;
 
     try {
       profiles.value = profiles.value.filter(p => p.slot_number !== slotNumber);
       await safeSaveLocal(PROFILE_STORAGE_KEY.value, profiles.value);
-
-      if (authStore.user && navigator.onLine) {
-        await supabase.from('route_profiles').delete().eq('user_id', authStore.user.id).eq('slot_number', slotNumber);
-      } else {
-        await addToQueue({ type: 'profile_delete', data: { user_id: authStore.user?.id, slot_number: slotNumber } });
-      }
-      addNotification({ message: 'تم حذف القالب', type: 'success' });
+      
+      // إضافة إلى قائمة المحذوفات المحلية للمزامنة لاحقاً (اختياري)
+      // await addToQueue({ type: 'profile_delete', data: { user_id: authStore.user?.id, slot_number: slotNumber } });
+      
+      addNotification({ message: 'تم حذف القالب محلياً', type: 'success' });
     } catch (err) {
       logger.error('Error deleting profile:', err);
+      addNotification({ message: 'فشل حذف القالب', type: 'error' });
     }
   }
 
@@ -372,9 +467,13 @@ export const useItineraryStore = defineStore('itinerary', () => {
     const idx = routes.value.findIndex(r => r.id === routeId);
     if (idx !== -1) {
       const timestamp = new Date().toISOString();
-      routes.value[idx].latitude = lat;
-      routes.value[idx].longitude = lng;
-      routes.value[idx].location_updated_at = timestamp;
+      const route = routes.value[idx];
+
+      // Update Local State
+      route.latitude = lat;
+      route.longitude = lng;
+      route.location_updated_at = timestamp;
+      route.updated_at = timestamp;
 
       await safeSaveLocal(STORAGE_KEY.value, routes.value);
 
@@ -382,6 +481,22 @@ export const useItineraryStore = defineStore('itinerary', () => {
         editingRoute.value.latitude = lat;
         editingRoute.value.longitude = lng;
         editingRoute.value.location_updated_at = timestamp;
+      }
+
+      // Update Cloud
+      if (authStore.user && navigator.onLine) {
+        try {
+          await supabase.from('client_routes').upsert({
+            user_id: authStore.user.id,
+            shop_code: route.shop_code,
+            latitude: lat,
+            longitude: lng,
+            location_updated_at: timestamp,
+            updated_at: timestamp
+          }, { onConflict: 'user_id, shop_code' });
+        } catch (err) {
+          logger.error('Failed to update location on cloud', err);
+        }
       }
     }
   }
@@ -443,6 +558,47 @@ export const useItineraryStore = defineStore('itinerary', () => {
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
+  }
+
+  /* --- Admin Helper --- */
+  async function adminFetchLocations() {
+    // Only admins should call this
+    try {
+      const { data, error } = await supabase
+        .from('client_routes')
+        .select('*')
+        .order('location_updated_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      logger.error('Admin Fetch Locations Error:', err);
+      return [];
+    }
+  }
+
+  async function deleteCustomerLocations(locationIds) {
+    // Delete multiple customer locations by ID
+    if (!locationIds || locationIds.length === 0) {
+      throw new Error('No locations to delete');
+    }
+
+    try {
+      logger.info(`🗑️ Deleting ${locationIds.length} customer locations...`);
+      
+      const { error } = await supabase
+        .from('client_routes')
+        .delete()
+        .in('id', locationIds);
+
+      if (error) throw error;
+      
+      logger.info(`✅ Successfully deleted ${locationIds.length} locations`);
+      return true;
+    } catch (err) {
+      logger.error('❌ Error deleting customer locations:', err);
+      throw new Error(`فشل حذف المواقع: ${err.message}`);
+    }
   }
 
   // --- View Methods ---
@@ -613,5 +769,6 @@ export const useItineraryStore = defineStore('itinerary', () => {
     reorderRoutesByInput, onDragStart, onDragEnter, onDragEnd, onDrop,
     toggleSortByBalance, getBalanceClass, goToLocation, openLocationModal,
     closeModal, copyCoords, useGPS, clearCoords, saveLocation,
+    adminFetchLocations, deleteCustomerLocations, refreshData,
   };
 });

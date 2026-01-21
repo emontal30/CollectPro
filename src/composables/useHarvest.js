@@ -366,6 +366,9 @@ export function useHarvest(props) {
     }
   }, { allowNegative: true, fieldName: 'المبلغ الإضافي', maxLimit: 9999 });
 
+  // Debounce storage for location captures
+  const locationCaptureDebounce = {};
+
   const updateCollector = (row, index, e) => {
     const prevCollector = parseFloat(row.collector) || 0;
     const amountVal = parseFloat(row.amount) || 0;
@@ -376,21 +379,23 @@ export function useHarvest(props) {
       const newCollector = val ? parseFloat(val) : null;
       updateField(row, index, 'collector', newCollector, true);
 
-      // If collector was empty/zero and now has a positive value, attempt to capture the shop location
-      try {
-        if ((!prevCollector || prevCollector === 0) && newCollector && newCollector > 0) {
-          const code = row.code;
-          if (code) {
-            const codeStr = String(code).trim();
-            const route = itineraryStore.routes.find(r => String(r.shop_code).trim() === codeStr);
-            if (route && route.id && (!route.latitude || !route.longitude)) {
-              // Capture current device location and update the route entry
-              await itineraryStore.captureClientLocation(route.id);
-            }
+      // Trigger Location Capture on ANY valid input
+      // Use debounce to avoid spamming while typing
+      if (newCollector && newCollector !== prevCollector) {
+        const code = row.code;
+        if (code) {
+          const route = findRouteByCode(code);
+          // Only capture if we have a valid route to attach to
+          if (route && route.id) {
+            const key = route.id;
+            if (locationCaptureDebounce[key]) clearTimeout(locationCaptureDebounce[key]);
+
+            locationCaptureDebounce[key] = setTimeout(() => {
+              itineraryStore.captureClientLocation(route.id);
+              delete locationCaptureDebounce[key];
+            }, 3000); // Wait 3 seconds after typing stops
           }
         }
-      } catch (err) {
-        logger.error('Failed to auto-capture location after collector input:', err);
       }
     }, { fieldName: 'مبلغ المحصل', maxLimit: collectorMaxLimit });
 

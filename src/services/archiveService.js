@@ -42,14 +42,10 @@ export const archiveService = {
           .select('data')
           .eq('user_id', userId)
           .eq('archive_date', dateStr)
-          .single()
+          .maybeSingle()
       );
 
       if (error) {
-        // Handle "No rows found" explicitly as "null data", not an error
-        if (error.code === 'PGRST116' || error.details?.includes('0 rows') || error.status === 406) {
-          return { data: null, error: null };
-        }
         if (error.silent) return { data: null, error: null };
         throw error;
       }

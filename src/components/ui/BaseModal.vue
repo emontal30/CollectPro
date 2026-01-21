@@ -2,7 +2,9 @@
   <Teleport to="body">
     <transition name="modal">
       <div v-if="show" class="shared-modal-overlay" @click="handleOverlayClick">
-        <div class="shared-modal" @click.stop>
+        <div class="shared-modal" 
+             :style="{ maxWidth: size === 'x-large' ? '1200px' : (size === 'large' ? '800px' : '600px') }" 
+             @click.stop>
           <div class="shared-modal-header">
             <h3>{{ title }}</h3>
             <button class="shared-modal-close btn btn--icon" aria-label="إغلاق" @click="close">
@@ -36,8 +38,11 @@ const props = defineProps({
     default: 'Modal Title'
   },
   closable: {
-    type: Boolean,
     default: true
+  },
+  size: {
+    type: String,
+    default: 'medium' // 'small', 'medium', 'large', 'x-large'
   }
 })
 

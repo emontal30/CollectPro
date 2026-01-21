@@ -172,14 +172,15 @@ const isEnforced = ref(false);
 // رابط مجموعة واتساب للانضمام
 const whatsappLink = 'https://chat.whatsapp.com/GuITuDz0xmJKHqKJ5QstDu';
 
-// تم التحديث: إضافة رابط صفحة المشاركة
+// تم التحديث: إضافة رابط صفحة المشاركة والتقارير
 const navLinks = [
   { to: '/app/dashboard', label: 'إدخال البيانات', icon: 'fas fa-tachometer-alt', protected: true },
   { to: '/app/harvest', label: 'التحصيلات', icon: 'fas fa-donate', protected: true },
   { to: '/app/archive', label: 'الأرشيف', icon: 'fas fa-archive', protected: true },
   { to: '/app/itinerary', label: 'خط السير', icon: 'fas fa-map-marked-alt', protected: true },
-  { to: '/app/share', label: 'مشاركة التحصيل', icon: 'fas fa-users', protected: true }, // رابط جديد
+  { to: '/app/share', label: 'مشاركة التحصيل', icon: 'fas fa-users', protected: true },
   { to: '/app/counter', label: 'عداد الأموال', icon: 'fas fa-calculator', protected: true },
+  { to: '/app/reports', label: 'تقارير التحصيل', icon: 'fas fa-chart-bar', protected: true },
   { to: '/app/subscriptions', label: 'الاشتراكات', icon: 'fas fa-credit-card', protected: false },
   { to: '/app/my-subscription', label: 'اشتراكي', icon: 'fas fa-user-shield', protected: false },
 ];

@@ -1,6 +1,6 @@
 {
   "name": "collectpro",
-  "version": "3.5.5",
+  "version": "3.5.7",
   "description": "تطبيق تحصيل شامل واحترافى",
   "repository": "https://github.com/emontal30/CollectPro.git",
   "scripts": {
@@ -14,6 +14,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.43.4",
     "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "chart.js": "^4.5.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
     "leaflet": "^1.9.4",
@@ -23,6 +24,7 @@
     "sweetalert2": "^11.11.0",
     "vite-plugin-pwa": "^1.2.0",
     "vue": "^3.4.27",
+    "vue-chartjs": "^5.3.3",
     "vue-router": "^4.3.2",
     "xlsx": "^0.18.5"
   },

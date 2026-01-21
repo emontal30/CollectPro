@@ -75,19 +75,15 @@ export const useAdminStore = defineStore('admin', () => {
     fetchError.value = null;
 
     try {
-      // تعريف مهلة زمنية (Timeout) لتجنب التعليق اللانهائي - زيادة إلى 60 ثانية
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: Data took too long to load')), 60000);
-      });
-
       // 2. Fetch Time Offset separately (Low priority)
       TimeService.getServerTimeOffset().then(offset => {
         serverTimeOffset.value = offset;
         logger.info('✅ Time offset fetched:', offset);
       }).catch(e => logger.warn('⚠️ Time offset fetch failed:', e));
 
-      // 3. Parallel Data Fetch
-      const fetchPromise = Promise.allSettled([
+      // 3. Parallel Data Fetch مع مهلة زمنية محسّنة
+      logger.info('🔄 Starting parallel data fetch...');
+      const results = await Promise.allSettled([
         fetchStats(false),
         fetchChartsData(),
         fetchPendingSubscriptions(),
@@ -97,11 +93,11 @@ export const useAdminStore = defineStore('admin', () => {
         fetchAppErrors()
       ]);
 
-      const results = await Promise.race([fetchPromise, timeoutPromise]);
-
       const failedCount = results.filter(r => r.status === 'rejected').length;
       if (failedCount > 0) {
-        logger.warn(`⚠️ ${failedCount} admin requests failed or timed out, but continuing with available data.`);
+        logger.warn(`⚠️ ${failedCount} admin requests failed, but continuing with available data.`);
+      } else {
+        logger.info('✅ All admin data loaded successfully');
       }
 
       lastFetchTime.value = Date.now();
@@ -210,8 +206,17 @@ export const useAdminStore = defineStore('admin', () => {
   async function fetchPendingSubscriptions() {
     try {
       const data = await api.admin.getPendingSubscriptions();
-      if (data) pendingSubscriptions.value = data;
-    } catch (e) { logger.error('Error pending subs', e); }
+      if (data) {
+        pendingSubscriptions.value = data;
+        logger.info('✅ Pending subscriptions loaded:', data.length);
+      } else {
+        pendingSubscriptions.value = [];
+        logger.warn('⚠️ No pending subscriptions data');
+      }
+    } catch (e) { 
+      logger.error('❌ Error fetching pending subs', e);
+      pendingSubscriptions.value = [];
+    }
   }
 
   async function fetchAllSubscriptions(showFeedback = false) {

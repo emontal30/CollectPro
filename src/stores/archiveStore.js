@@ -354,44 +354,53 @@ export const useArchiveStore = defineStore('archive', () => {
 
   async function deleteArchive(dateStr) {
     if (!dateStr) return { success: false, message: 'لا يوجد تاريخ محدد' };
+
+    // UI Feedback immediately
     isLoading.value = true;
+
     try {
-      // الحذف المحلي دائماً أولاً
+      // 1. Local Delete (Immediate)
       await localforage.removeItem(`${DB_PREFIX.value}${dateStr}`);
 
+      // Clear current view if it matches
       if (selectedDate.value === dateStr) {
         rows.value = [];
         selectedDate.value = '';
       }
 
+      // 2. Cloud Delete (Background / Fire & Forget strategy for UI responsiveness)
       const user = authStore.user;
-
-      // الحذف السحابي أو جدولته
       if (user) {
-        if (navigator.onLine) {
+        // We do NOT await the cloud operation to keep UI snappy.
+        // We trigger it and let it handle itself or fall back to queue.
+        const deleteCloud = async () => {
           try {
-            const { error } = await retry(() => api.archive.deleteArchiveByDate(user.id, dateStr), {
-              retries: 2,
-              delay: 3000,
-              timeout: 10000, // 10s timeout to prevent hanging
-              onRetry: (attempt, err) => {
-                // لا نعيد المحاولة إذا كان الخطأ انترنت، ننتقل للجدولة
-                if (err.status === 'offline' || err.status === 'network_error') throw err;
-              }
-            });
-            if (error) throw error;
+            if (navigator.onLine) {
+              const { error } = await retry(() => api.archive.deleteArchiveByDate(user.id, dateStr), {
+                retries: 2,
+                delay: 2000,
+                timeout: 8000 // Reduced timeout
+              });
+              if (error) throw error;
+            } else {
+              throw new Error('Offline');
+            }
           } catch (err) {
-            // فشل الحذف المباشر -> إضافة للطابور
+            // Silently queue for background sync
+            logger.warn('⚠️ Cloud delete failed/skipped, queuing:', err.message);
             await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
           }
-        } else {
-          // أوفلاين -> إضافة للطابور مباشرة
-          await addToSyncQueue({ type: 'delete_archive', payload: { user_id: user.id, archive_date: dateStr } });
-        }
+        };
+
+        // Execute background task
+        deleteCloud();
       }
 
-      // تحديث القائمة بعد الحذف
-      await loadAvailableDates(true);
+      // 3. Refresh List (Immediate)
+      // We don't need to wait for cloud to refresh the list, we just removed it locally.
+      // But we should refresh available dates to update the dropdown.
+      await loadAvailableDates(true); // This might be fast enough locally
+
       return { success: true, message: `تم حذف الأرشيف بنجاح 🗑️` };
     } catch (err) {
       logger.error('❌ ArchiveStore: deleteArchive Error:', err);
