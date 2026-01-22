@@ -7,10 +7,11 @@ import localforage from 'localforage';
 export const useReportsStore = defineStore('reports', () => {
     // --- State ---
     const allArchiveData = ref([]);
-    const isLoading = ref(false);
-    const selectedPeriod = ref('day'); // day, week, month
+    const isLoading = ref(true);
+    const selectedPeriod = ref('week'); // week is now default
     const selectedDate = ref(null);
     const customerNotes = ref([]);
+    const allNotes = ref([]);
 
     const authStore = useAuthStore();
 
@@ -194,12 +195,12 @@ export const useReportsStore = defineStore('reports', () => {
 
             const customer = customerMap.get(key);
             customer.totalNet += Number(record.net) || 0;
-            customer.totalAmount += Number(record.amount) || 0;
+            customer.totalAmount += (Number(record.amount) || 0) + (Number(record.extra) || 0);
             customer.count++;
         });
 
         return Array.from(customerMap.values())
-            .sort((a, b) => b.totalNet - a.totalNet)
+            .sort((a, b) => b.totalAmount - a.totalAmount) // الترتيب حسب إجمالي التحويلات (الأكثر تحصيلاً)
             .slice(0, 10);
     });
 
@@ -313,14 +314,16 @@ export const useReportsStore = defineStore('reports', () => {
                 dateMap.set(date, {
                     date,
                     totalNet: 0,
-                    totalAmount: 0,
+                    totalTransfers: 0,
+                    totalCollector: 0,
                     count: 0
                 });
             }
 
             const dayData = dateMap.get(date);
             dayData.totalNet += Number(record.net) || 0;
-            dayData.totalAmount += (Number(record.amount) || 0) + (Number(record.extra) || 0);
+            dayData.totalTransfers += (Number(record.amount) || 0) + (Number(record.extra) || 0);
+            dayData.totalCollector += Number(record.collector) || 0;
             dayData.count++;
         });
 
@@ -422,6 +425,41 @@ export const useReportsStore = defineStore('reports', () => {
         }
     }
 
+    /**
+     * جلب جميع الملاحظات لجميع العملاء مع إثراء البيانات
+     */
+    async function fetchAllNotes() {
+        try {
+            const allKeys = await localforage.keys();
+            const notesKeys = allKeys.filter(k => k.startsWith(NOTES_DB_PREFIX.value));
+
+            const allData = await Promise.all(
+                notesKeys.map(async key => {
+                    const notes = await localforage.getItem(key);
+                    return notes || [];
+                })
+            );
+
+            // تجميع وتسطيح الملاحظات
+            let flattened = allData.flat();
+
+            // إثراء الملاحظات ببيانات التاجر من الأرشيف (الكود)
+            flattened = flattened.map(note => {
+                const customerRecord = allArchiveData.value.find(r => r.shop === note.customerShop);
+                return {
+                    ...note,
+                    merchantCode: customerRecord ? customerRecord.code : '---'
+                };
+            });
+
+            // ترتيب حسب الأحدث
+            allNotes.value = flattened.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        } catch (err) {
+            logger.error('❌ ReportsStore: Error fetching all notes:', err);
+            allNotes.value = [];
+        }
+    }
+
     return {
         // State
         allArchiveData,
@@ -444,6 +482,8 @@ export const useReportsStore = defineStore('reports', () => {
         addCustomerNote,
         loadCustomerNotes,
         deleteCustomerNote,
-        searchNotes
+        searchNotes,
+        fetchAllNotes,
+        allNotes
     };
 });

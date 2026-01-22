@@ -1,5 +1,5 @@
 <template>
-  <div class="reports-page animate-fade-in">
+  <div class="reports-page animate-fade-in" v-if="!store.isLoading || store.allArchiveData.length > 0">
     
     <PageHeader 
       title="تقارير التحصيل" 
@@ -79,17 +79,54 @@
       </div>
     </div>
 
-    <!-- قسم الرسوم البيانية -->
-    <section class="chart-section" v-if="!store.isLoading && store.chartData.length > 0">
-      <div class="glass-panel">
-        <div class="panel-header">
-          <h3><i class="fas fa-chart-area text-gradient"></i> اتجاهات الأداء المالي</h3>
+    <!-- قسم الرسوم البيانية المتعددة -->
+    <div class="charts-dashboard-grid" v-if="!store.isLoading && store.chartData.length > 0">
+      
+      <!-- 1. إجمالي التحويلات -->
+      <div class="glass-panel chart-mini-card">
+        <div class="panel-header-sm">
+          <i class="fas fa-wallet color-blue"></i>
+          <h4>اتجاه التحويلات</h4>
         </div>
-        <div class="canvas-container">
-          <canvas ref="trendChartCanvas"></canvas>
+        <div class="canvas-container-sm">
+          <canvas ref="transfersChartCanvas"></canvas>
         </div>
       </div>
-    </section>
+
+      <!-- 2. صافي المديونية -->
+      <div class="glass-panel chart-mini-card">
+        <div class="panel-header-sm">
+          <i class="fas fa-chart-pie color-green"></i>
+          <h4>صافي المديونية</h4>
+        </div>
+        <div class="canvas-container-sm">
+          <canvas ref="netChartCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 3. إجمالي المحصل -->
+      <div class="glass-panel chart-mini-card">
+        <div class="panel-header-sm">
+          <i class="fas fa-hand-holding-usd color-purple"></i>
+          <h4>إجمالي المحصل</h4>
+        </div>
+        <div class="canvas-container-sm">
+          <canvas ref="collectorChartCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- 4. متوسط التحويلات -->
+      <div class="glass-panel chart-mini-card">
+        <div class="panel-header-sm">
+          <i class="fas fa-chart-line color-orange"></i>
+          <h4>متوسط العمليات</h4>
+        </div>
+        <div class="canvas-container-sm">
+          <canvas ref="avgChartCanvas"></canvas>
+        </div>
+      </div>
+
+    </div>
 
     <!-- قوائم التميز (Top Lists) -->
     <div class="lists-grid">
@@ -114,7 +151,7 @@
               <span class="customer-meta">كود: {{ customer.code }} | {{ customer.count }} عملية</span>
             </div>
             <div class="rank-value success">
-              {{ formatNum(customer.totalNet) }}
+              {{ formatNum(customer.totalAmount) }}
             </div>
              <button class="action-btn-mini" @click="openNotesModal(customer.shop)">
               <i class="far fa-edit"></i>
@@ -275,8 +312,46 @@
     </BaseModal>
 
     <!-- Loader -->
-    <div v-if="store.isLoading" class="loader-overlay">
-      <Loader />
+    <Transition name="fade-overlay">
+      <div v-if="store.isLoading" class="loader-overlay">
+        <Loader />
+      </div>
+    </Transition>
+
+    <!-- جدول إجمالي الملاحظات -->
+    <div class="list-panel full-width mt-4" v-if="store.allNotes.length > 0">
+      <div class="panel-header">
+        <div class="header-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="fas fa-clipboard-list"></i></div>
+        <h3>سجل الملاحظات الشامل</h3>
+        <span class="badge-soft" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">{{ store.allNotes.length }} ملاحظة</span>
+      </div>
+      
+      <div class="custom-table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>التاجر</th>
+              <th>كود</th>
+              <th>القسم</th>
+              <th>الملاحظة</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="note in store.allNotes" :key="note.id">
+              <td class="fw-bold">{{ note.customerShop }}</td>
+              <td><span class="code-badge">{{ note.merchantCode }}</span></td>
+              <td>
+                <span class="mini-badge" :class="note.category">
+                  {{ getCategoryLabel(note.category) }}
+                </span>
+              </td>
+              <td class="text-truncate-cell" :title="note.text">{{ note.text }}</td>
+              <td class="text-muted text-sm">{{ formatDate(note.createdAt) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -296,8 +371,15 @@ const store = useReportsStore();
 const authStore = useAuthStore();
 const { addNotification } = inject('notifications');
 
-const trendChartCanvas = ref(null);
-let trendChart = null;
+const transfersChartCanvas = ref(null);
+const netChartCanvas = ref(null);
+const collectorChartCanvas = ref(null);
+const avgChartCanvas = ref(null);
+
+let transfersChart = null;
+let netChart = null;
+let collectorChart = null;
+let avgChart = null;
 
 const periodOptions = [
   { value: 'day', label: 'يومي' },
@@ -343,6 +425,7 @@ const getRankClass = (idx) => {
 // --- Actions ---
 const handlePeriodChange = async (period) => {
   store.selectedPeriod = period;
+  store.selectedDate = null; // Reset specific date filtering to allow full range
   await nextTick();
   renderCharts();
 };
@@ -371,89 +454,114 @@ const handleDeleteNote = async (id) => {
 
 // --- Charts ---
 const renderCharts = () => {
-  if (!trendChartCanvas.value || store.chartData.length === 0) return;
+  if (store.chartData.length === 0) return;
   
-  if (typeof Chart === 'undefined') {
-    console.warn('Chart.js is not loaded correctly.');
-    return;
-  }
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1f2937',
+        bodyColor: '#4b5563',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        titleFont: { family: 'Cairo', weight: 'bold' },
+        bodyFont: { family: 'Cairo' },
+        rtl: true,
+        textDirection: 'rtl'
+      }
+    },
+    scales: {
+      y: { display: false, beginAtZero: true },
+      x: { grid: { display: false }, ticks: { font: { family: 'Cairo', size: 10 }, color: '#94a3b8' } }
+    }
+  };
 
-  if (trendChart) trendChart.destroy();
-
-  const ctx = trendChartCanvas.value.getContext('2d');
-  
-  // Gradient Fill
-  const gradientNet = ctx.createLinearGradient(0, 0, 0, 400);
-  gradientNet.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-  gradientNet.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: store.chartData.map(d => d.date),
-      datasets: [
-        {
-          label: 'الصافي',
-          data: store.chartData.map(d => d.totalNet),
-          borderColor: '#10b981',
-          borderWidth: 3,
-          backgroundColor: gradientNet,
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: '#fff',
-          pointBorderColor: '#10b981',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        },
-        {
-          label: 'التحويلات',
-          data: store.chartData.map(d => d.totalAmount),
+  // 1. Transfers Chart
+  if (transfersChart) transfersChart.destroy();
+  if (transfersChartCanvas.value) {
+    transfersChart = new Chart(transfersChartCanvas.value.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: store.chartData.map(d => d.date),
+        datasets: [{
+          data: store.chartData.map(d => d.totalTransfers),
           borderColor: '#3b82f6',
           borderWidth: 2,
-          borderDash: [5, 5], // Dashed line
           tension: 0.4,
           pointRadius: 0,
-          pointHoverRadius: 4
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
+          fill: true,
+          backgroundColor: 'rgba(59, 130, 246, 0.1)'
+        }]
       },
-      plugins: {
-        legend: { position: 'top', align: 'end', labels: { font: { family: 'Cairo' }, usePointStyle: true, boxWidth: 8 } },
-        tooltip: { 
-          backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-          titleColor: '#1f2937', 
-          bodyColor: '#4b5563', 
-          borderColor: '#e5e7eb', 
-          borderWidth: 1, 
-          titleFont: { family: 'Cairo', weight: 'bold' },
-          bodyFont: { family: 'Cairo' },
-          padding: 10,
-          displayColors: true,
-          rtl: true, // Support RTL in tooltips
-          textDirection: 'rtl'
-        }
+      options: commonOptions
+    });
+  }
+
+  // 2. Net Chart
+  if (netChart) netChart.destroy();
+  if (netChartCanvas.value) {
+    netChart = new Chart(netChartCanvas.value.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: store.chartData.map(d => d.date),
+        datasets: [{
+          data: store.chartData.map(d => d.totalNet),
+          borderColor: '#10b981',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: 'rgba(16, 185, 129, 0.1)'
+        }]
       },
-      scales: {
-        y: { 
-            beginAtZero: true, 
-            grid: { color: 'rgba(0,0,0,0.03)' }, 
-            ticks: { font: { family: 'Cairo' }, color: '#94a3b8' } 
-        },
-        x: { 
-            grid: { display: false }, 
-            ticks: { font: { family: 'Cairo', size: 10 }, color: '#94a3b8' } 
-        }
-      }
-    }
-  });
+      options: commonOptions
+    });
+  }
+
+  // 3. Collector Chart
+  if (collectorChart) collectorChart.destroy();
+  if (collectorChartCanvas.value) {
+    collectorChart = new Chart(collectorChartCanvas.value.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: store.chartData.map(d => d.date),
+        datasets: [{
+          data: store.chartData.map(d => d.totalCollector),
+          borderColor: '#8b5cf6',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: 'rgba(139, 92, 246, 0.1)'
+        }]
+      },
+      options: commonOptions
+    });
+  }
+
+  // 4. Average Chart
+  if (avgChart) avgChart.destroy();
+  if (avgChartCanvas.value) {
+    avgChart = new Chart(avgChartCanvas.value.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: store.chartData.map(d => d.date),
+        datasets: [{
+          data: store.chartData.map(d => Math.round(d.totalTransfers / (d.count || 1))),
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: 'rgba(245, 158, 11, 0.1)'
+        }]
+      },
+      options: commonOptions
+    });
+  }
 };
 
 onMounted(async () => {
@@ -462,6 +570,7 @@ onMounted(async () => {
   }
   if (authStore.isAuthenticated) {
     await store.loadAllLocalArchives();
+    await store.fetchAllNotes(); // Fetch list for table
     await nextTick();
     renderCharts();
   }
@@ -584,14 +693,41 @@ watch(() => store.chartData, () => nextTick(renderCharts), { deep: true });
 .stat-icon-bg { position: absolute; left: -10px; bottom: -10px; font-size: 5rem; transform: rotate(15deg); z-index: 1; pointer-events: none; }
 
 /* --- Charts --- */
-.chart-section { margin-top: 10px; }
-.glass-panel {
-  background: var(--surface-bg); border-radius: 24px; padding: 20px;
-  box-shadow: var(--container-shadow); border: 1px solid var(--border-color);
+.color-blue { color: #3b82f6 !important; }
+.color-green { color: #10b981 !important; }
+.color-purple { color: #8b5cf6 !important; }
+.color-orange { color: #f59e0b !important; }
+
+/* --- Multi-Chart Grid --- */
+.charts-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 10px;
 }
-.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.panel-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px; }
-.canvas-container { height: 280px; width: 100%; }
+.chart-mini-card {
+  padding: 15px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-header-sm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-header-sm i { font-size: 1.1rem; }
+.panel-header-sm h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.canvas-container-sm {
+  height: 120px;
+  width: 100%;
+}
+
 .text-gradient { 
     background: linear-gradient(135deg, var(--primary), var(--info)); 
     -webkit-background-clip: text; 
@@ -675,8 +811,12 @@ watch(() => store.chartData, () => nextTick(renderCharts), { deep: true });
 .timeline-content p { margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.4; }
 
 .empty-timeline, .empty-state { text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 20px; opacity: 0.7; }
-.loader-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 99; display: flex; align-items: center; justify-content: center; }
+.loader-overlay { position: fixed; inset: 0; background: var(--surface-bg); backdrop-filter: blur(5px); z-index: 999; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
 .dir-ltr { direction: ltr; text-align: right; }
+
+/* Transitions */
+.fade-overlay-enter-active, .fade-overlay-leave-active { transition: opacity 0.4s ease; }
+.fade-overlay-enter-from, .fade-overlay-leave-to { opacity: 0; }
 
 /* --- Responsive Layout Adjustments --- */
 @media (max-width: 600px) {
