@@ -359,10 +359,10 @@ export const useItineraryStore = defineStore('itinerary', () => {
     try {
       profiles.value = profiles.value.filter(p => p.slot_number !== slotNumber);
       await safeSaveLocal(PROFILE_STORAGE_KEY.value, profiles.value);
-      
+
       // إضافة إلى قائمة المحذوفات المحلية للمزامنة لاحقاً (اختياري)
       // await addToQueue({ type: 'profile_delete', data: { user_id: authStore.user?.id, slot_number: slotNumber } });
-      
+
       addNotification({ message: 'تم حذف القالب محلياً', type: 'success' });
     } catch (err) {
       logger.error('Error deleting profile:', err);
@@ -550,11 +550,16 @@ export const useItineraryStore = defineStore('itinerary', () => {
       },
       (error) => {
         let msg = 'فشل تحديد الموقع';
+        const errorDetails = {
+          code: error.code,
+          message: error.message
+        };
+
         if (error.code === 1) msg = 'يجب السماح بالوصول للموقع من إعدادات المتصفح';
         else if (error.code === 3) msg = 'انتهت مهلة الانتظار، حاول في مكان مفتوح';
 
         addNotification({ message: msg, type: 'error' });
-        logger.error('GPS Error:', error);
+        logger.error('📍 GPS Error:', errorDetails);
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
@@ -564,10 +569,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
   async function adminFetchLocations() {
     // Only admins should call this
     try {
-      const { data, error } = await supabase
-        .from('client_routes')
-        .select('*')
-        .order('location_updated_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_client_locations_admin');
 
       if (error) throw error;
       return data || [];
@@ -585,14 +587,14 @@ export const useItineraryStore = defineStore('itinerary', () => {
 
     try {
       logger.info(`🗑️ Deleting ${locationIds.length} customer locations...`);
-      
+
       const { error } = await supabase
         .from('client_routes')
         .delete()
         .in('id', locationIds);
 
       if (error) throw error;
-      
+
       logger.info(`✅ Successfully deleted ${locationIds.length} locations`);
       return true;
     } catch (err) {

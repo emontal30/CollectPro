@@ -1,5 +1,5 @@
 <template>
-  <div class="reports-page animate-fade-in" v-if="!store.isLoading || store.allArchiveData.length > 0">
+  <div class="reports-page animate-fade-in" v-if="store && (!store.isLoading || (store.allArchiveData && store.allArchiveData.length > 0))">
     
     <PageHeader 
       title="تقارير التحصيل" 
@@ -369,7 +369,7 @@ import Chart from 'chart.js/auto';
 
 const store = useReportsStore();
 const authStore = useAuthStore();
-const { addNotification } = inject('notifications');
+const { addNotification } = inject('notifications', { addNotification: () => {} });
 
 const transfersChartCanvas = ref(null);
 const netChartCanvas = ref(null);
@@ -571,6 +571,7 @@ onMounted(async () => {
   if (authStore.isAuthenticated) {
     await store.loadAllLocalArchives();
     await store.fetchAllNotes(); // Fetch list for table
+    await store.loadNotesStats(); // Fix missing LoadNotesStats call
     await nextTick();
     renderCharts();
   }

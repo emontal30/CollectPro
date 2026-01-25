@@ -31,41 +31,16 @@ export const adminService = {
    */
   async getPendingSubscriptions() {
     try {
-      // Step 1: Fetch subscriptions with nested user data
-      const { data: subsData, error: subsError } = await apiInterceptor(
-        supabase
-          .from('subscriptions')
-          .select('*, users:user_id (full_name, email), subscription_plans:plan_id (name, name_ar, price_egp, duration_months)')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_pending_subscriptions_admin')
       );
 
-      if (subsError) {
-        logger.error('❌ Error fetching pending subscriptions:', subsError);
+      if (error) {
+        logger.error('❌ Error fetching pending subscriptions via RPC:', error);
         return [];
       }
 
-      if (!subsData) {
-        logger.warn('⚠️ No pending subscriptions found');
-        return [];
-      }
-
-      logger.info(`✅ Found ${subsData.length} pending subscriptions`);
-
-      if (subsData.length === 0) return [];
-
-      const userIds = subsData.map(s => s.user_id);
-      const { data: profilesData, error: profilesError } = await apiInterceptor(
-        supabase.from('profiles').select('id, user_code').in('id', userIds)
-      );
-
-      if (profilesError) logger.warn('⚠️ Could not fetch profiles for pending subs:', profilesError);
-
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
-
-      const result = subsData.map(sub => ({ ...sub, user_code: profilesMap.get(sub.user_id) || null }));
-      logger.info(`✅ Processed ${result.length} pending subscriptions`);
-      return result;
+      return data || [];
     } catch (e) {
       logger.error('❌ Exception in getPendingSubscriptions:', e);
       return [];
@@ -73,47 +48,53 @@ export const adminService = {
   },
 
   /**
-   * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم
+   * 3. جلب جميع المستخدمين مع حالة اشتراكاتهم (باستخدام RPC لضمان تجاوز RLS)
    */
   async getUsers() {
-    const { data: usersData, error: usersError } = await apiInterceptor(
-      supabase.from('users').select('*, subscriptions(id, status, end_date)').order('created_at', { ascending: false })
-    );
+    try {
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_users_with_details')
+      );
 
-    if (usersError) {
-      logger.error('Error fetching users:', usersError);
+      if (error) {
+        logger.error('Error fetching users via RPC:', error);
+        return [];
+      }
+
+      // تحويل البيانات لتلائم الشكل الذي تتوقعه اللوحة
+      // الدالة في SQL تعيد مصفوفة جاهزة ومعالجة
+      return (data || []).map(user => ({
+        ...user,
+        manualDays: null // حقل إضافي للواجهة يبدأ فارغاً
+      }));
+    } catch (e) {
+      logger.error('❌ Exception in getUsers:', e);
       return [];
     }
-    if (!usersData) return [];
-
-    const userIds = usersData.map(u => u.id);
-    const { data: profilesData, error: profilesError } = await apiInterceptor(
-      supabase.from('profiles').select('id, user_code').in('id', userIds)
-    );
-
-    if (profilesError) logger.warn('Could not fetch user profiles, short codes will be missing.');
-
-    const profilesMap = new Map(profilesData?.map(p => [p.id, p.user_code]) || []);
-
-    return usersData.map(user => {
-      const activeSub = user.subscriptions?.find(s => s.status === 'active');
-      return { ...user, user_code: profilesMap.get(user.id) || null, hasActiveSub: !!activeSub, activeSubId: activeSub?.id, expiryDate: activeSub?.end_date || null };
-    });
   },
 
   /**
    * 4. جلب جميع الاشتراكات مع الفلترة
    */
   async getAllSubscriptions(filters = {}) {
-    let query = supabase.from('admin_subscriptions_view').select('*').order('created_at', { ascending: false });
-    if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status);
-    if (filters.expiry === 'expiring_soon') {
-      const today = new Date().toISOString();
-      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      query = query.gte('end_date', today).lte('end_date', sevenDaysFromNow);
+    try {
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('get_all_subscriptions_admin', {
+          p_status: filters.status || 'all',
+          p_expiry: filters.expiry || 'all'
+        })
+      );
+
+      if (error) {
+        logger.error('❌ Error fetching all subscriptions via RPC:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (e) {
+      logger.error('❌ Exception in getAllSubscriptions:', e);
+      return [];
     }
-    const { data } = await apiInterceptor(query);
-    return data || [];
   },
 
   /**

@@ -223,7 +223,9 @@ DECLARE
         'log_email_queue_activity', 'handle_notification_settings_updated_at', 'clean_old_user_actions',
         'log_notification_settings_activity', 'update_updated_at_column', 'get_active_users_last_n_days',
         'diagnose_permissions', 'log_activity', 'handle_updated_at', 'handle_new_user', 'handle_notification_read_at',
-        'get_admin_dashboard_statistics', 'log_error', 'log_notifications_activity', 'get_admin_status'
+        'get_admin_stats', 'get_admin_stats_fixed', 'get_users_with_details', 'fix_missing_profiles',
+        'get_pending_subscriptions_admin', 'get_all_subscriptions_admin', 'get_app_errors_admin', 'get_client_locations_admin',
+        'log_error', 'log_notifications_activity'
     ];
     func_name TEXT;
 BEGIN

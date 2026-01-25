@@ -213,7 +213,7 @@ export const useAdminStore = defineStore('admin', () => {
         pendingSubscriptions.value = [];
         logger.warn('⚠️ No pending subscriptions data');
       }
-    } catch (e) { 
+    } catch (e) {
       logger.error('❌ Error fetching pending subs', e);
       pendingSubscriptions.value = [];
     }
@@ -370,8 +370,9 @@ export const useAdminStore = defineStore('admin', () => {
       if (shouldRefresh) {
         // تحديث محلي: نفترض أن التفعيل اليدوي يعني أن المستخدم أصبح نشطاً
         const userIndex = usersList.value.findIndex(u => u.id === userId);
-        if (userIndex !== -1 && Number(days) > 0) {
-          usersList.value[userIndex].hasActiveSub = true;
+        if (userIndex !== -1) {
+          if (Number(days) > 0) usersList.value[userIndex].hasActiveSub = true;
+          usersList.value[userIndex].manualDays = null; // إعادة تصفير الحقل بعد النجاح
         }
 
         // تحديث الخلفية
@@ -388,7 +389,10 @@ export const useAdminStore = defineStore('admin', () => {
       }
 
     } catch (err) {
-      if (shouldRefresh) closeLoading();
+      if (shouldRefresh) {
+        closeLoading();
+        // في حالة الفشل، نترك القيمة كما هي ليتمكن من المحاولة مرة أخرى
+      }
       logger.error('Error activating manual subscription:', err);
       if (shouldRefresh) showError(err.message || 'حدث خطأ أثناء تحديث الاشتراك');
       throw err;
@@ -408,14 +412,7 @@ export const useAdminStore = defineStore('admin', () => {
   async function fetchAppErrors(showFeedback = false) {
     if (showFeedback) showLoading('جاري تحديث سجل الأخطاء...');
     try {
-      const { data, error } = await supabase
-        .from('app_errors')
-        .select(`
-          *,
-          users:user_id (email, full_name, role)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data, error } = await supabase.rpc('get_app_errors_admin');
 
       if (error) throw error;
       appErrors.value = data || [];
@@ -448,6 +445,43 @@ export const useAdminStore = defineStore('admin', () => {
     } catch (e) {
       logger.error('Error resolving error:', e);
       addNotification('فشل تحديث الحالة', 'error');
+    }
+  }
+
+  async function bulkResolveErrors() {
+    const unresolvedCount = appErrors.value.filter(e => !e.is_resolved).length;
+    if (unresolvedCount === 0) {
+      addNotification('لا توجد أخطاء غير معالجة', 'info');
+      return;
+    }
+
+    const result = await confirm({
+      title: 'معالجة الكل',
+      text: `هل أنت متأكد من تحديد جميع الأخطاء (${unresolvedCount}) كمعالجة؟`,
+      icon: 'question'
+    });
+    if (!result.isConfirmed) return;
+
+    showLoading('جاري معالجة الكل...');
+    try {
+      const { error } = await supabase
+        .from('app_errors')
+        .update({ is_resolved: true })
+        .eq('is_resolved', false);
+
+      if (error) throw error;
+
+      // Update local state
+      appErrors.value.forEach(err => {
+        err.is_resolved = true;
+      });
+
+      closeLoading();
+      addNotification(`تم معالجة ${unresolvedCount} خطأ بنجاح`, 'success');
+    } catch (e) {
+      closeLoading();
+      logger.error('Error bulk resolving:', e);
+      addNotification('فشل معالجة الكل', 'error');
     }
   }
 
@@ -534,7 +568,7 @@ export const useAdminStore = defineStore('admin', () => {
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
     serverTimeOffset, appErrors,
-    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers, fetchAppErrors, resolveError, deleteError,
+    loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers, fetchAppErrors, resolveError, bulkResolveErrors, deleteError,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig,
     runRepairTool, sendRemoteCommand
   };

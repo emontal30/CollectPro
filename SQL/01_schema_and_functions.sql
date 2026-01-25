@@ -17,7 +17,7 @@ DROP FUNCTION IF EXISTS public.update_statistics CASCADE;
 DROP FUNCTION IF EXISTS public.create_user_profile CASCADE;
 DROP FUNCTION IF EXISTS public.cleanup_old_archives CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
-DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE;
+DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE; -- Definition moved below to restore missing function
 DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
@@ -151,69 +151,47 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.handle_new_user_stats()
-RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
-BEGIN
-    IF (TG_OP = 'INSERT') THEN
-        UPDATE public.statistics SET total_users = total_users + 1, updated_at = NOW() WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
-    ELSIF (TG_OP = 'DELETE') THEN
-        UPDATE public.statistics SET total_users = total_users - 1, updated_at = NOW() WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
-    END IF;
-    RETURN NULL;
-END;
-$$;
+-- [DEPRECATED] These functions caused lock contention on the statistics table.
+-- Statistics are now calculated live via get_admin_stats().
+DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
+DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
 
-CREATE OR REPLACE FUNCTION public.handle_subscription_stats()
-RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
-DECLARE
-    price_diff DECIMAL(10,2) := 0;
-    plan_price DECIMAL(10,2);
-BEGIN
-    IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
-         SELECT price_egp INTO plan_price FROM public.subscription_plans WHERE id = NEW.plan_id;
-         price_diff := COALESCE(plan_price, 0);
-    ELSIF (TG_OP = 'DELETE') THEN
-         SELECT price_egp INTO plan_price FROM public.subscription_plans WHERE id = OLD.plan_id;
-         price_diff := COALESCE(plan_price, 0);
-    END IF;
+-- handle_subscription_stats was here (removed)
 
-    -- Partial logic simplified for readability
-    IF (TG_OP = 'INSERT') THEN
-        UPDATE public.statistics SET
-            active_subscriptions = CASE WHEN NEW.status = 'active' THEN active_subscriptions + 1 ELSE active_subscriptions END,
-            pending_requests = CASE WHEN NEW.status = 'pending' THEN pending_requests + 1 ELSE pending_requests END,
-            total_revenue = CASE WHEN NEW.status = 'active' THEN total_revenue + price_diff ELSE total_revenue END,
-            updated_at = NOW()
-        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        UPDATE public.statistics SET
-            active_subscriptions = active_subscriptions + (CASE WHEN NEW.status = 'active' THEN 1 ELSE 0 END) - (CASE WHEN OLD.status = 'active' THEN 1 ELSE 0 END),
-            pending_requests = pending_requests + (CASE WHEN NEW.status = 'pending' THEN 1 ELSE 0 END) - (CASE WHEN OLD.status = 'pending' THEN 1 ELSE 0 END),
-            total_revenue = total_revenue + (CASE WHEN NEW.status = 'active' THEN price_diff ELSE 0 END) - (CASE WHEN OLD.status = 'active' THEN price_diff ELSE 0 END),
-            updated_at = NOW()
-        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
-    ELSIF (TG_OP = 'DELETE') THEN
-        UPDATE public.statistics SET
-            active_subscriptions = CASE WHEN OLD.status = 'active' THEN active_subscriptions - 1 ELSE active_subscriptions END,
-            pending_requests = CASE WHEN OLD.status = 'pending' THEN pending_requests - 1 ELSE pending_requests END,
-            total_revenue = CASE WHEN OLD.status = 'active' THEN total_revenue - price_diff ELSE total_revenue END,
-            updated_at = NOW()
-        WHERE id = '00000000-0000-0000-0000-000000000001'::UUID;
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.create_user_profile()
+-- Robust User Initialization (SECURITY DEFINER)
+-- Handles both public.users and public.profiles creation atomically.
+CREATE OR REPLACE FUNCTION public.handle_new_user_registration()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
-DECLARE extracted_name TEXT;
+DECLARE 
+    extracted_name TEXT;
+    new_user_code TEXT;
 BEGIN
+    -- 1. Determine Full Name
     extracted_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1));
-    if extracted_name IS NULL OR extracted_name = '' THEN extracted_name := 'مستخدم'; END IF;
+    IF extracted_name IS NULL OR extracted_name = '' THEN extracted_name := 'مستخدم'; END IF;
 
+    -- 2. Generate Unique User Code (for Profiles/Collaboration)
+    new_user_code := 'EMP-' || substring(md5(NEW.id::text || random()::text) from 1 for 6);
+
+    -- 3. Create public.users record
     INSERT INTO public.users (id, email, full_name, role, provider)
-    VALUES (NEW.id, NEW.email, extracted_name, 'user', COALESCE(NEW.raw_app_meta_data->'providers', '["google"]'::jsonb))
-    ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, provider = EXCLUDED.provider, updated_at = NOW();
+    VALUES (
+        NEW.id, 
+        NEW.email, 
+        extracted_name, 
+        'user', 
+        COALESCE(NEW.raw_app_meta_data->'providers', '["email"]'::jsonb)
+    )
+    ON CONFLICT (id) DO UPDATE 
+    SET email = EXCLUDED.email, 
+        provider = EXCLUDED.provider, 
+        updated_at = NOW();
+
+    -- 4. Create public.profiles record
+    INSERT INTO public.profiles (id, user_code, full_name)
+    VALUES (NEW.id, new_user_code, extracted_name)
+    ON CONFLICT (id) DO NOTHING;
+
     RETURN NEW;
 END;
 $$;
@@ -250,14 +228,11 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS trigger_update_stats_subs ON public.subscriptions;
-CREATE TRIGGER trigger_update_stats_subs AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION handle_subscription_stats();
-
-DROP TRIGGER IF EXISTS trigger_update_stats_users ON public.users;
-CREATE TRIGGER trigger_update_stats_users AFTER INSERT OR UPDATE OR DELETE ON public.users FOR EACH ROW EXECUTE FUNCTION handle_new_user_stats();
+-- Removed trigger_update_stats_subs
+-- Removed trigger_update_stats_users
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.create_user_profile();
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_registration();
 
 -- Seed Data (Core)
 DO $$
@@ -268,9 +243,8 @@ BEGIN
         ('MONTH-3', 'خطة 3 شهور', 'خطة توفير', 80.00, 90, 3, '["جميع الميزات"]'::jsonb, TRUE, 80.00),
         ('YEAR-1', 'خطة سنوية', 'خطة احترافية', 360.00, 365, 12, '["جميع الميزات"]'::jsonb, TRUE, 360.00)
     ON CONFLICT DO NOTHING;
-    INSERT INTO public.statistics (id, total_users, active_subscriptions, total_revenue, pending_requests, last_sync)
-    VALUES ('00000000-0000-0000-0000-000000000001'::UUID, 0, 0, 0, 0, NOW())
-    ON CONFLICT (id) DO NOTHING;
+    -- Statistics row removed from seeding, table is still there but deprecated.
+    -- We keep the table for now to avoid breaking other views if any, but it's not updated anymore.
     INSERT INTO public.system_config (key, value) VALUES ('enforce_subscription', 'false'::jsonb) ON CONFLICT (key) DO NOTHING;
     UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
 END $$;
@@ -323,20 +297,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- Profiles trigger
-CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
-RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
-BEGIN
-    INSERT INTO public.profiles (id, user_code, full_name)
-    VALUES (
-        NEW.id, 'EMP-' || substring(md5(random()::text) from 1 for 6),
-        COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
-    ) ON CONFLICT (id) DO NOTHING;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS on_auth_user_created_profile ON auth.users;
-CREATE TRIGGER on_auth_user_created_profile AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
+-- Redundant Trigger "on_auth_user_created_profile" and function "handle_new_user_profile" removed (Merged into handle_new_user_registration)
+DROP FUNCTION IF EXISTS public.handle_new_user_profile CASCADE;
 
 -- Backfill profiles
 INSERT INTO public.profiles (id, user_code, full_name)
@@ -411,7 +373,6 @@ CREATE TRIGGER update_live_harvest_updated_at BEFORE UPDATE ON public.live_harve
 CREATE OR REPLACE FUNCTION get_admin_stats(active_days_period int default 30)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  stats_json json;
   total_users_count int;
   active_subscriptions_count int;
   total_revenue_val numeric;
@@ -420,17 +381,54 @@ DECLARE
   cancelled_count int;
   expired_count int;
 BEGIN
+  -- Security Check
   IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied: Admin privileges required'; END IF;
-  select total_users, active_subscriptions, total_revenue into total_users_count, active_subscriptions_count, total_revenue_val
-  from public.statistics where id = '00000000-0000-0000-0000-000000000001';
-  select count(distinct user_id) into active_users_count from public.daily_archives where updated_at >= (now() - (active_days_period || ' days')::interval);
-  select count(*) filter (where status = 'pending'), count(*) filter (where status = 'cancelled'), count(*) filter (where status = 'expired')
-  into pending_count, cancelled_count, expired_count from public.subscriptions;
+
+  -- Intelligent Live Calculation: Optimized for performance using existing indexes.
+  -- This replaces the cached statistics table to eliminate lock contention on high traffic.
   
-  return json_build_object(
-    'totalUsers', total_users_count, 'activeSubscriptions', active_subscriptions_count, 'totalRevenue', total_revenue_val,
-    'activeUsers', active_users_count, 'pendingRequests', pending_count, 'cancelled', cancelled_count, 'expired', expired_count
+  -- 1. Count Total Users
+  SELECT count(*) INTO total_users_count FROM public.users;
+
+  -- 2. Count Active Subscriptions
+  SELECT count(*) INTO active_subscriptions_count FROM public.subscriptions WHERE status = 'active';
+
+  -- 3. Calculate Total Revenue from Active Plans
+  SELECT COALESCE(SUM(sp.price_egp), 0) INTO total_revenue_val 
+  FROM public.subscriptions s
+  JOIN public.subscription_plans sp ON s.plan_id = sp.id
+  WHERE s.status = 'active';
+
+  -- 4. Count Active Users (last N days)
+  SELECT count(distinct user_id) INTO active_users_count 
+  FROM public.daily_archives 
+  WHERE updated_at >= (now() - (active_days_period || ' days')::interval);
+
+  -- 5. Status Breakdown
+  SELECT 
+    COUNT(*) FILTER (WHERE status = 'pending'),
+    COUNT(*) FILTER (WHERE status = 'cancelled'),
+    COUNT(*) FILTER (WHERE status = 'expired')
+  INTO pending_count, cancelled_count, expired_count 
+  FROM public.subscriptions;
+  
+  RETURN json_build_object(
+    'totalUsers', total_users_count, 
+    'activeSubscriptions', active_subscriptions_count, 
+    'totalRevenue', total_revenue_val,
+    'activeUsers', active_users_count, 
+    'pendingRequests', pending_count, 
+    'cancelled', cancelled_count, 
+    'expired', expired_count
   );
+END;
+$$;
+
+-- Frontend compatibility alias
+CREATE OR REPLACE FUNCTION public.get_admin_stats_fixed(active_days_period int default 30)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN public.get_admin_stats(active_days_period);
 END;
 $$;
 
@@ -438,17 +436,62 @@ CREATE OR REPLACE FUNCTION get_users_with_details()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
-  return (
-      select json_agg(json_build_object(
-            'id', u.id, 'full_name', p.full_name, 'email', u.email, 'user_code', p.user_code,
-            'created_at', u.created_at, 'hasActiveSub', (case when s.status = 'active' then true else false end),
-            'activeSubId', s.id, 'expiryDate', s.end_date,
-            'subscriptions', (select json_agg(sub_details) from (select id, status, end_date from public.subscriptions where user_id = u.id) as sub_details)
-          ) order by u.created_at desc)
-      from auth.users as u
-      left join public.profiles as p on u.id = p.id
-      left join public.subscriptions as s on u.id = s.user_id and s.status = 'active'
+  
+  -- Optimized Admin User Fetching: Bypasses RLS to ensure Admin sees all records.
+  RETURN (
+      SELECT json_agg(t) FROM (
+          SELECT 
+            u.id, 
+            u.full_name, 
+            u.email, 
+            p.user_code,
+            u.role,
+            u.created_at, 
+            (CASE WHEN s.status = 'active' THEN true ELSE false END) as "hasActiveSub",
+            s.id as "activeSubId", 
+            s.end_date as "expiryDate",
+            (
+                SELECT json_agg(sub_details) 
+                FROM (
+                    SELECT id, status, end_date, price 
+                    FROM public.subscriptions 
+                    WHERE user_id = u.id
+                    ORDER BY created_at DESC
+                ) AS sub_details
+            ) as subscriptions
+          FROM public.users AS u
+          LEFT JOIN public.profiles AS p ON u.id = p.id
+          LEFT JOIN public.subscriptions AS s ON u.id = s.user_id AND s.status = 'active'
+          ORDER BY u.created_at DESC
+      ) t
   );
+END;
+$$;
+
+-- Restore missing fix_missing_profiles function
+CREATE OR REPLACE FUNCTION public.fix_missing_profiles()
+RETURNS json SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
+DECLARE
+    users_count int := 0;
+    profiles_count int := 0;
+BEGIN
+    IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
+
+    -- 1. Restore missing public.users from auth.users
+    INSERT INTO public.users (id, email, full_name, role, created_at)
+    SELECT id, email, COALESCE(raw_user_meta_data->>'full_name', split_part(email, '@', 1)), 'user', created_at
+    FROM auth.users
+    ON CONFLICT (id) DO NOTHING;
+    GET DIAGNOSTICS users_count = ROW_COUNT;
+
+    -- 2. Restore missing public.profiles from auth.users
+    INSERT INTO public.profiles (id, user_code, full_name)
+    SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email)
+    FROM auth.users
+    ON CONFLICT (id) DO NOTHING;
+    GET DIAGNOSTICS profiles_count = ROW_COUNT;
+
+    RETURN json_build_object('success', true, 'users_restored', users_count, 'profiles_restored', profiles_count);
 END;
 $$;
 
@@ -511,6 +554,142 @@ BEGIN
   else
     return json_build_object('error', json_build_object('message', 'Invalid action'));
   end if;
+END;
+$$;
+
+-- 11. ADMIN SUBSCRIPTION FUNCTIONS (SECURITY DEFINER)
+-- ====================================================================
+
+-- RPC to fetch pending subscriptions with full details
+CREATE OR REPLACE FUNCTION public.get_pending_subscriptions_admin()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
+
+    RETURN (
+        SELECT json_agg(t) FROM (
+            SELECT 
+                s.id,
+                s.user_id,
+                s.plan_id,
+                s.plan_name,
+                s.status,
+                s.transaction_id,
+                s.price,
+                s.created_at,
+                json_build_object('full_name', u.full_name, 'email', u.email) as users,
+                json_build_object(
+                    'name', sp.name, 
+                    'name_ar', sp.name_ar, 
+                    'price_egp', sp.price_egp, 
+                    'duration_months', sp.duration_months
+                ) as subscription_plans,
+                prof.user_code
+            FROM public.subscriptions s
+            JOIN public.users u ON s.user_id = u.id
+            LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id
+            LEFT JOIN public.profiles prof ON s.user_id = prof.id
+            WHERE s.status = 'pending'
+            ORDER BY s.created_at DESC
+        ) t
+    );
+END;
+$$;
+
+-- RPC to fetch all subscriptions with filters (replaces view direct access)
+CREATE OR REPLACE FUNCTION public.get_all_subscriptions_admin(p_status text DEFAULT 'all', p_expiry text DEFAULT 'all')
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    today_date timestamptz := now();
+    seven_days_later timestamptz := now() + interval '7 days';
+BEGIN
+    IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
+
+    RETURN (
+        SELECT json_agg(t) FROM (
+            SELECT 
+                s.id,
+                s.user_id,
+                u.full_name as user_name,
+                u.email,
+                prof.user_code,
+                s.plan_id,
+                COALESCE(sp.name_ar, s.plan_name) as plan_name,
+                s.status,
+                s.start_date,
+                s.end_date,
+                s.price,
+                sp.price_egp,
+                s.transaction_id,
+                s.created_at,
+                s.updated_at
+            FROM public.subscriptions s
+            JOIN public.users u ON s.user_id = u.id
+            LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id
+            LEFT JOIN public.profiles prof ON s.user_id = prof.id
+            WHERE (p_status = 'all' OR s.status = p_status)
+              AND (p_expiry = 'all' OR (p_expiry = 'expiring_soon' AND s.end_date >= today_date AND s.end_date <= seven_days_later))
+            ORDER BY s.created_at DESC
+        ) t
+    );
+END;
+$$;
+
+-- RPC to fetch application errors with user details (SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.get_app_errors_admin()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
+
+    RETURN (
+        SELECT json_agg(t) FROM (
+            SELECT 
+                e.id,
+                e.user_id,
+                e.error_message,
+                e.stack_trace,
+                e.context,
+                e.severity,
+                e.is_resolved,
+                e.created_at,
+                json_build_object(
+                    'email', u.email,
+                    'full_name', u.full_name,
+                    'role', u.role
+                ) as users
+            FROM public.app_errors e
+            LEFT JOIN public.users u ON e.user_id = u.id
+            ORDER BY e.created_at DESC
+            LIMIT 100
+        ) t
+    );
+END;
+$$;
+
+-- RPC to fetch all client locations with user details (SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION public.get_client_locations_admin()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
+
+    RETURN (
+        SELECT json_agg(t) FROM (
+            SELECT 
+                cr.id,
+                cr.user_id,
+                cr.shop_code,
+                cr.shop_name,
+                cr.latitude,
+                cr.longitude,
+                cr.location_updated_at,
+                cr.updated_at,
+                u.full_name as user_name,
+                u.email as user_email
+            FROM public.client_routes cr
+            JOIN public.users u ON cr.user_id = u.id
+            ORDER BY cr.location_updated_at DESC NULLS LAST
+        ) t
+    );
 END;
 $$;
 

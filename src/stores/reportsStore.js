@@ -460,6 +460,20 @@ export const useReportsStore = defineStore('reports', () => {
         }
     }
 
+    /**
+     * جلب إحصائيات الملاحظات
+     */
+    async function loadNotesStats() {
+        if (allNotes.value.length === 0) {
+            await fetchAllNotes();
+        }
+        return {
+            total: allNotes.value.length,
+            important: allNotes.value.filter(n => n.category === 'important').length,
+            warning: allNotes.value.filter(n => n.category === 'warning').length
+        };
+    }
+
     return {
         // State
         allArchiveData,
@@ -484,6 +498,7 @@ export const useReportsStore = defineStore('reports', () => {
         deleteCustomerNote,
         searchNotes,
         fetchAllNotes,
+        loadNotesStats,
         allNotes
     };
 });

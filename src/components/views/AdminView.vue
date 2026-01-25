@@ -100,7 +100,7 @@
           <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
           <div class="bulk-actions" v-if="selectedUsers.length > 0">
             <div class="input-with-notch">
-              <input v-model.number="bulkDays" type="number" class="bulk-input no-spin" placeholder="أيام">
+              <input v-model.number="bulkDays" type="number" class="bulk-input no-spin">
               <button class="btn-notch-sign" @click="toggleBulkSign">-</button>
             </div>
             <button class="btn btn-secondary btn-sm p-1" @click="handleBulkActivate">تفعيل للمحددين ({{ selectedUsers.length }})</button>
@@ -158,7 +158,7 @@
                 </td>
                 <td class="col-subscription-days">
                   <div class="input-with-notch">
-                    <input v-model.number="user.manualDays" type="number" class="editable-input w-full no-spin" placeholder="أيام">
+                    <input v-model.number="user.manualDays" type="number" class="editable-input w-full no-spin">
                     <button class="btn-notch-sign" @click="toggleUserSign(user)">-</button>
                   </div>
                 </td>
@@ -190,10 +190,17 @@
     <section id="app-errors-section" class="admin-section">
       <div class="admin-section-header d-flex justify-between align-center">
         <h2><i class="fas fa-bug"></i> سجل أخطاء التطبيق ({{ store.appErrors.length }})</h2>
-        <button class="btn btn-sm btn-secondary" @click="store.fetchAppErrors(true)"><i class="fas fa-sync"></i> تحديث</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-success" title="معالجة كل الأخطاء غير المعالجة" @click="store.bulkResolveErrors">
+            <i class="fas fa-check-double"></i> معالجة الكل
+          </button>
+          <button class="btn btn-sm btn-secondary" @click="store.fetchAppErrors(true)">
+            <i class="fas fa-sync"></i> تحديث
+          </button>
+        </div>
       </div>
       
-      <div class="table-wrapper m-0 rounded-none shadow-none" style="max-height: 400px; overflow-y: auto;">
+      <div class="table-wrapper m-0 rounded-none shadow-none" style="max-height: 400px; overflow: auto;">
         <table class="modern-table auto-layout">
           <thead>
             <tr>
@@ -224,6 +231,7 @@
               <td class="text-center">
                 <div class="d-flex justify-center gap-1">
                   <button v-if="!err.is_resolved" class="btn btn--icon text-success" title="تحديد كمعالج" @click="store.resolveError(err.id)"><i class="fas fa-check"></i></button>
+                  <button v-if="err.users" class="btn btn--icon text-warning" title="أدوات الإصلاح" @click="openSupportModal(err.users)"><i class="fas fa-wrench"></i></button>
                   <button class="btn btn--icon text-danger" title="حذف" @click="store.deleteError(err.id)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
