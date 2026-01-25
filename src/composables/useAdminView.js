@@ -30,6 +30,7 @@ export function useAdminView() {
     const selectedSub = ref(null);
     const showSupportModal = ref(false);
     const selectedSupportUser = ref(null);
+    const selectedError = ref(null);
     const showLocationsModal = ref(false);
     const allLocations = ref([]);
     const isLoadingLocations = ref(false);
@@ -72,8 +73,9 @@ export function useAdminView() {
         };
     });
 
-    const openSupportModal = (user) => {
+    const openSupportModal = (user, error = null) => {
         selectedSupportUser.value = user;
+        selectedError.value = error;
         showSupportModal.value = true;
     };
 
@@ -308,6 +310,7 @@ export function useAdminView() {
         selectedSub,
         showSupportModal,
         selectedSupportUser,
+        selectedError,
         showLocationsModal,
         allLocations,
         isLoadingLocations,

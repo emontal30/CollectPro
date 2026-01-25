@@ -376,7 +376,7 @@
 
 
 <script setup>
-import { onMounted, watch, ref, nextTick, onActivated, computed } from 'vue';
+import { onMounted, watch, ref, nextTick, onActivated, computed, inject } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 import { useItineraryStore } from '@/stores/itineraryStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
@@ -386,6 +386,7 @@ import "leaflet/dist/leaflet.css";
 import { LMap, LTileLayer, LMarker, LPolyline, LIcon, LPopup } from "@vue-leaflet/vue-leaflet";
 
 const store = useItineraryStore();
+const { addNotification } = inject('notifications', { addNotification: () => {} });
 const mapRef = ref(null);
 
 let isInitializing = false; // Guard لمنع التنفيذ المتز امن
@@ -397,10 +398,7 @@ const exportableRoutes = computed(() => {
 
 const handleExportLocations = async () => {
     if (exportableRoutes.value.length === 0) {
-      store.addNotification({ 
-        message: 'لا توجد مواقع محددة للتصدير. يرجى تحديد مواقع للمحلات أولاً.', 
-        type: 'warning' 
-      });
+      addNotification('لا توجد مواقع محددة للتصدير. يرجى تحديد مواقع للمحلات أولاً.', 'warning');
       return;
     }
     await exportAndShareTable('locations-export-table', 'Merchant_Locations_Report', {

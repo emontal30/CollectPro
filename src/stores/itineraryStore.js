@@ -550,16 +550,14 @@ export const useItineraryStore = defineStore('itinerary', () => {
       },
       (error) => {
         let msg = 'فشل تحديد الموقع';
-        const errorDetails = {
-          code: error.code,
-          message: error.message
-        };
+        const errorDetails = `Code: ${error.code}, Message: ${error.message}`;
 
-        if (error.code === 1) msg = 'يجب السماح بالوصول للموقع من إعدادات المتصفح';
-        else if (error.code === 3) msg = 'انتهت مهلة الانتظار، حاول في مكان مفتوح';
+        if (error.code === 1) msg = 'يجب السماح بالوصول للموقع من إعدادات المتصفح (Permission Denied)';
+        else if (error.code === 2) msg = 'الموقع غير متاح حالياً (Position Unavailable)';
+        else if (error.code === 3) msg = 'انتهت مهلة الانتظار (Timeout)، حاول في مكان مفتوح';
 
         addNotification({ message: msg, type: 'error' });
-        logger.error('📍 GPS Error:', errorDetails);
+        logger.error(`📍 GPS Error: ${errorDetails}`);
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );

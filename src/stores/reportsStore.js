@@ -428,7 +428,7 @@ export const useReportsStore = defineStore('reports', () => {
     /**
      * جلب جميع الملاحظات لجميع العملاء مع إثراء البيانات
      */
-    async function fetchAllNotes() {
+    const fetchAllNotes = async () => {
         try {
             const allKeys = await localforage.keys();
             const notesKeys = allKeys.filter(k => k.startsWith(NOTES_DB_PREFIX.value));
@@ -458,12 +458,12 @@ export const useReportsStore = defineStore('reports', () => {
             logger.error('❌ ReportsStore: Error fetching all notes:', err);
             allNotes.value = [];
         }
-    }
+    };
 
     /**
      * جلب إحصائيات الملاحظات
      */
-    async function loadNotesStats() {
+    const loadNotesStats = async () => {
         if (allNotes.value.length === 0) {
             await fetchAllNotes();
         }
@@ -472,7 +472,7 @@ export const useReportsStore = defineStore('reports', () => {
             important: allNotes.value.filter(n => n.category === 'important').length,
             warning: allNotes.value.filter(n => n.category === 'warning').length
         };
-    }
+    };
 
     return {
         // State
@@ -481,6 +481,7 @@ export const useReportsStore = defineStore('reports', () => {
         selectedPeriod,
         selectedDate,
         customerNotes,
+        allNotes,
 
         // Computed
         filteredData,
@@ -498,7 +499,6 @@ export const useReportsStore = defineStore('reports', () => {
         deleteCustomerNote,
         searchNotes,
         fetchAllNotes,
-        loadNotesStats,
-        allNotes
+        loadNotesStats
     };
 });

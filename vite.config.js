@@ -48,14 +48,32 @@ export default defineConfig(({ mode }) => {
           navigateFallbackAllowlist: [/^(?!\/__).*/], // السماح بكافة المسارات ما عدا مسارات النظام الداخلية
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
-              handler: 'NetworkFirst',
+              // إعداد ذكي لطلبات Supabase: 
+              // نستخدم StaleWhileRevalidate بدلاً من NetworkFirst للبيانات التي تتحمل التأخير البسيط
+              // لضمان استجابة فورية للواجهة مع التحديث في الخلفية
+              urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,
+              handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'supabase-api-cache',
-                networkTimeoutSeconds: 5,
                 expiration: {
-                  maxEntries: 500,
-                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                  maxEntries: 1000, // زيادة عدد المدخلات لخدمة 3000 مستخدم
+                  maxAgeSeconds: 60 * 60 * 24 * 7, // 7 أيام
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              // طلبات RPC و Auth تظل NetworkFirst ولكن بتوقيت أسرع (3 ثواني) لعدم تعليق الواجهة
+              urlPattern: /^https:\/\/.*\.supabase\.co\/(?:rpc|auth)\/.*/,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-rpc-auth-cache',
+                networkTimeoutSeconds: 3, // تقليل وقت الانتظار من 5 لـ 3 ثواني
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60, // ساعة واحدة فقط للبيانات الحساسة
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -125,10 +143,20 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              const parts = id.split('node_modules/')[1].split('/');
-              // handle scoped packages like @supabase/supabase-js
-              const pkgName = parts[0].startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
-              return `vendor-${pkgName.replace('@', '')}`;
+              // 1. Core Framework (Vue, Pinia, Router)
+              if (id.includes('vue') || id.includes('pinia')) {
+                return 'vendor-core';
+              }
+              // 2. Database & Auth (Supabase)
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              // 3. UI & Charts (SweetAlert, Charts)
+              if (id.includes('chart.js') || id.includes('sweetalert2') || id.includes('vue-chartjs')) {
+                return 'vendor-ui';
+              }
+              // 4. Utilities (LocalForage, Axios, etc.)
+              return 'vendor-utils';
             }
           }
         }

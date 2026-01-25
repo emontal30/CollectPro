@@ -1,117 +1,138 @@
-
 /* --- Admin Global Styles --- */
 
-.admin-dashboard { 
-    padding-bottom: 2rem; 
-}
-.no-spin::-webkit-inner-spin-button, 
-.no-spin::-webkit-outer-spin-button { 
-    -webkit-appearance: none; 
-    margin: 0; 
-}
-.no-spin { 
-    -moz-appearance: textfield; 
-}
-.input-with-notch { 
-    position: relative; 
-    display: flex; 
-    align-items: center; 
-}
-.btn-notch-sign { 
-    position: absolute; 
-    left: 0; 
-    bottom: 0; 
-    background: var(--border-color, #ddd); 
-    color: var(--primary); 
-    border: none; 
-    border-radius: 0 4px 0 0; 
-    width: 18px; 
-    height: 14px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-weight: 900; 
-    font-size: 14px; 
-    cursor: pointer; 
-    opacity: 0.7; 
-    transition: all 0.2s; 
-    padding: 0; 
-    line-height: 0; 
+.admin-dashboard {
+  padding-bottom: 2rem;
 }
 
-.admin-section { 
-    margin-bottom: 2rem; 
-    background: var(--surface-bg); 
-    border-radius: var(--border-radius-lg); 
-    overflow: visible; /* Changed to visible to allow dropdowns */ 
+.no-spin::-webkit-inner-spin-button,
+.no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
 }
-.protection-card { 
-    border: 1px solid var(--border-color); 
+
+.no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
-.protection-content { 
-    padding: 1.5rem; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    gap: 1.5rem; 
+
+.input-with-notch {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
-.protection-info { 
-    flex: 1; 
+
+.btn-notch-sign {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: var(--border-color, #ddd);
+  color: var(--primary);
+  border: none;
+  border-radius: 0 4px 0 0;
+  width: 18px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 0;
 }
-.protection-desc { 
-    font-size: 0.9rem; 
-    color: var(--text-muted); 
+
+.admin-section {
+  margin-bottom: 2rem;
+  background: var(--surface-bg);
+  border-radius: var(--border-radius-lg);
+  overflow: visible;
+  /* Changed to visible to allow dropdowns */
 }
-.warning-text { 
-    display: block; 
-    margin-top: 0.5rem; 
-    font-weight: 700; 
-    color: var(--primary); 
+
+.protection-card {
+  border: 1px solid var(--border-color);
 }
-.switch { 
-    position: relative; 
-    display: inline-block; 
-    width: 60px; 
-    height: 34px; 
+
+.protection-content {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
-.switch input { 
-    opacity: 0; 
-    width: 0; 
-    height: 0; 
+
+.protection-info {
+  flex: 1;
 }
-.slider { 
-    position: absolute; 
-    cursor: pointer; 
-    inset: 0; 
-    background-color: #ccc; 
-    transition: .4s; 
-    border-radius: 34px; 
+
+.protection-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
-.slider:before { 
-    position: absolute; 
-    content: ""; 
-    height: 26px; 
-    width: 26px; 
-    left: 4px; 
-    bottom: 4px; 
-    background-color: white; 
-    transition: .4s; 
-    border-radius: 50%; 
+
+.warning-text {
+  display: block;
+  margin-top: 0.5rem;
+  font-weight: 700;
+  color: var(--primary);
 }
-input:checked + .slider { 
-    background-color: var(--primary); 
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
 }
-input:checked + .slider:before { 
-    transform: translateX(26px); 
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
-.modern-table.auto-layout { 
-    table-layout: auto !important; 
-    width: 100%; 
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
 }
-.modern-table th, 
-.modern-table td { 
-    white-space: nowrap; 
-} /* Apply to all cells by default */
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.slider {
+  background-color: var(--primary);
+}
+
+input:checked+.slider:before {
+  transform: translateX(26px);
+}
+
+.modern-table.auto-layout {
+  table-layout: auto !important;
+  width: 100%;
+}
+
+.modern-table th,
+.modern-table td {
+  white-space: nowrap;
+}
+
+/* Apply to all cells by default */
 
 /* Make all columns adapt to content */
 #logged-in-users-table th,
@@ -119,8 +140,11 @@ input:checked + .slider:before {
 #pending-subscriptions-table th,
 #pending-subscriptions-table td,
 #all-subscriptions-table th,
-#all-subscriptions-table td {
-  width: 1%; /* Forces columns to be as narrow as possible, fitting content */
+#all-subscriptions-table td,
+#app-errors-table th,
+#app-errors-table td {
+  width: 1%;
+  /* Forces columns to be as narrow as possible, fitting content */
 }
 
 /* Checkbox column - minimal width to fit checkbox only */
@@ -134,18 +158,20 @@ input:checked + .slider:before {
 }
 
 /* Dropdown Support Styles refined */
-.dropdown-wrapper { 
-    position: relative; 
-    display: inline-block; 
+.dropdown-wrapper {
+  position: relative;
+  display: inline-block;
 }
+
 .dropdown-content {
   display: none;
   position: absolute;
-  left: 0; /* Changed to left:0 to expand into table in RTL */
+  left: 0;
+  /* Changed to left:0 to expand into table in RTL */
   top: 100%;
   background-color: var(--surface-bg);
   min-width: 180px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -153,8 +179,9 @@ input:checked + .slider:before {
   text-align: right;
   margin-top: 5px;
 }
-.dropdown-content.show { 
-    display: block; 
+
+.dropdown-content.show {
+  display: block;
 }
 
 .dropdown-content a {
@@ -166,15 +193,17 @@ input:checked + .slider:before {
   font-size: 0.85rem;
   transition: background 0.2s;
 }
-.dropdown-content a:hover { 
-    background-color: var(--bg-secondary); 
-    color: var(--primary); 
+
+.dropdown-content a:hover {
+  background-color: var(--bg-secondary);
+  color: var(--primary);
 }
-.dropdown-content a i { 
-    display: inline-block; 
-    width: 20px; 
-    text-align: center; 
-    margin-left: 8px; 
+
+.dropdown-content a i {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  margin-left: 8px;
 }
 
 /* User column in logged-in users table - fixed width 150px */
@@ -189,25 +218,28 @@ input:checked + .slider:before {
 #pending-subscriptions-table th.col-user,
 #pending-subscriptions-table td.col-user,
 #all-subscriptions-table th.col-user,
-#all-subscriptions-table td.col-user {
-  width: 200px !important;
-  min-width: 200px !important;
-  max-width: 200px !important;
+#all-subscriptions-table td.col-user,
+#app-errors-table th.col-user,
+#app-errors-table td.col-user,
+#app-errors-table th.col-message,
+#app-errors-table td.col-message {
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
 }
 
 /* Status column in all tables - fixed width 100px for consistency */
 #logged-in-users-table th.col-status,
 #logged-in-users-table td.col-status,
 #all-subscriptions-table th.col-status,
-#all-subscriptions-table td.col-status {
+#all-subscriptions-table td.col-status,
+#app-errors-table th.col-status,
+#app-errors-table td.col-status {
   width: 100px !important;
   min-width: 100px !important;
   max-width: 100px !important;
 }
 
-/* Specific column adjustments */
-.col-user { /* flex-grow for user details */ }
-.col-plan { }
 /* Apply width constraint to Transaction ID with text wrapping */
 #pending-subscriptions-table th.col-transaction-id,
 #pending-subscriptions-table td.col-transaction-id,
@@ -235,9 +267,11 @@ input:checked + .slider:before {
   max-width: 80px !important;
 }
 
-.col-actions { 
-    min-width: 100px; 
-} /* Keep a min-width for action buttons */
+.col-actions {
+  min-width: 100px;
+}
+
+/* Keep a min-width for action buttons */
 
 /* Apply no-wrap to plan column */
 .admin-dashboard table th.col-plan,
@@ -245,134 +279,179 @@ input:checked + .slider:before {
   white-space: nowrap;
 }
 
-.status-badge { 
-    padding: 4px 10px; 
-    border-radius: 12px; 
-    font-size: 0.75rem; 
-    font-weight: 700; 
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
-.status-active { 
-    background: rgba(16, 185, 129, 0.1); 
-    color: #10b981; 
+
+.status-active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
 }
-.status-cancelled { 
-    background: rgba(245, 158, 11, 0.1); 
-    color: #f59e0b; 
+
+.status-cancelled {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
 }
-.status-expired { 
-    background: rgba(239, 68, 68, 0.1); 
-    color: #ef4444; 
+
+.status-expired {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
-.user-info-cell { 
-    text-align: right; 
-    white-space: normal; /* Allow text wrapping for user names */ 
+
+.user-info-cell {
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* التحديث: تكبير الخط وجعله عريضاً */
-.user-short-id { 
-  font-size: 13px;  /* تم التغيير من 10px إلى 13px */
-  font-weight: bold; /* تمت إضافة هذه الخاصية */
-  color: var(--gray-600); 
-  background: var(--gray-100); 
-  padding: 2px 6px; /* زيادة بسيطة في الحشو */
-  border-radius: 4px; 
-  margin-top: 4px; 
+.user-short-id {
+  font-size: 13px;
+  /* تم التغيير من 10px إلى 13px */
+  font-weight: bold;
+  /* تمت إضافة هذه الخاصية */
+  color: var(--gray-600);
+  background: var(--gray-100);
+  padding: 2px 6px;
+  /* زيادة بسيطة في الحشو */
+  border-radius: 4px;
+  margin-top: 4px;
   font-family: monospace;
   display: inline-block;
   width: fit-content;
 }
 
-.expiry-date-sub { 
-    font-size: 10px; 
-    color: var(--gray-600); 
+.expiry-date-sub {
+  font-size: 10px;
+  color: var(--gray-600);
 }
-.spinner-tiny { 
-    width: 1rem; 
-    height: 1rem; 
-    border: 2px solid rgba(0,0,0,0.1); 
-    border-top-color: var(--primary); 
-    border-radius: 50%; 
-    animation: spin 0.8s linear infinite; 
+
+.spinner-tiny {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.details-grid { 
-    display: grid; 
-    gap: 15px; 
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
-.detail-item { 
-    display: flex; 
-    justify-content: space-between; 
-    padding: 10px; 
-    border-bottom: 1px solid var(--border-color); 
+
+.details-grid {
+  display: grid;
+  gap: 15px;
 }
-.full-width { 
-    grid-column: 1 / -1; 
-    border-top: 1px dashed var(--border-color); 
-    margin: 10px 0; 
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
 }
-body.dark .user-short-id { 
-    background: rgba(255, 255, 255, 0.05); 
-    color: var(--gray-400); 
+
+.full-width {
+  grid-column: 1 / -1;
+  border-top: 1px dashed var(--border-color);
+  margin: 10px 0;
 }
-body.dark .bg-light { 
-    background-color: #0f172a !important; 
-    border-color: #334155 !important; 
+
+body.dark .user-short-id {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gray-400);
 }
-body.dark .detail-item label { 
-    color: var(--gray-400); 
+
+body.dark .bg-light {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark .detail-item label {
+  color: var(--gray-400);
 }
 
 /* أنماط إضافية لزر إعادة المحاولة */
-.alert { 
-    padding: 0.75rem 1.25rem; 
-    margin-bottom: 1rem; 
-    border: 1px solid transparent; 
-    border-radius: 0.25rem; 
+.alert {
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
 }
-.alert-danger { 
-    color: #721c24; 
-    background-color: #f8d7da; 
-    border-color: #f5c6cb; 
+
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
 }
+
 /* Utility classes if not in global */
-.d-flex { display: flex !important; }
-.justify-between { justify-content: space-between !important; }
-.align-center { align-items: center !important; }
+.d-flex {
+  display: flex !important;
+}
+
+.justify-between {
+  justify-content: space-between !important;
+}
+
+.align-center {
+  align-items: center !important;
+}
 
 /* Clear Icon Styles */
-.search-input-wrapper { 
-    position: relative; 
-    display: flex; 
-    align-items: center; 
-} /* Ensure wrapper is relative */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Ensure wrapper is relative */
 .clear-icon {
   position: absolute;
-  left: 10px; 
+  left: 10px;
   cursor: pointer;
   color: #999;
   padding: 5px;
   transition: color 0.2s;
   z-index: 2;
 }
-.clear-icon:hover { 
-    color: var(--danger, #ef4444); 
+
+.clear-icon:hover {
+  color: var(--danger, #ef4444);
 }
 
-.cursor-pointer { 
-    cursor: pointer; 
+.cursor-pointer {
+  cursor: pointer;
 }
-.hover-effect:hover { 
-    transform: translateY(-3px); 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
-    transition: all 0.3s ease; 
+
+.hover-effect:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
-.highlight-section { 
-    animation: glow 2s ease-in-out; 
+
+.highlight-section {
+  animation: glow 2s ease-in-out;
 }
+
 @keyframes glow {
-  0% { box-shadow: 0 0 5px rgba(0, 121, 101, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(0, 121, 101, 0.8); }
-  100% { box-shadow: none; }
+  0% {
+    box-shadow: 0 0 5px rgba(0, 121, 101, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(0, 121, 101, 0.8);
+  }
+
+  100% {
+    box-shadow: none;
+  }
 }
 
 /* Scroll To Top Button */
@@ -386,15 +465,17 @@ body.dark .detail-item label {
   background-color: var(--primary);
   color: white;
   border: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  z-index: 2147483647; /* Max Safe Integer for z-index */
+  z-index: 2147483647;
+  /* Max Safe Integer for z-index */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
   opacity: 0.9;
 }
+
 .scroll-top-btn:hover {
   transform: translateY(-5px);
   opacity: 1;
@@ -554,4 +635,50 @@ body.dark .detail-item label {
   cursor: pointer;
   width: 18px;
   height: 18px;
+}
+
+/* Error Log Styles */
+.error-msg-cell {
+  max-width: 350px;
+  white-space: normal !important;
+}
+
+.error-msg-cell .font-bold {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.bg-resolved {
+  opacity: 0.6;
+  background-color: var(--gray-100) !important;
+}
+
+.focused-error-item {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+body.dark .focused-error-item {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+#app-errors-table .col-date {
+  font-size: 10px !important;
+  line-height: 1.2;
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  white-space: normal !important;
+  text-align: center;
 }

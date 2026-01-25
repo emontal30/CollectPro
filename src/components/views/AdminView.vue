@@ -201,14 +201,14 @@
       </div>
       
       <div class="table-wrapper m-0 rounded-none shadow-none" style="max-height: 400px; overflow: auto;">
-        <table class="modern-table auto-layout">
+        <table id="app-errors-table" class="modern-table auto-layout">
           <thead>
             <tr>
-              <th>التاريخ</th>
-              <th>المستخدم</th>
-              <th>الرسالة</th>
-              <th>الحالة</th>
-              <th>إجراء</th>
+              <th class="col-date">التاريخ</th>
+              <th class="col-user">المستخدم</th>
+              <th class="col-message">الرسالة</th>
+              <th class="col-status text-center">الحالة</th>
+              <th class="text-center">إجراء</th>
             </tr>
           </thead>
           <tbody>
@@ -216,22 +216,25 @@
               <td colspan="5" class="text-center p-3 text-muted">سجل الأخطاء نظيف ✅</td>
             </tr>
             <tr v-for="err in store.appErrors" :key="err.id" :class="{ 'bg-resolved': err.is_resolved }">
-              <td class="text-xs">{{ store.formatDate(err.created_at) }} <br> {{ new Date(err.created_at).toLocaleTimeString() }}</td>
-              <td class="text-xs">
-                <div v-if="err.users">{{ err.users.full_name }}<br><span class="text-muted">{{ err.users.email }}</span></div>
+              <td class="col-date text-xs">{{ store.formatDate(err.created_at) }} <br> {{ new Date(err.created_at).toLocaleTimeString() }}</td>
+              <td class="col-user text-xs">
+                <div v-if="err.users" class="user-info-cell">
+                  <div class="user-name font-bold">{{ err.users.full_name }}</div>
+                  <div class="user-email text-muted">{{ err.users.email }}</div>
+                </div>
                 <div v-else class="text-muted">زائر / غير مسجل</div>
               </td>
-              <td class="text-sm error-msg-cell" :title="err.stack_trace">
+              <td class="col-message text-sm error-msg-cell" :title="err.error_message + (err.stack_trace ? '\n\n' + err.stack_trace : '')">
                 <div class="font-bold text-danger">{{ err.error_message }}</div>
                 <div class="text-xs text-muted truncate">{{ err.context?.url }}</div>
               </td>
-              <td class="text-center" style="white-space: nowrap;">
+              <td class="col-status text-center">
                 <span class="status-badge" :class="err.is_resolved ? 'status-active' : 'status-expired'">{{ err.is_resolved ? 'معالج' : 'جديد' }}</span>
               </td>
               <td class="text-center">
                 <div class="d-flex justify-center gap-1">
                   <button v-if="!err.is_resolved" class="btn btn--icon text-success" title="تحديد كمعالج" @click="store.resolveError(err.id)"><i class="fas fa-check"></i></button>
-                  <button v-if="err.users" class="btn btn--icon text-warning" title="أدوات الإصلاح" @click="openSupportModal(err.users)"><i class="fas fa-wrench"></i></button>
+                  <button v-if="err.users" class="btn btn--icon text-warning" title="أدوات الإصلاح" @click="openSupportModal(err.users, err)"><i class="fas fa-wrench"></i></button>
                   <button class="btn btn--icon text-danger" title="حذف" @click="store.deleteError(err.id)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
@@ -424,6 +427,16 @@
           <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span></div>
           <div class="text-xs text-muted">Email: {{ selectedSupportUser.email }}</div>
         </div>
+ 
+        <!-- Focused Error Section -->
+        <div v-if="selectedError" class="focused-error-item p-3 mb-3 border-danger rounded bg-danger-subtle">
+          <h4 class="text-sm font-bold mb-2 text-danger">
+            <i class="fas fa-exclamation-triangle"></i> الخطأ الحالي للتعامل معه
+          </h4>
+          <div class="font-bold text-danger">{{ selectedError.error_message }}</div>
+          <div class="text-xs text-muted mt-1">{{ store.formatDate(selectedError.created_at) }} - {{ new Date(selectedError.created_at).toLocaleTimeString() }}</div>
+          <div v-if="selectedError.context?.url" class="text-xs text-muted mt-1 truncate">المسار: {{ selectedError.context.url }}</div>
+        </div>
 
         <!-- Recent Errors Section -->
         <div class="error-history-section mb-4">
@@ -592,6 +605,7 @@ const {
   selectedSub,
   showSupportModal,
   selectedSupportUser,
+  selectedError,
   showLocationsModal,
   allLocations,
   isLoadingLocations,

@@ -133,60 +133,73 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function initializeAuth() {
     // منع التنفيذ المتزامن
-    if (isInitialized.value || isInitializing) {
-      logger.debug('⏳ Auth: Already initialized or initializing, skipping');
-      return;
-    }
+    if (isInitialized.value || isInitializing) return;
 
     isInitializing = true;
     isLoading.value = true;
 
-    const TIMEOUT_MS = 35000; // Increased to 35s for slow networks
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Auth Initialization Timeout (${TIMEOUT_MS}ms)`)), TIMEOUT_MS)
-    );
+    const MAX_ATTEMPTS = 3;
+    const ATTEMPT_TIMEOUT = 12000; // 12 ثانية لكل محاولة
 
-    try {
-      // Race between the actual initialization and the timeout
-      await Promise.race([
-        (async () => {
-          const { data: { session } } = await supabase.auth.getSession();
+    let lastError = null;
 
-          if (session?.user) {
-            await updateUserState(session);
-          }
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        if (attempt > 1) logger.info(`🔄 Auth: Retrying initialization (Attempt ${attempt}/${MAX_ATTEMPTS})...`);
 
-          // Load system config (Enforce Subscription) before finishing init
-          await loadSystemConfig();
-        })(),
-        timeoutPromise
-      ]);
+        // سباق بين جلب الجلسة والمهلة الزمنية للمحاولة الحالية
+        const { data: { session } } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT')), ATTEMPT_TIMEOUT)
+          )
+        ]);
 
-      isLoading.value = false;
-      isInitialized.value = true;
-      cleanUrlHash();
-
-      if (authListener.value?.subscription) authListener.value.subscription.unsubscribe();
-
-      const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
           await updateUserState(session);
-        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-          await logoutCleanup();
-          if (window.location.pathname !== '/') window.location.href = '/';
         }
-      });
-      authListener.value = listener;
 
-    } catch (err) {
-      logger.error('💥 Auth Init Error or Timeout:', err);
-      // Even on timeout/error, we mark as initialized to allow app to mount
-      // The router will then redirect to Login if not authenticated
-      isLoading.value = false;
-      isInitialized.value = true;
-    } finally {
-      isInitializing = false;
+        // تحميل إعدادات النظام
+        await loadSystemConfig();
+
+        // إذا وصلنا هنا فقد نجحت العملية
+        lastError = null;
+        break;
+
+      } catch (err) {
+        lastError = err;
+        logger.warn(`⚠️ Auth initialization attempt ${attempt} failed:`, err.message);
+
+        if (attempt < MAX_ATTEMPTS) {
+          // انتظار بسيط قبل إعادة المحاولة (يزداد مع كل محاولة)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
     }
+
+    if (lastError) {
+      logger.error('💥 Auth: All initialization attempts failed or timed out:', lastError);
+    }
+
+    // نعتبر العملية منتهية للسماح للتطبيق بالعمل حتى لو أوفلاين
+    isLoading.value = false;
+    isInitialized.value = true;
+    isInitializing = false;
+    cleanUrlHash();
+
+    // إعداد مستمع تغيير حالة المصادقة (دائم)
+    if (authListener.value?.subscription) authListener.value.subscription.unsubscribe();
+
+    const { data: listener } = api.auth.onAuthStateChange(async (event, session) => {
+      logger.info(`🔔 Auth State Change: ${event}`);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        await updateUserState(session);
+      } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        await logoutCleanup();
+        if (window.location.pathname !== '/') window.location.href = '/';
+      }
+    });
+    authListener.value = listener;
   }
 
   // Helper to consolidate user state updates and prevent race conditions

@@ -84,32 +84,30 @@ export function safeDeepClone(data) {
 
 // 3.5. نظام التشفير الاحترافي (Professional Encryption System)
 
-// Memory cache for the encryption key to avoid expensive PBKDF2 re-computation
-let cachedKey = null;
+let cachedKeys = {};
 
 /**
  * اشتقاق مفتاح التشفير من userId وorigin بشكل آمن
- * هذا يضمن أن كل مستخدم له مفتاح فريد، وأن المفتاح لا يُخزن في الكود
  */
-async function deriveEncryptionKey(userId = null) {
-  // Return cached key if available
-  if (cachedKey) return cachedKey;
+async function deriveEncryptionKey(userId = null, options = { iterations: 10000, version: 'v1.1' }) {
+  const versionKey = `${userId || 'anon'}:${options.version}:${options.iterations}`;
+  if (cachedKeys[versionKey]) return cachedKeys[versionKey];
 
   try {
-    // إنشاء salt فريد لكل مستخدم وموقع
     const origin = typeof window !== 'undefined' ? window.location.origin : 'default';
     const appName = 'CollectPro-v3';
-    const saltString = `${appName}:${origin}:${userId || 'anonymous'}`;
+    // استخدام الملح (Salt) بناءً على النسخة والتكرارات
+    const saltString = options.version === 'v1.0'
+      ? `${appName}:${origin}:${userId || 'anonymous'}`
+      : `${appName}:${origin}:${userId || 'anonymous'}:${options.version}`;
 
-    // تحويل salt إلى Uint8Array
     const encoder = new TextEncoder();
     const salt = encoder.encode(saltString);
 
-    // استخدام Web Crypto API لاشتقاق المفتاح
     if (typeof crypto !== 'undefined' && crypto.subtle) {
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
-        encoder.encode(saltString), // استخدام saltString الثابت فقط
+        encoder.encode(saltString),
         { name: 'PBKDF2' },
         false,
         ['deriveBits']
@@ -119,24 +117,22 @@ async function deriveEncryptionKey(userId = null) {
         {
           name: 'PBKDF2',
           salt: salt,
-          iterations: 100000, // عدد التكرارات لتقوية المفتاح
+          iterations: options.iterations,
           hash: 'SHA-256'
         },
         keyMaterial,
-        256 // 256 bits = 32 bytes
+        256
       );
 
-      cachedKey = new Uint8Array(derivedBits);
-      return cachedKey;
+      cachedKeys[versionKey] = new Uint8Array(derivedBits);
+      return cachedKeys[versionKey];
     } else {
-      // Fallback: استخدام خوارزمية بسيطة ولكن محسنة
-      cachedKey = fallbackKeyDerivation(saltString);
-      return cachedKey;
+      cachedKeys[versionKey] = fallbackKeyDerivation(saltString);
+      return cachedKeys[versionKey];
     }
   } catch (err) {
-    logger.warn('⚠️ Key derivation failed, using fallback:', err);
-    cachedKey = fallbackKeyDerivation(userId || 'anonymous');
-    return cachedKey;
+    logger.warn('⚠️ Key derivation failed:', err);
+    return fallbackKeyDerivation(userId || 'anonymous');
   }
 }
 
@@ -197,43 +193,44 @@ async function encryptData(data, userId = null) {
  * فك تشفير البيانات
  * يدعم التنسيقات القديمة والجديدة للتوافق
  */
-async function decryptData(encryptedData, userId = null) {
+export async function decryptData(encryptedData, userId = null) {
   if (typeof encryptedData !== 'string' || !encryptedData) return encryptedData;
 
-  try {
-    // محاولة تحديد نوع التشفير من البنية
-    let dataToDecrypt = encryptedData;
-    let useWebCrypto = false;
-
-    // فحص إذا كانت البيانات بتنسيق Web Crypto (تبدأ بـ "wc:")
-    if (encryptedData.startsWith('wc:')) {
-      dataToDecrypt = encryptedData.slice(3);
-      useWebCrypto = true;
-    }
-
-    const key = await deriveEncryptionKey(userId);
-
-    if (useWebCrypto && typeof crypto !== 'undefined' && crypto.subtle) {
-      try {
-        const decrypted = await decryptWithWebCrypto(dataToDecrypt, key);
-        return JSON.parse(decrypted);
-      } catch (err) {
-        logger.warn('⚠️ Web Crypto decryption failed, trying fallback:', err);
-      }
-    }
-
-    // محاولة فك التشفير بـ XOR (للتوافق مع البيانات القديمة والجديدة)
-    const decrypted = decryptWithXOR(dataToDecrypt, key);
-    return JSON.parse(decrypted);
-
-  } catch (err) {
-    // محاولة معالجة البيانات القديمة المشفرة بالطريقة القديمة
+  const tryDecrypt = async (data, key) => {
     try {
-      return decryptLegacyData(encryptedData);
-    } catch (legacyErr) {
-      logger.warn('⚠️ Decryption failed (both new and legacy methods):', err);
-      return null; // إرجاع null بدلاً من السلسلة المشفرة لتجنب تحطيم التطبيق
-    }
+      let decrypted;
+      if (data.startsWith('wc:')) {
+        decrypted = await decryptWithWebCrypto(data.slice(3), key);
+      } else {
+        decrypted = decryptWithXOR(data, key);
+      }
+      if (decrypted && (decrypted.trim().startsWith('{') || decrypted.trim().startsWith('[') || decrypted.trim().startsWith('"') || !isNaN(parseFloat(decrypted)))) {
+        return JSON.parse(decrypted);
+      }
+    } catch (e) { return null; }
+    return null;
+  };
+
+  // 1. محاولة فك التشفير بالمفتاح السريع الجديد (v1.1 - 10k)
+  const currentKey = await deriveEncryptionKey(userId, { iterations: 10000, version: 'v1.1' });
+  let result = await tryDecrypt(encryptedData, currentKey);
+  if (result !== null) return result;
+
+  // 2. إذا فشل، محاولة فك التشفير بالمفتاح القديم (v1.0 - 100k) للترحيل
+  logger.info('🔄 Attempting legacy data migration (100k iterations)...');
+  const legacyKey = await deriveEncryptionKey(userId, { iterations: 100000, version: 'v1.0' });
+  result = await tryDecrypt(encryptedData, legacyKey);
+
+  if (result !== null) {
+    logger.info('✅ Legacy data decrypted successfully. It will be re-encrypted with new key on next save.');
+    return result;
+  }
+
+  // 3. التوافق مع البيانات القديمة جداً غير المفهرسة
+  try {
+    return decryptLegacyData(encryptedData);
+  } catch (e) {
+    return null;
   }
 }
 
