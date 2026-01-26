@@ -1,16 +1,20 @@
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
 
+// Global state to share notifications across all usages (Singleton Pattern)
+const globalNotifications = ref([]);
+
 // نظام موحد احترافي للرسائل والإشعارات
 export function useNotifications() {
-  const notifications = ref([]);
+  // Use the global state
+  const notifications = globalNotifications;
 
   // وظيفة داخلية لتحديد سمة الرسالة بناءً على الوضع الحالي
   const getAlertTheme = () => {
-    const isDark = document.body.classList.contains('dark') || 
-                   document.documentElement.classList.contains('dark') ||
-                   localStorage.getItem('theme') === 'dark';
-    
+    const isDark = document.body.classList.contains('dark') ||
+      document.documentElement.classList.contains('dark') ||
+      localStorage.getItem('theme') === 'dark';
+
     return {
       background: isDark ? '#1e293b' : '#ffffff',
       color: isDark ? '#f8fafc' : '#1e293b',

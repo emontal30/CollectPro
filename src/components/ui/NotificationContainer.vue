@@ -41,7 +41,7 @@ const getIconClass = (type) => {
   top: var(--header-height, 70px); /* يظهر مباشرة تحت التوب بار */
   left: 0;
   right: 0;
-  z-index: 10000;
+  z-index: 999999;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -79,29 +79,25 @@ const getIconClass = (type) => {
 .notification-success {
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   color: white;
-  border-bottom: 3px solid #1e7e34;
-  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.25);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.25);
 }
 
 .notification-error {
   background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
   color: white;
-  border-bottom: 3px solid #a82835;
-  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.25);
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.25);
 }
 
 .notification-warning {
   background: linear-gradient(135deg, #ffc107 0%, #ffb703 100%);
   color: #333;
-  border-bottom: 3px solid #ff9d00;
-  box-shadow: 0 8px 25px rgba(255, 193, 7, 0.25);
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.25);
 }
 
 .notification-info {
   background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
   color: white;
-  border-bottom: 3px solid #0c5460;
-  box-shadow: 0 8px 25px rgba(23, 162, 184, 0.25);
+  box-shadow: 0 4px 15px rgba(23, 162, 184, 0.25);
 }
 
 .notification i {

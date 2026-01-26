@@ -93,7 +93,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     isLoading.value = true;
-    const TIMEOUT_MS = 25000; // Increased to 25s
+    const TIMEOUT_MS = 10000; // Reduced to 10s for better user experience
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`Subscription Refresh Timeout (${TIMEOUT_MS}ms)`)), TIMEOUT_MS)
     );
@@ -150,7 +150,13 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       ]);
 
     } catch (err) {
-      logger.error('ForceRefresh failed or timed out:', err);
+      // Don't treat timeouts as critical errors, just warn
+      const isTimeout = err.message.includes('Timeout');
+      if (isTimeout) {
+        logger.warn('ForceRefresh timed out, using cached/current state:', err.message);
+      } else {
+        logger.error('ForceRefresh failed:', err);
+      }
       // Even on error, we might want to say initialized so we don't block? 
       // OR we just leave it. If init fails, maybe we shouldn't block user from accessing free features?
       // Since this is forceRefresh, it's called often. If it fails, we assume old data or no data.

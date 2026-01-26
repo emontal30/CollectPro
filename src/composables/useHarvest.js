@@ -391,7 +391,7 @@ export function useHarvest(props) {
             if (locationCaptureDebounce[key]) clearTimeout(locationCaptureDebounce[key]);
 
             locationCaptureDebounce[key] = setTimeout(() => {
-              itineraryStore.captureClientLocation(route.id);
+              itineraryStore.captureClientLocation(route.id, true); // Silent mode
               delete locationCaptureDebounce[key];
             }, 3000); // Wait 3 seconds after typing stops
           }

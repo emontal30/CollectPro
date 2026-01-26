@@ -191,6 +191,9 @@
       <div class="admin-section-header d-flex justify-between align-center">
         <h2><i class="fas fa-bug"></i> سجل أخطاء التطبيق ({{ store.appErrors.length }})</h2>
         <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-info text-white" title="نسخ الأخطاء (بدون تكرار)" @click="store.copyUniqueErrors">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
           <button class="btn btn-sm btn-success" title="معالجة كل الأخطاء غير المعالجة" @click="store.bulkResolveErrors">
             <i class="fas fa-check-double"></i> معالجة الكل
           </button>
@@ -234,7 +237,7 @@
               <td class="text-center">
                 <div class="d-flex justify-center gap-1">
                   <button v-if="!err.is_resolved" class="btn btn--icon text-success" title="تحديد كمعالج" @click="store.resolveError(err.id)"><i class="fas fa-check"></i></button>
-                  <button v-if="err.users" class="btn btn--icon text-warning" title="أدوات الإصلاح" @click="openSupportModal(err.users, err)"><i class="fas fa-wrench"></i></button>
+                  <button v-if="err.users" class="btn btn--icon text-warning" title="أدوات الإصلاح" @click="openSupportModal({ ...err.users, id: err.user_id }, err)"><i class="fas fa-wrench"></i></button>
                   <button class="btn btn--icon text-danger" title="حذف" @click="store.deleteError(err.id)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>

@@ -250,9 +250,13 @@ async function _processQueueInternal() {
   syncStore.checkQueue();
 
   // 3. إرسال تنبيهات
+  // تم إيقاف التنبيه الثاني للأرشفة اليومية بناءً على طلب المستخدم لعدم الإزعاج
+  // الرسالة الأولى عند الضغط على الزر تكفي
+  /*
   if (syncedArchives.length > 0) {
     addNotification(`تم مزامنة أرشيف: ${syncedArchives.join(', ')} سحابياً ✅`, 'success');
   }
+  */
 
   if (deletedArchives.length > 0) {
     addNotification(`تم حذف التواريخ: ${deletedArchives.join(', ')} من السحاب 🗑️`, 'success');

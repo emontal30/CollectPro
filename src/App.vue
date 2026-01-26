@@ -93,11 +93,15 @@ onMounted(() => {
         itineraryStore.fetchRoutes(force),
         archiveStore.loadAvailableDates(force),
         collabStore.fetchCollaborators(),
-        adminStore.loadDashboardData(force),
         harvestStore.initialize(),
         mySubStore.forceRefresh(authStore.user),
         settingsStore.checkRemoteCommands()
       ];
+
+      // Only fetch admin dashboard data if the user has admin role
+      if (authStore.isAdmin) {
+        initPromises.push(adminStore.loadDashboardData(force));
+      }
 
       await Promise.allSettled(initPromises);
       logger.info('✅ Global Data Refreshed');

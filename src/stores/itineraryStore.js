@@ -157,7 +157,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
 
     // Check if online
     if (!navigator.onLine) {
-      addNotification({ message: 'لا يوجد اتصال بالإنترنت ⚠️', type: 'warning' });
+      addNotification('لا يوجد اتصال بالإنترنت ⚠️', 'warning');
       console.log('⚠️ Offline - cannot refresh');
       return;
     }
@@ -173,10 +173,10 @@ export const useItineraryStore = defineStore('itinerary', () => {
       await Promise.all([minDelay, fetchPromise]);
 
       console.log('✅ Refresh completed successfully');
-      addNotification({ message: 'تم تحديث البيانات من الخادم 🔄', type: 'success' });
+      addNotification('تم تحديث البيانات من الخادم 🔄', 'success');
     } catch (error) {
       console.error('❌ Refresh failed:', error);
-      addNotification({ message: 'فشل التحديث', type: 'error' });
+      addNotification('فشل التحديث', 'error');
     } finally {
       isLoading.value = false;
       console.log('🏁 Refresh process ended');
@@ -247,7 +247,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
       routes.value = normalizeRoutes(Array.from(currentRoutesMap.values()).sort((a, b) => a.sort_order - b.sort_order));
       await safeSaveLocal(STORAGE_KEY.value, routes.value);
 
-      addNotification({ message: 'تم الحفظ محلياً... جاري المزامنة ☁️', type: 'info' });
+      // Removed redundant notification regarding local save
 
       // 2. Update Cloud (Fire and Forget or Await?)
       if (navigator.onLine && routesToUpsert.length > 0) {
@@ -261,12 +261,12 @@ export const useItineraryStore = defineStore('itinerary', () => {
             throw error;
           }
         }
-        addNotification({ message: 'تمت المزامنة مع السحابة ✅', type: 'success' });
+        // Removed redundant notification regarding cloud sync
       }
 
     } catch (err) {
       logger.error('Sync Error:', err);
-      addNotification({ message: 'تم الحفظ محلياً لكن فشلت المزامنة', type: 'warning' });
+      addNotification('تم الحفظ محلياً لكن فشلت المزامنة', 'warning');
     }
   }
 
@@ -275,7 +275,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     routes.value = routes.value.filter(r => !routeIds.includes(r.id));
     await safeSaveLocal(STORAGE_KEY.value, routes.value);
     selectedIds.value = [];
-    addNotification({ message: 'تم الحذف نهائياً 🗑️', type: 'success' });
+    addNotification('تم الحذف نهائياً 🗑️', 'success');
   }
 
   async function emptyTrash() {
@@ -287,7 +287,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     // For now, adhering to "Remove cloud sync", we just clear the in-memory/local trash.
     ignoredRoutes.value = [];
     await safeSaveLocal(`${STORAGE_KEY.value}_ignored`, []); // Ensure we clear reserved storage if we use it
-    addNotification({ message: 'تم إفراغ السلة بنجاح', type: 'success' });
+    addNotification('تم إفراغ السلة بنجاح', 'success');
   }
 
   // Helper to persist ignored list locally since we can't fetch it from DB anymore
@@ -338,16 +338,16 @@ export const useItineraryStore = defineStore('itinerary', () => {
     // Cloud Sync (Preserved)
     if (!authStore.user || !navigator.onLine) {
       await addToQueue({ type: 'profile_upsert', data: payload });
-      addNotification({ message: 'تم حفظ القالب محلياً وسيتم المزامنة لاحقاً', type: 'info' });
+      addNotification('تم حفظ القالب محلياً وسيتم المزامنة لاحقاً', 'info');
       return;
     }
 
     try {
       await supabase.from('route_profiles').upsert(payload, { onConflict: 'user_id, slot_number' });
-      addNotification({ message: 'تم حفظ القالب', type: 'success' });
+      addNotification('تم حفظ القالب', 'success');
     } catch (err) {
       await addToQueue({ type: 'profile_upsert', data: payload });
-      addNotification({ message: 'حدث خطأ أثناء الحفظ على الخادم، سيتم المحاولة لاحقاً', type: 'warning' });
+      addNotification('حدث خطأ أثناء الحفظ على الخادم، سيتم المحاولة لاحقاً', 'warning');
     }
   }
 
@@ -363,10 +363,10 @@ export const useItineraryStore = defineStore('itinerary', () => {
       // إضافة إلى قائمة المحذوفات المحلية للمزامنة لاحقاً (اختياري)
       // await addToQueue({ type: 'profile_delete', data: { user_id: authStore.user?.id, slot_number: slotNumber } });
 
-      addNotification({ message: 'تم حذف القالب محلياً', type: 'success' });
+      addNotification('تم حذف القالب محلياً', 'success');
     } catch (err) {
       logger.error('Error deleting profile:', err);
-      addNotification({ message: 'فشل حذف القالب', type: 'error' });
+      addNotification('فشل حذف القالب', 'error');
     }
   }
 
@@ -385,7 +385,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     });
     await reorderRoutes(sorted);
     showProfilesModal.value = false;
-    addNotification({ message: 'تم تطبيق القالب', type: 'success' });
+    addNotification('تم تطبيق القالب', 'success');
   }
 
   async function ignoreRoutes(routeIds) {
@@ -415,7 +415,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     await _saveIgnored();
 
     selectedIds.value = [];
-    addNotification({ message: 'تم النقل للسلة محلياً', type: 'info' });
+    addNotification('تم النقل للسلة محلياً', 'info');
   }
 
   async function fetchIgnoredList() {
@@ -437,7 +437,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     await safeSaveLocal(STORAGE_KEY.value, routes.value);
     await _saveIgnored();
 
-    addNotification({ message: 'تمت الاستعادة محلياً', type: 'success' });
+    addNotification('تمت الاستعادة محلياً', 'success');
   }
 
   async function addRoute(routeData) {
@@ -530,13 +530,15 @@ export const useItineraryStore = defineStore('itinerary', () => {
   }
   function initNetworkListener() { window.addEventListener('online', () => { processQueue(); fetchProfiles(); }); }
 
-  async function captureClientLocation(routeId) {
+  async function captureClientLocation(routeId, silent = false) {
     if (!navigator.geolocation) {
-      addNotification({ message: 'المتصفح لا يدعم تحديد الموقع', type: 'error' });
+      addNotification('المتصفح لا يدعم تحديد الموقع', 'error');
       return;
     }
 
-    addNotification({ message: 'جاري تحديد الموقع، يرجى الانتظار...', type: 'info' });
+    if (!silent) {
+      addNotification('جاري تحديد الموقع، يرجى الانتظار...', 'info');
+    }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -546,9 +548,21 @@ export const useItineraryStore = defineStore('itinerary', () => {
         await updateLocation(routeId, lat, lng);
         // After updating, also update the input field in the modal
         coordsInput.value = `${lat}, ${lng}`;
-        addNotification({ message: 'تم حفظ الموقع بنجاح 📍', type: 'success' });
+        if (!silent) {
+          addNotification('تم حفظ الموقع بنجاح 📍', 'success');
+        }
       },
       (error) => {
+        // Log error regardless of silent mode, but suppress UI if desired? 
+        // User asked to remove the message after writing. That usually implies success messages.
+        // Errors should probably still be shown or logged. 
+        // If silent is true, we might still want to show errors if it fails?
+        // Let's assume silent means silent success, but errors might be important.
+        // However, if it's auto-capture, maybe errors are annoying too.
+        // I will keep errors for now or log them only?
+        // User said "I don't want the message to appear".
+        // If GPS is disabled, showing error every time they type is bad.
+
         let msg = 'فشل تحديد الموقع';
         const errorDetails = `Code: ${error.code}, Message: ${error.message}`;
 
@@ -556,7 +570,9 @@ export const useItineraryStore = defineStore('itinerary', () => {
         else if (error.code === 2) msg = 'الموقع غير متاح حالياً (Position Unavailable)';
         else if (error.code === 3) msg = 'انتهت مهلة الانتظار (Timeout)، حاول في مكان مفتوح';
 
-        addNotification({ message: msg, type: 'error' });
+        if (!silent) {
+          addNotification(msg, 'error');
+        }
         logger.error(`📍 GPS Error: ${errorDetails}`);
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
@@ -709,7 +725,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
   const copyCoords = () => {
     if (coordsInput.value) {
       navigator.clipboard.writeText(coordsInput.value);
-      addNotification({ message: 'تم نسخ الإحداثيات', type: 'success' });
+      addNotification('تم نسخ الإحداثيات', 'success');
     }
   };
 
@@ -731,7 +747,7 @@ export const useItineraryStore = defineStore('itinerary', () => {
     if (!editingRoute.value) return;
     if (!coordsInput.value) {
       await updateLocation(editingRoute.value.id, null, null);
-      addNotification({ message: 'تم حذف الموقع', type: 'info' });
+      addNotification('تم حذف الموقع', 'info');
       closeModal();
       return;
     }
@@ -742,13 +758,13 @@ export const useItineraryStore = defineStore('itinerary', () => {
       const lng = parseFloat(parts[1]);
       if (!isNaN(lat) && !isNaN(lng)) {
         await updateLocation(editingRoute.value.id, lat, lng);
-        addNotification({ message: 'تم تحديث الموقع', type: 'success' });
+        addNotification('تم تحديث الموقع', 'success');
         closeModal();
       } else {
-        addNotification({ message: 'تنسيق غير صحيح', type: 'error' });
+        addNotification('تنسيق غير صحيح', 'error');
       }
     } else {
-      addNotification({ message: 'تنسيق غير صحيح. الصيغة: lat, lng', type: 'error' });
+      addNotification('تنسيق غير صحيح. الصيغة: lat, lng', 'error');
     }
   };
 

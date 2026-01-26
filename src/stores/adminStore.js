@@ -504,6 +504,46 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function copyUniqueErrors() {
+    if (appErrors.value.length === 0) {
+      addNotification('لا توجد أخطاء للنسخ', 'info');
+      return;
+    }
+
+    try {
+      // Extract unique error messages
+      // Extract unique error messages with whitespace trimming
+      const uniqueMessages = [...new Set(appErrors.value.map(e => (e.error_message || '').trim()))].filter(Boolean);
+      const textToCopy = uniqueMessages.join('\n\n');
+
+      if (!navigator.clipboard) {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          const successful = document.execCommand('copy');
+          if (!successful) throw new Error('Fallback copy failed');
+          addNotification(`تم نسخ قائمة الأخطاء بنجاح ✅ (${uniqueMessages.length} خطأ)`, 'success');
+        } catch (err) {
+          throw err;
+        } finally {
+          document.body.removeChild(textArea);
+        }
+        return;
+      }
+
+      await navigator.clipboard.writeText(textToCopy);
+      addNotification(`تم نسخ قائمة الأخطاء بنجاح ✅ (${uniqueMessages.length} خطأ)`, 'success');
+    } catch (e) {
+      logger.error('Failed to copy to clipboard:', e);
+      addNotification('فشل النسخ للحافظة', 'error');
+    }
+  }
+
   async function runRepairTool(userId) {
     if (!userId) return;
     const result = await confirm({
@@ -570,6 +610,6 @@ export const useAdminStore = defineStore('admin', () => {
     serverTimeOffset, appErrors,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers, fetchAppErrors, resolveError, bulkResolveErrors, deleteError,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig,
-    runRepairTool, sendRemoteCommand
+    runRepairTool, sendRemoteCommand, copyUniqueErrors
   };
 });

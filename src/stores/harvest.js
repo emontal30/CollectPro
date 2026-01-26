@@ -12,6 +12,7 @@ import logger from '@/utils/logger.js';
 import localforage from 'localforage';
 import { supabase } from '@/supabase';
 import { TimeService } from '@/utils/time';
+import { withTimeout } from '@/utils/promiseUtils';
 
 const HARVEST_ROWS_KEY = 'harvest_rows';
 
@@ -846,6 +847,67 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    async syncOverdueStoresToCloud(items, archiveDate, manualQueue = false) {
+      const authStore = useAuthStore();
+      if (!authStore.user || !navigator.onLine) {
+        if (!manualQueue) {
+          // Add to queue if not triggered by queue processor
+          await addToSyncQueue({
+            type: 'sync_overdue_stores',
+            payload: { items, archive_date: archiveDate },
+            timestamp: Date.now()
+          });
+        }
+        return;
+      }
+
+      if (!items || items.length === 0) return;
+
+      // 1. Prepare data for batch insert
+      const userId = authStore.user.id;
+      const payload = items.map(item => ({
+        user_id: userId,
+        shop: item.shop,
+        code: String(item.code), // Ensure code is string
+        net: item.net,
+        archive_date: archiveDate
+      }));
+
+      // 2. Clear old pending for this user? No, we upsert based on (user_id, code).
+      // Actually, pending_overdue_stores table might need unique constraint on user_id, code.
+      // Assuming it has it. If not, we should delete first or use upsert.
+      // We will try upsert.
+
+      try {
+        const codes = payload.map(p => p.code);
+
+        // A. Delete existing logic
+        const chunkSize = 50;
+        for (let i = 0; i < codes.length; i += chunkSize) {
+          const chunkCodes = codes.slice(i, i + chunkSize);
+          await supabase
+            .from('pending_overdue_stores')
+            .delete()
+            .eq('user_id', userId)
+            .in('code', chunkCodes);
+        }
+
+        // B. Insert new records
+        for (let i = 0; i < payload.length; i += chunkSize) {
+          const chunk = payload.slice(i, i + chunkSize);
+          const { error } = await supabase
+            .from('pending_overdue_stores')
+            .insert(chunk);
+
+          if (error) throw error;
+        }
+        logger.info(`✅ Cloud sync overdue success: ${items.length} items`);
+      } catch (err) {
+        logger.error('❌ Cloud sync overdue failed:', err);
+        throw err; // Let queue processor handle retry
+      }
+    },
+
     async deleteOverdueStores(codes = []) {
       if (!Array.isArray(codes) || codes.length === 0) return;
       try {
@@ -908,6 +970,10 @@ export const useHarvestStore = defineStore('harvest', {
       return await TimeService.getCairoDate();
     },
 
+    // ... (existing imports)
+
+    // ...
+
     async archiveTodayData(dateToSave) {
       const collabStore = useCollaborationStore();
       if (collabStore.activeSessionId) {
@@ -944,19 +1010,23 @@ export const useHarvestStore = defineStore('harvest', {
           .filter(row => row.net !== 0)
           .map(row => ({ shop: row.shop, code: row.code, net: row.net }));
 
-        // ✅ التغيير: حفظ مع تاريخ الأرشيف باستخدام النظام الجديد
-        await Promise.all([
-          localforage.setItem(localKey, cleanRows),
-          overdueStores.length > 0
-            ? this._saveOverdueWithArchiveDate(overdueStores, dateToSave)
-            : Promise.all([
-              localforage.removeItem('overdue_stores'),          // حذف النظام القديم
-              localforage.removeItem('overdue_stores_metadata')  // حذف النظام الجديد
-            ])
-        ]);
+        // Safe Save: Wrap Promise.all with a timeout (10s)
+        await withTimeout(
+          Promise.all([
+            localforage.setItem(localKey, cleanRows),
+            overdueStores.length > 0
+              ? this._saveOverdueWithArchiveDate(overdueStores, dateToSave)
+              : Promise.all([
+                localforage.removeItem('overdue_stores'),          // حذف النظام القديم
+                localforage.removeItem('overdue_stores_metadata')  // حذف النظام الجديد
+              ])
+          ]),
+          10000,
+          'انتهت مهلة حفظ البيانات (Database Timeout). يرجى المحاولة مرة أخرى.'
+        );
 
-        // ✅ التغيير: المزامنة بدون انتظار (Fire and Forget)
-        // لا نريد أن تعطل مزامنة المتأخرات عملية الأرشفة الأساسية
+        // ... fire and forget cloud sync ...
+        this._performCloudSync(dbPayload);
         (async () => {
           try {
             if (navigator.onLine) {
@@ -979,6 +1049,7 @@ export const useHarvestStore = defineStore('harvest', {
             }
           } catch (err) {
             logger.warn('⚠️ Background overdue sync failed, adding to queue:', err);
+            // Queue attempt
             await addToSyncQueue({
               type: 'sync_overdue_stores',
               payload: { items: overdueStores, archive_date: dateToSave },
@@ -987,12 +1058,18 @@ export const useHarvestStore = defineStore('harvest', {
           }
         })();
 
-        await archiveStore.loadAvailableDates(false);
-        this._performCloudSync(dbPayload);
+        // Safe Refresh: Wrap loadAvailableDates with timeout (5s) AND catch so it doesn't block success
+        try {
+          await withTimeout(archiveStore.loadAvailableDates(false), 5000);
+        } catch (refreshErr) {
+          logger.warn('Archive refresh timed out/failed, but data was saved.', refreshErr);
+          // We proceed to return success because the SAVE itself succeeded.
+        }
 
         try {
           const itineraryStore = useItineraryStore();
-          await itineraryStore.syncFromDashboard(cleanRows);
+          // Also simple timeout for itinerary sync just in case
+          await withTimeout(itineraryStore.syncFromDashboard(cleanRows), 7000);
         } catch (syncError) {
           logger.error('Failed to sync with itinerary after archiving:', syncError);
           // Do not block the main operation, just log the error
