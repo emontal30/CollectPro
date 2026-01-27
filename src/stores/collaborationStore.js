@@ -411,16 +411,12 @@ export const useCollaborationStore = defineStore('collaboration', {
               const senderName = req?.sender_profile?.full_name || 'مستخدم';
               const roleText = payload.new.role === 'editor' ? 'محرر (تعديل)' : 'مشاهد (قراءة فقط)';
 
-              // بث حدث مخصص للرسائل المنبثقة الإضافية
-              window.dispatchEvent(new CustomEvent('collaboration-invite-received', {
-                detail: {
-                  requestId: payload.new.id,
-                  senderName: req?.sender_profile?.full_name,
-                  senderEmail: req?.sender_email,
-                  senderCode: req?.sender_code,
-                  role: payload.new.role
-                }
-              }));
+              // إرسال تنبيه بسيط بدلاً من نافذة منبثقة تفاعلية
+              this.addNotification(
+                `📬 لديك دعوة مشاركة جديدة من: ${senderName} (${req?.sender_code || '---'})`,
+                'info',
+                8000
+              );
             }
           }
         )

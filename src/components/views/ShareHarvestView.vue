@@ -245,7 +245,10 @@
                   <i class="fas fa-user-circle invite-avatar"></i>
                   <div class="sender-details">
                     <strong class="sender-name">{{ req.sender_profile?.full_name || 'مستخدم' }}</strong>
-                    <span class="sender-email text-xs text-muted">{{ req.sender_email }}</span>
+                    <div class="sender-meta">
+                      <span class="sender-code text-xs">{{ req.sender_code || '---' }}</span>
+                      <span class="sender-email text-xs text-muted">{{ req.sender_email }}</span>
+                    </div>
                   </div>
                 </div>
                 <div class="invite-role-selector">
