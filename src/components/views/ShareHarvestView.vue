@@ -142,7 +142,7 @@
             </div>
 
             <!-- قائمة تواريخ الأرشيف -->
-            <div v-if="collabStore.remoteArchiveDates.length > 0" class="archive-dates-card mt-3 animate-fade-in">
+            <div v-if="collabStore.remoteArchiveDates.length > 0 && collabStore.adminViewMode === 'archive'" class="archive-dates-card mt-3 animate-fade-in">
               <div class="adc-header">
                 <div class="adc-icon">
                   <i class="fas fa-calendar-alt"></i>
@@ -306,7 +306,7 @@
                   <i class="fas fa-history ah-icon-glow pulse-blue"></i>
                   <div class="ah-user-stack">
                     <span class="ah-name">{{ activeCollaboratorName }}</span>
-                    <span class="ah-code">{{ collabStore.activeSessionCode || collabStore.selectedRemoteUserCode || '---' }}</span>
+                    <span class="ah-code">{{ activeCollaboratorCode }}</span>
                   </div>
                 </div>
                 
@@ -337,7 +337,7 @@
                   </div>
                   <div class="lh-user-stack">
                     <span class="lh-name">{{ activeCollaboratorName }}</span>
-                    <span class="lh-code">{{ collabStore.activeSessionCode || '---' }}</span>
+                    <span class="lh-code">{{ activeCollaboratorCode }}</span>
                   </div>
                 </div>
 
@@ -427,6 +427,7 @@ const {
   nameInput,
   selectedArchiveDate,
   activeCollaboratorName,
+  activeCollaboratorCode,
   lastUpdatedText,
   handleAdminOpen,
   sendInvite,

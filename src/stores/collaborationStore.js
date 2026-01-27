@@ -35,72 +35,44 @@ export const useCollaborationStore = defineStore('collaboration', {
       if (!auth.user) return;
       this.isLoading = true;
       try {
-        logger.info('🔍 Fetching collaborators for user:', auth.user.id);
-
         const { data, error } = await supabase
           .from('collaboration_requests')
           .select('*')
           .or(`sender_id.eq.${auth.user.id},receiver_id.eq.${auth.user.id}`)
           .eq('status', 'accepted');
 
-        if (error) {
-          logger.error('❌ Error fetching collaboration_requests:', error);
-          throw error;
-        }
-
-        logger.info('✅ Collaboration requests fetched:', {
-          count: data?.length || 0,
-          requests: data
-        });
+        if (error) throw error;
 
         const otherUserIds = data.map(req =>
           req.sender_id === auth.user.id ? req.receiver_id : req.sender_id
         );
 
         if (otherUserIds.length === 0) {
-          logger.warn('⚠️ No accepted collaboration requests found');
           this.collaborators = [];
-          localStorage.setItem('collab_list', JSON.stringify([]));
           return;
         }
-
-        logger.info('👥 Fetching profiles for user IDs:', otherUserIds);
 
         const { data: profiles, error: profError } = await supabase
           .from('profiles')
           .select('id, full_name, user_code')
           .in('id', otherUserIds);
 
-        if (profError) {
-          logger.error('❌ Error fetching collaborator profiles:', profError);
-          // Don't throw here, continue with partial data
-        } else {
-          logger.info('✅ Profiles fetched:', {
-            count: profiles?.length || 0,
-            profiles: profiles
-          });
-        }
-
         // محاولة جلب البريد بشكل اختياري
         let emailMap = new Map();
         try {
           const { data: emails } = await supabase.from('profiles').select('id, email').in('id', otherUserIds);
-          if (emails) {
-            emails.forEach(e => emailMap.set(e.id, e.email));
-            logger.info('📧 Emails fetched:', emails.length);
-          }
+          if (emails) emails.forEach(e => emailMap.set(e.id, e.email));
         } catch (e) {
           logger.warn('Profiles email column not available yet');
+        }
+
+        if (profError) {
+          logger.error('Error fetching collaborator profiles:', profError);
         }
 
         this.collaborators = data.map(req => {
           const otherId = req.sender_id === auth.user.id ? req.receiver_id : req.sender_id;
           const profile = profiles?.find(p => p.id === otherId);
-
-          if (!profile) {
-            logger.warn(`⚠️ Profile not found for user ID: ${otherId}`);
-          }
-
           return {
             id: req.id,
             userId: otherId,
@@ -113,16 +85,9 @@ export const useCollaborationStore = defineStore('collaboration', {
             isOwner: req.sender_id === auth.user.id
           };
         });
-
-        logger.info('✅ Collaborators list built:', {
-          count: this.collaborators.length,
-          collaborators: this.collaborators
-        });
-
         localStorage.setItem('collab_list', JSON.stringify(this.collaborators));
       } catch (error) {
-        logger.error('❌ Fatal error in fetchCollaborators:', error);
-        this.addNotification('فشل تحميل قائمة الزملاء. يرجى المحاولة مرة أخرى.', 'error');
+        logger.error('Error fetching collaborators:', error);
       } finally {
         this.isLoading = false;
       }
@@ -257,8 +222,6 @@ export const useCollaborationStore = defineStore('collaboration', {
       if (!auth.user) throw new Error('يجب تسجيل الدخول أولاً');
 
       try {
-        logger.info(`📨 Responding to invite ${requestId} with status: ${status}, role: ${customRole || 'default'}`);
-
         // إذا كانت الحالة رفض، نقوم بالحذف مباشرة دون تحديث الحالة
         if (status === 'rejected') {
           const { error: deleteError } = await supabase
@@ -267,7 +230,6 @@ export const useCollaborationStore = defineStore('collaboration', {
             .eq('id', requestId);
 
           if (deleteError) throw deleteError;
-          logger.info('✅ Invitation rejected and deleted');
           this.addNotification('تم حذف الدعوة بنجاح', 'info');
         } else {
           // الحالات الأخرى (Accepted) تحتاج تحديث
@@ -280,37 +242,25 @@ export const useCollaborationStore = defineStore('collaboration', {
             updatePayload.role = customRole;
           }
 
-          logger.info('📝 Updating invitation with payload:', updatePayload);
-
           const { error } = await supabase
             .from('collaboration_requests')
             .update(updatePayload)
             .eq('id', requestId);
 
-          if (error) {
-            logger.error('❌ Error updating invitation:', error);
-            throw error;
-          }
-
-          logger.info('✅ Invitation updated successfully');
+          if (error) throw error;
 
           if (status === 'accepted') {
-            logger.info('🔄 Syncing data to cloud after acceptance...');
             const harvestStore = useHarvestStore();
             await harvestStore.forceSyncToCloud(auth.user.id);
-            logger.info('✅ Data synced to cloud');
             this.addNotification('تم قبول الدعوة بنجاح ✅', 'success');
           }
         }
 
-        logger.info('🔄 Refreshing incoming requests and collaborators lists...');
         await this.fetchIncomingRequests();
         await this.fetchCollaborators();
-        logger.info('✅ Lists refreshed successfully');
-
         return { success: true };
       } catch (error) {
-        logger.error('❌ Error responding to invite:', error);
+        logger.error('Error responding to invite:', error);
         return { success: false, error: error.message };
       }
     },
