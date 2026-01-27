@@ -509,9 +509,8 @@ export const useCollaborationStore = defineStore('collaboration', {
             // If I am the sender
             if (newData.sender_id === auth.user.id) {
               if (newData.status === 'accepted') {
-                const alreadyExists = this.collaborators.find(c => c.userId === newData.receiver_id);
-                if (!alreadyExists) {
-                  // جلب بيانات المُستقبِل لعرضها (بشكل مرن)
+                if (newData.status === 'accepted') {
+                  // جلب بيانات المُستقبِل لعرضها في الإشعار
                   const { data: receiverProfile } = await supabase
                     .from('profiles')
                     .select('full_name, user_code')
@@ -539,17 +538,7 @@ export const useCollaborationStore = defineStore('collaboration', {
                     10000
                   );
 
-                  // إرسال حدث للمزامنة التلقائية
-                  window.dispatchEvent(new CustomEvent('collaboration-accepted', {
-                    detail: {
-                      userId: newData.receiver_id,
-                      userName: receiverName,
-                      userEmail: receiverEmail,
-                      userCode: receiverCode,
-                      role: newData.role
-                    }
-                  }));
-
+                  // تحديث القائمة فوراً
                   await this.fetchCollaborators();
                 }
               }

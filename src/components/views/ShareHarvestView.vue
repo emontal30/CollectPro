@@ -270,16 +270,24 @@
               </div>
               
               <div class="invite-actions">
-                <button 
-                  @click="handleRespond(req.id, 'accepted', req.selectedRole)" 
-                  class="btn btn-sm btn-success"
-                  :title="`قبول الدعوة كـ ${req.selectedRole === 'editor' ? 'محرر' : 'مشاهد'}`"
-                >
-                  <i class="fas fa-check"></i> قبول
-                </button>
-                <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger" title="حذف الدعوة ورفضها">
-                  <i class="fas fa-trash-alt"></i> حذف / رفض
-                </button>
+                <template v-if="req.isAccepted">
+                  <div class="activation-badge text-success">
+                    <i class="fas fa-check-circle fa-lg"></i>
+                    <span class="ms-1 fw-bold">تم التفعيل ✅</span>
+                  </div>
+                </template>
+                <template v-else>
+                  <button 
+                    @click="handleRespond(req.id, 'accepted', req.selectedRole)" 
+                    class="btn btn-sm btn-success"
+                    :title="`قبول الدعوة كـ ${req.selectedRole === 'editor' ? 'محرر' : 'مشاهد'}`"
+                  >
+                    <i class="fas fa-check"></i> قبول
+                  </button>
+                  <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger" title="حذف الدعوة ورفضها">
+                    <i class="fas fa-trash-alt"></i> حذف / رفض
+                  </button>
+                </template>
               </div>
             </div>
           </div>

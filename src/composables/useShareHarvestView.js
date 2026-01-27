@@ -157,14 +157,32 @@ export function useShareHarvestView() {
     // 2. Respond to Invite
     const handleRespond = async (reqId, status, customRole = null) => {
         try {
+            // Visual feedback: Find request and mark as processing/accepted locally first
+            const req = collabStore.incomingRequests.find(r => r.id === reqId);
+            if (req && status === 'accepted') {
+                req.isAccepted = true; // Trigger UI change
+            }
+
+            // Short delay to let user see the "Activated" state if accepted
+            if (status === 'accepted') {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+
             await collabStore.respondToInvite(reqId, status, customRole);
             const msg = status === 'accepted' ? 'تم قبول الدعوة بنجاح ✅' : 'تم رفض الدعوة';
-            addNotification(msg, status === 'accepted' ? 'success' : 'info');
-            // Note: fetchCollaborators is already called in respondToInvite with timeout protection
+
+            // Only show toast if rejected, because accepted has visual UI feedback now
+            if (status !== 'accepted') {
+                addNotification(msg, 'info');
+            }
         } catch (err) {
             console.error('Error responding to invitation:', err);
             const errorMsg = err.message || 'حدث خطأ أثناء معالجة الطلب';
             addNotification(errorMsg, 'error');
+
+            // Revert local state on error
+            const req = collabStore.incomingRequests.find(r => r.id === reqId);
+            if (req) req.isAccepted = false;
         }
     };
 
