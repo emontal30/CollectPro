@@ -53,6 +53,17 @@ export function useShareHarvestView() {
         return 'المستخدم';
     });
 
+    const activeCollaboratorCode = computed(() => {
+        if (collabStore.activeSessionCode) return collabStore.activeSessionCode;
+
+        if (collabStore.selectedRemoteUserId) {
+            const fromHistory = collabStore.adminHistory.find(h => h.userId === collabStore.selectedRemoteUserId);
+            if (fromHistory) return fromHistory.code;
+        }
+
+        return '';
+    });
+
     const lastUpdatedText = computed(() => {
         if (!harvestStore.sharedLastUpdated) return '';
         const date = new Date(harvestStore.sharedLastUpdated);
@@ -70,6 +81,10 @@ export function useShareHarvestView() {
         });
 
         return `${year}-${month}-${day} | ${time}`;
+    });
+
+    const manageableCollaborators = computed(() => {
+        return collabStore.collaborators.filter(c => c.isOwner);
     });
 
     const shouldShowTable = computed(() => {
@@ -202,10 +217,15 @@ export function useShareHarvestView() {
 
     // 3. Select Collaborator
     const handleCollaboratorChange = async () => {
+        if (!selectedCollaboratorId.value) {
+            closeSession();
+            return;
+        }
+
         if (selectedCollaboratorId.value) {
             const collab = collabStore.collaborators.find(c => c.userId === selectedCollaboratorId.value);
             if (collab) {
-                collabStore.setActiveSession(collab.userId, collab.displayName, 'collab', collab.code);
+                collabStore.setActiveSession(collab.userId, collab.displayName, 'collab', collab.userCode);
                 // Load data
                 await harvestStore.switchToUserSession(collab.userId);
             }
@@ -408,6 +428,7 @@ export function useShareHarvestView() {
         nameInput,
         selectedArchiveDate,
         activeCollaboratorName,
+        activeCollaboratorCode,
         lastUpdatedText,
         handleAdminOpen,
         sendInvite,
@@ -428,6 +449,7 @@ export function useShareHarvestView() {
         cancelEditName,
         currentResultIsGhost,
         handleRevoke,
-        shouldShowTable
+        shouldShowTable,
+        manageableCollaborators
     };
 }

@@ -512,7 +512,10 @@ export const useCollaborationStore = defineStore('collaboration', {
               if (newData.status === 'revoked' || newData.status === 'rejected') {
                 this.fetchIncomingRequests();
                 this.fetchCollaborators();
-                if (this.activeSessionId === newData.sender_id) this.setActiveSession(null, null);
+                if (this.activeSessionId === newData.sender_id) {
+                  this.setActiveSession(null, null);
+                  this.addNotification('تم إلغاء المشاركة من قبل المرسل', 'warning');
+                }
               }
             }
 
@@ -551,6 +554,33 @@ export const useCollaborationStore = defineStore('collaboration', {
                   // تحديث القائمة فوراً
                   await this.fetchCollaborators();
                 }
+              }
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'collaboration_requests'
+          },
+          async (payload) => {
+            const oldData = payload.old;
+            if (!oldData) return;
+
+            // If the deleted request was relevant to me
+            if (oldData.receiver_id === auth.user.id || oldData.sender_id === auth.user.id) {
+              await this.fetchCollaborators();
+              await this.fetchIncomingRequests();
+
+              // If I was viewing this specific deleted session
+              // Check if the other party matches the active session
+              const otherPartyId = (oldData.sender_id === auth.user.id) ? oldData.receiver_id : oldData.sender_id;
+
+              if (this.activeSessionId === otherPartyId) {
+                this.setActiveSession(null, null);
+                this.addNotification('تم إنهاء المشاركة (حذف الدعوة) من الطرف الآخر', 'warning');
               }
             }
           }

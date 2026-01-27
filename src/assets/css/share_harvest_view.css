@@ -1161,6 +1161,8 @@
     color: #92400e;
     border: 1px solid #fde68a;
     animation: pulse-border 2s infinite;
+    font-size: 0.6rem;
+    padding: 1px 4px;
 }
 
 .lh-refresh-btn {

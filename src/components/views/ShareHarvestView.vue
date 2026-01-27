@@ -193,8 +193,8 @@
               <div class="select-box">
                 <label>عرض جدول:</label>
                 <select v-model="selectedCollaboratorId" class="form-control select-input" @change="handleCollaboratorChange">
-                  <option :value="null" disabled>-- اختر زميلاً --</option>
-                  <option v-for="collab in collabStore.collaborators" :key="collab.userId" :value="collab.userId">
+                  <option :value="null">-- اختر زميلاً (إيقاف المزامنة) --</option>
+                  <option v-for="collab in manageableCollaborators" :key="collab.userId" :value="collab.userId">
                     {{ collab.displayName }} | {{ collab.userEmail }} | {{ collab.userCode }} ({{ collab.role === 'editor' ? 'محرر' : 'مشاهد' }})
                   </option>
                 </select>
@@ -448,7 +448,8 @@ const {
   cancelEditName,
   currentResultIsGhost,
   handleRevoke,
-  shouldShowTable
+  shouldShowTable,
+  manageableCollaborators
 } = useShareHarvestView();
 </script>
 
