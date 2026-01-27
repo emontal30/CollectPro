@@ -6,6 +6,7 @@ import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSettingsStore } from '@/stores/settings';
 import logger from '@/utils/logger.js';
 import api, { apiInterceptor } from '@/services/api';
+import { withTimeout } from '@/utils/promiseUtils';
 
 import { clearCacheOnLogout, setLocalStorageCache, getLocalStorageCache, removeFromAllCaches } from '@/services/cacheManager';
 
@@ -313,16 +314,44 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function proactivelyRefreshSession() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Wrap refresh with timeout (Increased to 15s for slow networks)
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        15000,
+        'Session refresh timed out'
+      );
+
       if (session) {
         await updateUserState(session);
       } else {
         await logoutCleanup();
       }
     } catch (error) {
-      logger.error('Failed to proactively refresh session:', error);
-      await logoutCleanup();
+      if (error.message.includes('timed out')) {
+        logger.info('Background session refresh timed out - proceeding with current session.');
+      } else {
+        logger.error('Failed to proactively refresh session:', error);
+      }
+      // Don't force logout on timeout, just log it. Maybe network glitch.
+      // await logoutCleanup(); 
     }
+  }
+
+  /**
+   * Hard revival of the app's connectivity and session integrity.
+   * Useful before critical operations after long periods of inactivity.
+   */
+  async function reviveApp() {
+    logger.info('🚀 Reviving app connectivity...');
+
+    // 1. Force refresh session (which also tests network)
+    await proactivelyRefreshSession();
+
+    // 2. Clear internal Supabase cache if possible or just ensure it's responsive
+    // supabase.auth.startAutoRefresh() is handled by the client, but we can nudge it.
+
+    // 3. Return true if we have a user, false otherwise
+    return !!user.value;
   }
 
   return {
@@ -337,6 +366,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     logout,
     logoutCleanup,
-    proactivelyRefreshSession
+    proactivelyRefreshSession,
+    reviveApp
   };
 });

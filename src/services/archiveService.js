@@ -1,6 +1,7 @@
 import { supabase } from '@/supabase';
 import logger from '@/utils/logger.js';
 import { apiInterceptor } from './apiInterceptor.js';
+import { withTimeout } from '@/utils/promiseUtils';
 
 export const archiveService = {
   /**
@@ -9,11 +10,15 @@ export const archiveService = {
   async getAvailableDates(userId) {
     try {
       const { data, error } = await apiInterceptor(
-        supabase
-          .from('daily_archives')
-          .select('archive_date')
-          .eq('user_id', userId)
-          .order('archive_date', { ascending: false })
+        withTimeout(
+          supabase
+            .from('daily_archives')
+            .select('archive_date')
+            .eq('user_id', userId)
+            .order('archive_date', { ascending: false }),
+          15000,
+          'Archive dates fetch timed out'
+        )
       );
 
       if (error) {
@@ -37,12 +42,16 @@ export const archiveService = {
   async getArchiveByDate(userId, dateStr) {
     try {
       const { data, error } = await apiInterceptor(
-        supabase
-          .from('daily_archives')
-          .select('data')
-          .eq('user_id', userId)
-          .eq('archive_date', dateStr)
-          .maybeSingle()
+        withTimeout(
+          supabase
+            .from('daily_archives')
+            .select('data')
+            .eq('user_id', userId)
+            .eq('archive_date', dateStr)
+            .maybeSingle(),
+          15000,
+          'Archive data fetch timed out'
+        )
       );
 
       if (error) {
@@ -77,9 +86,13 @@ export const archiveService = {
       };
 
       const { error } = await apiInterceptor(
-        supabase
-          .from('daily_archives')
-          .upsert(payload, { onConflict: 'user_id, archive_date' })
+        withTimeout(
+          supabase
+            .from('daily_archives')
+            .upsert(payload, { onConflict: 'user_id, archive_date' }),
+          20000, // 20s for save (might be larger payload)
+          'Archive save timed out'
+        )
       );
 
       if (error) throw error;
@@ -98,11 +111,15 @@ export const archiveService = {
   async deleteArchiveByDate(userId, dateStr) {
     try {
       const { error } = await apiInterceptor(
-        supabase
-          .from('daily_archives')
-          .delete()
-          .eq('user_id', userId)
-          .eq('archive_date', dateStr)
+        withTimeout(
+          supabase
+            .from('daily_archives')
+            .delete()
+            .eq('user_id', userId)
+            .eq('archive_date', dateStr),
+          15000,
+          'Archive delete timed out'
+        )
       );
 
       if (error) throw error;
@@ -111,6 +128,58 @@ export const archiveService = {
     } catch (err) {
       logger.error('❌ خطأ أثناء حذف الأرشيف:', err);
       return { success: false, error: err };
+    }
+  },
+
+  /**
+   * [ADMIN] جلب قائمة التواريخ باستخدام RPC لتجاوز RLS
+   */
+  async getAvailableDatesAdmin(userId) {
+    try {
+      const { data, error } = await apiInterceptor(
+        withTimeout(
+          supabase.rpc('get_user_archive_dates_admin', { p_user_id: userId }),
+          15000,
+          'Admin archive dates fetch timed out'
+        )
+      );
+
+      if (error) throw error;
+
+      return {
+        dates: (data || []).map(item => item.archive_date),
+        error: null
+      };
+    } catch (err) {
+      logger.error('❌ Admin Archive RPC Failed:', err);
+      // Fallback to standard method if RPC doesn't exist yet
+      return this.getAvailableDates(userId);
+    }
+  },
+
+  /**
+   * [ADMIN] جلب بيانات الأرشيف باستخدام RPC لتجاوز RLS
+   */
+  async getArchiveByDateAdmin(userId, dateStr) {
+    try {
+      const { data, error } = await apiInterceptor(
+        withTimeout(
+          supabase.rpc('get_user_archive_data_admin', { p_user_id: userId, p_date: dateStr }),
+          15000,
+          'Admin archive data fetch timed out'
+        )
+      );
+
+      if (error) throw error;
+
+      return {
+        data: data || [],
+        error: null
+      };
+    } catch (err) {
+      logger.error('❌ Admin Archive Data RPC Failed:', err);
+      // Fallback to standard method if RPC doesn't exist yet
+      return this.getArchiveByDate(userId, dateStr);
     }
   }
 };

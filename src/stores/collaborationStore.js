@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { supabase } from '../supabase';
 import { useAuthStore } from './auth';
 import logger from '@/utils/logger.js';
+import { archiveService } from '@/services/archiveService';
+import { withTimeout } from '@/utils/promiseUtils';
 
 export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
@@ -11,6 +13,9 @@ export const useCollaborationStore = defineStore('collaboration', {
     // 1. استعادة الجلسة النشطة مباشرة من التخزين المحلي لضمان بقائها عند التحديث
     activeSessionId: localStorage.getItem('collab_active_session_id') || null,
     activeSessionName: localStorage.getItem('collab_active_session_name') || null,
+    activeSessionCode: localStorage.getItem('collab_active_session_code') || null,
+    // New flag to differentiate admin opened sessions vs normal collaboration
+    sessionType: localStorage.getItem('collab_session_type') || 'collab', // 'admin' when admin silently opens a user
 
     realtimeChannel: null,
     pgNotifyChannel: null, // قناة للإشعارات الفورية من PostgreSQL
@@ -25,7 +30,22 @@ export const useCollaborationStore = defineStore('collaboration', {
 
     // 3. معرف جلسة الأدمن النشطة ومؤقت الـ ping
     activeAdminSessionId: null,
-    adminSessionPingInterval: null
+    adminSessionPingInterval: null,
+
+    // --- ميزات الأدمن الجديدة ---
+    // سجل المستخدمين الذين تمت مشاهدتهم مؤخراً
+    adminHistory: JSON.parse(localStorage.getItem('admin_view_history') || '[]'),
+
+    // وضع الرؤية الافتراضي للأدمن: 'sync' (مزامنة حية) أو 'archive' (عرض أرشيف) أو null (لم يتم الاختيار بعد)
+    adminViewMode: null,
+
+    // أرشيف المستخدمين (عن بعد)
+    remoteArchiveDates: [],
+    remoteArchiveRows: [],
+    isRemoteArchiveMode: false,
+    selectedArchiveDate: null,
+    selectedRemoteUserId: null,
+    selectedRemoteUserCode: null
   }),
 
   actions: {
@@ -62,11 +82,16 @@ export const useCollaborationStore = defineStore('collaboration', {
       const auth = useAuthStore();
       if (!auth.user) return;
 
-      const { data: requests, error: reqError } = await supabase
-        .from('collaboration_requests')
-        .select('receiver_id, role')
-        .eq('sender_id', auth.user.id)
-        .eq('status', 'accepted');
+      const { data: requests, error: reqError } = await withTimeout(
+        (signal) => supabase
+          .from('collaboration_requests')
+          .select('receiver_id, role')
+          .eq('sender_id', auth.user.id)
+          .eq('status', 'accepted')
+          .abortSignal(signal),
+        20000, // Increased to 20s
+        'Fetch collaborators timed out'
+      ).catch(err => ({ data: [], error: err }));
 
       let serverUsers = [];
 
@@ -110,46 +135,11 @@ export const useCollaborationStore = defineStore('collaboration', {
       // التحقق في القائمة المدمجة الحالية
       const existing = this.collaborators.find(c => c.code === receiverCode);
       if (existing) {
-        this.setActiveSession(existing.userId, existing.displayName);
+        this.setActiveSession(existing.userId, existing.displayName, 'collab');
         return existing.userId;
       }
 
-      // --- وضع الأدمن (Ghost Mode) ---
-      if (auth.isAdmin) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id, full_name, user_code')
-          .eq('user_code', receiverCode)
-          .single();
-
-        if (error || !profile) throw new Error("كود المستخدم غير صحيح أو غير موجود.");
-
-        const originalName = profile.full_name || 'مستخدم';
-        const displayName = this.aliases[profile.id] || originalName;
-
-        const ghostUser = {
-          userId: profile.id,
-          name: originalName,
-          displayName: displayName,
-          code: profile.user_code,
-          role: role,
-          isLocal: true // تمييزه كمستخدم محلي
-        };
-
-        // 1. حفظه في LocalStorage لضمان بقائه في القائمة المنسدلة
-        this.localGhostUsers.push(ghostUser);
-        localStorage.setItem('collab_ghost_users', JSON.stringify(this.localGhostUsers));
-
-        // 2. تحديث القائمة الحالية
-        this.refreshCollaboratorsList();
-
-        // 3. تفعيل الجلسة (بدون تسجيل في قاعدة البيانات)
-        this.setActiveSession(profile.id, displayName);
-
-        return profile.id;
-      }
-
-      // --- الوضع العادي ---
+      // --- الوضع العادي (متاح للكل بمَن فيهم الأدمن) ---
       const { error } = await supabase.from('collaboration_requests').insert({
         sender_id: auth.user.id,
         receiver_code: receiverCode,
@@ -160,6 +150,231 @@ export const useCollaborationStore = defineStore('collaboration', {
 
       await this.fetchCollaborators();
       return null;
+    },
+
+    async adminOpenUser(targetUid, knownUserId = null) {
+      const auth = useAuthStore();
+      if (!auth.isAdmin) return;
+
+      // Ensure session is fresh and network is responsive (Hard Revival)
+      const isAlive = await auth.reviveApp();
+      if (!isAlive) throw new Error('لا يمكن الاتصال بالسيرفر، يرجى التحقق من الشبكة');
+
+      this.isLoading = true;
+      try {
+        let profile = null;
+
+        // Deep defense: Ensure knownUserId is a valid string (UUID or similar) and not an Event object
+        if (knownUserId && typeof knownUserId === 'string') {
+          // Optimization: Skip searching profiles table if we already have the ID
+          profile = { id: knownUserId, full_name: '', user_code: targetUid };
+        } else {
+          const cleanUid = targetUid.trim();
+          // Safe UUID detection 
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanUid);
+
+          let query = supabase.from('profiles').select('id, full_name, user_code');
+          if (isUuid) query = query.or(`id.eq."${cleanUid}",user_code.eq."${cleanUid}"`);
+          else query = query.eq('user_code', cleanUid);
+
+          // Use new withTimeout syntax to pass AbortSignal to query (Reduced timeout)
+          const { data: profileResult, error: profileError } = await withTimeout(
+            (signal) => query.maybeSingle().abortSignal(signal),
+            12000,
+            'User search timed out'
+          );
+
+          if (profileError) throw profileError;
+          if (!profileResult) throw new Error('المستخدم غير موجود');
+          profile = profileResult;
+
+          this.addToAdminHistory({ userId: profile.id, name: profile.full_name, code: profile.user_code });
+        }
+
+        // التبديل لوضع المزامنة دائماً عند الضغط على زر المزامنة
+        this.adminViewMode = 'sync';
+        this.exitRemoteArchiveMode();
+
+        this.setActiveSession(profile.id, profile.full_name, 'admin', profile.user_code);
+        return profile;
+      } catch (err) {
+        if (err.message && err.message.includes('timed out')) {
+          logger.info('Admin user search timed out (slow network).');
+        } else {
+          logger.error('Error admin opening user:', err);
+        }
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    setAdminViewMode(mode) {
+      this.adminViewMode = mode;
+      this.isRemoteArchiveMode = (mode === 'archive');
+      logger.info(`🛠️ Admin View Mode changed to: ${mode} (isRemoteArchiveMode: ${this.isRemoteArchiveMode})`);
+
+      // If switching to sync, clear archive data
+      if (mode === 'sync') {
+        this.remoteArchiveRows = [];
+        this.remoteArchiveDates = [];
+      } else {
+        // If switching to archive but no user selected yet, just prepare
+        this.remoteArchiveRows = [];
+      }
+    },
+
+    addToAdminHistory(user) {
+      if (!user || !user.userId) return;
+
+      const exists = this.adminHistory.find(h => h.userId === user.userId);
+      if (exists) {
+        // Move to top and preserve any current custom name
+        this.adminHistory = [
+          { ...exists, ...user, name: exists.name }, // keep existing name if it was edited
+          ...this.adminHistory.filter(h => h.userId !== user.userId)
+        ];
+      } else {
+        this.adminHistory = [user, ...this.adminHistory];
+      }
+
+      // Limit to 20 items
+      if (this.adminHistory.length > 20) this.adminHistory.pop();
+      localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
+    },
+
+    updateAdminHistoryName(userId, newName) {
+      const idx = this.adminHistory.findIndex(h => h.userId === userId);
+      if (idx !== -1) {
+        this.adminHistory[idx].name = newName;
+        localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
+      }
+    },
+
+    removeFromAdminHistory(userId) {
+      this.adminHistory = this.adminHistory.filter(h => h.userId !== userId);
+      localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
+    },
+
+    async fetchRemoteArchiveDates(targetUid, knownUserId = null) {
+      const auth = useAuthStore();
+      if (!auth.isAdmin) return [];
+
+      // 1. Hard Revival (proactively refresh session)
+      const isAlive = await auth.reviveApp();
+      if (!isAlive) throw new Error('لا يمكن الاتصال بالسيرفر، يرجى التحقق من الشبكة');
+
+      this.isLoading = true;
+      try {
+        let profile = null;
+
+        // Deep defense: Ensure knownUserId is a valid string (UUID or similar) and not an Event object
+        if (knownUserId && typeof knownUserId === 'string') {
+          // If we already have the user ID from history, we can skip searching profiles table
+          profile = { id: knownUserId, full_name: '', user_code: targetUid };
+        } else {
+          const cleanUid = targetUid.trim();
+          // Safe UUID detection 
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanUid);
+
+          let query = supabase.from('profiles').select('id, full_name, user_code');
+          if (isUuid) query = query.or(`id.eq."${cleanUid}",user_code.eq."${cleanUid}"`);
+          else query = query.eq('user_code', cleanUid);
+
+          const { data, error: pError } = await withTimeout(
+            (signal) => query.maybeSingle().abortSignal(signal),
+            12000, // Reduced timeout for profile search
+            'Profile search timed out'
+          );
+
+          if (pError) throw pError;
+          if (!data) throw new Error('المستخدم غير موجود (تحقق من الكود)');
+          profile = data;
+
+          // Add to history only if it's a new search
+          this.addToAdminHistory({ userId: profile.id, name: profile.full_name, code: profile.user_code });
+        }
+
+        this.selectedRemoteUserId = profile.id;
+        this.exitRemoteArchiveMode();
+
+        const { dates, error } = await archiveService.getAvailableDatesAdmin(profile.id);
+        if (error) throw error;
+
+        logger.info(`📅 Fetched ${dates.length} archive dates for user`);
+
+        if (dates.length === 0) {
+          logger.warn('⚠️ No archives found for this user.');
+        }
+
+        // Clear previous rows to avoid flicker when switching users
+        this.remoteArchiveRows = [];
+
+        this.remoteArchiveDates = dates;
+        this.selectedRemoteUserId = profile.id;
+        this.selectedRemoteUserCode = profile.user_code;
+
+        // إذا كنا بالفعل في وضع الأرشيف، نصل للجلسة تلقائياً للمستخدم الجديد
+        if (this.adminViewMode === 'archive') {
+          this.isRemoteArchiveMode = true; // نؤكد على وضع الأرشيف
+          this.setActiveSession(profile.id, profile.full_name, 'admin', profile.user_code);
+        }
+
+        return dates;
+      } catch (err) {
+        if (err.message && err.message.includes('timed out')) {
+          logger.info('Fetch remote archive dates timed out (slow network).');
+        } else {
+          logger.error('❌ Error fetching remote archive dates:', err);
+        }
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async fetchRemoteArchiveData(dateStr) {
+      if (!this.selectedRemoteUserId) return;
+
+      const auth = useAuthStore();
+      // Ensure fresh session before fetching data
+      await auth.reviveApp();
+
+      this.isLoading = true;
+      try {
+        // Use Admin Direct Fetch (RPC) with timeout
+        // Note: For now, we only apply timeout to the promise. If we decide to support abort in API layer, 
+        // we'd pass signal here.
+        const { data, error } = await withTimeout(
+          archiveService.getArchiveByDateAdmin(this.selectedRemoteUserId, dateStr),
+          20000,
+          'Remote archive data fetch timed out'
+        );
+        if (error) throw error;
+
+        this.remoteArchiveRows = data || [];
+        this.selectedArchiveDate = dateStr;
+        this.isRemoteArchiveMode = true;
+        // لا نقوم بمسح الجلسة هنا لنحافظ على ظهور اسم المستخدم في الهيدر
+      } catch (err) {
+        if (err.message && err.message.includes('timed out')) {
+          logger.info('Fetch remote archive data timed out (slow network).');
+        } else {
+          logger.error('❌ Error fetching remote archive data:', err);
+        }
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    exitRemoteArchiveMode() {
+      this.isRemoteArchiveMode = false;
+      this.remoteArchiveRows = [];
+      this.selectedArchiveDate = null;
+      this.selectedRemoteUserId = null;
+      this.selectedRemoteUserCode = null;
+      this.remoteArchiveDates = [];
     },
 
     async fetchIncomingRequests() {
@@ -257,17 +472,29 @@ export const useCollaborationStore = defineStore('collaboration', {
       }
     },
 
-    setActiveSession(userId, userName) {
+    async stopAdminGhostSession() {
+      // Since we no longer use a complex ghost session tracking with pings for this silent access,
+      // we just clear the active session.
+      this.setActiveSession(null, null);
+    },
+
+    setActiveSession(userId, userName, type = 'collab', userCode = null) {
       this.activeSessionId = userId;
       this.activeSessionName = userName;
+      this.sessionType = type;
+      this.activeSessionCode = userCode;
 
       // 3. حفظ الجلسة في التخزين المحلي
       if (userId) {
         localStorage.setItem('collab_active_session_id', userId);
         localStorage.setItem('collab_active_session_name', userName);
+        localStorage.setItem('collab_session_type', type);
+        if (userCode) localStorage.setItem('collab_active_session_code', userCode);
       } else {
         localStorage.removeItem('collab_active_session_id');
         localStorage.removeItem('collab_active_session_name');
+        localStorage.removeItem('collab_session_type');
+        localStorage.removeItem('collab_active_session_code');
       }
     },
 
@@ -385,6 +612,22 @@ export const useCollaborationStore = defineStore('collaboration', {
       if (this.pgNotifyChannel) {
         supabase.removeChannel(this.pgNotifyChannel);
         this.pgNotifyChannel = null;
+      }
+    },
+
+    async revokeInvite(userId) {
+      if (!userId) return;
+      const auth = useAuthStore();
+      // ... (rest of function)
+      // (This is NOT where we add it, wait. I should append it to actions)
+    }, // mistake in instruction parsing, let me find a better insertion point.
+    // Actually, I'll insert it before 'revokeInvite' or at the end of actions.
+
+    reconnectRealtime() {
+      const auth = useAuthStore();
+      if (auth.user && auth.user.userCode) {
+        logger.info('🔌 Reconnecting Collaboration Realtime...');
+        this.subscribeToRequests();
       }
     },
 

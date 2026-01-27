@@ -1,3 +1,4 @@
+import { withTimeout } from '@/utils/promiseUtils';
 import { defineStore } from 'pinia';
 import { ref, computed, toRaw } from 'vue';
 import { useAuthStore } from '@/stores/auth';
@@ -122,14 +123,20 @@ export const useItineraryStore = defineStore('itinerary', () => {
     if (!navigator.onLine) return;
 
     try {
-      const { data: cloudRoutes, error } = await supabase
-        .from('client_routes')
-        .select('*')
-        .eq('user_id', authStore.user.id);
+      const { data: cloudRoutes, error } = await withTimeout(
+        (signal) => supabase
+          .from('client_routes')
+          .select('*')
+          .eq('user_id', authStore.user.id)
+          .abortSignal(signal),
+        20000,
+        'Fetch routes timed out'
+      );
 
       if (error) throw error;
 
       if (cloudRoutes && cloudRoutes.length > 0) {
+        // ... existing merge logic ...
         // Merge Cloud & Local
         // We assume Cloud has the "truth" for persistence, but Local might have unsynced newer edits.
         // normalizeRoutes logic uses 'updated_at' to pick winner.
@@ -145,7 +152,11 @@ export const useItineraryStore = defineStore('itinerary', () => {
         await safeSaveLocal(STORAGE_KEY.value, merged);
       }
     } catch (err) {
-      logger.error('Error fetching cloud routes:', err);
+      if (err.message && err.message.includes('timed out')) {
+        logger.info('Background fetch routes timed out (slow network), using local data.');
+      } else {
+        logger.error('Error fetching cloud routes:', err);
+      }
     }
 
     // Fetch profiles as well
@@ -623,8 +634,81 @@ export const useItineraryStore = defineStore('itinerary', () => {
     selectedIds.value = e.target.checked ? displayedRoutes.value.map(r => r.id) : [];
   };
 
+  async function deleteRoutesFromCloud(shopCodes) {
+    if (!authStore.user || !shopCodes.length) return;
+    if (!navigator.onLine) {
+      addNotification('لا يوجد اتصال لحذف البيانات سحابياً', 'error');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('client_routes')
+        .delete()
+        .eq('user_id', authStore.user.id)
+        .in('shop_code', shopCodes);
+
+      if (error) throw error;
+      logger.info(`Deleted ${shopCodes.length} routes from cloud successfully.`);
+    } catch (err) {
+      logger.error('Cloud delete failed:', err);
+      addNotification('فشل الحذف السحابي', 'error');
+      throw err;
+    }
+  }
+
   const confirmPermanentDelete = async () => {
     if (!selectedIds.value.length) return;
+
+    // Admin Confirmation Logic
+    if (authStore.isAdmin) {
+      const result = await confirm({
+        title: 'خيارات الحذف (أدمن)',
+        text: `لقد حددت ${selectedIds.value.length} عنصر. اختر نوع الحذف:`,
+        icon: 'warning',
+        confirmButtonText: 'تنفيذ الحذف',
+        confirmButtonColor: '#d33',
+        input: 'radio',
+        inputOptions: {
+          'local': 'حذف محلي فقط (من هذا الجهاز)',
+          'cloud': 'حذف سحابي فقط (من قاعدة البيانات)',
+          'both': 'حذف من الجهتين (محلي + سحابي)'
+        },
+        inputValue: 'local', // default
+        inputValidator: (value) => {
+          if (!value) {
+            return 'يجب اختيار نوع الحذف!';
+          }
+        }
+      });
+
+      if (result.isConfirmed) {
+        const deleteType = result.value;
+        const routesToDelete = routes.value.filter(r => selectedIds.value.includes(r.id));
+        const shopCodes = routesToDelete.map(r => r.shop_code).filter(c => c);
+
+        // 1. Cloud Delete
+        if (deleteType === 'cloud' || deleteType === 'both') {
+          if (shopCodes.length > 0) {
+            try {
+              await deleteRoutesFromCloud(shopCodes);
+              if (deleteType === 'cloud') addNotification('تم الحذف من السحابة بنجاح', 'success');
+            } catch (e) { return; } // Stop if cloud delete fails
+          }
+        }
+
+        // 2. Local Delete
+        if (deleteType === 'local' || deleteType === 'both') {
+          await deleteRoutes(selectedIds.value);
+        } else if (deleteType === 'cloud') {
+          // If cloud only, we just clear selection to indicate done, but keep local data
+          selectedIds.value = [];
+        }
+      }
+      return;
+    }
+
+    // Regular User Logic (Local Only)
     const result = await confirm({
       title: 'حذف نهائي',
       text: `هل أنت متأكد من حذف ${selectedIds.value.length} عنصر؟ لا يمكن التراجع عن هذا الإجراء.`,

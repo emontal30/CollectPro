@@ -84,29 +84,36 @@ onMounted(() => {
      mySubStore.init(authStore.user);
   }
 
-  // دالة مركزية لتحديث جميع البيانات
+  // دالة مركزية لتحديث جميع البيانات بذكاء (تسلسلي لتخفيف الضغط)
   const refreshAllStores = async (force = false) => {
     if (!navigator.onLine || !authStore.isAuthenticated) return;
 
+    logger.info('🔄 Starting smart refresh sequence...');
+
     try {
-      const initPromises = [
+      // 1. الأولوية القصوى: التحقق من الاشتراك والحصاد (الحالة الحالية)
+      // نستخدم Promise.all للأشياء الحرجة فقط
+      await Promise.allSettled([
+        harvestStore.initialize(),
+        mySubStore.forceRefresh(authStore.user)
+      ]);
+
+      // 2. الخلفية: باقي البيانات (يمكن أن تتأخر قليلاً)
+      // لا نستخدم await هنا لكي لا نعطل الواجهة، لكن نسجل الأخطاء
+      Promise.allSettled([
         itineraryStore.fetchRoutes(force),
         archiveStore.loadAvailableDates(force),
         collabStore.fetchCollaborators(),
-        harvestStore.initialize(),
-        mySubStore.forceRefresh(authStore.user),
         settingsStore.checkRemoteCommands()
-      ];
+      ]).then(() => {
+        logger.info('✅ Background data refreshed');
+        // Admin dashboard is heavy, load last
+        if (authStore.isAdmin) adminStore.loadDashboardData(force);
+      });
 
-      // Only fetch admin dashboard data if the user has admin role
-      if (authStore.isAdmin) {
-        initPromises.push(adminStore.loadDashboardData(force));
-      }
-
-      await Promise.allSettled(initPromises);
-      logger.info('✅ Global Data Refreshed');
+      logger.info('✅ Critical Data Refreshed');
     } catch (err) {
-      logger.error('❌ Error refreshing stores:', err);
+      logger.error('❌ Error refreshing critical stores:', err);
     }
   };
 
@@ -115,14 +122,20 @@ onMounted(() => {
       if (!navigator.onLine) return;
       
       // Proactively refresh the session to handle expired tokens
+      // Timeout is handled inside this function now
       await authStore.proactivelyRefreshSession();
 
       if (!authStore.isAuthenticated) return;
 
-      // Trigger background refreshes
+      // Trigger smart refresh of data
       await refreshAllStores(true);
+
+      // Explicitly reconnect Realtime channels if they were dropped
+      // This is crucial for mobile background recovery
+      harvestStore.reconnectRealtime();
+      collabStore.reconnectRealtime();
       
-      logger.info('App resumed: stores refreshed');
+      logger.info('App resumed: stores refreshed and realtime reconnected');
     } catch (err) {
       logger.error('Error refreshing stores on resume:', err);
     }

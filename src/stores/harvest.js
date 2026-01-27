@@ -32,6 +32,7 @@ export const useHarvestStore = defineStore('harvest', {
     sharedExtraLimit: 0,
     sharedCurrentBalance: 0,
     sharedLastUpdated: null,
+    currentSharedUserId: null, // Track currently viewed user for reconnection
     isSharedLoading: false,
 
     // General
@@ -119,9 +120,14 @@ export const useHarvestStore = defineStore('harvest', {
         this.initOwnRealtimeSubscription();
 
         // Initial Cloud Sync (in case we missed updates while offline)
-        if (navigator.onLine) {
+        // Skip if we just imported data locally (hasImportedData), because local is definitely newer
+        if (navigator.onLine && !hasImportedData) {
           this.syncFromCloud().catch(err => {
-            logger.warn('Initial cloud sync failed:', err);
+            if (err.message && err.message.includes('timed out')) {
+              logger.info('Initial cloud sync timed out (using local data for now).');
+            } else {
+              logger.warn('Initial cloud sync failed:', err);
+            }
           });
         }
 
@@ -138,7 +144,7 @@ export const useHarvestStore = defineStore('harvest', {
       await this.saveRowsToStorage();
     },
 
-    async saveRowsToStorage() {
+    async saveRowsToStorage(skipCloud = false) {
       // This function ONLY saves the local `rows` to localforage.
       try {
         const cleanedRows = safeDeepClone(this.rows);
@@ -146,7 +152,7 @@ export const useHarvestStore = defineStore('harvest', {
         this.isModified = true;
 
         const authStore = useAuthStore();
-        if (navigator.onLine && authStore.user) {
+        if (!skipCloud && navigator.onLine && authStore.user) {
           this.syncToCloud(authStore.user.id).catch(err => {
             logger.warn('Cloud sync for local data skipped:', err.message);
           });
@@ -212,11 +218,17 @@ export const useHarvestStore = defineStore('harvest', {
       if (!authStore.user) return;
       const userId = authStore.user.id;
 
-      const { data, error } = await supabase
-        .from('live_harvest')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Wrap with timeout to prevent hanging during initial load (Increased to 15s)
+      const { data, error } = await withTimeout(
+        (signal) => supabase
+          .from('live_harvest')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle()
+          .abortSignal(signal),
+        20000,
+        'Cloud sync (read) timed out'
+      );
 
       if (data) {
         // Check if cloud is newer than local? 
@@ -267,10 +279,18 @@ export const useHarvestStore = defineStore('harvest', {
           last_updated_by: (await supabase.auth.getUser()).data.user?.id,
           updated_at: new Date()
         };
-        const { error } = await supabase.from('live_harvest').upsert(payload);
+
+        // Wrap with timeout to prevent hanging
+        const { error } = await withTimeout(
+          (signal) => supabase.from('live_harvest').upsert(payload).abortSignal(signal),
+          20000,
+          'Cloud sync timed out'
+        );
+
         if (error) throw error;
       } catch (error) {
-        console.warn('Sync local data to cloud failed:', error.message);
+        // Log warning but don't block user flow for background sync
+        logger.warn('Sync local data to cloud failed/timed out:', error.message);
       } finally {
         this.isCloudSyncing = false;
       }
@@ -296,10 +316,15 @@ export const useHarvestStore = defineStore('harvest', {
 
         // Use UPDATE instead of UPSERT
         // Collaborators have specific UPDATE policies, but rarely INSERT policies for other users' data.
-        const { error } = await supabase
-          .from('live_harvest')
-          .update(payload)
-          .eq('user_id', targetUserId);
+        const { error } = await withTimeout(
+          (signal) => supabase
+            .from('live_harvest')
+            .update(payload)
+            .eq('user_id', targetUserId)
+            .abortSignal(signal),
+          20000,
+          'Shared data update timed out'
+        );
 
         if (error) {
           logger.error('❌ Failed to update shared data (RLS or Network):', error);
@@ -309,7 +334,7 @@ export const useHarvestStore = defineStore('harvest', {
         logger.info('✅ Shared data synced successfully.');
 
       } catch (error) {
-        console.error('Failed to update shared data:', error.message);
+        logger.error('Failed to update shared data:', error.message);
         // We might want to notify the user via a persistent error state in the store
         // but for now, we rely on the logger.
       } finally {
@@ -318,6 +343,11 @@ export const useHarvestStore = defineStore('harvest', {
     },
 
     async switchToUserSession(userId) {
+      if (this.isSharedLoading) {
+        logger.warn('⚠️ Harvest: switch session already in progress, ignoring new request');
+        return;
+      }
+
       // CRITICAL: This function now only affects the SHARED part of the state.
 
       // Clear existing realtime channel
@@ -337,8 +367,11 @@ export const useHarvestStore = defineStore('harvest', {
         this.sharedMasterLimit = 0;
         this.sharedExtraLimit = 0;
         this.sharedCurrentBalance = 0;
+        this.currentSharedUserId = null;
         return;
       }
+
+      this.currentSharedUserId = userId;
 
       // Function to fetch shared data
       const fetchSharedData = async () => {
@@ -372,8 +405,25 @@ export const useHarvestStore = defineStore('harvest', {
 
       this.isSharedLoading = true;
       try {
-        // Initial fetch
-        await fetchSharedData();
+        // Initial fetch with timeout and ONE retry
+        // This handles cases where the first request fails due to cold start or stale connection
+        let attempt = 0;
+        const maxAttempts = 2;
+
+        while (attempt < maxAttempts) {
+          try {
+            attempt++;
+            await Promise.race([
+              fetchSharedData(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Fetch timeout')), 10000)) // 10s per attempt
+            ]);
+            break; // Success
+          } catch (err) {
+            if (attempt >= maxAttempts) throw err;
+            logger.warn(`⚠️ Fetch shared data attempt ${attempt} failed, retrying...`);
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+          }
+        }
 
         // Setup realtime subscription
         this.realtimeChannel = supabase
@@ -412,6 +462,7 @@ export const useHarvestStore = defineStore('harvest', {
         this.sharedExtraLimit = 0;
         this.sharedCurrentBalance = 0;
         this.sharedLastUpdated = null;
+        this.currentSharedUserId = null;
       } finally {
         this.isSharedLoading = false;
       }
@@ -448,12 +499,95 @@ export const useHarvestStore = defineStore('harvest', {
             this.currentBalance = parseFloat(newData.current_balance) || 0;
 
             // We should also persist to local storage to keep offline capability in sync
-            this.saveRowsToStorage();
+            // IMPORTANT: skipCloud=true to prevent pushing back the same data
+            this.saveRowsToStorage(true);
 
             logger.info('Received update from Admin/Collaborator - synced automatically');
           }
         )
         .subscribe();
+    },
+
+    // --- Bidirectional Sync for Owner ---
+    async initOwnRealtimeSubscription() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      const userId = auth.user.id;
+
+      if (this.ownRealtimeChannel) {
+        supabase.removeChannel(this.ownRealtimeChannel);
+      }
+
+      this.ownRealtimeChannel = supabase
+        .channel(`my-harvest-sync-${userId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'live_harvest', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const newData = payload.new;
+            if (!newData) return;
+
+            // CRITICAL: Check who updated it.
+            // If I updated it (last_updated_by == my_id), ignore it to avoid loops/jitter.
+            if (newData.last_updated_by === userId) return;
+
+            // If someone else (e.g. Admin) updated it, apply changes to LOCAL state.
+            this.rows = newData.rows || [];
+            this.masterLimit = parseFloat(newData.master_limit) || 0;
+            this.extraLimit = parseFloat(newData.extra_limit) || 0;
+            this.currentBalance = parseFloat(newData.current_balance) || 0;
+
+            // We should also persist to local storage to keep offline capability in sync
+            // IMPORTANT: skipCloud=true to prevent pushing back the same data
+            this.saveRowsToStorage(true);
+
+            logger.info('Received update from Admin/Collaborator - synced automatically');
+          }
+        )
+        .subscribe();
+    },
+
+    async reconnectRealtime() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      logger.info('🔌 Reconnecting Harvest Realtime...');
+
+      // 1. Own subscription
+      this.initOwnRealtimeSubscription();
+
+      // 2. Shared subscription if active
+      if (this.currentSharedUserId) {
+        logger.info(`🔌 Reconnecting Shared Realtime for user: ${this.currentSharedUserId}...`);
+        // We can re-use switchToUserSession logic but skipping fetch if possible? 
+        // Actually, just calling switchToUserSession again is the most robust way to ensure everything (fetch + real-time) is back in sync.
+        // It handles its own cleanup.
+        // But we want to avoid full loading state flicker if possible?
+        // Let's just re-subscribe the channel manually to avoid UI flicker.
+
+        const userId = this.currentSharedUserId;
+        if (this.realtimeChannel) await supabase.removeChannel(this.realtimeChannel);
+
+        this.realtimeChannel = supabase
+          .channel(`harvest-${userId}`)
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'live_harvest', filter: `user_id=eq.${userId}` },
+            (payload) => {
+              const newData = payload.new;
+              if (newData) {
+                this.sharedRows = newData.rows;
+                this.sharedMasterLimit = parseFloat(newData.master_limit) || 0;
+                this.sharedExtraLimit = parseFloat(newData.extra_limit) || 0;
+                this.sharedCurrentBalance = parseFloat(newData.current_balance) || 0;
+                this.sharedLastUpdated = newData.updated_at || new Date().toISOString();
+                logger.info('📡 Realtime update received for shared session (Reconnected)');
+              }
+            }
+          )
+          .subscribe();
+      }
     },
 
     // دالة جديدة: مزامنة إجبارية فورية مع السحابة

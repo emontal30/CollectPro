@@ -93,7 +93,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     isLoading.value = true;
-    const TIMEOUT_MS = 10000; // Reduced to 10s for better user experience
+    const TIMEOUT_MS = 15000; // Increased to 15s for better stability
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`Subscription Refresh Timeout (${TIMEOUT_MS}ms)`)), TIMEOUT_MS)
     );

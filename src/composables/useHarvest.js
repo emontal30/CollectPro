@@ -45,6 +45,11 @@ export function useHarvest(props) {
   const selectedOverdueStores = ref([]);
   const overdueDate = ref(null); // ← إضافة
 
+  // --- Loading State Management ---
+  const isLoadingDismissed = ref(false);
+  const showDismissLoading = ref(false);
+  let loadingTimer = null;
+
   // --- Extra Details Modal State ---
   const isExtraDetailsModalOpen = ref(false);
   const activeExtraRowIndex = ref(null);
@@ -52,57 +57,125 @@ export function useHarvest(props) {
 
   // --- Context-Aware Computed Properties (The Bridge) ---
 
-  const isLoading = computed(() =>
-    props.isSharedView
-      ? (store.isSharedLoading && (!store.sharedRows || store.sharedRows.length === 0))
-      : store.isLoading
-  );
+  const isLoading = computed(() => {
+    if (isLoadingDismissed.value) return false;
+
+    let loading = false;
+    if (props.isSharedView) {
+      if (collabStore.isRemoteArchiveMode) loading = collabStore.isLoading;
+      else loading = (store.isSharedLoading && (!store.sharedRows || store.sharedRows.length === 0));
+    } else {
+      loading = store.isLoading;
+    }
+    return loading;
+  });
+
+  // Watch loading state to handle timeout
+  watch(isLoading, (newVal) => {
+    if (newVal) {
+      // Start timer
+      if (loadingTimer) clearTimeout(loadingTimer);
+      loadingTimer = setTimeout(() => {
+        if (isLoading.value) showDismissLoading.value = true;
+      }, 5000); // Show dismiss button after 5 seconds
+    } else {
+      // Reset
+      if (loadingTimer) clearTimeout(loadingTimer);
+      showDismissLoading.value = false;
+      isLoadingDismissed.value = false;
+    }
+  });
+
+  const forceDismissLoading = () => {
+    isLoadingDismissed.value = true;
+    showDismissLoading.value = false;
+    addNotification('تم إخفاء شاشة التحميل يدوياً', 'warning');
+  };
 
   const isReadOnly = computed(() => {
     if (props.isSharedView) {
+      // 0. Remote Archive mode is always read-only
+      if (collabStore.isRemoteArchiveMode) return true;
+
+      // 1. Admin always has write access
+      if (collabStore.sessionType === 'admin') return false;
+
+      // 2. Local collaborator check
       const collabSession = collabStore.collaborators.find(c => c.userId === collabStore.activeSessionId);
-      return !collabSession || collabSession.role === 'viewer';
+
+      // If we are in "collab" mode but no record found (unlikely but safe), treat as viewer
+      if (!collabSession) return true;
+
+      return collabSession.role === 'viewer';
     }
     return false; // Local view is never read-only
   });
 
   const displayRows = computed({
     get() {
+      if (props.isSharedView && collabStore.isRemoteArchiveMode) {
+        return collabStore.remoteArchiveRows;
+      }
       return props.isSharedView ? store.sharedRows : store.rows;
     },
     set(value) {
       if (props.isSharedView) {
-        store.sharedRows = value;
+        if (!collabStore.isRemoteArchiveMode) {
+          store.sharedRows = value;
+        }
       } else {
         store.rows = value;
       }
     }
   });
 
-  const displayTotals = computed(() =>
-    props.isSharedView ? store.sharedTotals : store.totals
-  );
+  const displayTotals = computed(() => {
+    if (props.isSharedView && collabStore.isRemoteArchiveMode) {
+      return collabStore.remoteArchiveRows.reduce((acc, row) => {
+        acc.amount += parseFloat(row.amount) || 0;
+        acc.extra += parseFloat(row.extra) || 0;
+        acc.collector += parseFloat(row.collector) || 0;
+        return acc;
+      }, { amount: 0, extra: 0, collector: 0 });
+    }
+    return props.isSharedView ? store.sharedTotals : store.totals;
+  });
 
   const displayMasterLimit = computed({
-    get: () => props.isSharedView ? store.sharedMasterLimit : store.masterLimit,
+    get: () => {
+      if (props.isSharedView && collabStore.isRemoteArchiveMode) return 0;
+      return props.isSharedView ? store.sharedMasterLimit : store.masterLimit;
+    },
     set: (val) => {
-      if (props.isSharedView) store.sharedMasterLimit = val;
+      if (props.isSharedView) {
+        if (!collabStore.isRemoteArchiveMode) store.sharedMasterLimit = val;
+      }
       else store.setMasterLimit(val)
     }
   });
 
   const displayExtraLimit = computed({
-    get: () => props.isSharedView ? store.sharedExtraLimit : store.extraLimit,
+    get: () => {
+      if (props.isSharedView && collabStore.isRemoteArchiveMode) return 0;
+      return props.isSharedView ? store.sharedExtraLimit : store.extraLimit;
+    },
     set: (val) => {
-      if (props.isSharedView) store.sharedExtraLimit = val;
+      if (props.isSharedView) {
+        if (!collabStore.isRemoteArchiveMode) store.sharedExtraLimit = val;
+      }
       else store.setExtraLimit(val)
     }
   });
 
   const displayCurrentBalance = computed({
-    get: () => props.isSharedView ? store.sharedCurrentBalance : store.currentBalance,
+    get: () => {
+      if (props.isSharedView && collabStore.isRemoteArchiveMode) return 0;
+      return props.isSharedView ? store.sharedCurrentBalance : store.currentBalance;
+    },
     set: (val) => {
-      if (props.isSharedView) store.sharedCurrentBalance = val;
+      if (props.isSharedView) {
+        if (!collabStore.isRemoteArchiveMode) store.sharedCurrentBalance = val;
+      }
       else store.setCurrentBalance(val)
     }
   });
@@ -152,6 +225,9 @@ export function useHarvest(props) {
   });
 
   const displayResetStatus = computed(() => {
+    // Hidden in archive mode as we don't have enough data
+    if (props.isSharedView && collabStore.isRemoteArchiveMode) return { val: 0, text: 'بيانات مؤرشفة', color: '#94a3b8' };
+
     const totalCollected = displayTotals.value.collector || 0;
     const resetVal = (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0));
     const combinedValue = totalCollected + resetVal;
@@ -161,15 +237,19 @@ export function useHarvest(props) {
     return { val: combinedValue, text: 'زيادة 🔵', color: '#3b82f6' };
   });
 
-  const displayResetAmount = computed(() =>
-    (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0))
-  );
+  const displayResetAmount = computed(() => {
+    if (props.isSharedView && collabStore.isRemoteArchiveMode) return 0;
+    return (displayCurrentBalance.value || 0) - ((displayMasterLimit.value || 0) + (displayExtraLimit.value || 0));
+  });
 
 
   // --- Methods ---
 
   const saveData = () => {
     if (props.isSharedView) {
+      // Don't save if in archive mode
+      if (collabStore.isRemoteArchiveMode) return;
+
       if (collabStore.activeSessionId) {
         store.updateSharedData(collabStore.activeSessionId);
       }
@@ -602,6 +682,8 @@ export function useHarvest(props) {
 
     // Bridge computed properties
     isLoading,
+    showDismissLoading,
+    forceDismissLoading,
     isReadOnly,
     displayRows,
     displayTotals,

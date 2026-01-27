@@ -4,6 +4,9 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loader"></div>
       <p>جاري تحميل البيانات...</p>
+      <button v-if="showDismissLoading" @click="forceDismissLoading" class="btn-dismiss-loading fade-in">
+        <i class="fas fa-times"></i> إخفاء
+      </button>
     </div>
 
     <div v-if="collabStore.activeSessionId && !isSharedView" class="collab-banner animate-slide-down">
@@ -542,6 +545,8 @@ const {
   allOverdueSelected,
   // Bridge computeds
   isLoading, 
+  showDismissLoading,
+  forceDismissLoading,
   isReadOnly, 
   displayRows, 
   displayFilteredRows, 
@@ -737,4 +742,31 @@ export default {
 
 /* Original Styles (Implied to be global or inherited, but preserving scoped if any existed in Code 1 context) */
 /* Assuming Code 1 relied on global styles mostly, but keeping the structure intact */
+
+.btn-dismiss-loading {
+  margin-top: 15px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.btn-dismiss-loading:hover {
+  background: #f1f5f9;
+  color: #ef4444;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
 </style>
