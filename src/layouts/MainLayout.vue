@@ -55,6 +55,8 @@ import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useHarvestStore } from '@/stores/harvest';
 import { useDashboardStore } from '@/stores/dashboard';
 import { useCounterStore } from '@/stores/counterStore';
+import { useAuthStore } from '@/stores/auth';
+import logger from '@/utils/logger';
 
 const uiStore = useUIStore();
 const settingsStore = useSettingsStore();
@@ -64,6 +66,7 @@ const harvestStore = useHarvestStore();
 const dashboardStore = useDashboardStore();
 const counterStore = useCounterStore();
 const collabStore = useCollaborationStore();
+const authStore = useAuthStore();
 const notifications = useNotifications();
 
 provide('notifications', notifications);
@@ -184,15 +187,20 @@ onMounted(async () => {
   
   if (subStore.isInitialized) checkSubscriptionExpiry();
 
-  // Initialize collaboration and real-time syncing
-  collabStore.fetchCollaborators();
-  collabStore.fetchIncomingRequests();
-  collabStore.subscribeToRequests();
-  harvestStore.initOwnRealtimeSubscription();
-
   document.addEventListener('visibilitychange', handleVisibilityChange);
   window.addEventListener('collaboration-invite-received', showInvitePopup);
 });
+
+// تفعيل ميزات المشاركة بمجرد اكتمال دخول المستخدم
+watch(() => authStore.user?.id, (newId) => {
+  if (newId) {
+    logger.info('👤 User ID detected, initializing collaboration listeners...');
+    collabStore.fetchCollaborators();
+    collabStore.fetchIncomingRequests();
+    collabStore.subscribeToRequests();
+    harvestStore.initOwnRealtimeSubscription();
+  }
+}, { immediate: true });
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);

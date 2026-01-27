@@ -84,12 +84,12 @@ export const useCollaborationStore = defineStore('collaboration', {
 
     async fetchIncomingRequests() {
       const auth = useAuthStore();
-      if (!auth.user || !auth.user.userCode) return;
+      if (!auth.user) return;
       try {
         const { data: requests, error } = await supabase
           .from('collaboration_requests')
           .select('*')
-          .eq('receiver_code', auth.user.userCode)
+          .eq('receiver_id', auth.user.id)
           .eq('status', 'pending');
 
         if (error) throw error;
@@ -402,7 +402,7 @@ export const useCollaborationStore = defineStore('collaboration', {
             event: 'INSERT',
             schema: 'public',
             table: 'collaboration_requests',
-            filter: `receiver_code=eq.${auth.user.userCode}`
+            filter: `receiver_id=eq.${auth.user.id}`
           },
           async (payload) => {
             if (payload.new && payload.new.status === 'pending') {
@@ -410,13 +410,6 @@ export const useCollaborationStore = defineStore('collaboration', {
               const req = this.incomingRequests.find(r => r.id === payload.new.id);
               const senderName = req?.sender_profile?.full_name || 'مستخدم';
               const roleText = payload.new.role === 'editor' ? 'محرر (تعديل)' : 'مشاهد (قراءة فقط)';
-
-              // إشعار فوري منبثق
-              this.addNotification(
-                `📬 دعوة جديدة من ${senderName}\nكـ ${roleText}`,
-                'info',
-                10000
-              );
 
               // بث حدث مخصص للرسائل المنبثقة الإضافية
               window.dispatchEvent(new CustomEvent('collaboration-invite-received', {
@@ -520,6 +513,11 @@ export const useCollaborationStore = defineStore('collaboration', {
         supabase.removeChannel(this.realtimeChannel);
         this.realtimeChannel = null;
       }
+    },
+
+    reconnectRealtime() {
+      logger.info('🔄 Reconnecting collaboration realtime channel...');
+      this.subscribeToRequests();
     }
   }
 });

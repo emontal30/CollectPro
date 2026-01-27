@@ -103,7 +103,6 @@ onMounted(() => {
       Promise.allSettled([
         itineraryStore.fetchRoutes(force),
         archiveStore.loadAvailableDates(force),
-        collabStore.fetchCollaborators(),
         settingsStore.checkRemoteCommands()
       ]).then(() => {
         logger.info('✅ Background data refreshed');
