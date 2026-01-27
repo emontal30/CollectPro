@@ -1,481 +1,228 @@
 import { defineStore } from 'pinia';
-import { supabase } from '../supabase';
+import { supabase } from '@/supabase';
 import { useAuthStore } from './auth';
+import { useHarvestStore } from './harvest';
 import logger from '@/utils/logger.js';
-import { archiveService } from '@/services/archiveService';
-import { withTimeout } from '@/utils/promiseUtils';
 
 export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
-    collaborators: [],
+    collaborators: JSON.parse(localStorage.getItem('collab_list') || '[]'),
     incomingRequests: [],
-
-    // 1. استعادة الجلسة النشطة مباشرة من التخزين المحلي لضمان بقائها عند التحديث
     activeSessionId: localStorage.getItem('collab_active_session_id') || null,
     activeSessionName: localStorage.getItem('collab_active_session_name') || null,
     activeSessionCode: localStorage.getItem('collab_active_session_code') || null,
-    // New flag to differentiate admin opened sessions vs normal collaboration
-    sessionType: localStorage.getItem('collab_session_type') || 'collab', // 'admin' when admin silently opens a user
-
-    realtimeChannel: null,
-    pgNotifyChannel: null, // قناة للإشعارات الفورية من PostgreSQL
-
+    sessionType: localStorage.getItem('collab_session_type') || 'collab',
     isLoading: false,
-
-    // الأسماء المستعارة
-    aliases: JSON.parse(localStorage.getItem('collab_aliases') || '{}'),
-
-    // 2. تخزين "المستخدمين الأشباح" (Ghost Users) الذين يضيفهم الأدمن محلياً
-    localGhostUsers: JSON.parse(localStorage.getItem('collab_ghost_users') || '[]'),
-
-    // 3. معرف جلسة الأدمن النشطة ومؤقت الـ ping
-    activeAdminSessionId: null,
-    adminSessionPingInterval: null,
-
-    // --- ميزات الأدمن الجديدة ---
-    // سجل المستخدمين الذين تمت مشاهدتهم مؤخراً
-    adminHistory: JSON.parse(localStorage.getItem('admin_view_history') || '[]'),
-
-    // وضع الرؤية الافتراضي للأدمن: 'sync' (مزامنة حية) أو 'archive' (عرض أرشيف) أو null (لم يتم الاختيار بعد)
-    adminViewMode: null,
-
-    // أرشيف المستخدمين (عن بعد)
+    realtimeChannel: null,
+    pgNotifyChannel: null,
+    adminViewMode: 'sync',
     remoteArchiveDates: [],
     remoteArchiveRows: [],
+    adminHistory: JSON.parse(localStorage.getItem('admin_history') || '[]'),
     isRemoteArchiveMode: false,
-    selectedArchiveDate: null,
-    selectedRemoteUserId: null,
     selectedRemoteUserCode: null
   }),
 
   actions: {
-    // دالة مساعدة لدمج مستخدمي السيرفر مع المحليين وتحديث القائمة
-    refreshCollaboratorsList(serverUsers = null) {
-      // نبدأ بالقائمة القادمة من السيرفر، أو نأخذ الموجودين حالياً (غير المحليين) إذا لم نمرر جديد
-      let currentList = serverUsers ? [...serverUsers] : [...this.collaborators.filter(c => !c.isLocal)];
-
-      // استخراج المعرفات الموجودة لتجنب التكرار
-      const serverIds = new Set(currentList.map(u => u.userId));
-
-      // إضافة المستخدمين المحليين (Ghost Users) إذا لم يكونوا موجودين في قائمة السيرفر
-      this.localGhostUsers.forEach(ghost => {
-        if (!serverIds.has(ghost.userId)) {
-          const displayName = this.aliases[ghost.userId] || ghost.name;
-          currentList.push({ ...ghost, displayName, isLocal: true });
-        }
-      });
-
-      // تحديث الأسماء المستعارة للكل
-      this.collaborators = currentList.map(user => ({
-        ...user,
-        displayName: this.aliases[user.userId] || user.name
+    addNotification(message, type = 'info', duration = 5000) {
+      window.dispatchEvent(new CustomEvent('app-notification', {
+        detail: { message, type, duration }
       }));
-    },
-
-    setAlias(userId, newName) {
-      this.aliases[userId] = newName;
-      localStorage.setItem('collab_aliases', JSON.stringify(this.aliases));
-      this.refreshCollaboratorsList(); // تحديث القائمة لتطبيق الاسم الجديد
     },
 
     async fetchCollaborators() {
       const auth = useAuthStore();
       if (!auth.user) return;
-
-      const { data: requests, error: reqError } = await withTimeout(
-        (signal) => supabase
+      this.isLoading = true;
+      try {
+        const { data, error } = await supabase
           .from('collaboration_requests')
-          .select('receiver_id, role')
-          .eq('sender_id', auth.user.id)
-          .eq('status', 'accepted')
-          .abortSignal(signal),
-        20000, // Increased to 20s
-        'Fetch collaborators timed out'
-      ).catch(err => ({ data: [], error: err }));
+          .select('*')
+          .or(`sender_id.eq.${auth.user.id},receiver_id.eq.${auth.user.id}`)
+          .eq('status', 'accepted');
 
-      let serverUsers = [];
-
-      if (!reqError && requests && requests.length > 0) {
-        const receiverIds = requests.map(r => r.receiver_id).filter(id => id);
-
-        if (receiverIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, user_code')
-            .in('id', receiverIds);
-
-          const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
-          serverUsers = requests.map(item => {
-            const profile = profilesMap.get(item.receiver_id);
-            const originalName = profile?.full_name || 'مستخدم غير معروف';
-
-            return {
-              userId: item.receiver_id,
-              name: originalName,
-              // displayName سيتم ضبطه في refreshCollaboratorsList
-              code: profile?.user_code,
-              role: item.role,
-              isLocal: false
-            };
-          });
-        }
-      }
-
-      // دمج القوائم
-      this.refreshCollaboratorsList(serverUsers);
-    },
-
-    async sendInvite(receiverCode, role = 'editor') {
-      const auth = useAuthStore();
-
-      if (!auth.user) throw new Error("يجب تسجيل الدخول أولاً.");
-      if (receiverCode === auth.user.userCode) throw new Error("لا يمكنك دعوة نفسك.");
-
-      // التحقق في القائمة المدمجة الحالية
-      const existing = this.collaborators.find(c => c.code === receiverCode);
-      if (existing) {
-        this.setActiveSession(existing.userId, existing.displayName, 'collab');
-        return existing.userId;
-      }
-
-      // --- الوضع العادي (متاح للكل بمَن فيهم الأدمن) ---
-      const { error } = await supabase.from('collaboration_requests').insert({
-        sender_id: auth.user.id,
-        receiver_code: receiverCode,
-        role: role
-      });
-
-      if (error) throw error;
-
-      await this.fetchCollaborators();
-      return null;
-    },
-
-    async adminOpenUser(targetUid, knownUserId = null) {
-      const auth = useAuthStore();
-      if (!auth.isAdmin) return;
-
-      // Ensure session is fresh and network is responsive (Hard Revival)
-      const isAlive = await auth.reviveApp();
-      if (!isAlive) throw new Error('لا يمكن الاتصال بالسيرفر، يرجى التحقق من الشبكة');
-
-      this.isLoading = true;
-      try {
-        let profile = null;
-
-        // Deep defense: Ensure knownUserId is a valid string (UUID or similar) and not an Event object
-        if (knownUserId && typeof knownUserId === 'string') {
-          // Optimization: Skip searching profiles table if we already have the ID
-          profile = { id: knownUserId, full_name: '', user_code: targetUid };
-        } else {
-          const cleanUid = targetUid.trim();
-          // Safe UUID detection 
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanUid);
-
-          let query = supabase.from('profiles').select('id, full_name, user_code');
-          if (isUuid) query = query.or(`id.eq."${cleanUid}",user_code.eq."${cleanUid}"`);
-          else query = query.eq('user_code', cleanUid);
-
-          // Use new withTimeout syntax to pass AbortSignal to query (Reduced timeout)
-          const { data: profileResult, error: profileError } = await withTimeout(
-            (signal) => query.maybeSingle().abortSignal(signal),
-            12000,
-            'User search timed out'
-          );
-
-          if (profileError) throw profileError;
-          if (!profileResult) throw new Error('المستخدم غير موجود');
-          profile = profileResult;
-
-          this.addToAdminHistory({ userId: profile.id, name: profile.full_name, code: profile.user_code });
-        }
-
-        // التبديل لوضع المزامنة دائماً عند الضغط على زر المزامنة
-        this.adminViewMode = 'sync';
-        this.exitRemoteArchiveMode();
-
-        this.setActiveSession(profile.id, profile.full_name, 'admin', profile.user_code);
-        return profile;
-      } catch (err) {
-        if (err.message && err.message.includes('timed out')) {
-          logger.info('Admin user search timed out (slow network).');
-        } else {
-          logger.error('Error admin opening user:', err);
-        }
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    setAdminViewMode(mode) {
-      this.adminViewMode = mode;
-      this.isRemoteArchiveMode = (mode === 'archive');
-      logger.info(`🛠️ Admin View Mode changed to: ${mode} (isRemoteArchiveMode: ${this.isRemoteArchiveMode})`);
-
-      // If switching to sync, clear archive data
-      if (mode === 'sync') {
-        this.remoteArchiveRows = [];
-        this.remoteArchiveDates = [];
-      } else {
-        // If switching to archive but no user selected yet, just prepare
-        this.remoteArchiveRows = [];
-      }
-    },
-
-    addToAdminHistory(user) {
-      if (!user || !user.userId) return;
-
-      const exists = this.adminHistory.find(h => h.userId === user.userId);
-      if (exists) {
-        // Move to top and preserve any current custom name
-        this.adminHistory = [
-          { ...exists, ...user, name: exists.name }, // keep existing name if it was edited
-          ...this.adminHistory.filter(h => h.userId !== user.userId)
-        ];
-      } else {
-        this.adminHistory = [user, ...this.adminHistory];
-      }
-
-      // Limit to 20 items
-      if (this.adminHistory.length > 20) this.adminHistory.pop();
-      localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
-    },
-
-    updateAdminHistoryName(userId, newName) {
-      const idx = this.adminHistory.findIndex(h => h.userId === userId);
-      if (idx !== -1) {
-        this.adminHistory[idx].name = newName;
-        localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
-      }
-    },
-
-    removeFromAdminHistory(userId) {
-      this.adminHistory = this.adminHistory.filter(h => h.userId !== userId);
-      localStorage.setItem('admin_view_history', JSON.stringify(this.adminHistory));
-    },
-
-    async fetchRemoteArchiveDates(targetUid, knownUserId = null) {
-      const auth = useAuthStore();
-      if (!auth.isAdmin) return [];
-
-      // 1. Hard Revival (proactively refresh session)
-      const isAlive = await auth.reviveApp();
-      if (!isAlive) throw new Error('لا يمكن الاتصال بالسيرفر، يرجى التحقق من الشبكة');
-
-      this.isLoading = true;
-      try {
-        let profile = null;
-
-        // Deep defense: Ensure knownUserId is a valid string (UUID or similar) and not an Event object
-        if (knownUserId && typeof knownUserId === 'string') {
-          // If we already have the user ID from history, we can skip searching profiles table
-          profile = { id: knownUserId, full_name: '', user_code: targetUid };
-        } else {
-          const cleanUid = targetUid.trim();
-          // Safe UUID detection 
-          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanUid);
-
-          let query = supabase.from('profiles').select('id, full_name, user_code');
-          if (isUuid) query = query.or(`id.eq."${cleanUid}",user_code.eq."${cleanUid}"`);
-          else query = query.eq('user_code', cleanUid);
-
-          const { data, error: pError } = await withTimeout(
-            (signal) => query.maybeSingle().abortSignal(signal),
-            12000, // Reduced timeout for profile search
-            'Profile search timed out'
-          );
-
-          if (pError) throw pError;
-          if (!data) throw new Error('المستخدم غير موجود (تحقق من الكود)');
-          profile = data;
-
-          // Add to history only if it's a new search
-          this.addToAdminHistory({ userId: profile.id, name: profile.full_name, code: profile.user_code });
-        }
-
-        this.selectedRemoteUserId = profile.id;
-        this.exitRemoteArchiveMode();
-
-        const { dates, error } = await archiveService.getAvailableDatesAdmin(profile.id);
         if (error) throw error;
 
-        logger.info(`📅 Fetched ${dates.length} archive dates for user`);
-
-        if (dates.length === 0) {
-          logger.warn('⚠️ No archives found for this user.');
-        }
-
-        // Clear previous rows to avoid flicker when switching users
-        this.remoteArchiveRows = [];
-
-        this.remoteArchiveDates = dates;
-        this.selectedRemoteUserId = profile.id;
-        this.selectedRemoteUserCode = profile.user_code;
-
-        // إذا كنا بالفعل في وضع الأرشيف، نصل للجلسة تلقائياً للمستخدم الجديد
-        if (this.adminViewMode === 'archive') {
-          this.isRemoteArchiveMode = true; // نؤكد على وضع الأرشيف
-          this.setActiveSession(profile.id, profile.full_name, 'admin', profile.user_code);
-        }
-
-        return dates;
-      } catch (err) {
-        if (err.message && err.message.includes('timed out')) {
-          logger.info('Fetch remote archive dates timed out (slow network).');
-        } else {
-          logger.error('❌ Error fetching remote archive dates:', err);
-        }
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    async fetchRemoteArchiveData(dateStr) {
-      if (!this.selectedRemoteUserId) return;
-
-      const auth = useAuthStore();
-      // Ensure fresh session before fetching data
-      await auth.reviveApp();
-
-      this.isLoading = true;
-      try {
-        // Use Admin Direct Fetch (RPC) with timeout
-        // Note: For now, we only apply timeout to the promise. If we decide to support abort in API layer, 
-        // we'd pass signal here.
-        const { data, error } = await withTimeout(
-          archiveService.getArchiveByDateAdmin(this.selectedRemoteUserId, dateStr),
-          20000,
-          'Remote archive data fetch timed out'
+        const otherUserIds = data.map(req =>
+          req.sender_id === auth.user.id ? req.receiver_id : req.sender_id
         );
-        if (error) throw error;
 
-        this.remoteArchiveRows = data || [];
-        this.selectedArchiveDate = dateStr;
-        this.isRemoteArchiveMode = true;
-        // لا نقوم بمسح الجلسة هنا لنحافظ على ظهور اسم المستخدم في الهيدر
-      } catch (err) {
-        if (err.message && err.message.includes('timed out')) {
-          logger.info('Fetch remote archive data timed out (slow network).');
-        } else {
-          logger.error('❌ Error fetching remote archive data:', err);
+        if (otherUserIds.length === 0) {
+          this.collaborators = [];
+          return;
         }
-        throw err;
+
+        const { data: profiles, error: profError } = await supabase
+          .from('profiles')
+          .select('id, full_name, user_code')
+          .in('id', otherUserIds);
+
+        if (profError) throw profError;
+
+        this.collaborators = data.map(req => {
+          const otherId = req.sender_id === auth.user.id ? req.receiver_id : req.sender_id;
+          const profile = profiles.find(p => p.id === otherId);
+          return {
+            id: req.id,
+            userId: otherId,
+            userName: profile?.full_name || 'مستخدم',
+            displayName: profile?.full_name || 'مستخدم',
+            userCode: profile?.user_code || '---',
+            role: req.role,
+            status: req.status,
+            isOwner: req.sender_id === auth.user.id
+          };
+        });
+        localStorage.setItem('collab_list', JSON.stringify(this.collaborators));
+      } catch (error) {
+        logger.error('Error fetching collaborators:', error);
       } finally {
         this.isLoading = false;
       }
-    },
-
-    exitRemoteArchiveMode() {
-      this.isRemoteArchiveMode = false;
-      this.remoteArchiveRows = [];
-      this.selectedArchiveDate = null;
-      this.selectedRemoteUserId = null;
-      this.selectedRemoteUserCode = null;
-      this.remoteArchiveDates = [];
     },
 
     async fetchIncomingRequests() {
       const auth = useAuthStore();
-      if (!auth.user?.userCode) return;
+      if (!auth.user || !auth.user.userCode) return;
+      try {
+        const { data: requests, error } = await supabase
+          .from('collaboration_requests')
+          .select('*')
+          .eq('receiver_code', auth.user.userCode)
+          .eq('status', 'pending');
 
-      const { data: requests, error: reqError } = await supabase
-        .from('collaboration_requests')
-        .select('id, sender_id, role, status')
-        .eq('receiver_code', auth.user.userCode)
-        .eq('status', 'pending');
+        if (error) throw error;
 
-      if (reqError || !requests || requests.length === 0) {
-        this.incomingRequests = [];
-        return;
-      }
+        if (requests.length === 0) {
+          this.incomingRequests = [];
+          return;
+        }
 
-      const senderIds = requests.map(r => r.sender_id).filter(id => id);
-      if (senderIds.length === 0) {
-        this.incomingRequests = requests;
-        return;
-      }
+        const senderIds = requests.map(r => r.sender_id);
+        const { data: profiles, error: profError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', senderIds);
 
-      const { data: profiles, error: profError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', senderIds);
+        if (profError) throw profError;
 
-      if (profError) {
-        logger.error('❌ Error fetching sender profiles:', profError);
-      }
-
-      logger.info('📋 Fetched profiles:', profiles);
-
-      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
-      this.incomingRequests = requests.map(req => {
-        const profile = profilesMap.get(req.sender_id);
-        const displayName = profile?.full_name || 'مستخدم';
-
-        logger.info(`👤 Sender ${req.sender_id}: ${displayName}`);
-
-        return {
+        const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        this.incomingRequests = requests.map(req => ({
           ...req,
           sender_profile: {
-            full_name: displayName
+            full_name: profilesMap.get(req.sender_id)?.full_name || 'مستخدم'
           }
-        };
-      });
+        }));
+      } catch (error) {
+        logger.error('Error fetching incoming requests:', error);
+      }
     },
 
-    async respondToInvite(requestId, status) {
+    async sendInvite(receiverCode, role = 'viewer') {
       const auth = useAuthStore();
+      if (!auth.user) throw new Error('يجب تسجيل الدخول أولاً');
+      if (receiverCode === auth.user.userCode) throw new Error('لا يمكنك إرسال دعوة لنفسك');
 
-      if (!auth.user) {
-        throw new Error('يجب تسجيل الدخول أولاً');
-      }
+      try {
+        const { data: receiverProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('user_code', receiverCode)
+          .single();
 
-      const updateData = { status };
+        if (profileError || !receiverProfile) throw new Error('كود المستخدم غير موجود');
 
-      if (status === 'accepted') {
-        updateData.receiver_id = auth.user.id;
-      }
+        const { data: existing, error: existError } = await supabase
+          .from('collaboration_requests')
+          .select('id, status')
+          .match({ sender_id: auth.user.id, receiver_id: receiverProfile.id })
+          .maybeSingle();
 
-      logger.info(`📨 Responding to invitation ${requestId} with status: ${status}`);
+        if (existing) {
+          if (existing.status === 'pending') throw new Error('توجد دعوة معلقة بالفعل لهذا المستخدم');
+          if (existing.status === 'accepted') throw new Error('هذا المستخدم متعاون معك بالفعل');
 
-      const { error } = await supabase
-        .from('collaboration_requests')
-        .update(updateData)
-        .eq('id', requestId);
+          await supabase.from('collaboration_requests').delete().eq('id', existing.id);
+        }
 
-      if (error) {
-        logger.error('❌ Failed to respond to invitation:', error);
+        const { error } = await supabase
+          .from('collaboration_requests')
+          .insert({
+            sender_id: auth.user.id,
+            sender_name: auth.user.fullName || auth.user.email,
+            receiver_id: receiverProfile.id,
+            receiver_name: receiverProfile.full_name,
+            receiver_code: receiverCode,
+            role,
+            status: 'pending'
+          });
+
+        if (error) throw error;
+        this.addNotification('تم إرسال الدعوة بنجاح', 'success');
+        return { success: true };
+      } catch (error) {
+        logger.error('Error sending invite:', error);
         throw error;
       }
+    },
 
-      logger.info('✅ Successfully responded to invitation');
+    async respondToInvite(requestId, status, customRole = null) {
+      const auth = useAuthStore();
+      if (!auth.user) throw new Error('يجب تسجيل الدخول أولاً');
 
-      // Remove from incoming requests immediately
-      this.incomingRequests = this.incomingRequests.filter(req => req.id !== requestId);
+      try {
+        const updatePayload = {
+          status,
+          responded_at: new Date()
+        };
 
-      // If accepted, refresh collaborators list (but don't wait indefinitely)
-      if (status === 'accepted') {
-        try {
-          logger.info('🔄 Refreshing collaborators list...');
-          await Promise.race([
-            this.fetchCollaborators(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-          ]);
-          logger.info('✅ Collaborators list refreshed');
-        } catch (err) {
-          logger.warn('⚠️ Failed to refresh collaborators (non-critical):', err.message);
-          // Don't throw - the realtime listener will eventually sync
+        if (customRole) {
+          updatePayload.role = customRole;
         }
+
+        const { error } = await supabase
+          .from('collaboration_requests')
+          .update(updatePayload)
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        if (status === 'accepted') {
+          const harvestStore = useHarvestStore();
+          await harvestStore.forceSyncToCloud(auth.user.id);
+          this.addNotification('تم قبول الدعوة بنجاح', 'success');
+        } else {
+          this.addNotification('تم رفض الدعوة', 'info');
+        }
+
+        await this.fetchIncomingRequests();
+        await this.fetchCollaborators();
+        return { success: true };
+      } catch (error) {
+        logger.error('Error responding to invite:', error);
+        return { success: false, error: error.message };
       }
     },
 
-    async stopAdminGhostSession() {
-      // Since we no longer use a complex ghost session tracking with pings for this silent access,
-      // we just clear the active session.
-      this.setActiveSession(null, null);
+    async revokeInvite(userId) {
+      if (!userId) return;
+      const auth = useAuthStore();
+      try {
+        const { error } = await supabase
+          .from('collaboration_requests')
+          .delete()
+          .or(`and(sender_id.eq.${auth.user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${auth.user.id})`);
+
+        if (error) throw error;
+
+        if (this.activeSessionId === userId) {
+          this.setActiveSession(null, null);
+        }
+        await this.fetchCollaborators();
+        this.addNotification('تم إلغاء المشاركة مع المستخدم', 'info');
+      } catch (error) {
+        logger.error('Error revoking invite:', error);
+      }
     },
 
     setActiveSession(userId, userName, type = 'collab', userCode = null) {
@@ -484,7 +231,6 @@ export const useCollaborationStore = defineStore('collaboration', {
       this.sessionType = type;
       this.activeSessionCode = userCode;
 
-      // 3. حفظ الجلسة في التخزين المحلي
       if (userId) {
         localStorage.setItem('collab_active_session_id', userId);
         localStorage.setItem('collab_active_session_name', userName);
@@ -498,19 +244,144 @@ export const useCollaborationStore = defineStore('collaboration', {
       }
     },
 
-    // --- Real-time Subscription ---
+    async adminOpenUser(targetIdentifier, knownUserId = null) {
+      const auth = useAuthStore();
+      if (!auth.isAdmin) throw new Error('صلاحية مسؤول مطلوبة');
+
+      try {
+        let userId = knownUserId;
+        let profile = null;
+
+        if (!userId) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, user_code')
+            .eq('user_code', targetIdentifier)
+            .maybeSingle();
+
+          if (error) throw error;
+          if (!data) throw new Error('لم يتم العثور على المستخدم');
+          userId = data.id;
+          profile = data;
+        } else {
+          const { data } = await supabase.from('profiles').select('id, full_name, user_code').eq('id', userId).single();
+          profile = data;
+        }
+
+        this.setActiveSession(userId, profile?.full_name || 'مستخدم', 'admin', profile?.user_code);
+        this.addToAdminHistory(userId, profile?.full_name || 'مستخدم', profile?.user_code);
+
+        return { success: true };
+      } catch (error) {
+        logger.error('Admin open user failed:', error);
+        throw error;
+      }
+    },
+
+    addToAdminHistory(userId, name, code) {
+      const existingIndex = this.adminHistory.findIndex(h => h.userId === userId);
+      if (existingIndex !== -1) {
+        this.adminHistory.splice(existingIndex, 1);
+      }
+      this.adminHistory.unshift({ userId, name, code, lastViewed: new Date().toISOString() });
+      if (this.adminHistory.length > 20) this.adminHistory.pop();
+      localStorage.setItem('admin_history', JSON.stringify(this.adminHistory));
+    },
+
+    updateAdminHistoryName(userId, newName) {
+      const item = this.adminHistory.find(h => h.userId === userId);
+      if (item) {
+        item.name = newName;
+        localStorage.setItem('admin_history', JSON.stringify(this.adminHistory));
+      }
+    },
+
+    removeFromAdminHistory(userId) {
+      this.adminHistory = this.adminHistory.filter(h => h.userId !== userId);
+      localStorage.setItem('admin_history', JSON.stringify(this.adminHistory));
+    },
+
+    async fetchRemoteArchiveDates(targetIdentifier, knownUserId = null) {
+      try {
+        let userId = knownUserId;
+        if (!userId) {
+          const { data: prof, error: profErr } = await supabase.from('profiles').select('id, full_name, user_code').eq('user_code', targetIdentifier).single();
+          if (profErr || !prof) return [];
+          userId = prof.id;
+          this.selectedRemoteUserCode = prof.user_code;
+          this.addToAdminHistory(userId, prof.full_name, prof.user_code);
+        } else {
+          // If userId known, still try to find code in history or profile
+          const fromHist = this.adminHistory.find(h => h.userId === userId);
+          if (fromHist) this.selectedRemoteUserCode = fromHist.code;
+        }
+
+        this.selectedRemoteUserId = userId;
+
+        const { data: resData, error } = await supabase.rpc('get_user_archive_dates_admin', {
+          p_user_id: userId
+        });
+
+        if (error) throw error;
+        // RPC returns array of objects with archive_date property
+        this.remoteArchiveDates = (resData || []).map(d => d.archive_date);
+        return this.remoteArchiveDates;
+      } catch (error) {
+        logger.error('Error fetching remote archive dates:', error);
+        return [];
+      }
+    },
+
+    async fetchRemoteArchiveData(dateStr) {
+      if (!this.selectedRemoteUserId) return;
+      this.isLoading = true;
+      try {
+        const { data, error } = await supabase.rpc('get_user_archive_data_admin', {
+          p_user_id: this.selectedRemoteUserId,
+          p_date: dateStr
+        });
+
+        if (error) throw error;
+
+        // RPC returns the data JSONB directly.
+        // Support both old format (direct array) and new format (object with rows property)
+        const dataRows = Array.isArray(data) ? data : (data?.rows || []);
+        this.remoteArchiveRows = dataRows;
+        this.selectedArchiveDate = dateStr;
+        this.isRemoteArchiveMode = true;
+      } catch (error) {
+        logger.error('Error fetching remote archive data:', error);
+        throw error;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    exitRemoteArchiveMode() {
+      this.isRemoteArchiveMode = false;
+      this.remoteArchiveRows = [];
+      this.selectedArchiveDate = null;
+    },
+
+    setAlias(userId, alias) {
+      const collab = this.collaborators.find(c => c.userId === userId);
+      if (collab) {
+        collab.displayName = alias;
+      }
+    },
+
+    setAdminViewMode(mode) {
+      this.adminViewMode = mode;
+      this.isRemoteArchiveMode = (mode === 'archive');
+    },
+
     subscribeToRequests() {
       const auth = useAuthStore();
-      if (!auth.user || !auth.user.userCode) {
-        logger.warn('🚫 Cannot subscribe to requests: Missing user or userCode');
-        return;
-      }
+      if (!auth.user || !auth.user.userCode) return;
 
       if (this.realtimeChannel) {
         supabase.removeChannel(this.realtimeChannel);
       }
-
-      logger.info(`🔌 Subscribing to collaboration requests for code: ${auth.user.userCode}`);
 
       this.realtimeChannel = supabase
         .channel('collab-changes')
@@ -523,21 +394,9 @@ export const useCollaborationStore = defineStore('collaboration', {
             filter: `receiver_code=eq.${auth.user.userCode}`
           },
           async (payload) => {
-            logger.info('🔔 New collaboration request received vi Realtime:', payload);
-            // New invite for me
             if (payload.new && payload.new.status === 'pending') {
-              // Fetch details to get name
-              const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', payload.new.sender_id).single();
-              const newReq = {
-                ...payload.new,
-                sender_profile: { full_name: profile?.full_name || 'مستخدم' }
-              };
-              // Avoid duplicates
-              if (!this.incomingRequests.find(r => r.id === newReq.id)) {
-                this.incomingRequests.push(newReq);
-                // Trigger a notification via event bus or similar if possible, 
-                // but for now the store update reacts in the UI
-              }
+              await this.fetchIncomingRequests();
+              this.addNotification(`وصلتك دعوة جديدة للمشاركة من ${payload.new.sender_name || 'مستخدم'}`, 'info', 8000);
             }
           }
         )
@@ -546,61 +405,56 @@ export const useCollaborationStore = defineStore('collaboration', {
           {
             event: 'UPDATE',
             schema: 'public',
-            table: 'collaboration_requests',
-            filter: `sender_id=eq.${auth.user.id}`
-          },
-          (payload) => {
-            logger.info('🔔 Collaboration status update received:', payload);
-            // My invite was accepted/rejected
-            if (payload.new && payload.new.status === 'accepted') {
-              this.fetchCollaborators(); // Reload list to show the new person
-            }
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            logger.info('✅ Collaboration Realtime Channel Subscribed!');
-          } else if (status === 'CHANNEL_ERROR') {
-            logger.error('❌ Collaboration Realtime Channel Error');
-          }
-        });
-
-      // الاستماع لإشعارات PostgreSQL الفورية
-      this.subscribeToPgNotifications();
-    },
-
-    // دالة جديدة: الاستماع لإشعارات PostgreSQL
-    subscribeToPgNotifications() {
-      const auth = useAuthStore();
-      if (!auth.user) return;
-
-      if (this.pgNotifyChannel) {
-        supabase.removeChannel(this.pgNotifyChannel);
-      }
-
-      this.pgNotifyChannel = supabase
-        .channel('pg-notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
             table: 'collaboration_requests'
           },
           async (payload) => {
-            // معالجة الإشعارات الفورية للدعوات
-            if (payload.eventType === 'INSERT' && payload.new?.receiver_code === auth.user.userCode) {
-              // دعوة جديدة - تحديث القائمة فوراً
-              await this.fetchIncomingRequests();
-              logger.info('New invitation received instantly via trigger');
-            } else if (payload.eventType === 'UPDATE' && payload.new?.sender_id === auth.user.id) {
-              // استجابة على دعوتي - تحديث المتعاونين فوراً
-              await this.fetchCollaborators();
-              logger.info('Invitation response received instantly via trigger');
+            const newData = payload.new;
+            if (!newData) return;
+
+            // If I am the receiver
+            if (newData.receiver_id === auth.user.id) {
+              if (newData.status === 'revoked' || newData.status === 'rejected') {
+                this.fetchIncomingRequests();
+                this.fetchCollaborators();
+                if (this.activeSessionId === newData.sender_id) this.setActiveSession(null, null);
+              }
+            }
+
+            // If I am the sender
+            if (newData.sender_id === auth.user.id) {
+              if (newData.status === 'accepted') {
+                const alreadyExists = this.collaborators.find(c => c.userId === newData.receiver_id);
+                if (!alreadyExists) {
+                  this.addNotification(`تم قبول دعوتك من قبل ${newData.receiver_name || 'المستخدم'}`, 'success', 8000);
+                  await this.fetchCollaborators();
+                }
+              }
+            }
+          }
+        )
+        .on(
+          'broadcast',
+          { event: 'pulse-request' },
+          (payload) => {
+            const authStore = useAuthStore();
+            if (payload.payload.targetUserId === authStore.user?.id) {
+              logger.info('⚡ Received pulse request from admin, syncing data to cloud...');
+              const harvestStore = useHarvestStore();
+              harvestStore.syncToCloud(authStore.user.id);
             }
           }
         )
         .subscribe();
+    },
+
+    broadcastPulseRequest(targetUserId) {
+      if (!this.realtimeChannel) return;
+      logger.info(`📡 Sending pulse request for user: ${targetUserId}`);
+      this.realtimeChannel.send({
+        type: 'broadcast',
+        event: 'pulse-request',
+        payload: { targetUserId }
+      });
     },
 
     unsubscribeFromRequests() {
@@ -608,53 +462,6 @@ export const useCollaborationStore = defineStore('collaboration', {
         supabase.removeChannel(this.realtimeChannel);
         this.realtimeChannel = null;
       }
-
-      if (this.pgNotifyChannel) {
-        supabase.removeChannel(this.pgNotifyChannel);
-        this.pgNotifyChannel = null;
-      }
-    },
-
-    async revokeInvite(userId) {
-      if (!userId) return;
-      const auth = useAuthStore();
-      // ... (rest of function)
-      // (This is NOT where we add it, wait. I should append it to actions)
-    }, // mistake in instruction parsing, let me find a better insertion point.
-    // Actually, I'll insert it before 'revokeInvite' or at the end of actions.
-
-    reconnectRealtime() {
-      const auth = useAuthStore();
-      if (auth.user && auth.user.userCode) {
-        logger.info('🔌 Reconnecting Collaboration Realtime...');
-        this.subscribeToRequests();
-      }
-    },
-
-    async revokeInvite(userId) {
-      if (!userId) return;
-      const auth = useAuthStore();
-
-      // We need to find the request associated with this user
-      // Since our collaborations list is derived, we might need to query first or update assuming we know the structure.
-      // Optimally, we update based on sender_id (me) and receiver_id (them).
-
-      const { error } = await supabase
-        .from('collaboration_requests')
-        .delete() // Deleting is cleaner than just marking revoked for this simple use case, allows re-invite easily
-        .match({ sender_id: auth.user.id, receiver_id: userId });
-
-      if (error) throw error;
-
-      await this.fetchCollaborators();
-
-      // If we were viewing this user, close the session
-      if (this.activeSessionId === userId) {
-        this.setActiveSession(null, null);
-      }
-
-      // إيقاف جلسة الأدمن إذا كانت نشطة
-      await this.stopAdminGhostSession();
     }
   }
 });

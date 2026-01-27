@@ -245,16 +245,25 @@ export function useHarvest(props) {
 
   // --- Methods ---
 
-  const saveData = () => {
-    if (props.isSharedView) {
-      // Don't save if in archive mode
-      if (collabStore.isRemoteArchiveMode) return;
+  let saveDebounceTimer = null;
+  const saveData = (immediate = false) => {
+    if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 
-      if (collabStore.activeSessionId) {
-        store.updateSharedData(collabStore.activeSessionId);
+    const performSave = () => {
+      if (props.isSharedView) {
+        if (collabStore.isRemoteArchiveMode) return;
+        if (collabStore.activeSessionId) {
+          store.updateSharedData(collabStore.activeSessionId);
+        }
+      } else {
+        store.saveRowsToStorage();
       }
+    };
+
+    if (immediate) {
+      performSave();
     } else {
-      store.saveRowsToStorage();
+      saveDebounceTimer = setTimeout(performSave, 1000); // 1-second debounce
     }
   };
 
@@ -401,7 +410,7 @@ export function useHarvest(props) {
 
   const updateField = (row, index, field, value, syncCounter = false) => {
     row[field] = value;
-    saveData();
+    saveData(false); // Use debounced save
     if (!props.isSharedView) checkAndAddEmptyRow(index);
     if (syncCounter) syncWithCounterStore();
   };
@@ -489,7 +498,7 @@ export function useHarvest(props) {
       if (storeKey === 'masterLimit') displayMasterLimit.value = numVal;
       else if (storeKey === 'extraLimit') displayExtraLimit.value = numVal;
       else if (storeKey === 'currentBalance') displayCurrentBalance.value = numVal;
-      saveData();
+      saveData(false);
     }, { fieldName: fieldLabel, maxLimit: storeKey !== 'currentBalance' ? maxLimit : undefined });
   };
 

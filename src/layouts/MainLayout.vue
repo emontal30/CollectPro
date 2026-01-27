@@ -51,6 +51,7 @@ import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
 import { useMySubscriptionStore } from '@/stores/mySubscriptionStore';
 import { useSidebarStore } from '@/stores/sidebarStore';
+import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useHarvestStore } from '@/stores/harvest';
 import { useDashboardStore } from '@/stores/dashboard';
 import { useCounterStore } from '@/stores/counterStore';
@@ -62,6 +63,7 @@ const sidebarStore = useSidebarStore();
 const harvestStore = useHarvestStore();
 const dashboardStore = useDashboardStore();
 const counterStore = useCounterStore();
+const collabStore = useCollaborationStore();
 const notifications = useNotifications();
 
 provide('notifications', notifications);
@@ -139,11 +141,18 @@ onMounted(async () => {
   
   if (subStore.isInitialized) checkSubscriptionExpiry();
 
+  // Initialize collaboration and real-time syncing
+  collabStore.fetchCollaborators();
+  collabStore.fetchIncomingRequests();
+  collabStore.subscribeToRequests();
+  harvestStore.initOwnRealtimeSubscription();
+
   document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+  collabStore.unsubscribeFromRequests();
 });
 
 watch(() => subStore.isInitialized, (val) => {

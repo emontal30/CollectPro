@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, inject } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, inject, watch } from 'vue';
 import { useCollaborationStore } from '@/stores/collaborationStore';
 import { useHarvestStore } from '@/stores/harvest';
 import { useAuthStore } from '@/stores/auth';
@@ -13,7 +13,19 @@ export function useShareHarvestView() {
     const isAdmin = computed(() => authStore.isAdmin);
 
     // State
-    const activeTab = ref(authStore.isAdmin ? 'admin' : 'manage'); // admin | manage | invites
+    const savedTab = localStorage.getItem('share_harvest_active_tab');
+    const defaultTab = isAdmin.value ? 'admin' : 'manage';
+    const activeTab = ref(savedTab || defaultTab);
+
+    // Guard: If non-admin has 'admin' tab saved, reset to default
+    if (activeTab.value === 'admin' && !isAdmin.value) {
+        activeTab.value = 'manage';
+    }
+
+    // Watch for tab changes to persist
+    watch(activeTab, (newTab) => {
+        localStorage.setItem('share_harvest_active_tab', newTab);
+    });
     const newCollabCode = ref('');
     const adminTargetUid = ref('');
     const selectedRole = ref('editor'); // Default role
@@ -60,6 +72,21 @@ export function useShareHarvestView() {
         return `${year}-${month}-${day} | ${time}`;
     });
 
+    const shouldShowTable = computed(() => {
+        if (collabStore.isRemoteArchiveMode) {
+            return activeTab.value === 'admin';
+        }
+        if (!collabStore.activeSessionId) return false;
+
+        if (activeTab.value === 'admin') {
+            return collabStore.sessionType === 'admin';
+        }
+        if (activeTab.value === 'manage') {
+            return collabStore.sessionType === 'collab';
+        }
+        return false;
+    });
+
     // Lifecycle
     onMounted(async () => {
         await collabStore.fetchCollaborators();
@@ -99,6 +126,8 @@ export function useShareHarvestView() {
             // Switch to the shared view if not already there
             if (collabStore.activeSessionId) {
                 await harvestStore.switchToUserSession(collabStore.activeSessionId);
+                // Trigger a Pulse Request to force the user to sync their latest local state
+                collabStore.broadcastPulseRequest(collabStore.activeSessionId);
             }
         } catch (err) {
             addNotification(err.message || 'فشل الدخول كأدمن', 'error');
@@ -228,6 +257,7 @@ export function useShareHarvestView() {
         try {
             // تحديد وضع الأرشيف كوضع نشط
             collabStore.setAdminViewMode('archive');
+            collabStore.sessionType = 'admin';
 
             const dates = await collabStore.fetchRemoteArchiveDates(adminTargetUid.value.trim(), actualUserId);
             if (dates.length === 0) {
@@ -364,6 +394,7 @@ export function useShareHarvestView() {
         saveName,
         cancelEditName,
         currentResultIsGhost,
-        handleRevoke
+        handleRevoke,
+        shouldShowTable
     };
 }

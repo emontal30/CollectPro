@@ -259,10 +259,7 @@
       </div>
     </div>
 
-    <div v-if="(collabStore.activeSessionId || collabStore.isRemoteArchiveMode) && (
-      (activeTab === 'admin' && collabStore.sessionType === 'admin') || 
-      (activeTab === 'manage' && collabStore.sessionType !== 'admin')
-    )" class="shared-harvest-container animate-slide-up">
+    <div v-if="shouldShowTable" class="shared-harvest-container animate-slide-up">
       <div class="shared-header" :class="{ 'archive-header': collabStore.isRemoteArchiveMode }">
         <div class="header-info-group">
           <div class="badge-info">
@@ -348,10 +345,11 @@
       <HarvestView :isSharedView="true" />
     </div>
 
-    <div v-else class="placeholder-container">
+    <div v-else-if="activeTab !== 'invites'" class="placeholder-container">
       <div class="placeholder-content">
-        <i class="fas fa-table fa-3x text-muted opacity-50"></i>
-        <p class="mt-3 text-muted">اختر زميلاً من القائمة أعلاه لعرض الجدول الخاص به هنا.</p>
+        <i class="fas" :class="activeTab === 'admin' ? 'fa-user-shield' : 'fa-table'" style="font-size: 3rem; color: #cbd5e0; opacity: 0.5;"></i>
+        <p class="mt-3 text-muted" v-if="activeTab === 'admin'">أدخل كود المستخدم أعلاه للبدء في المتابعة أو عرض الأرشيف.</p>
+        <p class="mt-3 text-muted" v-else>اختر زميلاً من القائمة أعلاه لعرض الجدول الخاص به هنا.</p>
       </div>
     </div>
 
@@ -410,7 +408,8 @@ const {
   saveName,
   cancelEditName,
   currentResultIsGhost,
-  handleRevoke
+  handleRevoke,
+  shouldShowTable
 } = useShareHarvestView();
 </script>
 
