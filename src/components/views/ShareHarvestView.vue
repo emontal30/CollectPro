@@ -239,6 +239,12 @@
           </div>
           
           <div v-else class="invites-list">
+            <div class="invites-controls mb-3 text-start">
+              <button class="btn btn-outline-danger btn-sm" @click="handleClearAllInvites" title="حذف كافة الدعوات المعلقة">
+                <i class="fas fa-trash-alt me-1"></i> تنظيف كافة الدعوات
+              </button>
+            </div>
+            
             <div v-for="req in collabStore.incomingRequests" :key="req.id" class="invite-item">
               <div class="invite-header">
                 <div class="invite-sender-info">
@@ -271,8 +277,8 @@
                 >
                   <i class="fas fa-check"></i> قبول
                 </button>
-                <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger">
-                  <i class="fas fa-times"></i> رفض
+                <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger" title="حذف الدعوة ورفضها">
+                  <i class="fas fa-trash-alt"></i> حذف / رفض
                 </button>
               </div>
             </div>
@@ -417,6 +423,7 @@ const {
   handleAdminOpen,
   sendInvite,
   handleRespond,
+  handleClearAllInvites,
   handleCollaboratorChange,
   closeSession,
   handleEnterKey,

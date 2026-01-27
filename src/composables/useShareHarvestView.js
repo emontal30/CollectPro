@@ -168,6 +168,20 @@ export function useShareHarvestView() {
         }
     };
 
+    const handleClearAllInvites = async () => {
+        const result = await confirm({
+            title: 'تنظيف كافة الدعوات',
+            text: 'هل أنت متأكد من حذف كافة الدعوات الواردة المعلقة؟',
+            icon: 'warning',
+            confirmButtonText: 'نعم، تنظيف الكل',
+            confirmButtonColor: '#d33'
+        });
+
+        if (result.isConfirmed) {
+            await collabStore.clearAllIncomingInvites();
+        }
+    };
+
     // 3. Select Collaborator
     const handleCollaboratorChange = async () => {
         if (selectedCollaboratorId.value) {
@@ -380,6 +394,7 @@ export function useShareHarvestView() {
         handleAdminOpen,
         sendInvite,
         handleRespond,
+        handleClearAllInvites,
         handleCollaboratorChange,
         closeSession,
         handleEnterKey,

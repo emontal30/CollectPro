@@ -188,9 +188,9 @@ BEGIN
         updated_at = NOW();
 
     -- 4. Create public.profiles record
-    INSERT INTO public.profiles (id, user_code, full_name)
-    VALUES (NEW.id, new_user_code, extracted_name)
-    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.profiles (id, user_code, full_name, email)
+    VALUES (NEW.id, new_user_code, extracted_name, NEW.email)
+    ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = NOW();
 
     RETURN NEW;
 END;
@@ -292,18 +292,22 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     user_code TEXT UNIQUE NOT NULL, 
     full_name TEXT,
+    email TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure email column exists if table was already created before
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- Profiles trigger
 -- Redundant Trigger "on_auth_user_created_profile" and function "handle_new_user_profile" removed (Merged into handle_new_user_registration)
 DROP FUNCTION IF EXISTS public.handle_new_user_profile CASCADE;
 
 -- Backfill profiles
-INSERT INTO public.profiles (id, user_code, full_name)
-SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email)
-FROM auth.users ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.profiles (id, user_code, full_name, email)
+SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
+FROM auth.users ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
 CREATE TABLE IF NOT EXISTS public.collaboration_requests (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -317,6 +321,28 @@ CREATE TABLE IF NOT EXISTS public.collaboration_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_collab_receiver_code ON public.collaboration_requests(receiver_code, status);
 CREATE INDEX IF NOT EXISTS idx_collab_sender ON public.collaboration_requests(sender_id);
+
+-- Clean up existing duplicates before adding unique index (Fix for Error 23505)
+-- This keeps only the LATEST invitation (by created_at) for each sender-receiver pair
+DELETE FROM public.collaboration_requests
+WHERE id IN (
+    SELECT id
+    FROM (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                   PARTITION BY sender_id, receiver_id 
+                   ORDER BY created_at DESC
+               ) as r_num
+        FROM public.collaboration_requests
+        WHERE status IN ('pending', 'accepted')
+    ) t
+    WHERE t.r_num > 1
+);
+
+-- Prevent duplicate active invitations (pending or accepted) between same users
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_invitation 
+ON public.collaboration_requests (sender_id, receiver_id) 
+WHERE status IN ('pending', 'accepted');
 
 CREATE TABLE IF NOT EXISTS public.live_harvest (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -485,10 +511,10 @@ BEGIN
     GET DIAGNOSTICS users_count = ROW_COUNT;
 
     -- 2. Restore missing public.profiles from auth.users
-    INSERT INTO public.profiles (id, user_code, full_name)
-    SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email)
+    INSERT INTO public.profiles (id, user_code, full_name, email)
+    SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
     FROM auth.users
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
     GET DIAGNOSTICS profiles_count = ROW_COUNT;
 
     RETURN json_build_object('success', true, 'users_restored', users_count, 'profiles_restored', profiles_count);

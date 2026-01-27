@@ -54,19 +54,30 @@ export const useCollaborationStore = defineStore('collaboration', {
 
         const { data: profiles, error: profError } = await supabase
           .from('profiles')
-          .select('id, full_name, user_code, email')
+          .select('id, full_name, user_code')
           .in('id', otherUserIds);
 
-        if (profError) throw profError;
+        // محاولة جلب البريد بشكل اختياري
+        let emailMap = new Map();
+        try {
+          const { data: emails } = await supabase.from('profiles').select('id, email').in('id', otherUserIds);
+          if (emails) emails.forEach(e => emailMap.set(e.id, e.email));
+        } catch (e) {
+          logger.warn('Profiles email column not available yet');
+        }
+
+        if (profError) {
+          logger.error('Error fetching collaborator profiles:', profError);
+        }
 
         this.collaborators = data.map(req => {
           const otherId = req.sender_id === auth.user.id ? req.receiver_id : req.sender_id;
-          const profile = profiles.find(p => p.id === otherId);
+          const profile = profiles?.find(p => p.id === otherId);
           return {
             id: req.id,
             userId: otherId,
             userName: profile?.full_name || 'مستخدم',
-            userEmail: profile?.email || '---',
+            userEmail: emailMap.get(otherId) || '---',
             displayName: profile?.full_name || 'مستخدم',
             userCode: profile?.user_code || '---',
             role: req.role,
@@ -100,26 +111,48 @@ export const useCollaborationStore = defineStore('collaboration', {
         }
 
         const senderIds = requests.map(r => r.sender_id);
+
+        // جلب البيانات الأساسية للمرسلين
         const { data: profiles, error: profError } = await supabase
           .from('profiles')
-          .select('id, full_name, email, user_code')
+          .select('id, full_name, user_code')
           .in('id', senderIds);
 
-        if (profError) throw profError;
+        // محاولة جلب البريد بشكل اختياري
+        let emailMap = new Map();
+        try {
+          const { data: emails } = await supabase.from('profiles').select('id, email').in('id', senderIds);
+          if (emails) emails.forEach(e => emailMap.set(e.id, e.email));
+        } catch (e) {
+          logger.warn('Profiles email column not available yet for incoming requests');
+        }
+
+        if (profError) {
+          logger.error('Error fetching sender profiles:', profError);
+        }
 
         const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        this.incomingRequests = requests.map(req => {
-          const senderProfile = profilesMap.get(req.sender_id);
-          return {
-            ...req,
-            sender_profile: {
-              full_name: senderProfile?.full_name || 'مستخدم'
-            },
-            sender_email: senderProfile?.email || '---',
-            sender_code: senderProfile?.user_code || '---',
-            selectedRole: req.role // لتخزين الدور المختار بشكل مؤقت
-          };
-        });
+
+        // تصفية الدعوات المكررة برمجياً (لإضافة طبقة حماية إضافية للواجهة)
+        const seenSenders = new Set();
+        this.incomingRequests = requests
+          .filter(req => {
+            if (seenSenders.has(req.sender_id)) return false;
+            seenSenders.add(req.sender_id);
+            return true;
+          })
+          .map(req => {
+            const senderProfile = profilesMap.get(req.sender_id);
+            return {
+              ...req,
+              sender_profile: {
+                full_name: senderProfile?.full_name || 'مستخدم'
+              },
+              sender_email: emailMap.get(req.sender_id) || '---',
+              sender_code: senderProfile?.user_code || '---',
+              selectedRole: req.role // لتخزين الدور المختار بشكل مؤقت
+            };
+          });
       } catch (error) {
         logger.error('Error fetching incoming requests:', error);
       }
@@ -139,17 +172,30 @@ export const useCollaborationStore = defineStore('collaboration', {
 
         if (profileError || !receiverProfile) throw new Error('كود المستخدم غير موجود');
 
-        const { data: existing, error: existError } = await supabase
+        // Check if there is already an OUTGOING request from me to them
+        const { data: existingOutgoing, error: outError } = await supabase
           .from('collaboration_requests')
           .select('id, status')
           .match({ sender_id: auth.user.id, receiver_id: receiverProfile.id })
           .maybeSingle();
 
-        if (existing) {
-          if (existing.status === 'pending') throw new Error('توجد دعوة معلقة بالفعل لهذا المستخدم');
-          if (existing.status === 'accepted') throw new Error('هذا المستخدم متعاون معك بالفعل');
+        if (existingOutgoing) {
+          if (existingOutgoing.status === 'pending') throw new Error('توجد دعوة معلقة بالفعل لهذا المستخدم');
+          if (existingOutgoing.status === 'accepted') throw new Error('هذا المستخدم متعاون معك بالفعل');
+          // If rejected/revoked, we delete old one and create new below
+          await supabase.from('collaboration_requests').delete().eq('id', existingOutgoing.id);
+        }
 
-          await supabase.from('collaboration_requests').delete().eq('id', existing.id);
+        // Check if there is already an INCOMING request from them to me (Reverse relationship)
+        const { data: existingIncoming, error: inError } = await supabase
+          .from('collaboration_requests')
+          .select('id, status')
+          .match({ sender_id: receiverProfile.id, receiver_id: auth.user.id })
+          .maybeSingle();
+
+        if (existingIncoming) {
+          if (existingIncoming.status === 'pending') throw new Error('هذا المستخدم أرسل لك دعوة بالفعل! تفقد "الدعوات الواردة" لقبولها.');
+          if (existingIncoming.status === 'accepted') throw new Error('أنت متعاون بالفعل مع هذا المستخدم (كمستقبل).');
         }
 
         const { error } = await supabase
@@ -212,6 +258,26 @@ export const useCollaborationStore = defineStore('collaboration', {
       } catch (error) {
         logger.error('Error responding to invite:', error);
         return { success: false, error: error.message };
+      }
+    },
+
+    async clearAllIncomingInvites() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      try {
+        const { error } = await supabase
+          .from('collaboration_requests')
+          .delete()
+          .match({ receiver_id: auth.user.id, status: 'pending' });
+
+        if (error) throw error;
+
+        this.incomingRequests = [];
+        this.addNotification('تم تنظيف كافة الدعوات الواردة بنجاح', 'success');
+      } catch (error) {
+        logger.error('Error clearing invites:', error);
+        this.addNotification('فشل تنظيف الدعوات', 'error');
       }
     },
 
@@ -445,15 +511,26 @@ export const useCollaborationStore = defineStore('collaboration', {
               if (newData.status === 'accepted') {
                 const alreadyExists = this.collaborators.find(c => c.userId === newData.receiver_id);
                 if (!alreadyExists) {
-                  // جلب بيانات المُستقبِل لعرضها
-                  const { data: receiverProfile, error: profError } = await supabase
+                  // جلب بيانات المُستقبِل لعرضها (بشكل مرن)
+                  const { data: receiverProfile } = await supabase
                     .from('profiles')
-                    .select('full_name, email, user_code')
+                    .select('full_name, user_code')
                     .eq('id', newData.receiver_id)
                     .single();
 
+                  let receiverEmail = '---';
+                  try {
+                    const { data: emailData } = await supabase
+                      .from('profiles')
+                      .select('email')
+                      .eq('id', newData.receiver_id)
+                      .single();
+                    if (emailData?.email) receiverEmail = emailData.email;
+                  } catch (e) {
+                    logger.warn('Receiver email column not available yet');
+                  }
+
                   const receiverName = receiverProfile?.full_name || 'مستخدم';
-                  const receiverEmail = receiverProfile?.email || '---';
                   const receiverCode = receiverProfile?.user_code || '---';
 
                   this.addNotification(
