@@ -32,16 +32,23 @@ DO $$ BEGIN
 
     -- Collaboration Requests Policies
     -- ----------------------------------------------------
-    CREATE POLICY "Sender can insert request" ON public.collaboration_requests FOR INSERT TO authenticated WITH CHECK (auth.uid() = sender_id);
-    
-    CREATE POLICY "Related users can view requests" ON public.collaboration_requests FOR SELECT TO authenticated 
-    USING (sender_id = auth.uid() OR receiver_code = (SELECT user_code FROM profiles WHERE id = auth.uid()) OR receiver_id = auth.uid());
-    
-    CREATE POLICY "Receiver can update status" ON public.collaboration_requests FOR UPDATE TO authenticated 
-    USING (receiver_code = (SELECT user_code FROM profiles WHERE id = auth.uid()) OR receiver_id = auth.uid());
-    
-    CREATE POLICY "Related users can delete requests" ON public.collaboration_requests FOR DELETE TO authenticated 
-    USING (sender_id = auth.uid() OR receiver_id = auth.uid() OR receiver_code = (SELECT user_code FROM profiles WHERE id = auth.uid()));
+    -- Updated logic: Ensure visibility for both participants with proper WITH CHECK
+    CREATE POLICY "Visible to participants" ON public.collaboration_requests
+    FOR ALL
+    USING (
+        auth.uid() = sender_id OR 
+        auth.uid() = receiver_id
+    )
+    WITH CHECK (
+        auth.uid() = sender_id OR 
+        auth.uid() = receiver_id
+    );
+
+    CREATE POLICY "Allow insert new invitation" ON public.collaboration_requests
+    FOR INSERT
+    WITH CHECK (
+        auth.uid() = sender_id
+    );
 
     -- Live Harvest Policies
     -- ----------------------------------------------------
@@ -145,10 +152,14 @@ DO $$ BEGIN
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'profiles') THEN
         ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'profiles');
-        CREATE POLICY "Users view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+        
+        -- Allow public visibility for collaboration (Updated logic)
+        CREATE POLICY "Public profiles visibility" ON public.profiles FOR SELECT USING (true);
+        
         CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-        -- Allow finding profiles by code for collaboration
-        CREATE POLICY "Users sync by code" ON public.profiles FOR SELECT USING (true); 
+        
+        CREATE POLICY "Users insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+        
         CREATE POLICY "Admin manage profiles" ON public.profiles FOR ALL USING (public.is_admin());
     END IF;
 

@@ -309,6 +309,9 @@ INSERT INTO public.profiles (id, user_code, full_name, email)
 SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
 FROM auth.users ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
 
+-- Ensure responded_at column exists in collaboration_requests (Fix for invitation acceptance)
+ALTER TABLE public.collaboration_requests ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP WITH TIME ZONE;
+
 CREATE TABLE IF NOT EXISTS public.collaboration_requests (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -316,6 +319,7 @@ CREATE TABLE IF NOT EXISTS public.collaboration_requests (
     receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     role TEXT CHECK (role IN ('viewer', 'editor')) DEFAULT 'editor',
     status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'revoked')) DEFAULT 'pending',
+    responded_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
