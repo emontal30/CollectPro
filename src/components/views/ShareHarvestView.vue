@@ -195,7 +195,7 @@
                 <select v-model="selectedCollaboratorId" class="form-control select-input" @change="handleCollaboratorChange">
                   <option :value="null" disabled>-- اختر زميلاً --</option>
                   <option v-for="collab in collabStore.collaborators" :key="collab.userId" :value="collab.userId">
-                    {{ collab.displayName }} ({{ collab.role === 'editor' ? 'محرر' : 'مشاهد' }})
+                    {{ collab.displayName }} | {{ collab.userEmail }} | {{ collab.userCode }} ({{ collab.role === 'editor' ? 'محرر' : 'مشاهد' }})
                   </option>
                 </select>
                 

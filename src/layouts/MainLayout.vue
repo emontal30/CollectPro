@@ -131,6 +131,49 @@ const handleVisibilityChange = () => {
   }
 };
 
+// --- نظام الرسائل المنبثقة التفاعلية للدعوات ---
+const showInvitePopup = async (event) => {
+  const { requestId, senderName, senderEmail, role } = event.detail;
+  
+  const result = await Swal.fire({
+    title: `<div style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 10px; font-family: 'Cairo', sans-serif;">📬 دعوة مشاركة جديدة</div>`,
+    html: `
+      <div style="text-align: right; direction: rtl; font-family: 'Cairo', sans-serif; padding: 5px;">
+        <div style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="font-weight: 800; color: #1e293b; margin-bottom: 4px; font-size: 1.1rem;">المرسل: ${senderName}</div>
+          <div style="font-size: 0.85rem; color: #64748b; font-family: monospace;">${senderEmail}</div>
+        </div>
+        
+        <div style="margin-bottom: 10px;">
+          <label style="display: block; font-size: 0.95rem; font-weight: 700; color: #475569; margin-bottom: 10px;">تحديد صلاحيتك قبل القبول:</label>
+          <select id="swal-role-select" class="swal2-select" style="width: 100%; border-radius: 10px; margin: 0; display: block; border-color: #cbd5e1; height: 45px; font-family: 'Cairo', sans-serif;">
+            <option value="editor" ${role === 'editor' ? 'selected' : ''}>📝 محرر (إضافة وتعديل بيانات)</option>
+            <option value="viewer" ${role === 'viewer' ? 'selected' : ''}>👁️ مشاهد (عرض البيانات فقط)</option>
+          </select>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'قبول الدعوة ✅',
+    cancelButtonText: 'رفض ❌',
+    confirmButtonColor: '#10b981',
+    cancelButtonColor: '#ef4444',
+    background: document.body.classList.contains('dark') ? '#1e293b' : '#ffffff',
+    color: document.body.classList.contains('dark') ? '#f8fafc' : '#1e293b',
+    padding: '1.5rem',
+    preConfirm: () => {
+      const select = document.getElementById('swal-role-select');
+      return select ? select.value : role;
+    }
+  });
+
+  if (result.isConfirmed) {
+    await collabStore.respondToInvite(requestId, 'accepted', result.value);
+  } else if (result.dismiss === Swal.DismissReason.cancel) {
+    await collabStore.respondToInvite(requestId, 'rejected');
+  }
+};
+
 onMounted(async () => {
   if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
   
@@ -148,10 +191,12 @@ onMounted(async () => {
   harvestStore.initOwnRealtimeSubscription();
 
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('collaboration-invite-received', showInvitePopup);
 });
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('collaboration-invite-received', showInvitePopup);
   collabStore.unsubscribeFromRequests();
 });
 

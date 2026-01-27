@@ -54,7 +54,7 @@ export const useCollaborationStore = defineStore('collaboration', {
 
         const { data: profiles, error: profError } = await supabase
           .from('profiles')
-          .select('id, full_name, user_code')
+          .select('id, full_name, user_code, email')
           .in('id', otherUserIds);
 
         if (profError) throw profError;
@@ -66,6 +66,7 @@ export const useCollaborationStore = defineStore('collaboration', {
             id: req.id,
             userId: otherId,
             userName: profile?.full_name || 'مستخدم',
+            userEmail: profile?.email || '---',
             displayName: profile?.full_name || 'مستخدم',
             userCode: profile?.user_code || '---',
             role: req.role,
@@ -409,14 +410,14 @@ export const useCollaborationStore = defineStore('collaboration', {
               const req = this.incomingRequests.find(r => r.id === payload.new.id);
               const senderName = req?.sender_profile?.full_name || 'مستخدم';
               const roleText = payload.new.role === 'editor' ? 'محرر (تعديل)' : 'مشاهد (قراءة فقط)';
-              
+
               // إشعار فوري منبثق
               this.addNotification(
                 `📬 دعوة جديدة من ${senderName}\nكـ ${roleText}`,
                 'info',
                 10000
               );
-              
+
               // بث حدث مخصص للرسائل المنبثقة الإضافية
               window.dispatchEvent(new CustomEvent('collaboration-invite-received', {
                 detail: {
@@ -471,7 +472,7 @@ export const useCollaborationStore = defineStore('collaboration', {
                     'success',
                     10000
                   );
-                  
+
                   // إرسال حدث للمزامنة التلقائية
                   window.dispatchEvent(new CustomEvent('collaboration-accepted', {
                     detail: {
@@ -482,7 +483,7 @@ export const useCollaborationStore = defineStore('collaboration', {
                       role: newData.role
                     }
                   }));
-                  
+
                   await this.fetchCollaborators();
                 }
               }
