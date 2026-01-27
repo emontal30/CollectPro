@@ -46,6 +46,7 @@ import Topbar from '@/components/layout/Topbar.vue';
 import Sidebar from '@/components/layout/Sidebar.vue';
 import Footer from '@/components/layout/Footer.vue';
 import NotificationContainer from '@/components/ui/NotificationContainer.vue';
+import Swal from 'sweetalert2';
 import { useNotifications } from '@/composables/useNotifications';
 import { useUIStore } from '@/stores/ui';
 import { useSettingsStore } from '@/stores/settings';
@@ -177,6 +178,8 @@ const showInvitePopup = async (event) => {
   }
 };
 
+window.addEventListener('collaboration-invite-received', showInvitePopup);
+
 onMounted(async () => {
   if (uiStore?.loadFromLocalStorage) uiStore.loadFromLocalStorage();
   
@@ -188,7 +191,6 @@ onMounted(async () => {
   if (subStore.isInitialized) checkSubscriptionExpiry();
 
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  window.addEventListener('collaboration-invite-received', showInvitePopup);
 });
 
 // تفعيل ميزات المشاركة بمجرد اكتمال دخول المستخدم

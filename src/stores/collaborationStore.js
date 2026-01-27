@@ -388,7 +388,7 @@ export const useCollaborationStore = defineStore('collaboration', {
 
     subscribeToRequests() {
       const auth = useAuthStore();
-      if (!auth.user || !auth.user.userCode) return;
+      if (!auth.user?.id) return;
 
       if (this.realtimeChannel) {
         supabase.removeChannel(this.realtimeChannel);
