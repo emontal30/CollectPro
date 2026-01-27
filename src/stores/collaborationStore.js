@@ -222,34 +222,38 @@ export const useCollaborationStore = defineStore('collaboration', {
       if (!auth.user) throw new Error('يجب تسجيل الدخول أولاً');
 
       try {
-        const updatePayload = {
-          status,
-          responded_at: new Date()
-        };
-
-        if (customRole) {
-          updatePayload.role = customRole;
-        }
-
-        const { error } = await supabase
-          .from('collaboration_requests')
-          .update(updatePayload)
-          .eq('id', requestId);
-
-        if (error) throw error;
-
-        if (status === 'accepted') {
-          const harvestStore = useHarvestStore();
-          await harvestStore.forceSyncToCloud(auth.user.id);
-          this.addNotification('تم قبول الدعوة بنجاح ✅', 'success');
-        } else if (status === 'rejected') {
-          // حذف الدعوة فوراً عند الرفض
+        // إذا كانت الحالة رفض، نقوم بالحذف مباشرة دون تحديث الحالة
+        if (status === 'rejected') {
           const { error: deleteError } = await supabase
             .from('collaboration_requests')
             .delete()
             .eq('id', requestId);
-          if (deleteError) logger.error('Error deleting rejected invitation:', deleteError);
-          this.addNotification('تم رفض الدعوة', 'info');
+
+          if (deleteError) throw deleteError;
+          this.addNotification('تم حذف الدعوة بنجاح', 'info');
+        } else {
+          // الحالات الأخرى (Accepted) تحتاج تحديث
+          const updatePayload = {
+            status,
+            responded_at: new Date()
+          };
+
+          if (customRole) {
+            updatePayload.role = customRole;
+          }
+
+          const { error } = await supabase
+            .from('collaboration_requests')
+            .update(updatePayload)
+            .eq('id', requestId);
+
+          if (error) throw error;
+
+          if (status === 'accepted') {
+            const harvestStore = useHarvestStore();
+            await harvestStore.forceSyncToCloud(auth.user.id);
+            this.addNotification('تم قبول الدعوة بنجاح ✅', 'success');
+          }
         }
 
         await this.fetchIncomingRequests();
@@ -269,11 +273,17 @@ export const useCollaborationStore = defineStore('collaboration', {
         const { error } = await supabase
           .from('collaboration_requests')
           .delete()
-          .match({ receiver_id: auth.user.id, status: 'pending' });
+          .eq('receiver_id', auth.user.id)
+          .eq('status', 'pending');
 
         if (error) throw error;
 
+        // Reset list purely locally first for speed
         this.incomingRequests = [];
+
+        // Then double check with server
+        await this.fetchIncomingRequests();
+
         this.addNotification('تم تنظيف كافة الدعوات الواردة بنجاح', 'success');
       } catch (error) {
         logger.error('Error clearing invites:', error);
