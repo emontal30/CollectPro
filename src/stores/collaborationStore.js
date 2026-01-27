@@ -149,9 +149,7 @@ export const useCollaborationStore = defineStore('collaboration', {
           .from('collaboration_requests')
           .insert({
             sender_id: auth.user.id,
-            sender_name: auth.user.fullName || auth.user.email,
             receiver_id: receiverProfile.id,
-            receiver_name: receiverProfile.full_name,
             receiver_code: receiverCode,
             role,
             status: 'pending'
@@ -396,7 +394,9 @@ export const useCollaborationStore = defineStore('collaboration', {
           async (payload) => {
             if (payload.new && payload.new.status === 'pending') {
               await this.fetchIncomingRequests();
-              this.addNotification(`وصلتك دعوة جديدة للمشاركة من ${payload.new.sender_name || 'مستخدم'}`, 'info', 8000);
+              const req = this.incomingRequests.find(r => r.id === payload.new.id);
+              const senderName = req?.sender_profile?.full_name || 'مستخدم';
+              this.addNotification(`وصلتك دعوة جديدة للمشاركة من ${senderName}`, 'info', 8000);
             }
           }
         )
@@ -425,7 +425,7 @@ export const useCollaborationStore = defineStore('collaboration', {
               if (newData.status === 'accepted') {
                 const alreadyExists = this.collaborators.find(c => c.userId === newData.receiver_id);
                 if (!alreadyExists) {
-                  this.addNotification(`تم قبول دعوتك من قبل ${newData.receiver_name || 'المستخدم'}`, 'success', 8000);
+                  this.addNotification(`تم قبول دعوتك من قبل زميل`, 'success', 8000);
                   await this.fetchCollaborators();
                 }
               }

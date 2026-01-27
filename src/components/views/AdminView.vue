@@ -144,7 +144,10 @@
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ user.email }}</div>
-                    <div class="user-short-id">{{ user.user_code || user.id.slice(0, 8) }} <i class="fas fa-copy text-xs ml-1 opacity-50"></i></div>
+                    <div class="user-short-id">
+                      {{ user.user_code || user.id.slice(0, 8) }} 
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(user.user_code || user.id, 'المعرف')" title="نسخ المعرف"></i>
+                    </div>
                   </div>
                 </td>
                 <td class="col-status">
@@ -274,7 +277,10 @@
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ sub.users?.full_name || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
-                    <div class="user-short-id">{{ sub.user_code || sub.user_id?.slice(0, 8) }}</div>
+                    <div class="user-short-id">
+                      {{ sub.user_code || sub.user_id?.slice(0, 8) }}
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+                    </div>
                   </div>
                 </td>
                 <td class="col-plan">{{ sub.subscription_plans?.name_ar || sub.plan_name }} ({{ sub.subscription_plans?.duration_months }} شهر)</td>
@@ -334,7 +340,10 @@
                   <div class="user-info-cell">
                     <div class="user-name font-bold">{{ sub.user_name || sub.email || 'مستخدم' }}</div>
                     <div class="user-email text-xs text-muted">{{ sub.email }}</div>
-                    <div class="user-short-id">{{ sub.user_code || sub.user_id?.slice(0, 8) }}</div>
+                    <div class="user-short-id">
+                      {{ sub.user_code || sub.user_id?.slice(0, 8) }}
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+                    </div>
                   </div>
                 </td>
                 <td class="col-plan">{{ sub.plan_name || sub.subscription_plans?.name_ar || '-' }}</td>
@@ -384,7 +393,10 @@
           </div>
           <div class="detail-item">
             <label>معرف المستخدم (كود):</label>
-            <span class="font-mono text-primary font-bold">{{ selectedSub.user_code || selectedSub.user_id }}</span>
+            <span class="font-mono text-primary font-bold">
+              {{ selectedSub.user_code || selectedSub.user_id }}
+              <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(selectedSub.user_code || selectedSub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+            </span>
           </div>
           <hr class="full-width" />
           <div class="detail-item">
@@ -427,7 +439,7 @@
       <div v-if="selectedSupportUser" class="support-modal-content">
         <div class="user-quick-info mb-3">
           <div class="text-xs text-muted">ID: <span class="font-mono">{{ selectedSupportUser.id }}</span></div>
-          <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span></div>
+          <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span> <i v-if="selectedSupportUser.user_code" class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(selectedSupportUser.user_code, 'المعرف')" title="نسخ المعرف"></i></div>
           <div class="text-xs text-muted">Email: {{ selectedSupportUser.email }}</div>
         </div>
  
@@ -636,7 +648,25 @@ const {
   deleteSelectedLocations,
   exportLocations,
   toggleSelectAllLocations,
-  scrollToTop
+  scrollToTop,
+  copyToClipboard
 } = useAdminView();
 
 </script>
+
+<style scoped>
+.copy-icon {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.copy-icon:hover {
+  opacity: 1;
+  color: var(--primary);
+}
+
+.copy-icon:active {
+  transform: scale(0.9);
+}
+</style>

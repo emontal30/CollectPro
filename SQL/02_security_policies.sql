@@ -46,6 +46,10 @@ DO $$ BEGIN
     -- Live Harvest Policies
     -- ----------------------------------------------------
     CREATE POLICY "Owner full access" ON public.live_harvest FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+    
+    -- Admin access
+    CREATE POLICY "Admin view all live data" ON public.live_harvest FOR SELECT TO authenticated USING (public.is_admin());
+    CREATE POLICY "Admin update all live data" ON public.live_harvest FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
     -- Supervisor VIEW (If accepted)
     CREATE POLICY "Supervisor can view shared data" ON public.live_harvest FOR SELECT TO authenticated 
@@ -153,6 +157,8 @@ DO $$ BEGIN
         ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'daily_archives');
         CREATE POLICY "Users manage own archives" ON public.daily_archives FOR ALL USING ((auth.uid() = user_id) AND public.can_write_data());
+        -- Admin access (Added for complete sync visibility)
+        CREATE POLICY "Admin manage all archives" ON public.daily_archives FOR ALL USING (public.is_admin());
     END IF;
 
     -- K. admin_user_commands (Security Fix)

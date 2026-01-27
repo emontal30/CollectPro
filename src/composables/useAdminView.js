@@ -139,6 +139,17 @@ export function useAdminView() {
 
     const handleActiveUsersPeriodChange = () => store.fetchStats(false);
 
+    const copyToClipboard = async (text, label = 'النص') => {
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            addNotification(`تم نسخ ${label} بنجاح`, 'success');
+        } catch (err) {
+            logger.error('Failed to copy text:', err);
+            addNotification('فشل نسخ النص', 'error');
+        }
+    };
+
     const filteredUsers = computed(() => {
         if (!store.filters.usersSearch) return store.usersList;
         const q = store.filters.usersSearch.toLowerCase();
@@ -327,6 +338,7 @@ export function useAdminView() {
         scrollToTop,
         handleStatClick,
         handleActiveUsersPeriodChange,
+        copyToClipboard,
         filteredUsers,
         isAllSelected,
         toggleSelectAll,
