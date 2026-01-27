@@ -240,12 +240,32 @@
           
           <div v-else class="invites-list">
             <div v-for="req in collabStore.incomingRequests" :key="req.id" class="invite-item">
-              <div class="invite-info">
-                <strong>{{ req.sender_profile?.full_name || 'مستخدم' }}</strong>
-                <span class="text-muted text-sm">يدعوك لتكون ({{ req.role === 'editor' ? 'محرر' : 'مشاهد' }})</span>
+              <div class="invite-header">
+                <div class="invite-sender-info">
+                  <i class="fas fa-user-circle invite-avatar"></i>
+                  <div class="sender-details">
+                    <strong class="sender-name">{{ req.sender_profile?.full_name || 'مستخدم' }}</strong>
+                    <span class="sender-email text-xs text-muted">{{ req.sender_email }}</span>
+                  </div>
+                </div>
+                <div class="invite-role-selector">
+                  <select 
+                    v-model="req.selectedRole" 
+                    class="role-select"
+                    :title="`تحديد الدور: ${req.role === 'editor' ? 'محرر (تعديل)' : 'مشاهد (قراءة فقط)'}`"
+                  >
+                    <option value="editor">📝 محرر (تعديل)</option>
+                    <option value="viewer">👁️ مشاهد (قراءة فقط)</option>
+                  </select>
+                </div>
               </div>
+              
               <div class="invite-actions">
-                <button @click="handleRespond(req.id, 'accepted')" class="btn btn-sm btn-success">
+                <button 
+                  @click="handleRespond(req.id, 'accepted', req.selectedRole)" 
+                  class="btn btn-sm btn-success"
+                  :title="`قبول الدعوة كـ ${req.selectedRole === 'editor' ? 'محرر' : 'مشاهد'}`"
+                >
                   <i class="fas fa-check"></i> قبول
                 </button>
                 <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger">

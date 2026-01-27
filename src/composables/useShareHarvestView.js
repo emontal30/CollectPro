@@ -155,9 +155,9 @@ export function useShareHarvestView() {
     };
 
     // 2. Respond to Invite
-    const handleRespond = async (reqId, status) => {
+    const handleRespond = async (reqId, status, customRole = null) => {
         try {
-            await collabStore.respondToInvite(reqId, status);
+            await collabStore.respondToInvite(reqId, status, customRole);
             const msg = status === 'accepted' ? 'تم قبول الدعوة بنجاح ✅' : 'تم رفض الدعوة';
             addNotification(msg, status === 'accepted' ? 'success' : 'info');
             // Note: fetchCollaborators is already called in respondToInvite with timeout protection

@@ -101,18 +101,24 @@ export const useCollaborationStore = defineStore('collaboration', {
         const senderIds = requests.map(r => r.sender_id);
         const { data: profiles, error: profError } = await supabase
           .from('profiles')
-          .select('id, full_name')
+          .select('id, full_name, email, user_code')
           .in('id', senderIds);
 
         if (profError) throw profError;
 
         const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        this.incomingRequests = requests.map(req => ({
-          ...req,
-          sender_profile: {
-            full_name: profilesMap.get(req.sender_id)?.full_name || 'مستخدم'
-          }
-        }));
+        this.incomingRequests = requests.map(req => {
+          const senderProfile = profilesMap.get(req.sender_id);
+          return {
+            ...req,
+            sender_profile: {
+              full_name: senderProfile?.full_name || 'مستخدم'
+            },
+            sender_email: senderProfile?.email || '---',
+            sender_code: senderProfile?.user_code || '---',
+            selectedRole: req.role // لتخزين الدور المختار بشكل مؤقت
+          };
+        });
       } catch (error) {
         logger.error('Error fetching incoming requests:', error);
       }
@@ -188,8 +194,14 @@ export const useCollaborationStore = defineStore('collaboration', {
         if (status === 'accepted') {
           const harvestStore = useHarvestStore();
           await harvestStore.forceSyncToCloud(auth.user.id);
-          this.addNotification('تم قبول الدعوة بنجاح', 'success');
-        } else {
+          this.addNotification('تم قبول الدعوة بنجاح ✅', 'success');
+        } else if (status === 'rejected') {
+          // حذف الدعوة فوراً عند الرفض
+          const { error: deleteError } = await supabase
+            .from('collaboration_requests')
+            .delete()
+            .eq('id', requestId);
+          if (deleteError) logger.error('Error deleting rejected invitation:', deleteError);
           this.addNotification('تم رفض الدعوة', 'info');
         }
 
@@ -396,7 +408,25 @@ export const useCollaborationStore = defineStore('collaboration', {
               await this.fetchIncomingRequests();
               const req = this.incomingRequests.find(r => r.id === payload.new.id);
               const senderName = req?.sender_profile?.full_name || 'مستخدم';
-              this.addNotification(`وصلتك دعوة جديدة للمشاركة من ${senderName}`, 'info', 8000);
+              const roleText = payload.new.role === 'editor' ? 'محرر (تعديل)' : 'مشاهد (قراءة فقط)';
+              
+              // إشعار فوري منبثق
+              this.addNotification(
+                `📬 دعوة جديدة من ${senderName}\nكـ ${roleText}`,
+                'info',
+                10000
+              );
+              
+              // بث حدث مخصص للرسائل المنبثقة الإضافية
+              window.dispatchEvent(new CustomEvent('collaboration-invite-received', {
+                detail: {
+                  requestId: payload.new.id,
+                  senderName: req?.sender_profile?.full_name,
+                  senderEmail: req?.sender_email,
+                  senderCode: req?.sender_code,
+                  role: payload.new.role
+                }
+              }));
             }
           }
         )
@@ -425,7 +455,34 @@ export const useCollaborationStore = defineStore('collaboration', {
               if (newData.status === 'accepted') {
                 const alreadyExists = this.collaborators.find(c => c.userId === newData.receiver_id);
                 if (!alreadyExists) {
-                  this.addNotification(`تم قبول دعوتك من قبل زميل`, 'success', 8000);
+                  // جلب بيانات المُستقبِل لعرضها
+                  const { data: receiverProfile, error: profError } = await supabase
+                    .from('profiles')
+                    .select('full_name, email, user_code')
+                    .eq('id', newData.receiver_id)
+                    .single();
+
+                  const receiverName = receiverProfile?.full_name || 'مستخدم';
+                  const receiverEmail = receiverProfile?.email || '---';
+                  const receiverCode = receiverProfile?.user_code || '---';
+
+                  this.addNotification(
+                    `✅ تم قبول دعوتك من ${receiverName}\n${receiverEmail}`,
+                    'success',
+                    10000
+                  );
+                  
+                  // إرسال حدث للمزامنة التلقائية
+                  window.dispatchEvent(new CustomEvent('collaboration-accepted', {
+                    detail: {
+                      userId: newData.receiver_id,
+                      userName: receiverName,
+                      userEmail: receiverEmail,
+                      userCode: receiverCode,
+                      role: newData.role
+                    }
+                  }));
+                  
                   await this.fetchCollaborators();
                 }
               }
