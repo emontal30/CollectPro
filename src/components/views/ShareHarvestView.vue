@@ -58,7 +58,7 @@
                 <button 
                   class="amc-btn amc-btn-sync" 
                   :class="{ 'active': collabStore.adminViewMode === 'sync' && (collabStore.activeSessionId || collabStore.isRemoteArchiveMode) }"
-                  @click="handleAdminOpen()" 
+                  @click="handleAdminOpenWithRefresh()" 
                   :disabled="!adminTargetUid || isSyncLoading"
                 >
                   <i class="fas fa-bolt" v-if="!isSyncLoading"></i>
@@ -68,7 +68,7 @@
                 <button 
                   class="amc-btn amc-btn-archive" 
                   :class="{ 'active': collabStore.adminViewMode === 'archive' && (collabStore.activeSessionId || collabStore.isRemoteArchiveMode) }"
-                  @click="handleViewArchive()" 
+                  @click="handleViewArchiveWithRefresh()" 
                   :disabled="!adminTargetUid || isArchiveLoading"
                 >
                   <i class="fas fa-history" v-if="!isArchiveLoading"></i>
@@ -174,7 +174,7 @@
                 placeholder="كود الزميل (مثال: EMP-cf2757)" 
                 class="form-control code-input"
               />
-              <button class="btn btn-primary" @click="sendInvite" :disabled="!newCollabCode || isLoading">
+              <button class="btn btn-primary" @click="sendInviteWithRefresh" :disabled="!newCollabCode || isLoading">
                 <i class="fas fa-paper-plane" v-if="!isLoading"></i>
                 <i class="fas fa-spinner fa-spin" v-else></i>
                 <span class="d-none-mobile">إرسال دعوة</span>
@@ -430,7 +430,9 @@ const {
   activeCollaboratorCode,
   lastUpdatedText,
   handleAdminOpen,
+  handleAdminOpenWithRefresh,
   sendInvite,
+  sendInviteWithRefresh,
   handleRespond,
   handleClearAllInvites,
   handleCollaboratorChange,
@@ -441,6 +443,7 @@ const {
   deleteHistoryItem,
   handleHistorySelect,
   handleViewArchive,
+  handleViewArchiveWithRefresh,
   handleDateSelect,
   refreshSharedSession,
   startEditingName,

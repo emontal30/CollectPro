@@ -102,6 +102,64 @@ export function useShareHarvestView() {
         return false;
     });
 
+    // نظام التحديث الصامت للصفحة
+    const PENDING_OPS_KEY = 'share_harvest_pending_op';
+
+    const executePendingOperation = async () => {
+        const pendingOp = localStorage.getItem(PENDING_OPS_KEY);
+        if (!pendingOp) return;
+
+        try {
+            const { operation, data } = JSON.parse(pendingOp);
+            localStorage.removeItem(PENDING_OPS_KEY);
+
+            // انتظار قليل للتأكد من تحميل كل شيء
+            await new Promise(r => setTimeout(r, 500));
+
+            switch (operation) {
+                case 'adminOpen':
+                    adminTargetUid.value = data.targetUid;
+                    await handleAdminOpen(data.knownUserId);
+                    break;
+                case 'viewArchive':
+                    adminTargetUid.value = data.targetUid;
+                    await handleViewArchive(data.knownUserId);
+                    break;
+                case 'sendInvite':
+                    newCollabCode.value = data.code;
+                    selectedRole.value = data.role;
+                    await sendInvite();
+                    break;
+            }
+        } catch (err) {
+            console.error('Failed to execute pending operation:', err);
+            localStorage.removeItem(PENDING_OPS_KEY);
+        }
+    };
+
+    const scheduleOperationWithRefresh = (operation, data) => {
+        // وضع علامات لإخفاء splash وإظهار شاشة المزامنة
+        sessionStorage.setItem('skip_splash', 'true');
+        sessionStorage.setItem('show_sync_loader', 'true');
+
+        // تفعيل حالة التحميل قبل الـ reload مباشرة لإخفاء عملية التحديث
+        if (operation === 'adminOpen') {
+            isSyncLoading.value = true;
+        } else if (operation === 'viewArchive') {
+            isArchiveLoading.value = true;
+        } else if (operation === 'sendInvite') {
+            isLoading.value = true;
+        }
+
+        // حفظ العملية المطلوبة
+        localStorage.setItem(PENDING_OPS_KEY, JSON.stringify({ operation, data }));
+
+        // انتظار render للـ loading state ثم reload
+        setTimeout(() => {
+            window.location.reload();
+        }, 50); // 50ms فقط للسماح بظهور حالة التحميل
+    };
+
     // Lifecycle
     onMounted(async () => {
         await collabStore.fetchCollaborators();
@@ -114,6 +172,9 @@ export function useShareHarvestView() {
         if (collabStore.activeSessionId) {
             selectedCollaboratorId.value = collabStore.activeSessionId;
         }
+
+        // تنفيذ أي عملية معلقة بعد التحديث
+        await executePendingOperation();
     });
 
     onBeforeUnmount(() => {
@@ -123,6 +184,14 @@ export function useShareHarvestView() {
     // Methods
 
     // X. Admin Open Logic
+    const handleAdminOpenWithRefresh = () => {
+        if (!adminTargetUid.value) return;
+        scheduleOperationWithRefresh('adminOpen', {
+            targetUid: adminTargetUid.value,
+            knownUserId: null
+        });
+    };
+
     const handleAdminOpen = async (knownUserId = null) => {
         // Guard against Vue auto-passing PointerEvent if called directly from template
         const actualUserId = typeof knownUserId === 'string' ? knownUserId : null;
@@ -152,6 +221,14 @@ export function useShareHarvestView() {
     };
 
     // 1. Send Invite
+    const sendInviteWithRefresh = () => {
+        if (!newCollabCode.value) return;
+        scheduleOperationWithRefresh('sendInvite', {
+            code: newCollabCode.value,
+            role: selectedRole.value
+        });
+    };
+
     const sendInvite = async () => {
         if (!newCollabCode.value) return;
         isLoading.value = true;
@@ -299,6 +376,14 @@ export function useShareHarvestView() {
         }
     };
 
+    const handleViewArchiveWithRefresh = () => {
+        if (!adminTargetUid.value) return;
+        scheduleOperationWithRefresh('viewArchive', {
+            targetUid: adminTargetUid.value,
+            knownUserId: null
+        });
+    };
+
     const handleViewArchive = async (knownUserId = null) => {
         // Guard against Vue auto-passing PointerEvent if called directly from template
         const actualUserId = typeof knownUserId === 'string' ? knownUserId : null;
@@ -346,9 +431,13 @@ export function useShareHarvestView() {
     // 5. Refresh Session
     const refreshSharedSession = async () => {
         if (collabStore.activeSessionId) {
-            addNotification('جاري تحديث البيانات...', 'info');
-            await harvestStore.switchToUserSession(collabStore.activeSessionId);
-            addNotification('تم تحديث البيانات', 'success');
+            try {
+                await harvestStore.switchToUserSession(collabStore.activeSessionId);
+                addNotification('تم تحديث البيانات بنجاح ✅', 'success');
+            } catch (err) {
+                logger.error('Failed to refresh session:', err);
+                addNotification('فشل تحديث البيانات', 'error');
+            }
         }
     };
 
@@ -431,7 +520,9 @@ export function useShareHarvestView() {
         activeCollaboratorCode,
         lastUpdatedText,
         handleAdminOpen,
+        handleAdminOpenWithRefresh,
         sendInvite,
+        sendInviteWithRefresh,
         handleRespond,
         handleClearAllInvites,
         handleCollaboratorChange,
@@ -442,6 +533,7 @@ export function useShareHarvestView() {
         deleteHistoryItem,
         handleHistorySelect,
         handleViewArchive,
+        handleViewArchiveWithRefresh,
         handleDateSelect,
         refreshSharedSession,
         startEditingName,

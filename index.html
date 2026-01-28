@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
-  
+
   <!-- 1. Viewport & Responsive Logic (Original Logic Restored) -->
   <script>
-    (function() {
+    (function () {
       function updateViewport() {
         var viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
         viewport.name = "viewport";
@@ -20,26 +21,27 @@
         }
       }
       updateViewport();
-      window.addEventListener('orientationchange', function() {
+      window.addEventListener('orientationchange', function () {
         setTimeout(updateViewport, 200);
       });
     })();
   </script>
-  
+
   <!-- 2. Performance Optimizations (Resource Hints) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
-  
+
   <link rel="preload" href="/manifest/icon-192x192.png" as="image" />
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" as="style" />
-  
+
   <!-- 3. Primary SEO Meta Tags -->
   <title>CollectPro - نظام إدارة التحصيلات الاحترافي</title>
   <meta name="title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
-  <meta name="description" content="CollectPro هو الحل الأمثل لإدارة التحصيلات المالية، تتبع الديون، وإصدار التقارير الدقيقة. واجهة سهلة الاستخدام، نظام أرشفة ذكي، وعمل كامل بدون إنترنت." />
+  <meta name="description"
+    content="CollectPro هو الحل الأمثل لإدارة التحصيلات المالية، تتبع الديون، وإصدار التقارير الدقيقة. واجهة سهلة الاستخدام، نظام أرشفة ذكي، وعمل كامل بدون إنترنت." />
   <meta name="keywords" content="تحصيلات, إدارة مالية, تتبع ديون, محاسبة, CollectPro, أرشيف مالي, إدارة أعمال" />
   <meta name="author" content="CollectPro Team" />
   <meta name="robots" content="index, follow" />
@@ -48,7 +50,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://collectpro.vercel.app/" />
   <meta property="og:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
-  <meta property="og:description" content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
+  <meta property="og:description"
+    content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
   <meta property="og:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
   <meta property="og:image:secure_url" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
   <meta property="og:image:type" content="image/png" />
@@ -61,16 +64,17 @@
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://collectpro.vercel.app/" />
   <meta property="twitter:title" content="CollectPro - نظام إدارة التحصيلات الاحترافي" />
-  <meta property="twitter:description" content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
+  <meta property="twitter:description"
+    content="أدِر تحصيلاتك المالية بذكاء وسهولة مع CollectPro. تتبع دقيق، تقارير فورية، ودعم كامل للعمل أوفلاين." />
   <meta property="twitter:image" content="https://collectpro.vercel.app/manifest/icon-192x192.png" />
 
   <!-- 6. Theme & Mobile App Support -->
-  <meta name="theme-color" content="#007965" id="theme-color-meta"/>
+  <meta name="theme-color" content="#007965" id="theme-color-meta" />
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="CollectPro">
-  
+
   <!-- 7. Manifest & Icons -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -80,11 +84,12 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/ios/apple-touch-icon-180x180.png">
 
   <!-- 8. FontAwesome (Performance Optimization: Non-blocking) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" media="print" onload="this.media='all'" />
-  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" media="print"
+    onload="this.media='all'" />
+
   <!-- 9. Dark Mode Instant Init (Prevent White Flash) -->
   <script>
-    (function() {
+    (function () {
       try {
         const savedSettings = localStorage.getItem('app_settings_v1');
         if (savedSettings) {
@@ -97,10 +102,119 @@
         } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
           document.documentElement.classList.add('dark');
         }
-      } catch (e) {}
+      } catch (e) { }
     })();
   </script>
-  
+
+  <!-- 10. Sync Loader for Share Harvest Buttons -->
+  <script>
+    (function () {
+      // Early exit optimization: إذا لم تكن هناك flags، لا تنفذ أي شيء
+      var skipSplash = sessionStorage.getItem('skip_splash');
+      var showSyncLoader = sessionStorage.getItem('show_sync_loader');
+
+      // ⚡ Performance: إذا لا توجد flags، اخرج فوراً
+      if (!skipSplash && !showSyncLoader) return;
+
+      // إخفاء splash screen
+      if (skipSplash === 'true') {
+        sessionStorage.removeItem('skip_splash');
+        var style = document.createElement('style');
+        style.innerHTML = '#initial-loader { display: none !important; }';
+        document.head.appendChild(style);
+        document.addEventListener('DOMContentLoaded', function () {
+          document.body.classList.add('loaded');
+        }, { once: true, passive: true }); // ⚡ Performance: استخدم once و passive
+      }
+
+      // إظهار شاشة المزامنة
+      if (showSyncLoader === 'true') {
+        sessionStorage.removeItem('show_sync_loader');
+
+        // ⚡ Performance: استخدم CSS مصغّر
+        var loaderStyle = document.createElement('style');
+        loaderStyle.innerHTML = '#sync-loader-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#f0fdfa 0%,#fff 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99999}.sync-spinner-container{position:relative;width:60px;height:60px}.sync-spinner{position:absolute;width:60px;height:60px;border:3px solid transparent;border-top-color:#007965;border-right-color:#2dd4bf;border-radius:50%;animation:syncSpin .5s linear infinite}.sync-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;background:linear-gradient(135deg,#007965 0%,#2dd4bf 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pulse 1.5s ease-in-out infinite}.sync-text{color:#0f766e;font-weight:600;font-size:15px;letter-spacing:.3px}@keyframes syncSpin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}';
+        document.head.appendChild(loaderStyle);
+
+        var loaderDiv = document.createElement('div');
+        loaderDiv.id = 'sync-loader-overlay';
+        loaderDiv.innerHTML = '<div class="sync-spinner-container"><div class="sync-spinner"></div><i class="fas fa-sync-alt sync-icon"></i></div><div class="sync-text">جاري المزامنة</div>';
+
+        // ⚡ Performance: إضافة مباشرة أو انتظار DOM
+        if (document.body) {
+          document.body.appendChild(loaderDiv);
+        } else {
+          document.addEventListener('DOMContentLoaded', function () {
+            document.body.appendChild(loaderDiv);
+          }, { once: true, passive: true });
+        }
+
+        // ⚡ Performance: إزالة سريعة بعد DOM
+        var removeLoader = function () {
+          setTimeout(function () {
+            if (loaderDiv && loaderDiv.parentNode) {
+              loaderDiv.parentNode.removeChild(loaderDiv);
+            }
+            if (loaderStyle && loaderStyle.parentNode) {
+              loaderStyle.parentNode.removeChild(loaderStyle);
+            }
+          }, 50); // ⚡ تقليل من 100 إلى 50ms
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', removeLoader, { once: true, passive: true });
+        } else {
+          removeLoader(); // DOM جاهز بالفعل
+        }
+      }
+    })();
+  </script>
+
+  <!-- 11. Splash Screen Auto-Hide Failsafe (CRITICAL FIX) -->
+  <script>
+    (function () {
+      var splashRemoved = false;
+      var splash = null;
+
+      function removeSplash() {
+        if (splashRemoved) return;
+        splashRemoved = true;
+
+        // Method 1: Add loaded class
+        document.body.classList.add('loaded');
+
+        // Method 2: Direct removal after fade
+        setTimeout(function () {
+          splash = splash || document.getElementById('initial-loader');
+          if (splash && splash.parentNode) {
+            splash.parentNode.removeChild(splash);
+          }
+        }, 500);
+      }
+
+      // Trigger 1: DOMContentLoaded (fastest)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeSplash, { once: true });
+      }
+
+      // Trigger 2: window.load (backup)
+      window.addEventListener('load', removeSplash, { once: true });
+
+      // Trigger 3: FORCED timeout (FAILSAFE) - removes after 8 seconds NO MATTER WHAT
+      setTimeout(function () {
+        if (!splashRemoved) {
+          console.warn('⚠️ Splash screen timeout - forcing removal');
+          removeSplash();
+        }
+      }, 8000); // 8 seconds maximum
+
+      // Trigger 4: Early check if DOM already ready
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(removeSplash, 100);
+      }
+    })();
+  </script>
+
   <style>
     :root {
       --safe-area-top: env(safe-area-inset-top, 0px);
@@ -114,7 +228,12 @@
 
     /* Prevent annoying zoom on focus in iOS (Restored) */
     @media screen and (max-width: 767px) {
-      input, select, textarea { font-size: 16px !important; }
+
+      input,
+      select,
+      textarea {
+        font-size: 16px !important;
+      }
     }
 
     body {
@@ -126,49 +245,146 @@
       padding-right: var(--safe-area-right);
       background-color: var(--bg-light);
       position: relative;
-      overflow-x: auto; 
+      overflow-x: auto;
       -webkit-text-size-adjust: 100%;
       touch-action: manipulation;
     }
-    
-    html.dark body { background-color: var(--bg-dark) !important; color: #ffffff !important; }
-    
-    #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+    html.dark body {
+      background-color: var(--bg-dark) !important;
+      color: #ffffff !important;
+    }
+
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
     /* 10. Initial Splash Screen Styles (Restored & Optimized) */
     #initial-loader {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: var(--bg-light);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       z-index: 9999;
       transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    html.dark #initial-loader { background: var(--bg-dark) !important; }
 
-    .loader-content { display: flex; flex-direction: column; align-items: center; gap: 30px; }
-    .loader-logo { 
-      width: 120px; height: 120px; border-radius: 24px; 
+    html.dark #initial-loader {
+      background: var(--bg-dark) !important;
+    }
+
+    .loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .loader-logo {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
       box-shadow: 0 15px 35px rgba(0, 121, 101, 0.15);
       animation: logoPulse 2s infinite ease-in-out;
     }
-    .loader-brand { font-family: 'Poppins', system-ui, sans-serif; font-size: 24px; font-weight: 800; color: var(--primary-color); letter-spacing: 1px; }
-    html.dark .loader-brand { color: #2dd4bf; }
 
-    .loader-spinner { width: 140px; height: 4px; background: rgba(0, 121, 101, 0.1); border-radius: 4px; overflow: hidden; position: relative; }
-    html.dark .loader-spinner { background: rgba(255, 255, 255, 0.1); }
+    .loader-brand {
+      font-family: 'Poppins', system-ui, sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: 1px;
+    }
+
+    html.dark .loader-brand {
+      color: #2dd4bf;
+    }
+
+    .loader-spinner {
+      width: 140px;
+      height: 4px;
+      background: rgba(0, 121, 101, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    html.dark .loader-spinner {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
     .loader-spinner::after {
-      content: ''; position: absolute; left: -40%; width: 40%; height: 100%;
-      background: var(--primary-color); border-radius: 4px;
+      content: '';
+      position: absolute;
+      left: -40%;
+      width: 40%;
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 4px;
       animation: loadingSlide 1.5s infinite ease-in-out;
     }
-    html.dark .loader-spinner::after { background: #2dd4bf; }
 
-    @keyframes logoPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
-    @keyframes loadingSlide { 0% { left: -40%; } 50% { left: 100%; } 100% { left: -40%; } }
-    body.loaded #initial-loader { opacity: 0; pointer-events: none; }
+    html.dark .loader-spinner::after {
+      background: #2dd4bf;
+    }
+
+    @keyframes logoPulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+
+      50% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    @keyframes loadingSlide {
+      0% {
+        left: -40%;
+      }
+
+      50% {
+        left: 100%;
+      }
+
+      100% {
+        left: -40%;
+      }
+    }
+
+    body.loaded #initial-loader {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-out;
+    }
+
+    /* Failsafe: Force hide after animation */
+    body.loaded #initial-loader {
+      animation: forceHide 0.5s forwards;
+    }
+
+    @keyframes forceHide {
+      to {
+        opacity: 0;
+        visibility: hidden;
+        display: none;
+      }
+    }
   </style>
 </head>
+
 <body>
   <!-- 11. Splash Screen -->
   <div id="initial-loader">
@@ -182,4 +398,5 @@
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
+
 </html>

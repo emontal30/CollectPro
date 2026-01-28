@@ -50,9 +50,32 @@ bootstrapApp();
 router.isReady().then(() => {
   app.mount('#app');
 
-  // Hide the initial loading screen smoothly
+  // ⚡ CRITICAL: Remove splash screen with multiple methods
   setTimeout(() => {
+    // Method 1: Add loaded class
     document.body.classList.add('loaded');
+
+    // Method 2: Force remove element (backup)
+    setTimeout(() => {
+      const splash = document.getElementById('initial-loader');
+      if (splash && splash.parentNode) {
+        splash.parentNode.removeChild(splash);
+        logger.info('✅ Splash screen forcefully removed');
+      }
+    }, 400);
+
     logger.info('✅ Application Mounted and Splash Screen Hidden');
   }, 100);
+
+  // ⚡ CRITICAL FIX: Global error handlers to prevent crashes
+  window.addEventListener('unhandledrejection', (event) => {
+    logger.error('❌ Unhandled promise rejection:', event.reason);
+    event.preventDefault(); // Prevent console spam
+  });
+
+  window.addEventListener('error', (event) => {
+    logger.error('❌ Global error:', event.error);
+  });
+
+  logger.info('✅ Global error handlers registered');
 });

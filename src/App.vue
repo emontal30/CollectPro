@@ -42,8 +42,19 @@ const settingsStore = useSettingsStore();
 const notifications = useNotifications();
 provide('notifications', notifications);
 
-// إعداد PWA Service Worker
-const { needRefresh, updateServiceWorker } = useRegisterSW();
+// إعداد PWA Service Worker مع فحص دوري للتحديثات
+const { needRefresh, updateServiceWorker } = useRegisterSW({
+  immediate: true,
+  onRegistered(r) {
+    if (r) {
+      // فحص وجود تحديثات كل 60 ثانية
+      setInterval(() => {
+        logger.debug('Checking for App updates...');
+        r.update();
+      }, 60 * 1000);
+    }
+  }
+});
 const harvestStore = useHarvestStore();
 
 const updateSW = async () => {

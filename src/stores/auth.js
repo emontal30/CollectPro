@@ -19,6 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isSubscriptionEnforced = ref(false);
   const authListener = ref(null);
   let isInitializing = false; // Guard لمنع التنفيذ المتزامن
+  const isConfigLoaded = ref(false);
+  let configSubscription = null;
 
   const { addNotification } = useNotifications();
   const settingsStore = useSettingsStore();
@@ -117,6 +119,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loadSystemConfig() {
+    // Prevent redundant fetches in the same session
+    if (isConfigLoaded.value) return;
+
     try {
       const cached = await getLocalStorageCache('sys_config_enforce');
       if (cached !== null) isSubscriptionEnforced.value = cached === 'true';
@@ -129,7 +134,23 @@ export const useAuthStore = defineStore('auth', () => {
           await setLocalStorageCache('sys_config_enforce', String(value));
         }
       }
+      isConfigLoaded.value = true;
+      setupConfigListener();
     } catch (err) { }
+  }
+
+  function setupConfigListener() {
+    if (configSubscription) return;
+    configSubscription = supabase.channel('public:system_config_global')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_config', filter: "key=eq.enforce_subscription" }, (payload) => {
+        if (payload.new && payload.new.value !== undefined) {
+          const newVal = String(payload.new.value) === 'true';
+          isSubscriptionEnforced.value = newVal;
+          setLocalStorageCache('sys_config_enforce', String(newVal));
+          logger.info('🔔 System Config Updated:', newVal);
+        }
+      })
+      .subscribe();
   }
 
   async function initializeAuth() {
@@ -274,6 +295,19 @@ export const useAuthStore = defineStore('auth', () => {
         }
       });
       sessionStorage.removeItem('app_login_sync_performed');
+
+      // Clean up collaboration store realtime subscription (dynamically imported to avoid circular dependency)
+      try {
+        const { useCollaborationStore } = await import('./collaborationStore');
+        const collabStore = useCollaborationStore();
+        if (collabStore && typeof collabStore.unsubscribeFromRequests === 'function') {
+          collabStore.unsubscribeFromRequests();
+          collabStore.$reset(); // Also reset store state
+        }
+      } catch (e) {
+        logger.warn('Failed to cleanup collaboration store:', e);
+      }
+
     } catch (err) {
       logger.error('Error during logout cleanup:', err);
     }

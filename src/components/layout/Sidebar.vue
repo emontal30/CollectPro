@@ -168,7 +168,6 @@ const copyUserId = async () => {
 
 const isDarkMode = computed(() => settingsStore.darkMode);
 const isRefreshing = ref(false);
-const isEnforced = ref(false); 
 // رابط مجموعة واتساب للانضمام
 const whatsappLink = 'https://chat.whatsapp.com/GuITuDz0xmJKHqKJ5QstDu';
 
@@ -186,26 +185,11 @@ const navLinks = [
 ];
 
 const isLocked = (link) => {
-    return link.protected && isEnforced.value && !subStore.isSubscribed && !authStore.isAdmin;
+    return link.protected && authStore.isSubscriptionEnforced && !subStore.isSubscribed && !authStore.isAdmin;
 };
 
 const toggleDarkMode = () => {
   settingsStore.toggleDarkMode();
-};
-
-const checkEnforcementStatus = async () => {
-    try {
-        const cached = localStorage.getItem('sys_config_enforce');
-        if (cached !== null) isEnforced.value = cached === 'true';
-        
-        const { data } = await supabase.from('system_config').select('value').eq('key', 'enforce_subscription').maybeSingle();
-        if (data) {
-            isEnforced.value = data.value === true || data.value === 'true';
-            localStorage.setItem('sys_config_enforce', String(isEnforced.value));
-        }
-    } catch (e) {
-        logger.error('Failed to check enforcement status');
-    }
 };
 
 const handleShare = async () => {
@@ -341,7 +325,7 @@ const handleRefreshData = async () => {
 
       localStorage.setItem('app_version', currentVersion);
       await subStore.forceRefresh(authStore.user);
-      await checkEnforcementStatus();
+      
       await archiveStore.loadAvailableDates();
       if (hasNewUpdate) {
         addNotification(`تمت الترقية بنجاح إلى الإصدار رقم ${currentVersion} 🚀`, 'success');
@@ -379,35 +363,16 @@ async function processLocationQueue() {
 }
 
 onMounted(async () => {
-  await checkEnforcementStatus();
   if (authStore.user) { await subStore.init(authStore.user); }
 
   window.addEventListener('online', processLocationQueue);
   if (navigator.onLine) {
     processLocationQueue();
   }
-
-  // Realtime listener for enforcement status
-  supabase.channel('public:system_config')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_config', filter: "key=eq.enforce_subscription" }, (payload) => {
-      if (payload.new && payload.new.value !== undefined) {
-         isEnforced.value = String(payload.new.value) === 'true';
-         localStorage.setItem('sys_config_enforce', String(isEnforced.value));
-         // If enforcement is turned ON and user is not subscribed, redirect immediately if on protected route
-         if (isEnforced.value && !subStore.isSubscribed && !authStore.isAdmin) {
-             const currentRoute = router.currentRoute.value;
-             if (currentRoute.meta.requiresSubscription) {
-                 router.push('/app/my-subscription?access=denied');
-             }
-         }
-      }
-    })
-    .subscribe();
 });
 
 onUnmounted(() => {
   window.removeEventListener('online', processLocationQueue);
-  supabase.channel('public:system_config').unsubscribe();
 });
 
 const handleLogout = async () => {

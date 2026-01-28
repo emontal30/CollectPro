@@ -4,6 +4,8 @@ import { useAuthStore } from './auth';
 import { useHarvestStore } from './harvest';
 import logger from '@/utils/logger.js';
 
+import { useNotifications } from '@/composables/useNotifications';
+
 export const useCollaborationStore = defineStore('collaboration', {
   state: () => ({
     collaborators: JSON.parse(localStorage.getItem('collab_list') || '[]'),
@@ -25,9 +27,8 @@ export const useCollaborationStore = defineStore('collaboration', {
 
   actions: {
     addNotification(message, type = 'info', duration = 5000) {
-      window.dispatchEvent(new CustomEvent('app-notification', {
-        detail: { message, type, duration }
-      }));
+      const { addNotification } = useNotifications();
+      addNotification(message, type, duration);
     },
 
     async fetchCollaborators() {

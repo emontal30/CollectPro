@@ -83,11 +83,18 @@ export const TimeService = {
         return Math.max(0, diffDays);
     },
 
+    // Cache the offset in memory to avoid redundant API calls
+    _cachedOffset: null,
+
     /**
      * احصل على فارق التوقيت بين السيرفر والعميل
      * @returns {Promise<number>} فارق التوقيت بالميلي ثانية
      */
     async getServerTimeOffset() {
+        if (this._cachedOffset !== null) {
+            return this._cachedOffset;
+        }
+
         try {
             if (typeof navigator !== 'undefined' && navigator.onLine) {
                 const timeout = new Promise((_, reject) => {
@@ -100,7 +107,8 @@ export const TimeService = {
                 ]);
 
                 if (!error && data) {
-                    return new Date(data).getTime() - Date.now();
+                    this._cachedOffset = new Date(data).getTime() - Date.now();
+                    return this._cachedOffset;
                 }
             }
         } catch (error) {

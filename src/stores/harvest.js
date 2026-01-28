@@ -465,6 +465,12 @@ export const useHarvestStore = defineStore('harvest', {
 
         // Setup periodic auto-sync every 30 seconds using recursive timeout for safety
         const scheduleNextSync = () => {
+          // ⚡ CRITICAL FIX: Clear existing timer before scheduling new one
+          if (this.autoSyncInterval) {
+            clearTimeout(this.autoSyncInterval);
+            this.autoSyncInterval = null;
+          }
+
           this.autoSyncInterval = setTimeout(async () => {
             // Only proceed if we still care about this specific session
             if (this.currentSharedUserId === userId) {

@@ -552,8 +552,34 @@ export function useHarvest(props) {
     }
   };
 
-  const archiveToday = async () => {
+  const PENDING_ARCHIVE_KEY = 'pending_archive_action';
+
+  const archiveToday = () => {
     if (props.isSharedView) return;
+
+    // وضع علامات لإخفاء splash وإظهار شاشة المزامنة
+    sessionStorage.setItem('skip_splash', 'true');
+    sessionStorage.setItem('show_sync_loader', 'true');
+
+    // تفعيل حالة التحميل
+    isArchiving.value = true;
+
+    // حفظ العملية المطلوبة
+    localStorage.setItem(PENDING_ARCHIVE_KEY, 'true');
+
+    // reload فوراً
+    setTimeout(() => {
+      window.location.reload();
+    }, 50);
+  };
+
+  const executePendingArchive = async () => {
+    const pendingArchive = localStorage.getItem(PENDING_ARCHIVE_KEY);
+    if (!pendingArchive) return;
+
+    // إزالة العلامة
+    localStorage.removeItem(PENDING_ARCHIVE_KEY);
+
     isArchiving.value = true;
     try {
       await archiveStore.loadAvailableDates(false);
@@ -566,7 +592,11 @@ export function useHarvest(props) {
         icon: exists ? 'warning' : 'question'
       });
 
-      if (!isConfirmed) return addNotification('تم إلغاء الأرشفة.', 'info');
+      if (!isConfirmed) {
+        addNotification('تم إلغاء الأرشفة.', 'info');
+        isArchiving.value = false;
+        return;
+      }
 
       const res = await store.archiveTodayData(dateToSave);
       if (res.success) {
@@ -661,6 +691,26 @@ export function useHarvest(props) {
   // Lifecycle Hooks
   onMounted(() => {
     initializeHarvestData();
+    executePendingArchive(); // تنفيذ عملية الأرشفة المعلقة بعد reload
+
+    // ⚡ Performance: إزالة شاشة المزامنة فقط إذا كانت موجودة
+    if (sessionStorage.getItem('show_sync_loader')) {
+      setTimeout(() => {
+        const syncLoader = document.getElementById('sync-loader-overlay');
+        if (syncLoader && syncLoader.parentNode) {
+          syncLoader.parentNode.removeChild(syncLoader);
+        }
+        // إزالة الـ styles أيضاً
+        const styles = document.querySelectorAll('style');
+        styles.forEach(style => {
+          if (style.innerHTML.includes('sync-loader-overlay')) {
+            style.parentNode.removeChild(style);
+          }
+        });
+        sessionStorage.removeItem('show_sync_loader');
+      }, 50);
+    }
+
     window.addEventListener('focus', syncWithCounterStore);
     document.addEventListener('click', handleOutsideClick);
   });

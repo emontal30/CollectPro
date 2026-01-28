@@ -101,10 +101,19 @@ export function useAdminView() {
     };
 
     const refreshLocations = async () => {
-        isLoadingLocations.value = true;
-        allLocations.value = await itineraryStore.adminFetchLocations();
-        selectedLocationIds.value = [];
-        isLoadingLocations.value = false;
+        try {
+            isLoadingLocations.value = true;
+            const locations = await itineraryStore.adminFetchLocations();
+            allLocations.value = locations || [];
+            selectedLocationIds.value = [];
+            logger.info(`✅ Loaded ${allLocations.value.length} customer locations`);
+        } catch (err) {
+            logger.error('❌ Failed to load customer locations:', err);
+            allLocations.value = [];
+            addNotification('فشل تحميل مواقع العملاء', 'error');
+        } finally {
+            isLoadingLocations.value = false;
+        }
     };
 
     const openLocationsModal = async () => {

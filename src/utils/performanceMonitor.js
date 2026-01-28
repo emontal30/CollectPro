@@ -70,13 +70,13 @@ class PerformanceMonitor {
 
     // Track unhandled promise rejections
     this.handleUnhandledRejection = (event) => {
-      logger.error('🚨 Unhandled Promise Rejection:', event.reason);
+      // logger.error is handled globally in main.js
       this.reportPerformanceIssue('unhandled-promise-rejection', event.reason);
     };
 
     // Track JavaScript errors
     this.handleError = (event) => {
-      logger.error('🚨 JavaScript Error:', event.error);
+      // logger.error is handled globally in main.js
       this.reportPerformanceIssue('javascript-error', event.error);
     };
 
