@@ -139,8 +139,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
-  // ⚡ CRITICAL FIX: Overall timeout for entire guard (20s max)
-  const GUARD_TIMEOUT = 20000;
+  // ⚡ CRITICAL FIX: Overall timeout for entire guard (Reduced to 5s)
+  const GUARD_TIMEOUT = 5000;
 
   try {
     await Promise.race([
@@ -215,5 +215,34 @@ router.afterEach((to) => {
     localStorage.setItem('app_last_route', to.fullPath);
   }
 })
+
+// ⚡ CRITICAL: Handle ChunkLoadError (White Screen on Update)
+// When a new version is deployed, old chunks are deleted. This causes navigation to fail.
+// We catch this and force a reload to get new chunks.
+router.onError((error, to) => {
+  const pattern = /Loading chunk (\d)+ failed/g;
+  const isChunkLoadFailed = error.message.match(pattern);
+  const isImportFailed = error.message.includes('Failed to fetch dynamically imported module');
+
+  if (isChunkLoadFailed || isImportFailed) {
+    logger.error('🚀 dynamic import failed (New Version Deployed?), reloading...', error);
+
+    // Prevent infinite reload loop if the error persists
+    const targetPath = to.fullPath;
+    const reloadKey = `reload_error_${targetPath}`;
+    const lastReload = parseInt(sessionStorage.getItem(reloadKey) || '0');
+    const now = Date.now();
+
+    if (now - lastReload < 10000) {
+      logger.error('❌ Reload loop detected, stopping reload.');
+      return;
+    }
+
+    sessionStorage.setItem(reloadKey, String(now));
+    window.location.assign(targetPath); // Hard reload to fetch new index.html
+  } else {
+    logger.error('Router Error:', error);
+  }
+});
 
 export default router;

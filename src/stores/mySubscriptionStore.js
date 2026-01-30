@@ -93,7 +93,7 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
     isLoading.value = true;
-    const TIMEOUT_MS = 15000; // Increased to 15s for better stability
+    const TIMEOUT_MS = 8000; // Reduced to 8s to match system-wide safety timeout
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`Subscription Refresh Timeout (${TIMEOUT_MS}ms)`)), TIMEOUT_MS)
     );
@@ -116,11 +116,16 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
             return;
           }
 
-          const [subRes, histRes, serverTimeRes] = await Promise.all([
+          // Use allSettled to ensure that if history or server time fails, we still get the subscription
+          const results = await Promise.allSettled([
             api.subscriptions.getUserSubscription(user.value.id),
             api.subscriptions.getSubscriptionHistory(user.value.id),
             supabase.rpc('get_server_time')
           ]);
+
+          const subRes = results[0].status === 'fulfilled' ? results[0].value : { error: results[0].reason };
+          const histRes = results[1].status === 'fulfilled' ? results[1].value : { error: results[1].reason };
+          const serverTimeRes = results[2].status === 'fulfilled' ? results[2].value : { error: results[2].reason };
 
           if (!serverTimeRes.error && serverTimeRes.data) {
             serverTimeOffset.value = new Date(serverTimeRes.data).getTime() - Date.now();
@@ -150,10 +155,11 @@ export const useMySubscriptionStore = defineStore('mySubscription', () => {
       ]);
 
     } catch (err) {
-      // Don't treat timeouts as critical errors, just warn
+      // Don't treat timeouts as critical errors
       const isTimeout = err.message.includes('Timeout');
       if (isTimeout) {
-        logger.warn('ForceRefresh timed out, using cached/current state:', err.message);
+        // Change to info to avoid alarming the user/admin
+        logger.info('Network slow, using cached subscription:', err.message);
       } else {
         logger.error('ForceRefresh failed:', err);
       }

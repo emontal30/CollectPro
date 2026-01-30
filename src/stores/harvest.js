@@ -108,15 +108,25 @@ export const useHarvestStore = defineStore('harvest', {
         const savedBalance = await getLocalStorageCache('currentBalance');
         if (savedBalance) this.currentBalance = parseFloat(savedBalance);
 
-        const hasImportedData = await this.loadDataFromStorage();
-        if (!hasImportedData) {
-          const savedRows = await localforage.getItem(HARVEST_ROWS_KEY);
-          if (savedRows && Array.isArray(savedRows)) {
-            this.rows = savedRows;
-          } else {
-            await this.resetTable();
+        // ⚡ Timeout protection for IndexedDB (Oppo Reno Fix)
+        let hasImportedData = false;
+
+        const loadLocalDataPromise = (async () => {
+          hasImportedData = await this.loadDataFromStorage();
+          if (!hasImportedData) {
+            const savedRows = await localforage.getItem(HARVEST_ROWS_KEY);
+            if (savedRows && Array.isArray(savedRows)) {
+              this.rows = savedRows;
+            } else {
+              await this.resetTable();
+            }
           }
-        }
+        })();
+
+        await Promise.race([
+          loadLocalDataPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Harvest Init Timeout')), 8000))
+        ]);
 
         // Start listening for Admin overrides or other sync events
         this.initOwnRealtimeSubscription();
@@ -131,8 +141,19 @@ export const useHarvestStore = defineStore('harvest', {
         }
 
       } catch (err) {
-        logger.error('Harvest initialization failed:', err);
-        await this.resetTable();
+        // 🛡️ Safety: If it's just a timeout, DO NOT wipe data.
+        // The background promise might still succeed later.
+        if (err.message === 'Harvest Init Timeout') {
+          logger.warn('Harvest init timed out - allowing background load to continue.');
+          // We don't call resetTable() here because data might be fine, just slow.
+          if (!this.rows || this.rows.length === 0) {
+            // Only ensure minimal valid state in memory if needed
+            this.rows = [{ id: Date.now(), shop: '', code: '', amount: '', extra: '', collector: '', net: 0 }];
+          }
+        } else {
+          logger.error('Harvest initialization failed (Critical):', err);
+          await this.resetTable();
+        }
       } finally {
         this.isLoading = false;
       }
@@ -1113,7 +1134,8 @@ export const useHarvestStore = defineStore('harvest', {
           .filter(row => row.net !== 0)
           .map(row => ({ shop: row.shop, code: row.code, net: row.net }));
 
-        // Safe Save: Wrap Promise.all with a timeout (10s)
+        // 1. Critical: Save to Local Storage (Awaited with Timeout)
+        // We MUST ensure this succeeds before telling the user "Done".
         await withTimeout(
           Promise.all([
             localforage.setItem(localKey, cleanRows),
@@ -1128,62 +1150,64 @@ export const useHarvestStore = defineStore('harvest', {
           'انتهت مهلة حفظ البيانات (Database Timeout). يرجى المحاولة مرة أخرى.'
         );
 
-        // ... fire and forget cloud sync ...
-        this._performCloudSync(dbPayload);
-        (async () => {
-          try {
-            if (navigator.onLine) {
-              await this.syncOverdueStoresToCloud(overdueStores, dateToSave);
+        // 2. Background: Fire and forget everything else
+        this._runBackgroundArchiveTasks(dbPayload, overdueStores, dateToSave, cleanRows);
 
-              // تحديث حالة المزامنة
-              const metadata = await localforage.getItem('overdue_stores_metadata');
-              if (metadata) {
-                metadata.synced_to_cloud = true;
-                await localforage.setItem('overdue_stores_metadata', metadata);
-              }
-              logger.info('✅ Overdue synced successfully in background');
-            } else {
-              await addToSyncQueue({
-                type: 'sync_overdue_stores',
-                payload: { items: overdueStores, archive_date: dateToSave },
-                timestamp: Date.now()
-              });
-              logger.info(`📌 Overdue queued for sync (offline) - Date: ${dateToSave}`);
-            }
-          } catch (err) {
-            logger.warn('⚠️ Background overdue sync failed, adding to queue:', err);
-            // Queue attempt
-            await addToSyncQueue({
-              type: 'sync_overdue_stores',
-              payload: { items: overdueStores, archive_date: dateToSave },
-              timestamp: Date.now()
-            });
-          }
-        })();
-
-        // Safe Refresh: Wrap loadAvailableDates with timeout (5s) AND catch so it doesn't block success
-        try {
-          await withTimeout(archiveStore.loadAvailableDates(false), 5000);
-        } catch (refreshErr) {
-          logger.warn('Archive refresh timed out/failed, but data was saved.', refreshErr);
-          // We proceed to return success because the SAVE itself succeeded.
-        }
-
-        try {
-          const itineraryStore = useItineraryStore();
-          // Also simple timeout for itinerary sync just in case
-          await withTimeout(itineraryStore.syncFromDashboard(cleanRows), 7000);
-        } catch (syncError) {
-          logger.error('Failed to sync with itinerary after archiving:', syncError);
-          // Do not block the main operation, just log the error
-        }
-
-        return { success: true, message: 'تم الحفظ على الهاتف بنجاح، وتتم المزامنة سحابياً 💾' };
+        return { success: true, message: 'تم الحفظ بنجاح (تتم المزامنة في الخلفية) 🚀' };
       } catch (error) {
         logger.error('💥 Archive Error:', error);
         return { success: false, message: error.message || 'فشل في الأرشفة' };
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    // Helper for background tasks
+    async _runBackgroundArchiveTasks(dbPayload, overdueStores, dateToSave, cleanRows) {
+      try {
+        // A. Cloud Sync (Queue)
+        this._performCloudSync(dbPayload);
+
+        // B. Overdue Sync
+        if (navigator.onLine) {
+          this.syncOverdueStoresToCloud(overdueStores, dateToSave).then(async () => {
+            // Update metadata status after success
+            const metadata = await localforage.getItem('overdue_stores_metadata');
+            if (metadata) {
+              metadata.synced_to_cloud = true;
+              await localforage.setItem('overdue_stores_metadata', metadata);
+            }
+          }).catch(err => {
+            logger.warn('⚠️ Background overdue sync failed, queuing...', err);
+            addToSyncQueue({
+              type: 'sync_overdue_stores',
+              payload: { items: overdueStores, archive_date: dateToSave },
+              timestamp: Date.now()
+            });
+          });
+        } else {
+          addToSyncQueue({
+            type: 'sync_overdue_stores',
+            payload: { items: overdueStores, archive_date: dateToSave },
+            timestamp: Date.now()
+          });
+        }
+
+        // C. Refresh Lists (Archives)
+        const archiveStore = useArchiveStore();
+        // Give it a small delay to resolve locally first
+        setTimeout(() => {
+          archiveStore.loadAvailableDates(false).catch(e => logger.warn('Background dates refresh failed', e));
+        }, 500);
+
+        // D. Itinerary Sync
+        const itineraryStore = useItineraryStore();
+        setTimeout(() => {
+          itineraryStore.syncFromDashboard(cleanRows).catch(e => logger.warn('Background itinerary sync failed', e));
+        }, 100);
+
+      } catch (bgError) {
+        logger.error('Background archive tasks error:', bgError);
       }
     },
 

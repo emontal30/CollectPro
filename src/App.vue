@@ -9,11 +9,40 @@
     <UpdateNotification :show="needRefresh" @reload="updateSW" />
     <NotificationContainer />
     <OfflineBanner />
+
+    <!-- Vue-level Loading Fallback (Visible if Splash is gone but App is busy) -->
+    <div v-if="isLoading && !authStore.isAuthenticated" class="vue-loading-overlay">
+      <div class="spinner"></div>
+    </div>
   </div>
 </template>
 
+<style scoped>
+.vue-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-light);
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark .vue-loading-overlay {
+  background: var(--bg-dark);
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 121, 101, 0.3);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
 <script setup>
-import { onMounted, provide, onBeforeUnmount } from 'vue';
+import { onMounted, provide, onBeforeUnmount, ref } from 'vue';
 import { RouterView } from 'vue-router';
 import ErrorBoundary from '@/components/ErrorBoundary.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
@@ -37,6 +66,13 @@ import OfflineBanner from '@/components/ui/OfflineBanner.vue';
 
 // إعداد متجر الإعدادات
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
+const isLoading = ref(true);
+
+onMounted(() => {
+  // Give Vue a moment to render, then disable local loader
+  setTimeout(() => { isLoading.value = false; }, 2000);
+});
 
 // إعداد نظام التنبيهات العالمي وتوفيره لكافة المكونات
 const notifications = useNotifications();
@@ -59,13 +95,27 @@ const harvestStore = useHarvestStore();
 
 const updateSW = async () => {
   try {
-    // حفظ البيانات قبل التحديث كإجراء احترازي
+    logger.info('🔄 Application updating...');
+    
+    // 1. Save critical data first
     await harvestStore.prepareForUpdate();
+    
+    // 2. Unregister ALL service workers to ensure clean slate for new version
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+    }
+
+    // 3. Force update via PWA plugin (might fail if unregistered, but good to try)
     await updateServiceWorker();
+    
+    // 4. Hard reload just in case
+    window.location.reload(true);
   } catch (error) {
     logger.error('Failed to update service worker:', error);
-    // حتى في حالة الفشل، نحاول التحديث
-    await updateServiceWorker();
+    window.location.reload(true);
   }
 };
 

@@ -116,24 +116,33 @@
       // ⚡ Performance: إذا لا توجد flags، اخرج فوراً
       if (!skipSplash && !showSyncLoader) return;
 
-      // إخفاء splash screen
+      // إخفاء splash screen فوراً مع الاحتفاظ بخلفية مناسبة
       if (skipSplash === 'true') {
         sessionStorage.removeItem('skip_splash');
         var style = document.createElement('style');
-        style.innerHTML = '#initial-loader { display: none !important; }';
+        // إخفاء splash screen فوراً مع الاحتفاظ بخلفية لمنع الشاشة البيضاء
+        style.innerHTML = `
+          #initial-loader { 
+            display: none !important; 
+          }
+          body { 
+            background: var(--bg-light); 
+          }
+          html.dark body { 
+            background: var(--bg-dark) !important; 
+          }
+        `;
         document.head.appendChild(style);
-        document.addEventListener('DOMContentLoaded', function () {
-          document.body.classList.add('loaded');
-        }, { once: true, passive: true }); // ⚡ Performance: استخدم once و passive
+        // لا نضيف loaded class هنا - Vue سيتولى ذلك عند التحميل
       }
 
       // إظهار شاشة المزامنة
       if (showSyncLoader === 'true') {
         sessionStorage.removeItem('show_sync_loader');
 
-        // ⚡ Performance: استخدم CSS مصغّر
+        // ⚡ Performance: استخدم CSS مصغّر مع دعم Dark Mode
         var loaderStyle = document.createElement('style');
-        loaderStyle.innerHTML = '#sync-loader-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#f0fdfa 0%,#fff 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99999}.sync-spinner-container{position:relative;width:60px;height:60px}.sync-spinner{position:absolute;width:60px;height:60px;border:3px solid transparent;border-top-color:#007965;border-right-color:#2dd4bf;border-radius:50%;animation:syncSpin .5s linear infinite}.sync-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;background:linear-gradient(135deg,#007965 0%,#2dd4bf 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pulse 1.5s ease-in-out infinite}.sync-text{color:#0f766e;font-weight:600;font-size:15px;letter-spacing:.3px}@keyframes syncSpin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}';
+        loaderStyle.innerHTML = '#sync-loader-overlay{position:fixed;inset:0;background:var(--bg-light);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:99999}html.dark #sync-loader-overlay{background:var(--bg-dark)!important}.sync-spinner-container{position:relative;width:60px;height:60px}.sync-spinner{position:absolute;width:60px;height:60px;border:3px solid transparent;border-top-color:#007965;border-right-color:#2dd4bf;border-radius:50%;animation:syncSpin .5s linear infinite}.sync-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;background:linear-gradient(135deg,#007965 0%,#2dd4bf 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pulse 1.5s ease-in-out infinite}.sync-text{color:#0f766e;font-weight:600;font-size:15px;letter-spacing:.3px}html.dark .sync-text{color:#2dd4bf}@keyframes syncSpin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}';
         document.head.appendChild(loaderStyle);
 
         var loaderDiv = document.createElement('div');
@@ -170,7 +179,7 @@
     })();
   </script>
 
-  <!-- 11. Splash Screen Auto-Hide Failsafe (CRITICAL FIX) -->
+  <!-- 11. Splash Screen Auto-Hide Failsafe (Vue-Controlled) -->
   <script>
     (function () {
       var splashRemoved = false;
@@ -180,38 +189,81 @@
         if (splashRemoved) return;
         splashRemoved = true;
 
-        // Method 1: Add loaded class
+        // Method 1: Add loaded class (triggers CSS fade)
         document.body.classList.add('loaded');
 
-        // Method 2: Direct removal after fade
+        // Method 2: Direct removal after fade animation completes
         setTimeout(function () {
           splash = splash || document.getElementById('initial-loader');
           if (splash && splash.parentNode) {
             splash.parentNode.removeChild(splash);
           }
-        }, 500);
+        }, 400); // Match CSS transition duration
       }
 
-      // Trigger 1: DOMContentLoaded (fastest)
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', removeSplash, { once: true });
+      function setupObserver() {
+        // Listen for Vue to signal that it's ready
+        // Vue will add 'loaded' class in App.vue onMounted
+        var observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              if (document.body.classList.contains('loaded')) {
+                removeSplash();
+                observer.disconnect();
+              }
+            }
+          });
+        });
+
+        observer.observe(document.body, { attributes: true });
       }
 
-      // Trigger 2: window.load (backup)
-      window.addEventListener('load', removeSplash, { once: true });
+      // Setup observer when body is available
+      if (document.body) {
+        setupObserver();
+      } else {
+        document.addEventListener('DOMContentLoaded', setupObserver, { once: true });
+      }
 
-      // Trigger 3: FORCED timeout (FAILSAFE) - removes after 8 seconds NO MATTER WHAT
+      // Failsafe timeout
       setTimeout(function () {
         if (!splashRemoved) {
-          console.warn('⚠️ Splash screen timeout - forcing removal');
-          removeSplash();
+          // Show Repair Button after 8 seconds
+          var btn = document.getElementById('repair-btn');
+          if (btn) btn.style.display = 'block';
+          console.warn('⚠️ Splash screen slow - showing repair option');
         }
-      }, 8000); // 8 seconds maximum
+      }, 8000);
 
-      // Trigger 4: Early check if DOM already ready
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(removeSplash, 100);
-      }
+      // Safe Repair Function (Global)
+      window.safeRepairApp = async function () {
+        if (confirm('هل تريد إصلاح التطبيق؟\n(لن يتم حذف بيانات التحصيل، سيتم فقط تحديث الجلسة)')) {
+          try {
+            // 1. Unregister Service Workers (Crucial for update issues)
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const registration of registrations) {
+                await registration.unregister();
+              }
+            }
+
+            // 2. Clear Auth Tokens only
+            Object.keys(localStorage).forEach(function (key) {
+              if (key.startsWith('sb-') || key.includes('auth-token') || key === 'app_last_route') {
+                localStorage.removeItem(key);
+              }
+            });
+
+            // 3. Clear Session
+            sessionStorage.clear();
+
+            // 4. Reload (Hard Reload)
+            window.location.reload(true);
+          } catch (e) {
+            window.location.reload();
+          }
+        }
+      };
     })();
   </script>
 
@@ -367,19 +419,18 @@
     body.loaded #initial-loader {
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s ease-out;
+      transition: opacity 0.25s cubic-bezier(0.4, 0, 1, 1);
     }
 
     /* Failsafe: Force hide after animation */
     body.loaded #initial-loader {
-      animation: forceHide 0.5s forwards;
+      animation: forceHide 0.3s forwards;
     }
 
     @keyframes forceHide {
       to {
         opacity: 0;
         visibility: hidden;
-        display: none;
       }
     }
   </style>
@@ -392,6 +443,25 @@
       <img src="/manifest/icon-192x192.png" alt="CollectPro" class="loader-logo" />
       <div class="loader-brand">Collect<span style="color: #2dd4bf;">Pro</span></div>
       <div class="loader-spinner"></div>
+
+      <!-- Safe Repair Button (Hidden by default) -->
+      <button id="repair-btn" onclick="safeRepairApp()" style="
+        display: none;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-family: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        z-index: 10000;
+      ">
+        <i class="fas fa-wrench" style="margin-left: 8px;"></i>
+        إصلاح التطبيق (آمن)
+      </button>
     </div>
   </div>
 

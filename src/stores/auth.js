@@ -160,8 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
     isInitializing = true;
     isLoading.value = true;
 
-    const MAX_ATTEMPTS = 3;
-    const ATTEMPT_TIMEOUT = 12000; // 12 ثانية لكل محاولة
+    const MAX_ATTEMPTS = 2;
+    const ATTEMPT_TIMEOUT = 5000; // 5 ثوانٍ كحد أقصى لكل محاولة
 
     let lastError = null;
 
@@ -232,20 +232,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const [userResponse, profileResponse] = await Promise.all([
+      // ⚡ Robust Sync: Use allSettled so one failure doesn't block the user
+      const results = await Promise.allSettled([
         api.auth.getUser(),
         supabase.from('profiles').select('user_code, full_name').eq('id', session.user.id).single()
       ]);
 
       let completeUser = { ...session.user };
 
-      if (userResponse?.user) {
-        completeUser = { ...completeUser, ...userResponse.user };
+      // Result 0: Auth User Data
+      if (results[0].status === 'fulfilled' && results[0].value?.user) {
+        completeUser = { ...completeUser, ...results[0].value.user };
       }
 
-      if (profileResponse?.data) {
-        completeUser.userCode = profileResponse.data.user_code || null;
-        completeUser.fullName = profileResponse.data.full_name || completeUser.user_metadata?.full_name;
+      // Result 1: Profile Data (Optional enrichment)
+      if (results[1].status === 'fulfilled' && results[1].value?.data) {
+        const profileData = results[1].value.data;
+        completeUser.userCode = profileData.user_code || null;
+        completeUser.fullName = profileData.full_name || completeUser.user_metadata?.full_name;
+      } else {
+        // Log warning but don't stop
+        if (results[1].status === 'rejected') logger.warn('Profile fetch failed during auth update (non-critical)');
       }
 
       user.value = completeUser;

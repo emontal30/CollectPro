@@ -15,29 +15,33 @@
     />
 
     <div class="archive-controls">
-      <div class="control-group">
-        <label class="font-bold mb-2 d-flex align-center gap-2">
-          <i class="fas fa-calendar-alt text-primary"></i>
-          اختر التاريخ:
-        </label>
+      <!-- قائمة تواريخ الأرشيف - نفس تصميم ShareHarvestView -->
+      <div class="archive-dates-card">
+        <div class="adc-header">
+          <div class="adc-icon">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <h3 class="adc-title">سجلات الأرشيف المتوفرة</h3>
+        </div>
+        
         <select 
+          class="adc-select" 
           v-model="store.selectedDate" 
-          class="archive-select" 
           @change="handleDateChange"
           :disabled="store.isLoading || isSearching"
         >
-          <option value="">{{ isSearching ? '-- وضع البحث الشامل نشط --' : '-- اختر تاريخ --' }}</option>
+          <option :value="null">{{ isSearching ? '— وضع البحث الشامل نشط —' : '— اختر التاريخ للعرض —' }}</option>
           <template v-if="store.availableDates.length > 0">
             <option 
               v-for="dateItem in store.availableDates" 
               :key="dateItem.value" 
               :value="dateItem.value"
             >
-              {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
+              📅 {{ dateItem.value }} {{ dateItem.source === 'cloud' ? '(سحابة)' : '' }}
             </option>
           </template>
           <template v-else>
-            <option value="" disabled>لا يوجد أرشيف لعرضه حالياً</option>
+            <option :value="null" disabled>لا يوجد أرشيف لعرضه حالياً</option>
           </template>
         </select>
       </div>
@@ -331,7 +335,183 @@ const deleteCurrentArchive = async () => {
 .btn-export-share { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; }
 .btn-export-share:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
 .btn-export-share i { font-size: 1rem; }
+
+/* Archive Dates Card - نفس التنسيق من ShareHarvestView */
+.archive-dates-card {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border: 2px solid #5eead4;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(49, 219, 191, 0.15);
+  margin-bottom: 16px;
+}
+
+.adc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #5eead4;
+}
+
+.adc-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #31DBBF 0%, #14b8a6 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.adc-icon i {
+  font-size: 1.2rem;
+  color: white;
+}
+
+.adc-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.adc-select {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  font-size: 0.95rem;
+  border: 2px solid #5eead4;
+  border-radius: 12px;
+  background: white;
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2331DBBF' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+}
+
+.adc-select:focus {
+  outline: none;
+  border-color: #31DBBF;
+  box-shadow: 0 0 0 4px rgba(49, 219, 191, 0.15);
+}
+
+.adc-select option {
+  padding: 10px;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) { .archive-specific-table .shop, .archive-specific-table td.shop, .archive-specific-table th.shop { width: 115px !important; min-width: 115px !important; } .date-header, .date-cell { width: 70px !important; min-width: 70px !important; } .export-container { justify-content: center; } }
+
+/* Search Input Styling */
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  border: 2px solid #5eead4;
+  border-radius: 12px;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: #31DBBF;
+  box-shadow: 0 0 0 4px rgba(49, 219, 191, 0.15);
+}
+
+.search-input {
+  border: none !important;
+  padding: 12px 16px 12px 40px;
+  font-size: 0.95rem;
+  border-radius: 12px;
+  width: 100%;
+  background: transparent;
+}
+
+.search-input:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+.control-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #31DBBF;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+/* Unified Dark Mode Support - Neutral Colors */
+html.dark .archive-dates-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #334155;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .adc-header {
+  border-bottom: 2px solid #334155;
+}
+
+html.dark .adc-icon {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  box-shadow: none;
+}
+
+html.dark .adc-title {
+  color: #f1f5f9;
+}
+
+html.dark .adc-select {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  border: 2px solid #334155;
+  /* White/Gray arrow for neutral look */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+}
+
+html.dark .adc-select:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.1);
+}
+
+html.dark .adc-select option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+html.dark .search-input-wrapper {
+  background: #0f172a;
+  border: 2px solid #334155;
+}
+
+html.dark .search-input-wrapper:focus-within {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.1);
+}
+
+html.dark .search-input {
+  color: #f1f5f9;
+}
+
+html.dark .search-input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+html.dark .control-icon {
+  color: #94a3b8;
+}
+
 
 /* Use global dashboard button styles; keep simple layout spacing */
 .buttons-container { margin-top: 30px; padding: 12px; }

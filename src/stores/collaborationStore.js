@@ -332,6 +332,14 @@ export const useCollaborationStore = defineStore('collaboration', {
       }
     },
 
+    endSession() {
+      this.setActiveSession(null, null);
+      this.setAdminViewMode('live');
+      this.exitRemoteArchiveMode();
+      this.remoteArchiveDates = [];
+      logger.info('Shared session ended via endSession()');
+    },
+
     async adminOpenUser(targetIdentifier, knownUserId = null) {
       const auth = useAuthStore();
       if (!auth.isAdmin) throw new Error('صلاحية مسؤول مطلوبة');
@@ -601,8 +609,19 @@ export const useCollaborationStore = defineStore('collaboration', {
         .subscribe();
     },
 
-    broadcastPulseRequest(targetUserId) {
+    async broadcastPulseRequest(targetUserId) {
       if (!this.realtimeChannel) return;
+
+      // Wait for channel to be joined if needed
+      if (this.realtimeChannel.state !== 'joined') {
+        logger.info('Waiting for realtime channel to connect...');
+        let attempts = 0;
+        while (this.realtimeChannel.state !== 'joined' && attempts < 10) {
+          await new Promise(r => setTimeout(r, 200));
+          attempts++;
+        }
+      }
+
       logger.info(`📡 Sending pulse request for user: ${targetUserId}`);
       this.realtimeChannel.send({
         type: 'broadcast',

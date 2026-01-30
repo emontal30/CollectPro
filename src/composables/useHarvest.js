@@ -568,9 +568,7 @@ export function useHarvest(props) {
     localStorage.setItem(PENDING_ARCHIVE_KEY, 'true');
 
     // reload فوراً
-    setTimeout(() => {
-      window.location.reload();
-    }, 50);
+    window.location.reload();
   };
 
   const executePendingArchive = async () => {
@@ -579,6 +577,14 @@ export function useHarvest(props) {
 
     // إزالة العلامة
     localStorage.removeItem(PENDING_ARCHIVE_KEY);
+
+    // التأكد من عدم وجود جلسة مشتركة نشطة، وإن وجدت نقوم بإنهائها
+    if (collabStore.activeSessionId) {
+      logger.info('Closing active shared session before archiving...');
+      collabStore.endSession();
+      // ننتظر قليلاً للتأكد من تحديث الحالة
+      await new Promise(r => setTimeout(r, 100));
+    }
 
     isArchiving.value = true;
     try {

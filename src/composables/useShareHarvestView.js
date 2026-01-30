@@ -154,10 +154,8 @@ export function useShareHarvestView() {
         // حفظ العملية المطلوبة
         localStorage.setItem(PENDING_OPS_KEY, JSON.stringify({ operation, data }));
 
-        // انتظار render للـ loading state ثم reload
-        setTimeout(() => {
-            window.location.reload();
-        }, 50); // 50ms فقط للسماح بظهور حالة التحميل
+        // reload فوراً
+        window.location.reload();
     };
 
     // Lifecycle

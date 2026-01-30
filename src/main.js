@@ -47,7 +47,11 @@ settingsStore.loadSettings();
 bootstrapApp();
 
 // 6. Mount Application & Cleanup Splash Screen
-router.isReady().then(() => {
+// ⚡ CRITICAL FIX: Race condition to ensure App mounts even if Router hangs
+Promise.race([
+  router.isReady(),
+  new Promise(resolve => setTimeout(resolve, 2000)) // Force mount after 2s max
+]).then(() => {
   app.mount('#app');
 
   // ⚡ CRITICAL: Remove splash screen with multiple methods

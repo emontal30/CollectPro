@@ -241,9 +241,9 @@ const handleSaveAndGo = async () => {
     if (harvestStore.hasData) {
       const { isConfirmed } = await confirm({
         title: 'تحذير: بيانات موجودة',
-        text: 'هناك بيانات فى صفحه التحصيلات تاكد من ارشفتها اولا , لان بهذا الاجراء سيتم فقدها واستبدالها بالبيانات الحاليه',
+        text: 'هناك بيانات فى صفحه التحصيلات سيتم ارشفتها تلقائيا وتنظيف صفحه التحصيلات ,فهل انت متأكد',
         icon: 'warning',
-        confirmButtonText: 'متابعة واستبدال',
+        confirmButtonText: 'نعم، أرشفة ومتابعة',
         cancelButtonText: 'إلغاء',
         showCancelButton: true,
       });
@@ -251,6 +251,27 @@ const handleSaveAndGo = async () => {
       if (!isConfirmed) {
         addNotification('تم إلغاء العملية.', 'info');
         return; // Abort if user cancels
+      }
+
+      // Auto-archive logic
+      try {
+        showStatusMessage('saving', '⏳ جاري أرشفة البيانات الحالية...', 'يرجى الانتظار', 0);
+        
+        const dateToSave = await harvestStore.getAccurateDate();
+        const archiveResult = await harvestStore.archiveTodayData(dateToSave);
+
+        if (!archiveResult.success) {
+          showStatusMessage('error', '❌ فشل الأرشفة', archiveResult.message);
+          return;
+        }
+
+        await harvestStore.clearAll();
+        addNotification('تم أرشفة البيانات السابقة بنجاح', 'success');
+        
+      } catch (err) {
+        console.error('Auto-archive failed:', err);
+        showStatusMessage('error', '❌ خطأ في الأرشفة التلقائية', 'فشلت عملية حفظ البيانات السابقة');
+        return;
       }
     }
 

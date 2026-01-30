@@ -44,7 +44,7 @@ export const useReportsStore = defineStore('reports', () => {
 
             logger.info(`📊 ReportsStore: Found ${archKeys.length} archive keys`);
 
-            const allData = await Promise.all(
+            const results = await Promise.allSettled(
                 archKeys.map(async (key) => {
                     const data = await localforage.getItem(key);
                     const dateStr = key.replace(currentPrefix, '').replace(BASE_PREFIX, '');
@@ -53,6 +53,11 @@ export const useReportsStore = defineStore('reports', () => {
                     return records.map(r => ({ ...r, date: dateStr }));
                 })
             );
+
+            // Filter only successful reads
+            const allData = results
+                .filter(r => r.status === 'fulfilled')
+                .map(r => r.value);
 
             allArchiveData.value = allData.flat();
             logger.info(`✅ ReportsStore: Loaded ${allArchiveData.value.length} total records`);
