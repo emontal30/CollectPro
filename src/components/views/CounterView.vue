@@ -13,7 +13,7 @@
         <div class="counter-card">
           <div class="card-header centered-header">
             <h2 class="counter-title">العداد الأول</h2>
-            <button @click="toggleSort(1)" class="sort-btn header-action" :title="sortOrder1 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
+            <button class="sort-btn header-action" :title="sortOrder1 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'" @click="toggleSort(1)">
               <i :class="sortOrder1 === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
             </button>
           </div>
@@ -67,7 +67,7 @@
         <div class="counter-card">
           <div class="card-header centered-header">
             <h2 class="counter-title">العداد الثاني</h2>
-            <button @click="toggleSort(2)" class="sort-btn header-action" :title="sortOrder2 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'">
+            <button class="sort-btn header-action" :title="sortOrder2 === 'desc' ? 'ترتيب تصاعدي' : 'ترتيب تنازلي'" @click="toggleSort(2)">
               <i :class="sortOrder2 === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
             </button>
           </div>
@@ -153,7 +153,7 @@
       <div id="categories-summary-container" class="categories-section categories-card">
         <div class="card-header centered-header">
           <h2 class="counter-title">ملخص الفئات</h2>
-          <button @click="toggleSort(3)" class="sort-btn header-action">
+          <button class="sort-btn header-action" @click="toggleSort(3)">
              <i :class="sortOrderSummary === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up'"></i>
           </button>
         </div>
@@ -184,7 +184,7 @@
             </tbody>
           </table>
           
-          <div class="card-footer-stats" v-if="!store.categoriesSummary.every(c => c.qty === 0)">
+          <div v-if="!store.categoriesSummary.every(c => c.qty === 0)" class="card-footer-stats">
             <div class="stat-item">
               <span class="stat-label">الإجمالي</span>
               <span class="stat-value">{{ store.formatNumber(store.grandTotal) }}</span>

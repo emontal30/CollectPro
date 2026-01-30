@@ -32,7 +32,7 @@
               </div>
             </div>
           </div>
-          <button @click="copyUserCode" class="btn btn-outline-primary btn-copy" title="نسخ الكود">
+          <button class="btn btn-outline-primary btn-copy" title="نسخ الكود" @click="copyUserCode">
             <i class="fas fa-copy"></i> <span class="d-none-mobile">نسخ</span>
           </button>
         </div>

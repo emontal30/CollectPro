@@ -110,7 +110,7 @@
                     ادخل رقم الحساب: 
                     <span class="copy-container">
                       <strong class="copyable-text">01094085228</strong>
-                      <button type="button" class="btn-copy-small" @click="copyToClipboard('01094085228')" title="نسخ الرقم">
+                      <button type="button" class="btn-copy-small" title="نسخ الرقم" @click="copyToClipboard('01094085228')">
                         <i class="fas fa-copy"></i>
                       </button>
                     </span>

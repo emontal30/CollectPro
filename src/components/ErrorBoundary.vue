@@ -5,16 +5,16 @@
       <h2 class="error-title">حدث خطأ غير متوقع</h2>
       <p class="error-message">نعتذر عن هذا الإزعاج. حدث خطأ غير متوقع في التطبيق.</p>
       
-      <div class="error-details" v-if="showDetails">
+      <div v-if="showDetails" class="error-details">
         <pre>{{ errorDetails }}</pre>
       </div>
       
       <div class="error-actions">
-        <button @click="reload" class="btn btn-primary">
+        <button class="btn btn-primary" @click="reload">
           <i class="fas fa-sync-alt"></i>
           إعادة تحميل الصفحة
         </button>
-        <button @click="toggleDetails" class="btn btn-secondary">
+        <button class="btn btn-secondary" @click="toggleDetails">
           <i class="fas fa-info-circle"></i>
           {{ showDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل' }}
         </button>

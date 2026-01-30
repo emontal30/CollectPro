@@ -2,7 +2,8 @@
   <Teleport to="body">
     <transition name="modal">
       <div v-if="show" class="shared-modal-overlay" @click="handleOverlayClick">
-        <div class="shared-modal" 
+        <div
+class="shared-modal" 
              :style="{ maxWidth: size === 'x-large' ? '1200px' : (size === 'large' ? '800px' : '600px') }" 
              @click.stop>
           <div class="shared-modal-header">

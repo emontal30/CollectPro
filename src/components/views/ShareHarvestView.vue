@@ -9,8 +9,8 @@
     <div class="collab-controls card">
       <div class="controls-header">
         <button 
-          class="tab-btn" 
-          v-if="isAdmin"
+          v-if="isAdmin" 
+          class="tab-btn"
           :class="{ active: activeTab === 'admin' }"
           @click="activeTab = 'admin'"
         >
@@ -58,28 +58,28 @@
                 <button 
                   class="amc-btn amc-btn-sync" 
                   :class="{ 'active': collabStore.adminViewMode === 'sync' && (collabStore.activeSessionId || collabStore.isRemoteArchiveMode) }"
-                  @click="handleAdminOpenWithRefresh()" 
-                  :disabled="!adminTargetUid || isSyncLoading"
+                  :disabled="!adminTargetUid || isSyncLoading" 
+                  @click="handleAdminOpenWithRefresh()"
                 >
-                  <i class="fas fa-bolt" v-if="!isSyncLoading"></i>
-                  <i class="fas fa-spinner fa-spin" v-else></i>
+                  <i v-if="!isSyncLoading" class="fas fa-bolt"></i>
+                  <i v-else class="fas fa-spinner fa-spin"></i>
                   <span>مزامنة</span>
                 </button>
                 <button 
                   class="amc-btn amc-btn-archive" 
                   :class="{ 'active': collabStore.adminViewMode === 'archive' && (collabStore.activeSessionId || collabStore.isRemoteArchiveMode) }"
-                  @click="handleViewArchiveWithRefresh()" 
-                  :disabled="!adminTargetUid || isArchiveLoading"
+                  :disabled="!adminTargetUid || isArchiveLoading" 
+                  @click="handleViewArchiveWithRefresh()"
                 >
-                  <i class="fas fa-history" v-if="!isArchiveLoading"></i>
-                  <i class="fas fa-spinner fa-spin" v-else></i>
+                  <i v-if="!isArchiveLoading" class="fas fa-history"></i>
+                  <i v-else class="fas fa-spinner fa-spin"></i>
                   <span>الأرشيف</span>
                 </button>
               </div>
             </div>
 
             <!-- مؤشر الوضع الحالي -->
-            <div class="mode-indicator mb-3 animate-fade-in" v-if="adminTargetUid">
+            <div v-if="adminTargetUid" class="mode-indicator mb-3 animate-fade-in">
               <!-- إذا لم يتم الدخول بعد (لا توجد جلسة نشطة)، نعرض رسالة الاختيار -->
               <span v-if="!collabStore.activeSessionId && !collabStore.isRemoteArchiveMode" class="badge badge-prompt">
                 <i class="fas fa-hand-pointer"></i> برجاء الاختيار بين وضع المزامنة أو وضع عرض الأرشيف
@@ -95,7 +95,7 @@
             </div>
 
             <!-- السجل (History) - قائمة منسدلة سريعة + زر إدارة -->
-            <div class="history-card-container mt-4" v-if="collabStore.adminHistory.length > 0">
+            <div v-if="collabStore.adminHistory.length > 0" class="history-card-container mt-4">
               <div class="hcc-header">
                 <div class="hcc-title-group">
                   <div class="hcc-icon">
@@ -110,7 +110,7 @@
               </div>
 
               <!-- القائمة المنسدلة (الحل المطلوب) -->
-              <select class="hcc-select" @change="handleHistorySelect" v-if="!showHistoryManager">
+              <select v-if="!showHistoryManager" class="hcc-select" @change="handleHistorySelect">
                 <option value="">— اختر مستخدم من السجل —</option>
                 <option v-for="item in collabStore.adminHistory" :key="item.userId" :value="item.userId">
                   👤 {{ item.name }} ({{ item.code }})
@@ -118,7 +118,7 @@
               </select>
               
               <!-- واجهة الإدارة (تعديل/حذف) تظهر عند الطلب فقط -->
-              <div class="hcc-manage-list animate-slide-up" v-if="showHistoryManager">
+              <div v-if="showHistoryManager" class="hcc-manage-list animate-slide-up">
                 <div v-for="item in collabStore.adminHistory" :key="item.userId" class="hcc-item">
                   <div class="hcc-item-info" @click="quickOpenFromHistory(item)">
                     <div class="hcc-item-avatar">
@@ -130,10 +130,10 @@
                     </div>
                   </div>
                   <div class="hcc-item-actions">
-                    <button class="hcc-action-btn edit" @click.stop="editHistoryItem(item)" title="تعديل الاسم">
+                    <button class="hcc-action-btn edit" title="تعديل الاسم" @click.stop="editHistoryItem(item)">
                       <i class="fas fa-pencil-alt"></i>
                     </button>
-                    <button class="hcc-action-btn delete" @click.stop="deleteHistoryItem(item.userId)" title="حذف من السجل">
+                    <button class="hcc-action-btn delete" title="حذف من السجل" @click.stop="deleteHistoryItem(item.userId)">
                       <i class="fas fa-trash-alt"></i>
                     </button>
                   </div>
@@ -150,7 +150,7 @@
                 <h3 class="adc-title">سجلات الأرشيف المتوفرة</h3>
               </div>
               
-              <select class="adc-select" @change="handleDateSelect" v-model="selectedArchiveDate">
+              <select v-model="selectedArchiveDate" class="adc-select" @change="handleDateSelect">
                 <option :value="null">— اختر التاريخ للعرض —</option>
                 <option v-for="date in collabStore.remoteArchiveDates" :key="date" :value="date">
                   📅 {{ date }}
@@ -174,9 +174,9 @@
                 placeholder="كود الزميل (مثال: EMP-cf2757)" 
                 class="form-control code-input"
               />
-              <button class="btn btn-primary" @click="sendInviteWithRefresh" :disabled="!newCollabCode || isLoading">
-                <i class="fas fa-paper-plane" v-if="!isLoading"></i>
-                <i class="fas fa-spinner fa-spin" v-else></i>
+              <button class="btn btn-primary" :disabled="!newCollabCode || isLoading" @click="sendInviteWithRefresh">
+                <i v-if="!isLoading" class="fas fa-paper-plane"></i>
+                <i v-else class="fas fa-spinner fa-spin"></i>
                 <span class="d-none-mobile">إرسال دعوة</span>
               </button>
             </div>
@@ -202,8 +202,8 @@
                 <button 
                   v-if="selectedCollaboratorId && !currentResultIsGhost" 
                   class="btn btn-danger btn-sm ml-2" 
-                  @click="handleRevoke" 
-                  title="إلغاء الصلاحية (حذف)"
+                  title="إلغاء الصلاحية (حذف)" 
+                  @click="handleRevoke"
                 >
                   <i class="fas fa-trash-alt"></i>
                 </button>
@@ -211,18 +211,18 @@
 
               <div v-if="selectedCollaboratorId" class="rename-box">
                 <div v-if="!isEditingName">
-                  <button class="btn-icon" @click="startEditingName" title="تغيير الاسم المستعار">
+                  <button class="btn-icon" title="تغيير الاسم المستعار" @click="startEditingName">
                     <i class="fas fa-pen"></i>
                   </button>
                 </div>
                 <div v-else class="edit-group">
                   <input 
+                    ref="nameInput" 
                     v-model="tempName" 
                     type="text" 
-                    class="form-control sm-input" 
-                    ref="nameInput"
-                    @keyup.enter="saveName"
+                    class="form-control sm-input"
                     placeholder="اسم مستعار"
+                    @keyup.enter="saveName"
                   />
                   <button class="btn-icon text-success" @click="saveName"><i class="fas fa-check"></i></button>
                   <button class="btn-icon text-secondary" @click="cancelEditName"><i class="fas fa-times"></i></button>
@@ -240,7 +240,7 @@
           
           <div v-else class="invites-list">
             <div class="invites-controls mb-3 text-start">
-              <button class="btn btn-outline-danger btn-sm" @click="handleClearAllInvites" title="حذف كافة الدعوات المعلقة">
+              <button class="btn btn-outline-danger btn-sm" title="حذف كافة الدعوات المعلقة" @click="handleClearAllInvites">
                 <i class="fas fa-trash-alt me-1"></i> تنظيف كافة الدعوات
               </button>
             </div>
@@ -278,13 +278,13 @@
                 </template>
                 <template v-else>
                   <button 
-                    @click="handleRespond(req.id, 'accepted', req.selectedRole)" 
-                    class="btn btn-sm btn-success"
+                    class="btn btn-sm btn-success" 
                     :title="`قبول الدعوة كـ ${req.selectedRole === 'editor' ? 'محرر' : 'مشاهد'}`"
+                    @click="handleRespond(req.id, 'accepted', req.selectedRole)"
                   >
                     <i class="fas fa-check"></i> قبول
                   </button>
-                  <button @click="handleRespond(req.id, 'rejected')" class="btn btn-sm btn-outline-danger" title="حذف الدعوة ورفضها">
+                  <button class="btn btn-sm btn-outline-danger" title="حذف الدعوة ورفضها" @click="handleRespond(req.id, 'rejected')">
                     <i class="fas fa-trash-alt"></i> حذف / رفض
                   </button>
                 </template>
@@ -341,7 +341,7 @@
                   </div>
                 </div>
 
-                <div class="lh-sync-info" v-if="lastUpdatedText">
+                <div v-if="lastUpdatedText" class="lh-sync-info">
                   <span class="lh-separator">|</span>
                   <div class="lh-date-stack">
                     <span class="lh-label">آخر تحديث</span>
@@ -351,9 +351,9 @@
                       </span>
                       <button 
                         class="lh-refresh-btn" 
-                        @click="refreshSharedSession" 
-                        title="تحديث البيانات"
+                        title="تحديث البيانات" 
                         :disabled="harvestStore.isSharedLoading"
+                        @click="refreshSharedSession"
                       >
                         <i class="fas fa-sync-alt" :class="{ 'fa-spin': harvestStore.isSharedLoading }"></i>
                       </button>
@@ -361,7 +361,7 @@
                   </div>
                 </div>
 
-                <div class="lh-status-info" v-if="collabStore.sessionType === 'admin'">
+                <div v-if="collabStore.sessionType === 'admin'" class="lh-status-info">
                   <span class="lh-separator">|</span>
                   <div class="lh-date-stack">
                     <span class="lh-label">الوضع</span>
@@ -379,14 +379,14 @@
         </button>
       </div>
 
-      <HarvestView :isSharedView="true" />
+      <HarvestView :is-shared-view="true" />
     </div>
 
     <div v-else-if="activeTab !== 'invites'" class="placeholder-container">
       <div class="placeholder-content">
         <i class="fas" :class="activeTab === 'admin' ? 'fa-user-shield' : 'fa-table'" style="font-size: 3rem; color: #cbd5e0; opacity: 0.5;"></i>
-        <p class="mt-3 text-muted" v-if="activeTab === 'admin'">أدخل كود المستخدم أعلاه للبدء في المتابعة أو عرض الأرشيف.</p>
-        <p class="mt-3 text-muted" v-else>اختر زميلاً من القائمة أعلاه لعرض الجدول الخاص به هنا.</p>
+        <p v-if="activeTab === 'admin'" class="mt-3 text-muted">أدخل كود المستخدم أعلاه للبدء في المتابعة أو عرض الأرشيف.</p>
+        <p v-else class="mt-3 text-muted">اختر زميلاً من القائمة أعلاه لعرض الجدول الخاص به هنا.</p>
       </div>
     </div>
 

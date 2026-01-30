@@ -98,7 +98,7 @@
       <div class="admin-section-header">
         <div class="d-flex align-center gap-3">
           <h2><i class="fas fa-users-cog"></i> المستخدمون المسجلون</h2>
-          <div class="bulk-actions" v-if="selectedUsers.length > 0">
+          <div v-if="selectedUsers.length > 0" class="bulk-actions">
             <div class="input-with-notch">
               <input v-model.number="bulkDays" type="number" class="bulk-input no-spin">
               <button class="btn-notch-sign" @click="toggleBulkSign">-</button>
@@ -112,7 +112,7 @@
         <div class="search-input-wrapper w-full">
            <i class="fas fa-search control-icon"></i>
            <input v-model="store.filters.usersSearch" type="text" class="search-input" placeholder="ابحث بالكود، الاسم أو البريد" />
-           <i v-if="store.filters.usersSearch" class="fas fa-times clear-icon" @click="store.filters.usersSearch = ''" title="مسح البحث"></i>
+           <i v-if="store.filters.usersSearch" class="fas fa-times clear-icon" title="مسح البحث" @click="store.filters.usersSearch = ''"></i>
         </div>
       </div>
 
@@ -138,7 +138,7 @@
             <template v-else>
               <tr v-for="user in filteredUsers" :key="user.id">
                 <td class="td-checkbox">
-                  <input type="checkbox" v-model="selectedUsers" :value="user.id">
+                  <input v-model="selectedUsers" type="checkbox" :value="user.id">
                 </td>
                 <td class="col-user">
                   <div class="user-info-cell">
@@ -146,7 +146,7 @@
                     <div class="user-email text-xs text-muted">{{ user.email }}</div>
                     <div class="user-short-id">
                       {{ user.user_code || user.id.slice(0, 8) }} 
-                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(user.user_code || user.id, 'المعرف')" title="نسخ المعرف"></i>
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" title="نسخ المعرف" @click="copyToClipboard(user.user_code || user.id, 'المعرف')"></i>
                     </div>
                   </div>
                 </td>
@@ -255,7 +255,7 @@
         <h2><i class="fas fa-clock"></i> طلبات الاشتراك قيد المراجعة ({{ store.pendingSubscriptions.length }})</h2>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table id="pending-subscriptions-table" class="modern-table auto-layout" v-if="store.pendingSubscriptions.length > 0 || store.isLoading">
+        <table v-if="store.pendingSubscriptions.length > 0 || store.isLoading" id="pending-subscriptions-table" class="modern-table auto-layout">
           <thead>
             <tr>
               <th class="col-user">المستخدم</th>
@@ -279,7 +279,7 @@
                     <div class="user-email text-xs text-muted">{{ sub.users?.email }}</div>
                     <div class="user-short-id">
                       {{ sub.user_code || sub.user_id?.slice(0, 8) }}
-                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" title="نسخ المعرف" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')"></i>
                     </div>
                   </div>
                 </td>
@@ -317,7 +317,7 @@
         </select>
       </div>
       <div class="table-wrapper m-0 rounded-none shadow-none">
-        <table id="all-subscriptions-table" class="modern-table auto-layout" v-if="store.allSubscriptions.length > 0 || store.isLoading">
+        <table v-if="store.allSubscriptions.length > 0 || store.isLoading" id="all-subscriptions-table" class="modern-table auto-layout">
           <thead>
             <tr>
               <th class="col-user">المستخدم</th>
@@ -342,7 +342,7 @@
                     <div class="user-email text-xs text-muted">{{ sub.email }}</div>
                     <div class="user-short-id">
                       {{ sub.user_code || sub.user_id?.slice(0, 8) }}
-                      <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+                      <i class="fas fa-copy text-xs ml-1 copy-icon" title="نسخ المعرف" @click="copyToClipboard(sub.user_code || sub.user_id, 'المعرف')"></i>
                     </div>
                   </div>
                 </td>
@@ -355,7 +355,8 @@
                   <div v-if="sub.end_date" class="expiry-date-sub">إلى: {{ store.formatDate(sub.end_date) }}</div>
                 </td>
                 <td class="col-days text-center font-bold">
-                  <span v-if="sub.status === 'active' || sub.status === 'cancelled'" 
+                  <span
+v-if="sub.status === 'active' || sub.status === 'cancelled'" 
                         :style="{ color: sub.status === 'cancelled' ? '#ef4444' : getRemainingDaysColor(sub.end_date) }">
                     {{ calculateRemainingDays(sub.end_date, sub.status, sub.updated_at) }}
                   </span>
@@ -395,7 +396,7 @@
             <label>معرف المستخدم (كود):</label>
             <span class="font-mono text-primary font-bold">
               {{ selectedSub.user_code || selectedSub.user_id }}
-              <i class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(selectedSub.user_code || selectedSub.user_id, 'المعرف')" title="نسخ المعرف"></i>
+              <i class="fas fa-copy text-xs ml-1 copy-icon" title="نسخ المعرف" @click="copyToClipboard(selectedSub.user_code || selectedSub.user_id, 'المعرف')"></i>
             </span>
           </div>
           <hr class="full-width" />
@@ -439,7 +440,7 @@
       <div v-if="selectedSupportUser" class="support-modal-content">
         <div class="user-quick-info mb-3">
           <div class="text-xs text-muted">ID: <span class="font-mono">{{ selectedSupportUser.id }}</span></div>
-          <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span> <i v-if="selectedSupportUser.user_code" class="fas fa-copy text-xs ml-1 copy-icon" @click="copyToClipboard(selectedSupportUser.user_code, 'المعرف')" title="نسخ المعرف"></i></div>
+          <div class="text-xs text-muted">UID: <span class="font-mono font-bold text-primary">{{ selectedSupportUser.user_code || 'N/A' }}</span> <i v-if="selectedSupportUser.user_code" class="fas fa-copy text-xs ml-1 copy-icon" title="نسخ المعرف" @click="copyToClipboard(selectedSupportUser.user_code, 'المعرف')"></i></div>
           <div class="text-xs text-muted">Email: {{ selectedSupportUser.email }}</div>
         </div>
  
@@ -522,7 +523,7 @@
                  </button>
                  <div v-if="selectedLocationIds.length > 0" class="bulk-actions-locations">
                     <span class="text-xs text-muted">{{ selectedLocationIds.length }} محدد</span>
-                    <button class="btn btn-sm btn-danger" @click="deleteSelectedLocations" :disabled="isLoadingLocations">
+                    <button class="btn btn-sm btn-danger" :disabled="isLoadingLocations" @click="deleteSelectedLocations">
                        <i class="fas fa-trash"></i> حذف
                     </button>
                  </div>
@@ -568,7 +569,7 @@
                     </tr>
                     <tr v-for="loc in allLocations" :key="loc.id" :class="{ 'has-location': loc.latitude }">
                         <td class="td-checkbox">
-                           <input type="checkbox" v-model="selectedLocationIds" :value="loc.id">
+                           <input v-model="selectedLocationIds" type="checkbox" :value="loc.id">
                         </td>
                         <td class="font-mono font-bold text-primary">{{ loc.shop_code }}</td>
                         <td>{{ loc.shop_name }}</td>

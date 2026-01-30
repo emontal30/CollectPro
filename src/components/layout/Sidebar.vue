@@ -29,7 +29,7 @@
                    UID: {{ authStore.user?.userCode || authStore.user?.id?.slice(0,8) || '---' }}
                  </span>
               </div>
-              <button @click="copyUserId" class="copy-id-btn" title="نسخ الكود فقط">
+              <button class="copy-id-btn" title="نسخ الكود فقط" @click="copyUserId">
                 <i class="fas fa-copy"></i>
               </button>
             </div>
@@ -42,7 +42,7 @@
     <div class="sidebar-content">
       <ul class="nav-links">
         <li v-for="link in navLinks" :key="link.to">
-          <router-link :to="link.to" active-class="active" @click="store.closeSidebar" :class="{ 'locked-link': isLocked(link) }">
+          <router-link :to="link.to" active-class="active" :class="{ 'locked-link': isLocked(link) }" @click="store.closeSidebar">
             <i :class="link.icon"></i>
             <span>{{ link.label }}</span>
             <i v-if="isLocked(link)" class="fas fa-lock lock-icon-mini"></i>
@@ -61,7 +61,7 @@
       
         <!-- WhatsApp join block: opens group link in new tab -->
         <div class="whatsapp-join" aria-hidden="false">
-          <a :href="whatsappLink" target="_blank" rel="noopener" class="whatsapp-link" @click="store.closeSidebar" aria-label="انضم ليصلك كل جديد عبر واتساب">
+          <a :href="whatsappLink" target="_blank" rel="noopener" class="whatsapp-link" aria-label="انضم ليصلك كل جديد عبر واتساب" @click="store.closeSidebar">
             <span class="whatsapp-badge"><i class="fab fa-whatsapp"></i></span>
             <span class="whatsapp-text">انضم ليصلك كل جديد</span>
           </a>

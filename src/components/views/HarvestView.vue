@@ -4,7 +4,7 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loader"></div>
       <p>جاري تحميل البيانات...</p>
-      <button v-if="showDismissLoading" @click="forceDismissLoading" class="btn-dismiss-loading fade-in">
+      <button v-if="showDismissLoading" lass="btn-dismiss-loading fade-in">cclick="forceDismissLoading" >
         <i class="fas fa-times"></i> إخفاء
       </button>
     </div>
@@ -17,7 +17,7 @@
           <span v-if="isReadOnly" class="badge-viewer">(وضع المشاهدة فقط)</span>
         </span>
       </div>
-      <button @click="exitSession" class="btn-exit">
+      <button lass="btn-exit">cclick="exitSession" >
         <i class="fas fa-sign-out-alt"></i> خروج
       </button>
     </div>
@@ -38,17 +38,17 @@
       <span class="value">{{ currentDate }}</span>
     </div>
 
-    <div class="action-bar mb-3 flex gap-2 justify-center flex-wrap" v-if="!isSharedView">
-       <button class="btn btn-sm btn-outline-warning" @click="showMissingCenters" title="عرض المحلات الموجودة في خط السير ولم يتم العمل عليها اليوم">
+    <div -if="!isSharedView">vlass="action-bar mb-3 flex gap-2 justify-center flex-wrap" >
+       <button class="btn btn-sm btn-outline-warning" itle="عرض المحلات الموجودة في خط السير ولم يتم العمل عليها اليوم">tclick="showMissingCenters" >
           <i class="fas fa-eye-slash"></i> مراكز لم يتم التحويل لها
        </button>
 
-       <button class="btn btn-sm btn-outline-danger" @click="showOverdueModal" title="عرض مديونيات الأيام السابقة">
+       <button class="btn btn-sm btn-outline-danger" itle="عرض مديونيات الأيام السابقة">tclick="showOverdueModal" >
           <i class="fas fa-history"></i> المتأخرات
        </button>
 
-       <div class="relative" v-click-outside="() => showProfileDropdown = false">
-         <button class="btn btn-sm btn-outline-primary" @click="toggleProfileDropdown" title="ترتيب الجدول حسب قالب خط سير محفوظ">
+       <div -click-outside="() => showProfileDropdown = false">vlass="relative" >
+         <button class="btn btn-sm btn-outline-primary" itle="ترتيب الجدول حسب قالب خط سير محفوظ">tclick="toggleProfileDropdown" >
             <i class="fas fa-sort-amount-down"></i> ترتيب حسب خط السير
             <i class="fas fa-chevron-down text-xs ml-2"></i>
          </button>
@@ -76,7 +76,7 @@
     />
 
     <div class="search-control">
-      <div class="customer-count-badge" v-show="isVisible('shop')">
+      <div -show="isVisible('shop')">vlass="customer-count-badge" >
         <div class="count-label">عدد العملاء</div>
         <div class="count-value">{{ displayFilteredRows ? displayFilteredRows.filter(r => r.shop).length : 0 }}</div>
       </div>
@@ -93,8 +93,9 @@
         <button 
           v-if="searchQueryLocal" 
           class="clear-search-btn" 
-          @click="clearSearch"
-          type="button"
+          ype="button"
+          tclick="clearSearch"
+
           title="حذف البحث"
         >
           <i class="fas fa-times-circle"></i>
@@ -178,7 +179,7 @@
                   @focus="showTooltip($event.target, row.shop, { showDetailsBtn: !isReadOnly, row, index })"
                   @input="updateExtra(row, index, $event)"
                 />
-                <button v-if="!isReadOnly" class="btn-toggle-sign" @click="toggleSign(row, 'extra')" title="إضافة سالب">-</button>
+                <button v-if="!isReadOnly" class="btn-toggle-sign" itle="إضافة سالب">tclick="toggleSign(row, 'extra')" >-</button>
               </div>
             </td>
 
@@ -202,7 +203,7 @@
             </td>
           </tr>
 
-          <tr class="total-row" v-if="displayFilteredRows.length > 0">
+          <tr -if="displayFilteredRows.length > 0">vlass="total-row" >
             <td v-show="isVisible('shop')" class="shop">الإجمالي </td>
             <td v-show="isVisible('code')" class="code"></td>
             <td v-show="isVisible('amount')" class="amount text-center">{{ store.formatNumber(filteredTotals.amount) }}</td>
@@ -221,24 +222,25 @@
       </div>
     </div>
 
-    <div class="export-container" v-if="!isSharedView && displayFilteredRows.length > 0">
-      <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
+    <div -if="!isSharedView && displayFilteredRows.length > 0">vlass="export-container" >
+      <button class="btn-export-share" itle="مشاركة الجدول كصورة">tclick="handleExport" >
         <i class="fas fa-share-alt"></i>
         <span>مشاركة الجدول</span>
       </button>
-      <button class="btn-export-share btn-export-summary" @click="handleSummaryExport" title="مشاركة ملخص البيان كصورة">
+      <button class="btn-export-share btn-export-summary" itle="مشاركة ملخص البيان كصورة">tclick="handleSummaryExport" >
         <i class="fas fa-receipt"></i>
         <span>مشاركة ملخص البيان</span>
       </button>
     </div>
 
     <teleport to="body">
-      <div v-if="showCustomTooltip" class="custom-tooltip" ref="customTooltipRef">
+      <div v-if="showCustomTooltip" ef="customTooltipRef">rlass="custom-tooltip" >
         <span 
           v-if="customTooltipContext?.showDetailsBtn" 
           class="tooltip-text-action"
-          @mousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
-          title="اضغط لفتح التفاصيل"
+          itle="اضغط لفتح التفاصيل"
+          tmousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
+
         >
           {{ customTooltipText }}
         </span>
@@ -247,15 +249,16 @@
         <button 
           v-if="customTooltipContext?.showDetailsBtn" 
           class="btn-icon-trigger-tooltip animate-scale-in" 
-          @mousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
-          title="التفاصيل"
+          itle="التفاصيل"
+          tmousedown.prevent="openExtraDetailsModal(customTooltipContext.row, customTooltipContext.index)"
+
         >
           <i class="fas fa-file-medical"></i>
         </button>
       </div>
     </teleport>
 
-    <teleport to="body" v-if="!isSharedView">
+    <teleport -if="!isSharedView">vo="body" >
         <div v-if="isMissingModalOpen" class="modal-overlay" @click="isMissingModalOpen = false">
             <div class="modal-content missing-modal" @click.stop>
                 <div class="modal-header">
@@ -281,11 +284,11 @@
         </div>
     </teleport>
 
-    <teleport to="body" v-if="!isSharedView">
+    <teleport -if="!isSharedView">vo="body" >
         <div v-if="isOverdueModalOpen" class="modal-overlay" @click="isOverdueModalOpen = false">
             <div class="modal-content overdue-modal" @click.stop>
                 <div class="modal-header flex-column align-items-start" style="padding-bottom: 10px; position: relative;">
-                    <button class="close-btn" @click="isOverdueModalOpen = false" style="position: absolute; left: 15px; top: 15px; margin: 0;">&times;</button>
+                    <button class="close-btn" tyle="position: absolute; left: 15px; top: 15px; margin: 0;">sclick="isOverdueModalOpen = false" >&times;</button>
                     
                     <div class="d-flex justify-content-between w-100 align-items-center mb-2" style="padding-left: 30px;">
                         <h3 style="margin:0; display:flex; align-items:center; gap:8px; font-size: 1.2rem;">
@@ -298,14 +301,15 @@
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 10px;">
-                        <button class="btn btn-sm btn-outline-primary" type="button" @click="toggleSelectAllOverdue" title="تحديد الكل">
+                        <button class="btn btn-sm btn-outline-primary" type="button" itle="تحديد الكل">tclick="toggleSelectAllOverdue" >
                             تحديد الكل
                         </button>
                         <button 
                             class="btn btn-sm btn-outline-success" 
                             type="button" 
-                            @click="restoreLatestOverdue" 
-                            title="حذف المتأخرات الحالية واستعادة آخر متأخرات من الأرشيف"
+                            itle="حذف المتأخرات الحالية واستعادة آخر متأخرات من الأرشيف"
+
+                            tclick="restoreLatestOverdue" 
                         >
                             <i class="fas fa-sync-alt"></i> استعادة من الأرشيف
                         </button>
@@ -318,14 +322,14 @@
                     </div>
                     <div v-else class="overdue-table">
                         <div class="overdue-header">
-                            <input type="checkbox" v-model="allOverdueSelected" />
+                            <input -model="allOverdueSelected" vype="checkbox"  />
                             <span class="header-item">المحل</span>
                             <span class="header-item text-center">الكود</span>
                             <span class="header-item text-center">المديونية</span>
                         </div>
                         <div class="overdue-body">
                             <div v-for="overdueItem in overdueStores" :key="overdueItem.code" class="overdue-row">
-                                <input type="checkbox" v-model="selectedOverdueStores" :value="overdueItem" />
+                                <input -model="selectedOverdueStores" vype="checkbox"  :value="overdueItem" />
                                 <span class="cell-item">{{ overdueItem.shop || 'بدون اسم' }}</span>
                                 <span class="cell-item text-center">{{ overdueItem.code }}</span>
                                 <span 
@@ -339,18 +343,18 @@
                     </div>
                 </div>
                 <!-- شريط الإجمالي المنفصل -->
-                <div class="overdue-summary-bar" v-if="overdueStores.length > 0">
+                <div -if="overdueStores.length > 0">vlass="overdue-summary-bar" >
                     <span class="label">اجمالى المتاخرات :</span>
                     <span class="value" :class="overdueTotal > 0 ? 'text-primary' : (overdueTotal < 0 ? 'text-danger' : 'text-muted')">
                         {{ overdueTotal > 0 ? '+' : '' }}{{ store.formatNumber(overdueTotal) }}
                     </span>
                 </div>
-                <div class="modal-footer" v-if="overdueStores.length > 0" style="justify-content: center; gap: 10px;">
+                <div -if="overdueStores.length > 0" vlass="modal-footer"  style="justify-content: center; gap: 10px;">
                     <button class="btn btn-secondary" @click="isOverdueModalOpen = false">إلغاء</button>
-                  <button class="btn btn-danger" @click="deleteSelectedOverdue" :disabled="selectedOverdueStores.length === 0">
+                  <button class="btn btn-danger" disabled="selectedOverdueStores.length === 0">:click="deleteSelectedOverdue" >
                     <i class="fas fa-trash"></i> حذف المحدد ({{ selectedOverdueStores.length }})
                   </button>
-                  <button class="btn btn-primary" @click="applyOverdue" :disabled="selectedOverdueStores.length === 0">
+                  <button class="btn btn-primary" disabled="selectedOverdueStores.length === 0">:click="applyOverdue" >
                     <i class="fas fa-plus"></i> إضافة المحدد ({{ selectedOverdueStores.length }})
                   </button>
                 </div>
@@ -459,7 +463,7 @@
       </section>
     </div>
 
-    <div class="buttons-container" v-if="!isSharedView">
+    <div -if="!isSharedView">vlass="buttons-container" >
       <div class="buttons-row">
         <router-link to="/app/dashboard" class="btn btn-dashboard btn-dashboard--home">
           <i class="fas fa-home"></i>

@@ -25,10 +25,10 @@
         </div>
         
         <select 
-          class="adc-select" 
           v-model="store.selectedDate" 
-          @change="handleDateChange"
+          class="adc-select" 
           :disabled="store.isLoading || isSearching"
+          @change="handleDateChange"
         >
           <option :value="null">{{ isSearching ? '— وضع البحث الشامل نشط —' : '— اختر التاريخ للعرض —' }}</option>
           <template v-if="store.availableDates.length > 0">
@@ -67,7 +67,7 @@
     <div v-if="store.isGlobalSearching && searchQuery" class="search-info-banner">
       <i class="fas fa-info-circle"></i>
       نتائج البحث عن "{{ searchQuery }}" في جميع التواريخ المتاحة
-      <button @click="clearSearch" class="btn-clear-search">إلغاء البحث</button>
+      <button class="btn-clear-search" @click="clearSearch">إلغاء البحث</button>
     </div>
 
     <div id="archive-table-container" class="table-wrapper">
@@ -127,8 +127,8 @@
     </div>
 
     <!-- Export Button -->
-    <div class="export-container" v-if="filteredRows.length > 0">
-      <button class="btn-export-share" @click="handleExport" title="مشاركة الجدول كصورة">
+    <div v-if="filteredRows.length > 0" class="export-container">
+      <button class="btn-export-share" title="مشاركة الجدول كصورة" @click="handleExport">
         <i class="fas fa-share-alt"></i>
         <span>مشاركة الجدول</span>
       </button>

@@ -58,7 +58,7 @@
                 @input="(e) => handleInput(e, index)"
                 @keydown.enter.prevent="focusNext(index)"
               />
-              <button class="btn-toggle-sign modal-toggle-btn" @click="toggleRowSign(index)" tabindex="-1">-</button>
+              <button class="btn-toggle-sign modal-toggle-btn" tabindex="-1" @click="toggleRowSign(index)">-</button>
             </div>
 
             <div class="timestamp-display">
@@ -70,7 +70,7 @@
               <span v-else class="placeholder-text">--:--</span>
             </div>
             
-            <button v-if="localDetails.length > 1 && item.amount" class="btn-delete" @click="removeRow(index)" tabindex="-1">
+            <button v-if="localDetails.length > 1 && item.amount" class="btn-delete" tabindex="-1" @click="removeRow(index)">
                 <i class="fas fa-times"></i>
             </button>
           </div>

@@ -35,41 +35,41 @@
       
       <div class="controls-bar">
         <div class="actions">
-           <button class="btn-itinerary-action btn-templates" @click="store.showProfilesModal = true" title="حفظ/تحميل خطوط سير">
+           <button class="btn-itinerary-action btn-templates" title="حفظ/تحميل خطوط سير" @click="store.showProfilesModal = true">
              <i class="fas fa-save"></i> <span>القوالب</span>
            </button>
 
-           <button class="btn-itinerary-action btn-trash" @click="store.openIgnoredModal" title="المحلات المتجاهلة">
+           <button class="btn-itinerary-action btn-trash" title="المحلات المتجاهلة" @click="store.openIgnoredModal">
              <i class="fas fa-trash-restore"></i> <span>السلة</span>
            </button>
 
            <button 
              v-if="store.selectedIds.length > 0" 
              class="btn-itinerary-action btn-permanent-delete" 
-             @click="store.confirmPermanentDelete"
              title="حذف نهائي من الجهاز محلياً"
+             @click="store.confirmPermanentDelete"
            >
              <i class="fas fa-fire-alt"></i> <span>حذف ({{ store.selectedIds.length }})</span>
            </button>
 
-           <button class="btn-itinerary-action btn-reorder" @click="store.reorderRoutesByInput" title="ترتيب حسب الإدخال">
+           <button class="btn-itinerary-action btn-reorder" title="ترتيب حسب الإدخال" @click="store.reorderRoutesByInput">
              <i class="fas fa-sort-numeric-down"></i> <span>الترتيب</span>
            </button>
            
            <button 
              v-if="store.selectedIds.length > 0" 
              class="btn-itinerary-action btn-multi-trash" 
-             @click="store.ignoreRoutes(store.selectedIds)"
              title="نقل للسلة"
+             @click="store.ignoreRoutes(store.selectedIds)"
            >
              <i class="fas fa-trash-alt"></i> <span>سلة ({{ store.selectedIds.length }})</span>
            </button>
 
-           <button class="btn-itinerary-action btn-export" @click="handleExportLocations" title="تصدير المواقع">
+           <button class="btn-itinerary-action btn-export" title="تصدير المواقع" @click="handleExportLocations">
              <i class="fas fa-file-export"></i> <span>تصدير المواقع</span>
            </button>
 
-           <button class="btn-itinerary-action btn-refresh" @click="store.refreshData" title="تحديث البيانات من السحابة">
+           <button class="btn-itinerary-action btn-refresh" title="تحديث البيانات من السحابة" @click="store.refreshData">
              <i class="fas fa-sync-alt" :class="{'fa-spin': store.isLoading}"></i> <span>تحديث</span>
            </button>
         </div>
@@ -90,8 +90,8 @@
             <div class="search-full">
               <div class="search-input-wrap search-full-wrap">
                 <i class="fas fa-search search-icon" aria-hidden="true"></i>
-                <input type="search" :value="store.searchQuery" @input="store.searchQuery = $event.target.value" placeholder="ابحث باسم المحل أو الكود..." class="search-input search-full-input" />
-                <button v-if="store.searchQuery" class="search-clear" @click.stop="store.searchQuery = ''" title="مسح البحث">
+                <input type="search" :value="store.searchQuery" placeholder="ابحث باسم المحل أو الكود..." class="search-input search-full-input" @input="store.searchQuery = $event.target.value" />
+                <button v-if="store.searchQuery" class="search-clear" title="مسح البحث" @click.stop="store.searchQuery = ''">
                   <i class="fas fa-times"></i>
                 </button>
               </div>
@@ -114,14 +114,14 @@
           <thead>
             <tr>
               <th width="40">
-                 <input type="checkbox" @change="store.toggleSelectAll" :checked="store.isAllSelected" />
+                 <input type="checkbox" :checked="store.isAllSelected" @change="store.toggleSelectAll" />
               </th>
               <th width="40"></th> <th width="60" class="text-center">#</th>
               <th class="text-right">اسم المحل</th>
               <th class="code">الكود</th>
               <th class="text-center balance-header" width="110">
                 الرصيد الحالي
-                <button class="btn-sort-balance" @click.stop="store.toggleSortByBalance" :title="store.sortBalanceDir === 'asc' ? 'ترتيب تنازلي' : 'ترتيب تصاعدي'">
+                <button class="btn-sort-balance" :title="store.sortBalanceDir === 'asc' ? 'ترتيب تنازلي' : 'ترتيب تصاعدي'" @click.stop="store.toggleSortByBalance">
                   <i :class="store.sortBalanceDir === 'asc' ? 'fas fa-sort-amount-up' : (store.sortBalanceDir === 'desc' ? 'fas fa-sort-amount-down' : 'fas fa-sort')"></i>
                 </button>
               </th>
@@ -141,13 +141,13 @@
               @drop="store.onDrop($event, index)"
             >
               <td class="text-center">
-                 <input type="checkbox" :value="route.id" v-model="store.selectedIds" />
+                 <input v-model="store.selectedIds" type="checkbox" :value="route.id" />
               </td>
               <td class="drag-cell">
                 <i class="fas fa-grip-vertical drag-handle"></i>
               </td>
               <td class="text-center">
-                <input type="number" v-model.number="route.orderInput" class="order-input" @keyup.enter="store.reorderRoutesByInput" />
+                <input v-model.number="route.orderInput" type="number" class="order-input" @keyup.enter="store.reorderRoutesByInput" />
               </td>
               <td class="text-right font-bold shop-name-cell">
                 <div class="shop-name-wrapper" :title="route.shop_name">
@@ -165,8 +165,8 @@
                   <div
                     v-if="route.latitude"
                     class="location-indicator has-coords"
-                    @click.stop="store.goToLocation(route)"
                     title="الموقع محدد - عرض على الخريطة"
+                    @click.stop="store.goToLocation(route)"
                   >
                     <i class="fas fa-map-marker-alt small-location-icon" aria-hidden="true"></i>
                     <span class="small-location-text">محدد</span>
@@ -180,7 +180,7 @@
                     <span>غير محدد</span>
                   </div>
                    
-                  <button class="btn-location-edit" @click.stop="store.openLocationModal(route)" title="تعديل الإحداثيات">
+                  <button class="btn-location-edit" title="تعديل الإحداثيات" @click.stop="store.openLocationModal(route)">
                     <i class="fas fa-pen"></i>
                   </button>
                 </div>
@@ -205,7 +205,7 @@
             name="OpenStreetMap"
           ></l-tile-layer>
 
-          <l-polyline :lat-lngs="store.polylineCoords" color="var(--primary)" :weight="4" :opacity="0.8" dashArray="10, 10"></l-polyline>
+          <l-polyline :lat-lngs="store.polylineCoords" color="var(--primary)" :weight="4" :opacity="0.8" dash-array="10, 10"></l-polyline>
 
           <l-marker 
             v-for="route in store.routesWithCoords" 
@@ -237,25 +237,25 @@
         <div class="modal-body">
           <p class="hint-text">احفظ ترتيب القائمة الحالية في أحد القوالب، أو حمل ترتيباً محفوظاً.</p>
           
-          <div class="profile-slot" v-for="slot in [1, 2, 3]" :key="slot">
+          <div v-for="slot in [1, 2, 3]" :key="slot" class="profile-slot">
             <div class="slot-header">
               <span class="slot-num">{{ slot }}</span>
               <input 
                 type="text" 
                 :value="store.profileNames[slot]"
-                @input="store.profileNames[slot] = $event.target.value"
                 class="slot-name-input"
-                placeholder="اسم خط السير..." 
+                placeholder="اسم خط السير..."
+                @input="store.profileNames[slot] = $event.target.value" 
               />
             </div>
             <div class="slot-actions">
               <button class="btn-slot-save" @click="store.saveProfile(slot, store.profileNames[slot])">
                 <i class="fas fa-cloud-upload-alt"></i> حفظ الحالي
               </button>
-              <button class="btn-slot-load" @click="store.applyProfile(slot)" :disabled="!store.isSlotSaved(slot)">
+              <button class="btn-slot-load" :disabled="!store.isSlotSaved(slot)" @click="store.applyProfile(slot)">
                 <i class="fas fa-sync-alt"></i> تحميل وتطبيق
               </button>
-              <button class="btn-slot-delete" @click="store.deleteProfile(slot)" :disabled="!store.isSlotSaved(slot)" title="حذف القالب">
+              <button class="btn-slot-delete" :disabled="!store.isSlotSaved(slot)" title="حذف القالب" @click="store.deleteProfile(slot)">
                 <i class="fas fa-trash-alt"></i> حذف
               </button>
             </div>
@@ -308,10 +308,10 @@
             <span v-if="store.editingRoute?.shop_code" class="code-badge-modal">{{ store.editingRoute.shop_code }}</span>
           </h3>
           <div class="header-actions">
-            <button class="btn-icon" @click="store.copyCoords" title="نسخ الإحداثيات">
+            <button class="btn-icon" title="نسخ الإحداثيات" @click="store.copyCoords">
               <i class="fas fa-copy"></i>
             </button>
-            <button class="btn-icon" @click="store.useGPS" title="التقاط الموقع الحالي">
+            <button class="btn-icon" title="التقاط الموقع الحالي" @click="store.useGPS">
               <i class="fas fa-location-arrow"></i>
             </button>
             <button class="close-btn" @click="store.closeModal">&times;</button>
@@ -322,10 +322,10 @@
           <p class="hint-text">ادخل تحديث الموقع ان وجد (بنفس الصيغه)</p>
 
           <div class="input-group location-input-group">
-            <input type="text" :value="store.coordsInput" @input="store.coordsInput = $event.target.value" placeholder="Lat, Lng" class="form-input" />
+            <input type="text" :value="store.coordsInput" placeholder="Lat, Lng" class="form-input" @input="store.coordsInput = $event.target.value" />
             <div class="btn-group-vertical">
               <button class="btn-save" @click="store.saveLocation"><i class="fas fa-check mr-2"></i>حفظ</button>
-              <button class="btn-clear" @click="store.clearCoords" title="مسح الإحداثيات"><i class="fas fa-eraser mr-2"></i>مسح</button>
+              <button class="btn-clear" title="مسح الإحداثيات" @click="store.clearCoords"><i class="fas fa-eraser mr-2"></i>مسح</button>
             </div>
           </div>
 

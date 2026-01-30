@@ -1,5 +1,5 @@
 <template>
-  <div class="reports-page animate-fade-in" v-if="store && (!store.isLoading || (store.allArchiveData && store.allArchiveData.length > 0))">
+  <div v-if="store && (!store.isLoading || (store.allArchiveData && store.allArchiveData.length > 0))" class="reports-page animate-fade-in">
     
     <PageHeader 
       title="تقارير التحصيل" 
@@ -24,7 +24,7 @@
     </div>
 
     <!-- شبكة الإحصائيات (KPIs) -->
-    <div class="stats-grid" v-if="!store.isLoading">
+    <div v-if="!store.isLoading" class="stats-grid">
       
       <!-- الصف الأول: الأرقام الرئيسية -->
       <div class="stat-card stat-card--gradient-primary span-2-mobile">
@@ -80,7 +80,7 @@
     </div>
 
     <!-- قسم الرسوم البيانية المتعددة -->
-    <div class="charts-dashboard-grid" v-if="!store.isLoading && store.chartData.length > 0">
+    <div v-if="!store.isLoading && store.chartData.length > 0" class="charts-dashboard-grid">
       
       <!-- 1. إجمالي التحويلات -->
       <div class="glass-panel chart-mini-card">
@@ -280,7 +280,7 @@
                  {{ getCategoryLabel(cat) }}
                </button>
             </div>
-            <button class="btn-send" @click="handleAddNote" :disabled="!newNote.text.trim()">
+            <button class="btn-send" :disabled="!newNote.text.trim()" @click="handleAddNote">
               <i class="fas fa-paper-plane"></i>
             </button>
           </div>
@@ -319,7 +319,7 @@
     </Transition>
 
     <!-- جدول إجمالي الملاحظات -->
-    <div class="list-panel full-width mt-4" v-if="store.allNotes.length > 0">
+    <div v-if="store.allNotes.length > 0" class="list-panel full-width mt-4">
       <div class="panel-header">
         <div class="header-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="fas fa-clipboard-list"></i></div>
         <h3>سجل الملاحظات الشامل</h3>

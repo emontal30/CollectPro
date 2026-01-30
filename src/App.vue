@@ -17,30 +17,6 @@
   </div>
 </template>
 
-<style scoped>
-.vue-loading-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-light);
-  z-index: 9990;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.dark .vue-loading-overlay {
-  background: var(--bg-dark);
-}
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(0, 121, 101, 0.3);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
-
 <script setup>
 import { onMounted, provide, onBeforeUnmount, ref } from 'vue';
 import { RouterView } from 'vue-router';
@@ -238,6 +214,30 @@ onMounted(() => {
   initializeApp();
 });
 </script>
+
+<style scoped>
+.vue-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-light);
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark .vue-loading-overlay {
+  background: var(--bg-dark);
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 121, 101, 0.3);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 
 <style>
 /* تضمن هذه التنسيقات ظهور المكونات في الطبقة العليا */

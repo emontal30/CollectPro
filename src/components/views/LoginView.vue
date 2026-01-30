@@ -43,7 +43,7 @@
 
           <div class="install-section-wrapper">
             <transition name="fade" mode="out-in">
-              <div v-if="showInstallButton" class="install-app-section" key="install-btn">
+              <div v-if="showInstallButton" key="install-btn" class="install-app-section">
                 <button class="install-app-btn" @click="installApp">
                   <div class="install-app-icon">
                     <img src="/favicon.svg" alt="شعار التطبيق" />
@@ -60,14 +60,14 @@
                 </button>
               </div>
 
-              <div v-else-if="isInstallSuccess" class="install-feedback" key="install-feedback">
+              <div v-else-if="isInstallSuccess" key="install-feedback" class="install-feedback">
                 <div class="feedback-content">
                   <i class="fas fa-circle-notch fa-spin text-orange"></i>
                   <span class="pulse-text"> جاري تثبيت التطبيق...</span>
                 </div>
               </div>
 
-              <div v-else class="app-installed-card" key="installed-card">
+              <div v-else key="installed-card" class="app-installed-card">
                 <div class="status-icon">
                   <i class="fas fa-shield-alt"></i>
                 </div>

@@ -12,11 +12,11 @@
         <p>{{ isUpdating ? 'جاري حفظ البيانات وتحديث التطبيق...' : 'يتوفر إصدار جديد من التطبيق مع تحسينات ومميزات جديدة.' }}</p>
       </div>
       <div class="update-actions">
-        <button @click="handleUpdate" class="btn-update" :disabled="isUpdating">
+        <button class="btn-update" :disabled="isUpdating" @click="handleUpdate">
           <i class="fas" :class="isUpdating ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
           {{ isUpdating ? 'جاري التحديث...' : 'تحديث الآن' }}
         </button>
-        <button @click="closePrompt" class="btn-later" :disabled="isUpdating">
+        <button class="btn-later" :disabled="isUpdating" @click="closePrompt">
           لاحقاً
         </button>
       </div>
