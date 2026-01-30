@@ -4,21 +4,18 @@
 <head>
   <meta charset="UTF-8" />
 
-  <!-- 1. Viewport & Responsive Logic (Original Logic Restored) -->
+  <!-- 1. Viewport & Responsive Logic -->
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <script>
     (function () {
       function updateViewport() {
-        var viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
-        viewport.name = "viewport";
+        var viewport = document.querySelector('meta[name="viewport"]');
         var targetWidth = 768;
         if (window.innerHeight > window.innerWidth && window.screen.width < targetWidth) {
           viewport.content = "width=" + targetWidth + ", user-scalable=yes, maximum-scale=5.0, viewport-fit=cover";
-        } else {
-          viewport.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
         }
-        if (!document.querySelector('meta[name="viewport"]')) {
-          document.getElementsByTagName('head')[0].appendChild(viewport);
-        }
+        // Else: Default is already set specifically above
       }
       updateViewport();
       window.addEventListener('orientationchange', function () {
