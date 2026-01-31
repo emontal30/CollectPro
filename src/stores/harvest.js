@@ -628,21 +628,28 @@ export const useHarvestStore = defineStore('harvest', {
 
       logger.info('🌐 Connection Restored - Initiating Smart Sync...');
 
+      // Give the network a moment to stabilize (prevent immediate timeouts)
+      await new Promise(r => setTimeout(r, 1000));
+
       try {
-        // 1. Re-establish Realtime Subscriptions first (Listeners)
+        // 1. Re-establish Realtime Subscriptions first
         await this.reconnectRealtime();
+      } catch (e) { logger.warn('Realtime reconnect warning:', e); }
 
-        // 2. Pull latest from Cloud (in case we missed something while offline)
-        // This won't overwrite local if local is newer (handled inside syncFromCloud)
+      // 2. Pull latest from Cloud (Independent Step)
+      try {
         await this.syncFromCloud();
+      } catch (err) {
+        logger.warn('⚠️ Smart Sync (Pull) failed/timed out - proceeding to push local data anyway.', err.message);
+      }
 
-        // 3. Push our local changes (if any) to Cloud
-        // This ensures the server has our latest offline work
+      // 3. Push local changes (Independent Step)
+      // Critical: Ensure we save our work even if pull failed
+      try {
         await this.forceSyncToCloud(auth.user.id);
-
         logger.info('✅ Smart Sync Complete');
       } catch (err) {
-        logger.error('Smart Sync Failed:', err);
+        logger.error('❌ Smart Sync (Push) Failed:', err);
       }
     },
 
