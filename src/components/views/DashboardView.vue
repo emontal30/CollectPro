@@ -103,7 +103,7 @@
           </button>
         </div>
 
-        <div -if="activeTab === 'manual'">vlass="tab-content" >
+        <div v-if="activeTab === 'manual'" class="tab-content">
           <h3 class="tab-title">📋 تعليمات النسخ اليدوي</h3>
           <ul class="help-list">
           <li>قم بالدخول على موقع  "ممكن" وادخل على التقارير واضبط تاريخ التحصيله بعنايه</li>
@@ -115,7 +115,7 @@
         </ul>
         </div>
 
-        <div -else>vlass="tab-content auto-instructions" >
+        <div v-else class="tab-content auto-instructions">
           <h3 class="tab-title">🚀 النسخ التلقائي الاحترافي</h3>
           
           <div class="instruction-steps">
