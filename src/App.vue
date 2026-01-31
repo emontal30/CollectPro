@@ -122,28 +122,34 @@ onMounted(() => {
   }
 
   // دالة مركزية لتحديث جميع البيانات بذكاء (تسلسلي لتخفيف الضغط)
-  const refreshAllStores = async (force = false) => {
+  const refreshAllStores = async (force = false, isResume = false) => {
     if (!navigator.onLine || !authStore.isAuthenticated) return;
 
-    logger.info('🔄 Starting smart refresh sequence...');
+    logger.info(`🔄 Starting smart refresh sequence (Resume: ${isResume})...`);
 
     try {
-      // 1. الأولوية القصوى: التحقق من الاشتراك والحصاد (الحالة الحالية)
-      // نستخدم Promise.all للأشياء الحرجة فقط
-      await Promise.allSettled([
-        harvestStore.initialize(),
-        mySubStore.forceRefresh(authStore.user)
-      ]);
+      // 1. الأولوية القصوى: التحقق من الاشتراك والحصاد
+      const criticalTasks = [];
+
+      // إذا كنا في وضع "استئناف" والبيانات موجودة بالفعل، نستخدم المزامنة الذكية بدلاً من إعادة التهيئة الكاملة
+      if (isResume && harvestStore.hasData) {
+        criticalTasks.push(harvestStore.handleConnectionRestored());
+      } else {
+        // تهيئة كاملة (عند بدء التطبيق أو إذا كانت البيانات فارغة)
+        criticalTasks.push(harvestStore.initialize());
+      }
+
+      criticalTasks.push(mySubStore.forceRefresh(authStore.user));
+
+      await Promise.allSettled(criticalTasks);
 
       // 2. الخلفية: باقي البيانات (يمكن أن تتأخر قليلاً)
-      // لا نستخدم await هنا لكي لا نعطل الواجهة، لكن نسجل الأخطاء
       Promise.allSettled([
         itineraryStore.fetchRoutes(force),
         archiveStore.loadAvailableDates(force),
         settingsStore.checkRemoteCommands()
       ]).then(() => {
         logger.info('✅ Background data refreshed');
-        // Admin dashboard is heavy, load last
         if (authStore.isAdmin) adminStore.loadDashboardData(force);
       });
 
@@ -158,17 +164,14 @@ onMounted(() => {
       if (!navigator.onLine) return;
       
       // Proactively refresh the session to handle expired tokens
-      // Timeout is handled inside this function now
       await authStore.proactivelyRefreshSession();
 
       if (!authStore.isAuthenticated) return;
 
-      // Trigger smart refresh of data
-      await refreshAllStores(true);
-
-      // Explicitly reconnect Realtime channels if they were dropped
-      // This is crucial for mobile background recovery
-      harvestStore.reconnectRealtime();
+      // Trigger smart refresh of data (pass true for isResume)
+      await refreshAllStores(true, true);
+      
+      // Reconnect Collaboration Realtime separately as it is not part of harvest
       collabStore.reconnectRealtime();
       
       logger.info('App resumed: stores refreshed and realtime reconnected');
@@ -177,15 +180,22 @@ onMounted(() => {
     }
   };
 
+  const handleOnline = () => {
+    logger.info('🌐 Network Online Detected - Triggering Immediate Sync');
+    handleResume();
+  };
+
   const visibilityHandler = () => { if (!document.hidden) handleResume(); };
 
   window.addEventListener('visibilitychange', visibilityHandler);
   window.addEventListener('focus', handleResume);
+  window.addEventListener('online', handleOnline); // ✨ Added Listener
 
   // Cleanup on unmount
   onBeforeUnmount(() => {
     window.removeEventListener('visibilitychange', visibilityHandler);
     window.removeEventListener('focus', handleResume);
+    window.removeEventListener('online', handleOnline);
   });
 
   // --- Initial App Mount Logic ---

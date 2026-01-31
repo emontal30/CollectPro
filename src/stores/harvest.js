@@ -622,6 +622,30 @@ export const useHarvestStore = defineStore('harvest', {
       }
     },
 
+    async handleConnectionRestored() {
+      const auth = useAuthStore();
+      if (!auth.user) return;
+
+      logger.info('🌐 Connection Restored - Initiating Smart Sync...');
+
+      try {
+        // 1. Re-establish Realtime Subscriptions first (Listeners)
+        await this.reconnectRealtime();
+
+        // 2. Pull latest from Cloud (in case we missed something while offline)
+        // This won't overwrite local if local is newer (handled inside syncFromCloud)
+        await this.syncFromCloud();
+
+        // 3. Push our local changes (if any) to Cloud
+        // This ensures the server has our latest offline work
+        await this.forceSyncToCloud(auth.user.id);
+
+        logger.info('✅ Smart Sync Complete');
+      } catch (err) {
+        logger.error('Smart Sync Failed:', err);
+      }
+    },
+
     async forceSyncToCloud(targetUserId) {
       return this.syncToCloud(targetUserId);
     },

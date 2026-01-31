@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   let isInitializing = false; // Guard لمنع التنفيذ المتزامن
   const isConfigLoaded = ref(false);
   let configSubscription = null;
+  const authWarning = ref(null); // Warning message to be displayed in OfflineBanner
 
   const { addNotification } = useNotifications();
   const settingsStore = useSettingsStore();
@@ -331,6 +332,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function clearAuthWarning() {
+    authWarning.value = null;
+  }
+
   async function logout() {
     isLoading.value = true;
     try {
@@ -398,6 +403,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     userProfile,
+    authWarning,
     isLoading,
     isInitialized,
     isAuthenticated,
@@ -407,6 +413,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     logout,
     logoutCleanup,
+    clearAuthWarning,
     proactivelyRefreshSession,
     reviveApp
   };
