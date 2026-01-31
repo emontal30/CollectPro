@@ -263,7 +263,7 @@ export function useHarvest(props) {
     if (immediate) {
       performSave();
     } else {
-      saveDebounceTimer = setTimeout(performSave, 1000); // 1-second debounce
+      saveDebounceTimer = setTimeout(performSave, 500); // 0.5-second debounce
     }
   };
 
@@ -679,8 +679,7 @@ export function useHarvest(props) {
     isInitializing = true;
     try {
       if (!props.isSharedView) {
-        store.initialize();
-        store.loadDataFromStorage();
+        await store.initialize();
         itineraryStore.fetchProfiles();
         itineraryStore.fetchRoutes();
       }
@@ -697,7 +696,10 @@ export function useHarvest(props) {
   // Lifecycle Hooks
   onMounted(() => {
     initializeHarvestData();
-    executePendingArchive(); // تنفيذ عملية الأرشفة المعلقة بعد reload
+    executePendingArchive();
+
+    // Safety: Save on page exit/refresh
+    window.addEventListener('beforeunload', () => saveData(true));
 
     // ⚡ Performance: إزالة شاشة المزامنة فقط إذا كانت موجودة
     if (sessionStorage.getItem('show_sync_loader')) {
@@ -706,7 +708,6 @@ export function useHarvest(props) {
         if (syncLoader && syncLoader.parentNode) {
           syncLoader.parentNode.removeChild(syncLoader);
         }
-        // إزالة الـ styles أيضاً
         const styles = document.querySelectorAll('style');
         styles.forEach(style => {
           if (style.innerHTML.includes('sync-loader-overlay')) {
@@ -729,6 +730,9 @@ export function useHarvest(props) {
     store.searchQuery = searchQueryLocal.value;
     window.removeEventListener('focus', syncWithCounterStore);
     document.removeEventListener('click', handleOutsideClick);
+    window.removeEventListener('beforeunload', () => saveData(true));
+    // Force save on unmount (navigation)
+    saveData(true);
   });
 
   watch(() => collabStore.activeSessionId, (newId, oldId) => {
