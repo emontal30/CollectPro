@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="body" :disabled="!show">
     <transition name="modal">
       <div v-if="show" class="shared-modal-overlay" @click="handleOverlayClick">
         <div

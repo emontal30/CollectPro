@@ -1,5 +1,5 @@
 <template>
-  <teleport to="body">
+  <teleport to="body" :disabled="!isOpen">
     <div v-if="isOpen" class="modal-overlay" @click.self="close">
       <div class="modal-content extra-details-modal animate-scale-in">
         

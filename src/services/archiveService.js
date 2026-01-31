@@ -90,7 +90,7 @@ export const archiveService = {
           supabase
             .from('daily_archives')
             .upsert(payload, { onConflict: 'user_id, archive_date' }),
-          20000, // 20s for save (might be larger payload)
+          60000, // 60s for save (accommodation for slow networks)
           'Archive save timed out'
         )
       );

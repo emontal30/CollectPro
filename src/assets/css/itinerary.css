@@ -380,6 +380,7 @@
 
 .order-input[type=number] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .shop-name-cell {

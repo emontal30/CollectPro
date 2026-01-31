@@ -188,6 +188,7 @@ import { useRouter } from 'vue-router';
 import { useDashboardStore } from '@/stores/dashboard';
 import { useItineraryStore } from '@/stores/itineraryStore'; // إضافة store خط السير
 import { useHarvestStore } from '@/stores/harvest';
+import { useCollaborationStore } from '@/stores/collaborationStore';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import api from '@/services/api'; // Import the api object
 
@@ -251,6 +252,13 @@ const handleSaveAndGo = async () => {
       if (!isConfirmed) {
         addNotification('تم إلغاء العملية.', 'info');
         return; // Abort if user cancels
+      }
+
+      // Check if we are in a shared session and exit it first
+      const collabStore = useCollaborationStore();
+      if (collabStore.activeSessionId) {
+        await collabStore.endSession();
+        harvestStore.switchToUserSession(null);
       }
 
       // Auto-archive logic
