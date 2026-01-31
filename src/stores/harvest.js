@@ -23,7 +23,7 @@ export const useHarvestStore = defineStore('harvest', {
     masterLimit: 100000,
     extraLimit: 0,
     currentBalance: 0,
-    isLoading: false,
+    isLoading: true,
     isModified: false,
 
     // Shared State

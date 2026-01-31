@@ -130,6 +130,7 @@
                 class="editable-input" 
                 :disabled="isReadOnly"
                 @input="updateShop(row, index, $event)" 
+                @blur="saveData(true)"
                 @click="showTooltip($event.target, row.shop)" 
               />
               <span v-else class="readonly-field" @click="showTooltip($event.target, row.shop)">{{ row.shop }}</span>
@@ -145,6 +146,7 @@
                 class="editable-input" 
                 :disabled="isReadOnly"
                 @input="updateCode(row, index, $event)" 
+                @blur="saveData(true)"
               />
               <span v-else class="readonly-field">{{ row.code }}</span>
             </td>
@@ -160,6 +162,7 @@
                 lang="en"
                 :disabled="isReadOnly"
                 @input="updateAmount(row, index, $event)"
+                @blur="saveData(true)"
               />
               <span v-else class="readonly-amount">{{ formatInputNumber(row.amount) }}</span>
             </td>
@@ -177,6 +180,7 @@
                   :disabled="isReadOnly"
                   @focus="showTooltip($event.target, row.shop, { showDetailsBtn: !isReadOnly, row, index })"
                   @input="updateExtra(row, index, $event)"
+                  @blur="saveData(true)"
                 />
                 <button v-if="!isReadOnly" class="btn-toggle-sign" title="إضافة سالب" @click="toggleSign(row, 'extra')">-</button>
               </div>
@@ -193,6 +197,7 @@
                 :disabled="isReadOnly"
                 @focus="showTooltip($event.target, row.shop)"
                 @input="updateCollector(row, index, $event)"
+                @blur="saveData(true)"
               />
             </td>
 
@@ -593,6 +598,7 @@ const {
   // Overdue date
   overdueDate,
   restoreLatestOverdue,
+  saveData,
   overdueTotal
 } = useHarvest(props);
 

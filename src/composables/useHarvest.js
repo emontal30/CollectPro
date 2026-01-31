@@ -263,7 +263,7 @@ export function useHarvest(props) {
     if (immediate) {
       performSave();
     } else {
-      saveDebounceTimer = setTimeout(performSave, 500); // 0.5-second debounce
+      saveDebounceTimer = setTimeout(performSave, 300); // 0.3-second debounce
     }
   };
 
@@ -775,7 +775,7 @@ export function useHarvest(props) {
     exitSession, showMissingCenters, showOverdueModal, applyOverdue, deleteSelectedOverdue, restoreLatestOverdue, toggleProfileDropdown,
     applyItineraryProfile, handleSearchInput, clearSearch, updateShop, updateCode,
     updateAmount, updateExtra, updateCollector, updateSummaryField, toggleSign,
-    confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext,
+    confirmClearAll, archiveToday, handleExport, handleSummaryExport, showTooltip, formatInputNumber, customTooltipContext, saveData,
     // Extra Details Modal
     isExtraDetailsModalOpen, activeExtraRowData, openExtraDetailsModal, closeExtraDetailsModal, saveExtraDetails,
     // Overdue date
