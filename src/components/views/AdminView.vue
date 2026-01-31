@@ -37,6 +37,45 @@
       </div>
     </section>
 
+    <!-- Super Admin Controls -->
+    <section v-if="isSuperAdmin" class="admin-section border-warning-subtle">
+      <div class="admin-section-header">
+        <h2><i class="fas fa-crown text-warning"></i> تحكم المشرف الرئيسي</h2>
+      </div>
+      <div class="p-4">
+        <div class="info-banner mb-3 warning-banner">
+          <i class="fas fa-shield-alt"></i> هذه المنطقة مخصصة فقط للمشرف الرئيسي لإدارة صلاحيات المشرفين الآخرين.
+        </div>
+        <div class="d-flex gap-2 align-end flex-wrap">
+          <div class="input-group flex-1" style="min-width: 250px;">
+            <label class="mb-1 d-block font-bold text-sm">البريد الإلكتروني للمستخدم</label>
+            <input 
+              v-model="superAdminEmailInput" 
+              type="email" 
+              class="modern-input" 
+              placeholder="user@example.com"
+            >
+          </div>
+          <div class="d-flex gap-2">
+            <button 
+              class="btn btn-primary font-bold" 
+              @click="store.manageAdminRole(superAdminEmailInput, 'promote')"
+              :disabled="!superAdminEmailInput"
+            >
+              <i class="fas fa-user-shield"></i> ترقية لمشرف
+            </button>
+            <button 
+              class="btn btn-danger font-bold" 
+              @click="store.manageAdminRole(superAdminEmailInput, 'demote')"
+              :disabled="!superAdminEmailInput"
+            >
+              <i class="fas fa-user-minus"></i> إزالة الصلاحية
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="stats-container">
       <div 
         v-for="(stat, key) in adminStats" 
@@ -142,7 +181,15 @@
                 </td>
                 <td class="col-user">
                   <div class="user-info-cell">
-                    <div class="user-name font-bold">{{ user.full_name || 'مستخدم' }}</div>
+                    <div class="user-name font-bold d-flex align-center gap-1">
+                      {{ user.full_name || 'مستخدم' }}
+                      <span v-if="user.email === 'emontal.33@gmail.com'" class="text-xs font-bold border rounded px-1" style="color: #0d6efd; border-color: #0d6efd;" title="المشرف الرئيسي">
+                        <i class="fas fa-crown" style="color: #ffd700;"></i> Admin
+                      </span>
+                      <span v-else-if="user.role === 'admin'" class="text-xs font-bold border rounded px-1" style="color: #d35400; border-color: #d35400;" title="مشرف مساعد">
+                        <i class="fas fa-user-shield" style="color: #f39c12;"></i> Supervisor
+                      </span>
+                    </div>
                     <div class="user-email text-xs text-muted">{{ user.email }}</div>
                     <div class="user-short-id">
                       {{ user.user_code || user.id.slice(0, 8) }} 
@@ -650,7 +697,9 @@ const {
   exportLocations,
   toggleSelectAllLocations,
   scrollToTop,
-  copyToClipboard
+  copyToClipboard,
+  isSuperAdmin,
+  superAdminEmailInput
 } = useAdminView();
 
 </script>
@@ -670,4 +719,38 @@ const {
 .copy-icon:active {
   transform: scale(0.9);
 }
+
+.copy-icon:active {
+  transform: scale(0.9);
+}
+
+.modern-input {
+  width: 100%;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.modern-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+  outline: none;
+}
+
+.border-warning-subtle {
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.warning-banner {
+  background: rgba(245, 158, 11, 0.1);
+  border-right: 4px solid var(--warning);
+  color: var(--text-primary);
+  padding: 1rem;
+  border-radius: 4px;
+}
+
 </style>

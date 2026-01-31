@@ -14,6 +14,13 @@ export function useAdminView() {
     const authStore = useAuthStore();
     const { confirm, addNotification } = inject('notifications');
 
+    // Super Admin Check
+    const isSuperAdmin = computed(() => {
+        return authStore.user?.email === 'emontal.33@gmail.com';
+    });
+
+    const superAdminEmailInput = ref('');
+
     const adminStats = {
         totalUsers: { label: 'إجمالي المستخدمين', icon: 'fas fa-users', unit: '' },
         activeUsers: { label: 'مستخدمون فعالون', icon: 'fas fa-user-check', unit: '' },
@@ -305,11 +312,6 @@ export function useAdminView() {
         window.removeEventListener('scroll', handleScroll);
     });
 
-    // Using onBeforeRouteUpdate inside setup needs to be careful, but it works in setup component usually.
-    // However, the standard way in composables is often to rely on the component using it, 
-    // but since we are refactoring, we can keep the logic here if we call it from the component setup.
-    // Ideally, onBeforeRouteUpdate is a guard. We can export a function to be called or just register it here if supported.
-    // Vue Router guards inside composables are supported if called within setup().
     onBeforeRouteUpdate((to, from, next) => {
         initAdminData(true);
         next();
@@ -361,6 +363,8 @@ export function useAdminView() {
         openLocationsModal,
         deleteSelectedLocations,
         exportLocations,
-        toggleSelectAllLocations
+        toggleSelectAllLocations,
+        isSuperAdmin,
+        superAdminEmailInput
     };
 }

@@ -605,11 +605,49 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function manageAdminRole(email, action) {
+    if (!email) {
+      addNotification('يرجى إدخال البريد الإلكتروني', 'warning');
+      return;
+    }
+
+    const actionText = action === 'promote' ? 'ترقية لمشرف' : 'إزالة الصلاحية';
+    const result = await confirm({
+      title: 'تأكيد الإجراء الحساس',
+      text: `هل أنت متأكد من ${actionText} للمستخدم ${email}؟`,
+      icon: 'warning'
+    });
+
+    if (!result.isConfirmed) return;
+
+    showLoading('جاري تحديث الصلاحيات...');
+    try {
+      const response = await api.admin.manageAdminRole(email, action);
+
+      closeLoading();
+
+      if (response && response.success) {
+        showSuccess(response.message);
+        // تحديث القائمة إذا كان المستخدم موجوداً فيها
+        const userIdx = usersList.value.findIndex(u => u.email === email);
+        if (userIdx !== -1) {
+          usersList.value[userIdx].role = response.new_role;
+        }
+      } else {
+        showError(response?.message || 'فشلت العملية');
+      }
+    } catch (e) {
+      closeLoading();
+      logger.error('Manage admin role failed:', e);
+      showError('حدث خطأ غير متوقع');
+    }
+  }
+
   return {
     stats, chartsData, usersList, pendingSubscriptions, allSubscriptions, filters, isLoading, isSubscriptionEnforced, fetchError,
     serverTimeOffset, appErrors,
     loadDashboardData, fetchStats, fetchAllSubscriptions, fetchUsers, syncUsers, fetchAppErrors, resolveError, bulkResolveErrors, deleteError,
     handleSubscriptionAction, activateManualSubscription, formatDate, toggleSubscriptionEnforcement, fetchSystemConfig,
-    runRepairTool, sendRemoteCommand, copyUniqueErrors
+    runRepairTool, sendRemoteCommand, copyUniqueErrors, manageAdminRole
   };
 });

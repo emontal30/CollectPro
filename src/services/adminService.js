@@ -187,6 +187,29 @@ export const adminService = {
     });
 
     return { labels: last5Months, values: last5Months.map(k => monthsCount[k]) };
+  },
+
+  /**
+   * 8. إدارة أدوار المشرفين (Super Admin Only)
+   * @param {string} email
+   * @param {string} action 'promote' | 'demote'
+   */
+  async manageAdminRole(email, action) {
+    try {
+      const { data, error } = await apiInterceptor(
+        supabase.rpc('manage_admin_role', { target_email: email, action })
+      );
+
+      if (error) {
+        logger.error('❌ Error managing admin role:', error);
+        return { success: false, message: error.message };
+      }
+
+      return data;
+    } catch (e) {
+      logger.error('❌ Exception in manageAdminRole:', e);
+      return { success: false, message: e.message };
+    }
   }
 }
 
