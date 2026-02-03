@@ -1,6 +1,7 @@
 -- ====================================================================
--- COLLECTPRO DATABASE - FILE 2/3: SECURITY & POLICIES
--- Includes: RLS Policies, Security Fixes, View Permissions
+-- COLLECTPRO DATABASE - FILE 2/5: SECURITY & RLS POLICIES
+-- Consolidated from: 02_security_policies.sql + RLS from 05_client_routes.sql
+-- Includes: All RLS Policies, Security Functions, Permissions
 -- ====================================================================
 
 -- 1. HELPER FUNCTIONS
@@ -16,23 +17,17 @@ BEGIN
 END;
 $$;
 
-
--- 2. COLLABORATION & LIVE HARVEST POLICIES (Supervision/Collaboration Mode)
--- ====================================================================
--- Logic: Owner full control. Supervisor can view/edit specific tables if accepted.
+-- 2. COLLABORATION & LIVE HARVEST POLICIES
 -- ====================================================================
 
 ALTER TABLE public.live_harvest ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collaboration_requests ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
-    -- Clean slate for these tables
     PERFORM public.drop_all_policies_for_table('public', 'live_harvest');
     PERFORM public.drop_all_policies_for_table('public', 'collaboration_requests');
 
     -- Collaboration Requests Policies
-    -- ----------------------------------------------------
-    -- Updated logic: Ensure visibility for both participants with proper WITH CHECK
     CREATE POLICY "Visible to participants" ON public.collaboration_requests
     FOR ALL
     USING (
@@ -51,23 +46,18 @@ DO $$ BEGIN
     );
 
     -- Live Harvest Policies
-    -- ----------------------------------------------------
     CREATE POLICY "Owner full access" ON public.live_harvest FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
     
-    -- Admin access
     CREATE POLICY "Admin view all live data" ON public.live_harvest FOR SELECT TO authenticated USING (public.is_admin());
     CREATE POLICY "Admin update all live data" ON public.live_harvest FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
-    -- Supervisor VIEW (If accepted)
     CREATE POLICY "Supervisor can view shared data" ON public.live_harvest FOR SELECT TO authenticated 
     USING (EXISTS (SELECT 1 FROM collaboration_requests WHERE sender_id = auth.uid() AND receiver_id = live_harvest.user_id AND status = 'accepted'));
 
-    -- Supervisor EDIT (If accepted + Editor role)
     CREATE POLICY "Supervisor can update shared data" ON public.live_harvest FOR UPDATE TO authenticated 
     USING (EXISTS (SELECT 1 FROM collaboration_requests WHERE sender_id = auth.uid() AND receiver_id = live_harvest.user_id AND status = 'accepted' AND role = 'editor'))
     WITH CHECK (EXISTS (SELECT 1 FROM collaboration_requests WHERE sender_id = auth.uid() AND receiver_id = live_harvest.user_id AND status = 'accepted' AND role = 'editor'));
 
-    -- Add Realtime Publication safely
     BEGIN
       ALTER PUBLICATION supabase_realtime ADD TABLE collaboration_requests;
       ALTER PUBLICATION supabase_realtime ADD TABLE live_harvest;
@@ -78,8 +68,7 @@ END $$;
 GRANT SELECT ON collaboration_requests TO authenticated;
 GRANT SELECT ON live_harvest TO authenticated;
 
-
--- 3. OTHER MODULE POLICIES (Routes, Overdue, Actions, Config)
+-- 3. CORE TABLES POLICIES
 -- ====================================================================
 
 DO $$ BEGIN
@@ -107,7 +96,7 @@ DO $$ BEGIN
         CREATE POLICY "Admin view actions" ON public.user_actions FOR SELECT USING (public.is_admin());
     END IF;
     
-    -- D. system_config (Was system_settings)
+    -- D. system_config
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'system_config') THEN
         ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'system_config');
@@ -115,7 +104,7 @@ DO $$ BEGIN
         CREATE POLICY "Admin manage config" ON public.system_config FOR ALL USING (public.is_admin());
     END IF;
 
-    -- E. subscriptions (Missing)
+    -- E. subscriptions
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'subscriptions') THEN
         ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'subscriptions');
@@ -124,7 +113,7 @@ DO $$ BEGIN
         CREATE POLICY "Admin manage all subs" ON public.subscriptions FOR ALL USING (public.is_admin());
     END IF;
 
-    -- F. subscription_plans (Missing)
+    -- F. subscription_plans
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'subscription_plans') THEN
         ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'subscription_plans');
@@ -132,14 +121,14 @@ DO $$ BEGIN
         CREATE POLICY "Admin manage plans" ON public.subscription_plans FOR ALL USING (public.is_admin());
     END IF;
 
-    -- G. statistics (Missing)
+    -- G. statistics
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'statistics') THEN
         ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'statistics');
         CREATE POLICY "Admin view statistics" ON public.statistics FOR SELECT USING (public.is_admin());
     END IF;
 
-    -- H. users (Core - Missing in consolidation)
+    -- H. users
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'users') THEN
         ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'users');
@@ -148,58 +137,60 @@ DO $$ BEGIN
         CREATE POLICY "Allow admins to manage all profiles" ON public.users FOR ALL USING (public.is_admin());
     END IF;
 
-    -- I. profiles (Core - Missing in consolidation)
+    -- I. profiles
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'profiles') THEN
         ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'profiles');
-        
-        -- Allow public visibility for collaboration (Updated logic)
         CREATE POLICY "Public profiles visibility" ON public.profiles FOR SELECT USING (true);
-        
         CREATE POLICY "Users update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-        
         CREATE POLICY "Users insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
-        
         CREATE POLICY "Admin manage profiles" ON public.profiles FOR ALL USING (public.is_admin());
     END IF;
 
-    -- J. daily_archives (Fix for 403 Error)
+    -- J. daily_archives
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'daily_archives') THEN
         ALTER TABLE public.daily_archives ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'daily_archives');
         CREATE POLICY "Users manage own archives" ON public.daily_archives FOR ALL USING ((auth.uid() = user_id) AND public.can_write_data());
-        -- Admin access (Added for complete sync visibility)
         CREATE POLICY "Admin manage all archives" ON public.daily_archives FOR ALL USING (public.is_admin());
     END IF;
 
-    -- K. admin_user_commands (Security Fix)
+    -- K. admin_user_commands
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'admin_user_commands') THEN
         ALTER TABLE public.admin_user_commands ENABLE ROW LEVEL SECURITY;
         PERFORM public.drop_all_policies_for_table('public', 'admin_user_commands');
-        
-        CREATE POLICY "Admins can manage all commands" ON public.admin_user_commands FOR ALL
-        USING (public.is_admin());
-
-        CREATE POLICY "Users can view their own commands" ON public.admin_user_commands FOR SELECT
-        USING (auth.uid() = user_id);
-
-        CREATE POLICY "Users can delete their own commands" ON public.admin_user_commands FOR DELETE
-        USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can manage all commands" ON public.admin_user_commands FOR ALL USING (public.is_admin());
+        CREATE POLICY "Users can view their own commands" ON public.admin_user_commands FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can delete their own commands" ON public.admin_user_commands FOR DELETE USING (auth.uid() = user_id);
     END IF;
 
-    -- L. archive_search (Security Fix - No Policy)
-    IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'archive_search') THEN
-        ALTER TABLE public.archive_search ENABLE ROW LEVEL SECURITY;
-        PERFORM public.drop_all_policies_for_table('public', 'archive_search');
+    -- L. client_routes (من ملف 05)
+    IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'client_routes') THEN
+        ALTER TABLE public.client_routes ENABLE ROW LEVEL SECURITY;
+        PERFORM public.drop_all_policies_for_table('public', 'client_routes');
         
-        -- Admin Access
-        CREATE POLICY "Admin manage archive search" ON public.archive_search FOR ALL 
-        USING (public.is_admin());
+        CREATE POLICY "Users can view their own routes" ON public.client_routes FOR SELECT USING (auth.uid() = user_id);
+        CREATE POLICY "Users can insert their own routes" ON public.client_routes FOR INSERT WITH CHECK (auth.uid() = user_id);
+        CREATE POLICY "Users can update their own routes" ON public.client_routes FOR UPDATE USING (auth.uid() = user_id);
+        CREATE POLICY "Users can delete their own routes" ON public.client_routes FOR DELETE USING (auth.uid() = user_id);
+        CREATE POLICY "Admins can view all routes" ON public.client_routes FOR SELECT USING (public.is_admin());
+    END IF;
+
+    -- M. app_errors (من ملف 04)
+    IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'app_errors') THEN
+        ALTER TABLE public.app_errors ENABLE ROW LEVEL SECURITY;
+        PERFORM public.drop_all_policies_for_table('public', 'app_errors');
+        
+        CREATE POLICY "Anyone can insert errors" ON public.app_errors FOR INSERT 
+        WITH CHECK (auth.role() IN ('anon', 'authenticated') AND severity IN ('error', 'warning', 'critical', 'info'));
+        
+        CREATE POLICY "Admins can view errors" ON public.app_errors FOR SELECT USING (public.is_admin());
+        CREATE POLICY "Admins can update errors" ON public.app_errors FOR UPDATE USING (public.is_admin());
+        CREATE POLICY "Admins can delete errors" ON public.app_errors FOR DELETE USING (public.is_admin());
     END IF;
 END $$;
 
-
--- 4. LEGACY TABLE SAFEGUARDS & VIEW FIXES
+-- 4. LEGACY TABLE SAFEGUARDS
 -- ====================================================================
 
 DO $$ 
@@ -231,7 +222,9 @@ BEGIN
     IF EXISTS (SELECT FROM pg_views WHERE viewname = 'user_subscription_status') THEN ALTER VIEW public.user_subscription_status SET (security_invoker = true); END IF;
 END $$;
 
--- Fix Function Search Paths (Security Hardening)
+-- 5. FIX FUNCTION SEARCH PATHS (Security Hardening)
+-- ====================================================================
+
 DO $$
 DECLARE
     r RECORD;
@@ -242,7 +235,8 @@ DECLARE
         'diagnose_permissions', 'log_activity', 'handle_updated_at', 'handle_new_user', 'handle_notification_read_at',
         'get_admin_stats', 'get_admin_stats_fixed', 'get_users_with_details', 'fix_missing_profiles',
         'get_pending_subscriptions_admin', 'get_all_subscriptions_admin', 'get_app_errors_admin', 'get_client_locations_admin',
-        'log_error', 'log_notifications_activity'
+        'log_error', 'log_notifications_activity', 'upsert_daily_archive_safe', 'upsert_client_routes_safe',
+        'get_user_archive_dates_admin', 'get_user_archive_data_admin', 'repair_user_account', 'manage_admin_role'
     ];
     func_name TEXT;
 BEGIN
@@ -253,5 +247,8 @@ BEGIN
     END LOOP;
 END $$;
 
--- 5. REFRESH SCHEMA CACHE
+-- 6. REFRESH SCHEMA CACHE
+-- ====================================================================
+
+NOTIFY pgrst, 'reload schema';
 NOTIFY pgrst, 'reload config';

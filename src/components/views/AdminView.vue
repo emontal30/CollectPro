@@ -594,17 +594,17 @@ v-if="sub.status === 'active' || sub.status === 'cancelled'"
          </div>
 
          <div id="locations-table-container" class="table-wrapper m-0" style="max-height: 500px; overflow-y: auto;">
-            <table class="modern-table auto-layout">
+            <table class="modern-table auto-layout locations-table">
                 <thead>
                     <tr>
                         <th class="th-checkbox" style="width: 40px;">
                            <input type="checkbox" :checked="isAllLocationsSelected" @change="toggleSelectAllLocations">
                         </th>
-                        <th>كود العميل</th>
-                        <th>اسم المحل</th>
+                        <th style="width: 120px;">كود العميل</th>
+                        <th class="col-shop-name">اسم المحل</th>
                         <th>الإحداثيات (Lat, Lng)</th>
-                        <th>آخر تحديث للموقع</th>
-                        <th class="text-center">خريطة</th>
+                        <th class="col-last-updated">آخر تحديث</th>
+                        <th class="text-center" style="width: 80px;">خريطة</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -619,7 +619,7 @@ v-if="sub.status === 'active' || sub.status === 'cancelled'"
                            <input v-model="selectedLocationIds" type="checkbox" :value="loc.id">
                         </td>
                         <td class="font-mono font-bold text-primary">{{ loc.shop_code }}</td>
-                        <td>{{ loc.shop_name }}</td>
+                        <td class="col-shop-name">{{ loc.shop_name }}</td>
                         <td class="text-xs" dir="ltr">
                            <template v-if="loc.latitude">
                               <span class="location-badge">{{ Number(loc.latitude).toFixed(6) }}, {{ Number(loc.longitude).toFixed(6) }}</span>
@@ -628,7 +628,7 @@ v-if="sub.status === 'active' || sub.status === 'cancelled'"
                               <span class="no-location-badge">-</span>
                            </template>
                         </td>
-                        <td class="text-xs">{{ store.formatDate(loc.location_updated_at || loc.updated_at) }}</td>
+                        <td class="col-last-updated">{{ store.formatDate(loc.location_updated_at || loc.updated_at) }}</td>
                         <td class="text-center">
                             <a v-if="loc.latitude" :href="`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`" target="_blank" class="btn btn--icon text-primary" title="عرض في Google Maps">
                                 <i class="fas fa-map-marked-alt"></i>
@@ -704,6 +704,7 @@ const {
 
 </script>
 
+
 <style scoped>
 .copy-icon {
   cursor: pointer;
@@ -751,6 +752,78 @@ const {
   color: var(--text-primary);
   padding: 1rem;
   border-radius: 4px;
+}
+
+/* Ensure locations table is always visible */
+.locations-modal-content {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrapper {
+  flex: 1;
+  min-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive table for all screen sizes */
+@media (max-width: 768px) {
+  .table-wrapper {
+    max-height: 400px !important;
+    min-height: 250px !important;
+  }
+  
+  .modern-table {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-wrapper {
+    max-height: 350px !important;
+    min-height: 200px !important;
+  }
+  
+  .modern-table {
+    font-size: 0.85rem;
+  }
+  
+  .modern-table th,
+  .modern-table td {
+    padding: 0.5rem !important;
+  }
+}
+
+/* Force fixed column widths for locations table */
+.locations-table th,
+.locations-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#locations-table-container .col-shop-name {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#locations-table-container .col-last-updated {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+}
+
+#locations-table-container td.col-last-updated {
+  font-size: 0.72rem !important;
+  white-space: normal !important;
+  line-height: 1.2;
 }
 
 </style>

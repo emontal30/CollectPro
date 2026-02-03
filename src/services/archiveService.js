@@ -74,36 +74,75 @@ export const archiveService = {
   },
 
   /**
-   * حفظ أو تحديث أرشيف اليوم (Upsert)
+   * حفظ أو تحديث أرشيف اليوم (Upsert) - مع حماية من Deadlock
    */
   async saveDailyArchive(userId, dateStr, harvestData) {
-    try {
-      const payload = {
-        user_id: userId,
-        archive_date: dateStr,
-        data: harvestData,
-        updated_at: new Date().toISOString()
-      };
+    const queueKey = `${userId}-${dateStr}`;
 
-      const { error } = await apiInterceptor(
+    // Initialize queue map if not exists
+    if (!this._saveQueue) {
+      this._saveQueue = new Map();
+    }
+
+    // Wait for existing operation on same user-date
+    if (this._saveQueue.has(queueKey)) {
+      logger.info(`⏳ Waiting for existing save operation: ${dateStr}`);
+      await this._saveQueue.get(queueKey);
+    }
+
+    // Create new promise for this operation
+    const savePromise = this._saveDailyArchiveInternal(userId, dateStr, harvestData);
+    this._saveQueue.set(queueKey, savePromise);
+
+    try {
+      const result = await savePromise;
+      return result;
+    } finally {
+      // Clean up queue
+      this._saveQueue.delete(queueKey);
+    }
+  },
+
+  /**
+   * Internal save implementation using safe RPC function
+   */
+  async _saveDailyArchiveInternal(userId, dateStr, harvestData) {
+    try {
+      const { data, error } = await apiInterceptor(
         withTimeout(
-          supabase
-            .from('daily_archives')
-            .upsert(payload, { onConflict: 'user_id, archive_date' }),
-          60000, // 60s for save (accommodation for slow networks)
+          supabase.rpc('upsert_daily_archive_safe', {
+            p_user_id: userId,
+            p_archive_date: dateStr,
+            p_data: harvestData,
+            p_updated_at: new Date().toISOString()
+          }),
+          60000, // 60s timeout
           'Archive save timed out'
         )
       );
 
+      // Check RPC response
       if (error) throw error;
+
+      // Check if RPC returned error in response
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Unknown database error');
+      }
 
       logger.info(`☁️ تم رفع أرشيف ${dateStr} بنجاح`);
       return { success: true, error: null };
     } catch (err) {
+      // Check if this is a deadlock error
+      if (err.code === '40P01' || (err.message && err.message.includes('deadlock'))) {
+        logger.error('⚠️ Deadlock detected, will retry...', err);
+        return { success: false, error: err, shouldRetry: true };
+      }
+
       logger.error('❌ خطأ أثناء رفع الأرشيف:', err);
       return { success: false, error: err };
     }
   },
+
 
   /**
    * حذف أرشيف يوم محدد يدوياً

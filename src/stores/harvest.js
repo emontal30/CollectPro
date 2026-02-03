@@ -250,7 +250,7 @@ export const useHarvestStore = defineStore('harvest', {
           .eq('user_id', userId)
           .maybeSingle()
           .abortSignal(signal),
-        20000,
+        30000, // Increased from 20s to 30s
         'Cloud sync (read) timed out'
       );
 

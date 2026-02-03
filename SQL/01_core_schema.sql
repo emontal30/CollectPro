@@ -1,6 +1,7 @@
 -- ====================================================================
--- COLLECTPRO DATABASE - FILE 1/3: SCHEMA & FUNCTIONS
--- Includes: Core Schema, Itinerary, Tracking, Collaboration, Admin RPC
+-- COLLECTPRO DATABASE - FILE 1/5: CORE SCHEMA & FUNCTIONS
+-- Consolidated from: 01_schema_and_functions.sql, 05_client_routes.sql
+-- Includes: Core Schema, Functions, Triggers, Itinerary, Collaboration
 -- ====================================================================
 
 -- 1. EXTENSIONS
@@ -17,7 +18,7 @@ DROP FUNCTION IF EXISTS public.update_statistics CASCADE;
 DROP FUNCTION IF EXISTS public.create_user_profile CASCADE;
 DROP FUNCTION IF EXISTS public.cleanup_old_archives CASCADE;
 DROP FUNCTION IF EXISTS public.update_updated_at_column CASCADE;
-DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE; -- Definition moved below to restore missing function
+DROP FUNCTION IF EXISTS public.fix_missing_profiles CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin CASCADE;
 DROP FUNCTION IF EXISTS public.get_server_time CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
@@ -25,7 +26,7 @@ DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
 DROP FUNCTION IF EXISTS public.can_write_data CASCADE;
 DROP FUNCTION IF EXISTS public.protect_user_role CASCADE;
 
--- Tables
+-- Core Tables
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
@@ -78,7 +79,6 @@ CREATE TABLE IF NOT EXISTS public.daily_archives (
     CONSTRAINT daily_archives_user_date_unique UNIQUE(user_id, archive_date)
 );
 
--- 8. Statistics table
 CREATE TABLE IF NOT EXISTS public.statistics (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -89,23 +89,136 @@ CREATE TABLE IF NOT EXISTS public.statistics (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 9. Route Profiles (Itinerary Templates)
-CREATE TABLE IF NOT EXISTS public.route_profiles (
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    slot_number INTEGER NOT NULL,
-    profile_name TEXT,
-    shops_order JSONB, -- Stores array of shop codes
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    PRIMARY KEY (user_id, slot_number)
-);
-
 CREATE TABLE IF NOT EXISTS public.system_config (
     key TEXT PRIMARY KEY,
     value JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Core Functions
+-- ====================================================================
+-- SECTION: ITINERARY SCHEMA (route_profiles, client_routes)
+-- ====================================================================
+
+CREATE TABLE IF NOT EXISTS public.route_profiles (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    slot_number INTEGER NOT NULL,
+    profile_name TEXT NOT NULL,
+    shops_order JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT unique_slot_per_user UNIQUE(user_id, slot_number)
+);
+
+-- Client Routes Table (Consolidated from file 05)
+CREATE TABLE IF NOT EXISTS public.client_routes (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    shop_code TEXT NOT NULL,
+    shop_name TEXT,
+    latitude FLOAT,
+    longitude FLOAT,
+    location_updated_at TIMESTAMP WITH TIME ZONE,
+    current_balance NUMERIC DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    is_ignored BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT unique_shop_code_per_user UNIQUE(user_id, shop_code)
+);
+
+-- Indexes for client_routes
+CREATE INDEX IF NOT EXISTS idx_client_routes_user_id ON public.client_routes(user_id);
+CREATE INDEX IF NOT EXISTS idx_client_routes_shop_code ON public.client_routes(shop_code);
+
+-- ====================================================================
+-- SECTION: TRACKING SCHEMA (user_actions)
+-- ====================================================================
+
+CREATE TABLE IF NOT EXISTS public.user_actions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    action_type TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_actions_created_at ON public.user_actions(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_actions_user_id ON public.user_actions(user_id);
+
+-- ====================================================================
+-- SECTION: COLLABORATION (profiles, requests, live_harvest)
+-- ====================================================================
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    user_code TEXT UNIQUE NOT NULL, 
+    full_name TEXT,
+    email TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+
+CREATE TABLE IF NOT EXISTS public.collaboration_requests (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    receiver_code TEXT NOT NULL,
+    receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT CHECK (role IN ('viewer', 'editor')) DEFAULT 'editor',
+    status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'revoked')) DEFAULT 'pending',
+    responded_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_collab_receiver_code ON public.collaboration_requests(receiver_code, status);
+CREATE INDEX IF NOT EXISTS idx_collab_sender ON public.collaboration_requests(sender_id);
+
+-- Clean up existing duplicates before adding unique index
+DELETE FROM public.collaboration_requests
+WHERE id IN (
+    SELECT id FROM (
+        SELECT id,
+               ROW_NUMBER() OVER (
+                   PARTITION BY sender_id, receiver_id 
+                   ORDER BY created_at DESC
+               ) as r_num
+        FROM public.collaboration_requests
+        WHERE status IN ('pending', 'accepted')
+    ) t
+    WHERE t.r_num > 1
+);
+
+-- Prevent duplicate active invitations
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_invitation 
+ON public.collaboration_requests (sender_id, receiver_id) 
+WHERE status IN ('pending', 'accepted');
+
+CREATE TABLE IF NOT EXISTS public.live_harvest (
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    rows JSONB DEFAULT '[]'::jsonb,
+    master_limit NUMERIC DEFAULT 0,
+    extra_limit NUMERIC DEFAULT 0,
+    current_balance NUMERIC DEFAULT 0,
+    last_updated_by UUID REFERENCES auth.users(id),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Pending Overdue Stores (من ملف 03)
+CREATE TABLE IF NOT EXISTS public.pending_overdue_stores (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    code TEXT NOT NULL,
+    shop TEXT,
+    net NUMERIC DEFAULT 0,
+    archive_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ====================================================================
+-- SECTION: CORE FUNCTIONS
+-- ====================================================================
+
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER 
 SECURITY DEFINER SET search_path = public
@@ -151,31 +264,19 @@ BEGIN
 END;
 $$;
 
--- [DEPRECATED] These functions caused lock contention on the statistics table.
--- Statistics are now calculated live via get_admin_stats().
-DROP FUNCTION IF EXISTS public.handle_new_user_stats CASCADE;
-DROP FUNCTION IF EXISTS public.handle_subscription_stats CASCADE;
-
--- handle_subscription_stats was here (removed)
-
--- Robust User Initialization (SECURITY DEFINER)
--- Handles both public.users and public.profiles creation atomically.
+-- User Registration Handler
 CREATE OR REPLACE FUNCTION public.handle_new_user_registration()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 DECLARE 
     extracted_name TEXT;
     new_user_code TEXT;
 BEGIN
-    -- 1. Determine Full Name
     extracted_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1));
     IF extracted_name IS NULL OR extracted_name = '' THEN extracted_name := 'مستخدم'; END IF;
 
-    -- 2. Generate Unique User Code (for Profiles/Collaboration)
     new_user_code := 'EMP-' || substring(md5(NEW.id::text || random()::text) from 1 for 6);
 
-    -- 3. Create public.users record
-    INSERT INTO public.users (id, email, full_name, role, provider)
-    VALUES (
+    INSERT INTO public.users (id, email, full_name, role, provider)    VALUES (
         NEW.id, 
         NEW.email, 
         extracted_name, 
@@ -187,7 +288,6 @@ BEGIN
         provider = EXCLUDED.provider, 
         updated_at = NOW();
 
-    -- 4. Create public.profiles record
     INSERT INTO public.profiles (id, user_code, full_name, email)
     VALUES (NEW.id, new_user_code, extracted_name, NEW.email)
     ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, updated_at = NOW();
@@ -196,169 +296,7 @@ BEGIN
 END;
 $$;
 
--- View: Admin Subscriptions View (Restored)
-CREATE OR REPLACE VIEW public.admin_subscriptions_view WITH (security_invoker = true) AS
-SELECT 
-    s.id,
-    s.user_id,
-    p.user_code,
-    u.full_name AS user_name,
-    u.email AS user_email,
-    s.plan_id,
-    sp.name AS plan_name,
-    sp.name_ar AS plan_name_ar,
-    s.status,
-    s.start_date,
-    s.end_date,
-    s.price,
-    s.created_at,
-    s.updated_at
-FROM public.subscriptions s
-JOIN public.users u ON s.user_id = u.id
-LEFT JOIN public.profiles p ON s.user_id = p.id
-LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id;
-
--- Triggers for Core Schema
-DROP TRIGGER IF EXISTS trigger_protect_user_role ON public.users;
-CREATE TRIGGER trigger_protect_user_role BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.protect_user_role();
-
-DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
-CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Removed trigger_update_stats_subs
--- Removed trigger_update_stats_users
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_registration();
-
--- Seed Data (Core)
-DO $$
-BEGIN
-    INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
-    VALUES 
-        ('MONTH-1', 'خطة شهرية', 'خطة أساسية', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات"]'::jsonb, TRUE, 30.00),
-        ('MONTH-3', 'خطة 3 شهور', 'خطة توفير', 80.00, 90, 3, '["جميع الميزات"]'::jsonb, TRUE, 80.00),
-        ('YEAR-1', 'خطة سنوية', 'خطة احترافية', 360.00, 365, 12, '["جميع الميزات"]'::jsonb, TRUE, 360.00)
-    ON CONFLICT DO NOTHING;
-    -- Statistics row removed from seeding, table is still there but deprecated.
-    -- We keep the table for now to avoid breaking other views if any, but it's not updated anymore.
-    INSERT INTO public.system_config (key, value) VALUES ('enforce_subscription', 'false'::jsonb) ON CONFLICT (key) DO NOTHING;
-    UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
-END $$;
-
-
--- ====================================================================
--- SECTION: ITINERARY SCHEMA (route_profiles)
--- ====================================================================
-
--- Note: client_routes table is deprecated/local-only, removed from here.
-
-CREATE TABLE IF NOT EXISTS public.route_profiles (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    slot_number INTEGER NOT NULL,
-    profile_name TEXT NOT NULL,
-    shops_order JSONB NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT unique_slot_per_user UNIQUE(user_id, slot_number)
-);
-
-DROP TRIGGER IF EXISTS update_route_profiles_modtime ON public.route_profiles;
-CREATE TRIGGER update_route_profiles_modtime BEFORE UPDATE ON public.route_profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-
-
--- ====================================================================
--- SECTION: TRACKING SCHEMA (user_actions)
--- ====================================================================
-
-CREATE TABLE IF NOT EXISTS public.user_actions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    action_type TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_user_actions_created_at ON public.user_actions(created_at);
-CREATE INDEX IF NOT EXISTS idx_user_actions_user_id ON public.user_actions(user_id);
-
-
--- ====================================================================
--- SECTION: COLLABORATION (sync-harvest.sql)
--- ====================================================================
-
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    user_code TEXT UNIQUE NOT NULL, 
-    full_name TEXT,
-    email TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Ensure email column exists if table was already created before
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
-
--- Profiles trigger
--- Redundant Trigger "on_auth_user_created_profile" and function "handle_new_user_profile" removed (Merged into handle_new_user_registration)
-DROP FUNCTION IF EXISTS public.handle_new_user_profile CASCADE;
-
--- Backfill profiles
-INSERT INTO public.profiles (id, user_code, full_name, email)
-SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
-FROM auth.users ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
-
--- Ensure responded_at column exists in collaboration_requests (Fix for invitation acceptance)
-ALTER TABLE public.collaboration_requests ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP WITH TIME ZONE;
-
-CREATE TABLE IF NOT EXISTS public.collaboration_requests (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    receiver_code TEXT NOT NULL,
-    receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT CHECK (role IN ('viewer', 'editor')) DEFAULT 'editor',
-    status TEXT CHECK (status IN ('pending', 'accepted', 'rejected', 'revoked')) DEFAULT 'pending',
-    responded_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_collab_receiver_code ON public.collaboration_requests(receiver_code, status);
-CREATE INDEX IF NOT EXISTS idx_collab_sender ON public.collaboration_requests(sender_id);
-
--- Clean up existing duplicates before adding unique index (Fix for Error 23505)
--- This keeps only the LATEST invitation (by created_at) for each sender-receiver pair
-DELETE FROM public.collaboration_requests
-WHERE id IN (
-    SELECT id
-    FROM (
-        SELECT id,
-               ROW_NUMBER() OVER (
-                   PARTITION BY sender_id, receiver_id 
-                   ORDER BY created_at DESC
-               ) as r_num
-        FROM public.collaboration_requests
-        WHERE status IN ('pending', 'accepted')
-    ) t
-    WHERE t.r_num > 1
-);
-
--- Prevent duplicate active invitations (pending or accepted) between same users
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_invitation 
-ON public.collaboration_requests (sender_id, receiver_id) 
-WHERE status IN ('pending', 'accepted');
-
-CREATE TABLE IF NOT EXISTS public.live_harvest (
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    rows JSONB DEFAULT '[]'::jsonb,
-    master_limit NUMERIC DEFAULT 0,
-    extra_limit NUMERIC DEFAULT 0,
-    current_balance NUMERIC DEFAULT 0,
-    last_updated_by UUID REFERENCES auth.users(id),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Notifications Functions
+-- Collaboration & Live Harvest Notification Functions
 CREATE OR REPLACE FUNCTION public.notify_live_harvest_change()
 RETURNS TRIGGER SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 BEGIN
@@ -380,22 +318,6 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS live_harvest_notify_trigger ON public.live_harvest;
-CREATE TRIGGER live_harvest_notify_trigger AFTER INSERT OR UPDATE ON public.live_harvest FOR EACH ROW EXECUTE FUNCTION public.notify_live_harvest_change();
-
-DROP TRIGGER IF EXISTS collaboration_notify_trigger ON public.collaboration_requests;
-CREATE TRIGGER collaboration_notify_trigger AFTER INSERT OR UPDATE ON public.collaboration_requests FOR EACH ROW EXECUTE FUNCTION public.notify_collaboration_change();
-
-DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
-CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_collab_updated_at ON public.collaboration_requests;
-CREATE TRIGGER update_collab_updated_at BEFORE UPDATE ON public.collaboration_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_live_harvest_updated_at ON public.live_harvest;
-CREATE TRIGGER update_live_harvest_updated_at BEFORE UPDATE ON public.live_harvest FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
 -- ====================================================================
 -- SECTION: ADMIN RPC FUNCTIONS
 -- ====================================================================
@@ -411,30 +333,20 @@ DECLARE
   cancelled_count int;
   expired_count int;
 BEGIN
-  -- Security Check
   IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied: Admin privileges required'; END IF;
 
-  -- Intelligent Live Calculation: Optimized for performance using existing indexes.
-  -- This replaces the cached statistics table to eliminate lock contention on high traffic.
-  
-  -- 1. Count Total Users
   SELECT count(*) INTO total_users_count FROM public.users;
-
-  -- 2. Count Active Subscriptions
   SELECT count(*) INTO active_subscriptions_count FROM public.subscriptions WHERE status = 'active';
-
-  -- 3. Calculate Total Revenue from Active Plans
+  
   SELECT COALESCE(SUM(sp.price_egp), 0) INTO total_revenue_val 
   FROM public.subscriptions s
   JOIN public.subscription_plans sp ON s.plan_id = sp.id
   WHERE s.status = 'active';
 
-  -- 4. Count Active Users (last N days)
   SELECT count(distinct user_id) INTO active_users_count 
   FROM public.daily_archives 
   WHERE updated_at >= (now() - (active_days_period || ' days')::interval);
 
-  -- 5. Status Breakdown
   SELECT 
     COUNT(*) FILTER (WHERE status = 'pending'),
     COUNT(*) FILTER (WHERE status = 'cancelled'),
@@ -454,7 +366,6 @@ BEGIN
 END;
 $$;
 
--- Frontend compatibility alias
 CREATE OR REPLACE FUNCTION public.get_admin_stats_fixed(active_days_period int default 30)
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -467,7 +378,6 @@ RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
   
-  -- Optimized Admin User Fetching: Bypasses RLS to ensure Admin sees all records.
   RETURN (
       SELECT json_agg(t) FROM (
           SELECT 
@@ -498,7 +408,6 @@ BEGIN
 END;
 $$;
 
--- Restore missing fix_missing_profiles function
 CREATE OR REPLACE FUNCTION public.fix_missing_profiles()
 RETURNS json SECURITY DEFINER SET search_path = public LANGUAGE plpgsql AS $$
 DECLARE
@@ -507,14 +416,12 @@ DECLARE
 BEGIN
     IF NOT public.is_admin() THEN RAISE EXCEPTION 'Access Denied'; END IF;
 
-    -- 1. Restore missing public.users from auth.users
     INSERT INTO public.users (id, email, full_name, role, created_at)
     SELECT id, email, COALESCE(raw_user_meta_data->>'full_name', split_part(email, '@', 1)), 'user', created_at
     FROM auth.users
     ON CONFLICT (id) DO NOTHING;
     GET DIAGNOSTICS users_count = ROW_COUNT;
 
-    -- 2. Restore missing public.profiles from auth.users
     INSERT INTO public.profiles (id, user_code, full_name, email)
     SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
     FROM auth.users
@@ -552,21 +459,10 @@ BEGIN
     update subscriptions set status = 'cancelled', updated_at = v_now where id = p_subscription_id returning * into v_sub;
     return json_build_object('data', row_to_json(v_sub));
   elsif p_action = 'reactivate' then
-    -- Smart Resume: Extend end_date by the duration of suspension (NOW - updated_at)
-    -- This assumes updated_at was the time of cancellation.
     if v_sub.status = 'cancelled' then
-       v_end_date := v_sub.end_date + (v_now - v_sub.updated_at);
-       -- If end_date was already in the past, maybe we should start from NOW? 
-       -- User request: "days continue as is". 
-       -- If I had 5 days left, I should have 5 days left starting today.
-       -- If (end_date - updated_at) > 0, that implies days remaining.
-       -- So new_end_date = NOW() + (end_date - updated_at).
-       -- Let's use that logic if end_date > updated_at.
        if v_sub.end_date > v_sub.updated_at then
           v_end_date := v_now + (v_sub.end_date - v_sub.updated_at);
        else
-          -- If no days were remaining, just reactivate with old date (expired) or set to now?
-          -- For safety, just keep strict shift logic:
           v_end_date := v_sub.end_date + (v_now - v_sub.updated_at);
        end if;
        
@@ -577,7 +473,6 @@ BEGIN
        where id = p_subscription_id 
        returning * into v_sub;
     else
-       -- Fallback for non-cancelled
        update subscriptions set status = 'active', updated_at = v_now where id = p_subscription_id returning * into v_sub;
     end if;
     return json_build_object('data', row_to_json(v_sub));
@@ -587,10 +482,6 @@ BEGIN
 END;
 $$;
 
--- 11. ADMIN SUBSCRIPTION FUNCTIONS (SECURITY DEFINER)
--- ====================================================================
-
--- RPC to fetch pending subscriptions with full details
 CREATE OR REPLACE FUNCTION public.get_pending_subscriptions_admin()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -626,7 +517,6 @@ BEGIN
 END;
 $$;
 
--- RPC to fetch all subscriptions with filters (replaces view direct access)
 CREATE OR REPLACE FUNCTION public.get_all_subscriptions_admin(p_status text DEFAULT 'all', p_expiry text DEFAULT 'all')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -665,7 +555,6 @@ BEGIN
 END;
 $$;
 
--- RPC to fetch application errors with user details (SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.get_app_errors_admin()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -696,7 +585,6 @@ BEGIN
 END;
 $$;
 
--- RPC to fetch all client locations with user details (SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.get_client_locations_admin()
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -723,10 +611,7 @@ BEGIN
 END;
 $$;
 
-NOTIFY pgrst, 'reload config';
-
--- 10. AUTO-CLEANUP TRIGGER (31-Day Retention)
--- ====================================================================
+-- Auto-cleanup trigger for archives (31-day retention)
 CREATE OR REPLACE FUNCTION public.cleanup_old_user_archives()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
@@ -734,7 +619,6 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Delete archives older than 31 days for the specific user
   DELETE FROM public.daily_archives
   WHERE user_id = NEW.user_id
     AND archive_date < (CURRENT_DATE - INTERVAL '31 days');
@@ -742,8 +626,93 @@ BEGIN
 END;
 $$;
 
+-- ====================================================================
+-- SECTION: TRIGGERS
+-- ====================================================================
+
+DROP TRIGGER IF EXISTS trigger_protect_user_role ON public.users;
+CREATE TRIGGER trigger_protect_user_role BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.protect_user_role();
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_subs_updated_at ON public.subscriptions;
+CREATE TRIGGER update_subs_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_registration();
+
+DROP TRIGGER IF EXISTS update_route_profiles_modtime ON public.route_profiles;
+CREATE TRIGGER update_route_profiles_modtime BEFORE UPDATE ON public.route_profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_client_routes_modtime ON public.client_routes;
+CREATE TRIGGER update_client_routes_modtime BEFORE UPDATE ON public.client_routes FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS live_harvest_notify_trigger ON public.live_harvest;
+CREATE TRIGGER live_harvest_notify_trigger AFTER INSERT OR UPDATE ON public.live_harvest FOR EACH ROW EXECUTE FUNCTION public.notify_live_harvest_change();
+
+DROP TRIGGER IF EXISTS collaboration_notify_trigger ON public.collaboration_requests;
+CREATE TRIGGER collaboration_notify_trigger AFTER INSERT OR UPDATE ON public.collaboration_requests FOR EACH ROW EXECUTE FUNCTION public.notify_collaboration_change();
+
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_collab_updated_at ON public.collaboration_requests;
+CREATE TRIGGER update_collab_updated_at BEFORE UPDATE ON public.collaboration_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_live_harvest_updated_at ON public.live_harvest;
+CREATE TRIGGER update_live_harvest_updated_at BEFORE UPDATE ON public.live_harvest FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 DROP TRIGGER IF EXISTS trigger_cleanup_old_archives ON public.daily_archives;
 CREATE TRIGGER trigger_cleanup_old_archives
 AFTER INSERT ON public.daily_archives
 FOR EACH ROW
 EXECUTE FUNCTION public.cleanup_old_user_archives();
+
+-- ====================================================================
+-- SECTION: SEED DATA
+-- ====================================================================
+
+DO $$
+BEGIN
+    INSERT INTO public.subscription_plans (name, name_ar, description, price, duration_days, duration_months, features, is_active, price_egp) 
+    VALUES 
+        ('MONTH-1', 'خطة شهرية', 'خطة أساسية', 30.00, 30, 1, '["إدخال البيانات", "التحصيلات"]'::jsonb, TRUE, 30.00),
+        ('MONTH-3', 'خطة 3 شهور', 'خطة توفير', 80.00, 90, 3, '["جميع الميزات"]'::jsonb, TRUE, 80.00),
+        ('YEAR-1', 'خطة سنوية', 'خطة احترافية', 360.00, 365, 12, '["جميع الميزات"]'::jsonb, TRUE, 360.00)
+    ON CONFLICT DO NOTHING;
+    
+    INSERT INTO public.system_config (key, value) VALUES ('enforce_subscription', 'false'::jsonb) ON CONFLICT (key) DO NOTHING;
+    UPDATE public.users SET role = 'admin' WHERE email = 'emontal.33@gmail.com';
+
+    -- Backfill profiles
+    INSERT INTO public.profiles (id, user_code, full_name, email)
+    SELECT id, 'EMP-' || substring(md5(id::text) from 1 for 6), COALESCE(raw_user_meta_data->>'full_name', email), email
+    FROM auth.users ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+END $$;
+
+-- Admin Subscriptions View
+CREATE OR REPLACE VIEW public.admin_subscriptions_view WITH (security_invoker = true) AS
+SELECT 
+    s.id,
+    s.user_id,
+    p.user_code,
+    u.full_name AS user_name,
+    u.email AS user_email,
+    s.plan_id,
+    sp.name AS plan_name,
+    sp.name_ar AS plan_name_ar,
+    s.status,
+    s.start_date,
+    s.end_date,
+    s.price,
+    s.created_at,
+    s.updated_at
+FROM public.subscriptions s
+JOIN public.users u ON s.user_id = u.id
+LEFT JOIN public.profiles p ON s.user_id = p.id
+LEFT JOIN public.subscription_plans sp ON s.plan_id = sp.id;
+
+-- Reload Schema Cache
+NOTIFY pgrst, 'reload schema';
+NOTIFY pgrst, 'reload config';

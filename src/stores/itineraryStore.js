@@ -586,7 +586,11 @@ export const useItineraryStore = defineStore('itinerary', () => {
         }
         logger.error(`📍 GPS Error: ${errorDetails}`);
       },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      {
+        enableHighAccuracy: true,
+        timeout: 30000, // ⬆️ زيادة من 20 إلى 30 ثانية للأماكن المغلقة
+        maximumAge: 5000 // قبول موقع محفوظ مؤخراً (5 ثواني) كـ fallback
+      }
     );
   }
 

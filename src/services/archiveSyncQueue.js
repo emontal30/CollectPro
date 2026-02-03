@@ -131,12 +131,29 @@ async function _processQueueInternal() {
   for (let i = 0; i < processingBatch.length; i++) {
     const item = processingBatch[i];
 
-    // --- Backoff Check ---
-    // If item failed recently (less than 10 seconds ago), skip it to avoid infinite loop
+    // --- Backoff Check with Exponential Backoff ---
+    // If item failed recently, skip it to avoid hammering the server
+    // Backoff time increases exponentially: 10s, 20s, 40s, 60s (max)
     const lastAttempt = item.lastAttempt || 0;
     const now = Date.now();
-    if (now - lastAttempt < 10000 && item.retryCount > 0) {
-      continue; // Skip this item for now
+    const retryCount = item.retryCount || 0;
+
+    if (retryCount > 0 && lastAttempt > 0) {
+      // Exponential backoff: 10s * 2^retryCount, max 60s
+      const backoffTime = Math.min(10000 * Math.pow(2, retryCount - 1), 60000);
+      const timeSinceLastAttempt = now - lastAttempt;
+
+      if (timeSinceLastAttempt < backoffTime) {
+        logger.info(`⏳ Skipping item due to backoff: ${backoffTime - timeSinceLastAttempt}ms remaining`);
+        continue; // Skip this item for now
+      }
+    }
+
+    // Deadlock protection: Skip if retried too many times (10 times = ~10 mins)
+    if (retryCount > 10) {
+      logger.error(`❌ Item exceeded max retries (${retryCount}), removing from queue`, item);
+      processedIndices.add(i); // Remove from queue (dead-letter)
+      continue;
     }
 
     const type = item.type;
